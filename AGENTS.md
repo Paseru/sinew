@@ -187,8 +187,20 @@ Code map:
 │   │       ├── AppIcon-76x76@2x.png
 │   │       └── AppIcon-83.5x83.5@2x.png
 │   └── src
+│       ├── context.rs
+│       ├── conversations.rs
 │       ├── lib.rs
-│       └── main.rs
+│       ├── main.rs
+│       ├── models.rs
+│       ├── platform.rs
+│       ├── providers.rs
+│       ├── state.rs
+│       ├── swarm.rs
+│       ├── terminal.rs
+│       ├── tests.rs
+│       ├── turns.rs
+│       ├── workflow.rs
+│       └── workspace.rs
 └── src
     ├── App.tsx
     ├── main.tsx
