@@ -43,6 +43,19 @@ Code map:
 │   │       ├── store.rs
 │   │       ├── subagent.rs
 │   │       ├── team.rs
+│   │       ├── team
+│   │       │   ├── agent_turns.rs
+│   │       │   ├── context.rs
+│   │       │   ├── descriptors.rs
+│   │       │   ├── launch.rs
+│   │       │   ├── live.rs
+│   │       │   ├── messaging.rs
+│   │       │   ├── model.rs
+│   │       │   ├── render.rs
+│   │       │   ├── session.rs
+│   │       │   ├── status_stop.rs
+│   │       │   ├── task_board.rs
+│   │       │   └── tests.rs
 │   │       ├── text.rs
 │   │       ├── todo.rs
 │   │       ├── tool_run.rs
