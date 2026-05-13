@@ -29,6 +29,19 @@ Code map:
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── agent.rs
+│   │       ├── agent
+│   │       │   ├── assistant_message.rs
+│   │       │   ├── cancel.rs
+│   │       │   ├── clean_context.rs
+│   │       │   ├── compaction.rs
+│   │       │   ├── context.rs
+│   │       │   ├── events.rs
+│   │       │   ├── history.rs
+│   │       │   ├── mode.rs
+│   │       │   ├── tests.rs
+│   │       │   ├── tool_dispatch.rs
+│   │       │   ├── tool_summary.rs
+│   │       │   └── turn.rs
 │   │       ├── bash.rs
 │   │       ├── compact.rs
 │   │       ├── glob.rs
