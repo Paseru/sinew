@@ -2,7 +2,7 @@
 /dist
 /node_modules
 /.history
-/.sinew/images
+/.sinew/
 .DS_Store
 *.log
 .env
