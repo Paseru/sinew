@@ -1,6 +1,23 @@
 Code map:
 - L'agent doit garder à jour cette carte simple des fichiers à chaque création, suppression, renommage, déplacement ou modification.
 
+Release pipeline (déjà configuré, pas besoin de re-setup) :
+- Auto-updater Tauri actif (plugin tauri-plugin-updater + composant UpdateBadge dans la titlebar).
+- Manifest : https://github.com/Paseru/sinew/releases/latest/download/latest.json
+- Workflow CI : .github/workflows/release.yml — déclenché par un tag `v*.*.*`.
+- Secrets GitHub configurés sur le repo Paseru/sinew :
+  * TAURI_SIGNING_PRIVATE_KEY + TAURI_SIGNING_PRIVATE_KEY_PASSWORD (signature updater)
+  * APPLE_CERTIFICATE + APPLE_CERTIFICATE_PASSWORD (Developer ID .p12)
+  * APPLE_SIGNING_IDENTITY = "Developer ID Application: Rayane Rachid (6629RYMYD3)"
+  * APPLE_ID = hyrakalache@gmail.com
+  * APPLE_PASSWORD (app-specific password Apple)
+  * APPLE_TEAM_ID = 6629RYMYD3
+- Pour publier une release :
+  1. Bump version dans Cargo.toml (workspace.package.version), package.json, src-tauri/tauri.conf.json.
+  2. `git commit -am "chore: release vX.Y.Z" && git push`
+  3. `git tag vX.Y.Z && git push --tags`
+  CI build/sign/notarize macOS + Windows + Linux, publie sur GitHub Releases, génère latest.json, les apps installées auto-update sous ~30 min.
+
 .
 ├── .gitignore
 ├── AGENTS.md
