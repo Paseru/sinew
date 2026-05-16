@@ -42,6 +42,13 @@ objc2 = "0.6.4"
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSMenu", "NSMenuItem"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSString"] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+# Used to allocate a hidden console at startup so child processes spawned via
+# ConPTY (PowerShell) can initialize their DLLs even though Sinew itself runs
+# as a GUI process with `windows_subsystem = "windows"`. Without this, PowerShell
+# fails to start with STATUS_DLL_INIT_FAILED (0xc0000142).
+winapi = { version = "0.3", features = ["consoleapi", "wincon", "winuser"] }
+
 # Updater plugin is desktop-only (Tauri does not ship updater for iOS/Android).
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = { workspace = true }
