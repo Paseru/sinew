@@ -185,6 +185,59 @@ jobs:
             "$(dirname "$DMG_PATH")/Sinew_universal.dmg" \
             --clobber
 
+      # Same trick on Windows: expose version-less NSIS + MSI installers so
+      # the landing page can hard-link to
+      # `releases/latest/download/Sinew_x64-setup.exe` (and `.msi`).
+      - name: Upload version-less Windows aliases
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          NSIS_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/nsis/Sinew_*_x64-setup.exe 2>/dev/null | head -1 || true)
+          MSI_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/msi/Sinew_*_x64_*.msi 2>/dev/null | head -1 || true)
+          if [ -n "$NSIS_SRC" ]; then
+            ALIAS="$(dirname "$NSIS_SRC")/Sinew_x64-setup.exe"
+            cp "$NSIS_SRC" "$ALIAS"
+            gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
+          else
+            echo "No NSIS installer produced - skipping NSIS alias."
+          fi
+          if [ -n "$MSI_SRC" ]; then
+            ALIAS="$(dirname "$MSI_SRC")/Sinew_x64.msi"
+            cp "$MSI_SRC" "$ALIAS"
+            gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
+          else
+            echo "No MSI installer produced - skipping MSI alias."
+          fi
+
+      # Same trick on Linux: expose version-less AppImage + .deb so the
+      # landing page can hard-link to
+      # `releases/latest/download/Sinew_amd64.AppImage` (and `.deb`).
+      - name: Upload version-less Linux aliases
+        if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          APPIMG_SRC=$(ls target/x86_64-unknown-linux-gnu/release/bundle/appimage/*_*_amd64.AppImage 2>/dev/null | head -1 || true)
+          DEB_SRC=$(ls target/x86_64-unknown-linux-gnu/release/bundle/deb/*_*_amd64.deb 2>/dev/null | head -1 || true)
+          if [ -n "$APPIMG_SRC" ]; then
+            ALIAS="$(dirname "$APPIMG_SRC")/Sinew_amd64.AppImage"
+            cp "$APPIMG_SRC" "$ALIAS"
+            gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
+          else
+            echo "No AppImage produced - skipping AppImage alias."
+          fi
+          if [ -n "$DEB_SRC" ]; then
+            ALIAS="$(dirname "$DEB_SRC")/Sinew_amd64.deb"
+            cp "$DEB_SRC" "$ALIAS"
+            gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
+          else
+            echo "No .deb produced - skipping .deb alias."
+          fi
+
   finalize-release:
     name: Finalize release
     needs: [create-release, build-tauri]
