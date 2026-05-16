@@ -83,7 +83,17 @@ jobs:
           - name: macos-universal
             os: macos-latest
             rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"
-            tauri_args: "--target universal-apple-darwin"
+            tauri_args: "--target universal-apple-darwin --config src-tauri/tauri.sidecars.conf.json"
+          # Windows x64 installer bundles — MSI + NSIS.
+          - name: windows-x64
+            os: windows-latest
+            rust_targets: "x86_64-pc-windows-msvc"
+            tauri_args: "--target x86_64-pc-windows-msvc --config src-tauri/tauri.sidecars.conf.json"
+          # Linux x64 bundles — .deb + AppImage.
+          - name: linux-x64
+            os: ubuntu-22.04
+            rust_targets: "x86_64-unknown-linux-gnu"
+            tauri_args: "--target x86_64-unknown-linux-gnu --config src-tauri/tauri.sidecars.conf.json"
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4

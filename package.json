@@ -1,11 +1,12 @@
 {
   "name": "sinew",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "prepare-sidecars": "node scripts/prepare-sidecars.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },

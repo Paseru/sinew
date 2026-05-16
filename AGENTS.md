@@ -11,6 +11,8 @@ Code map:
 ├── package-lock.json
 ├── package.json
 ├── README.md
+├── scripts
+│   └── prepare-sidecars.mjs
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
@@ -130,7 +132,10 @@ Code map:
 │           └── wire.rs
 ├── src-tauri
 │   ├── Cargo.toml
+│   ├── binaries
+│   │   └── .gitkeep
 │   ├── build.rs
+│   ├── tauri.sidecars.conf.json
 │   ├── tauri.conf.json
 │   ├── capabilities
 │   │   └── default.json

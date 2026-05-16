@@ -493,7 +493,6 @@ export function TodoStrip({
   const [lastTeamBlockId, setLastTeamBlockId] = useState<string | null>(null);
   const [lastMessagesBlockId, setLastMessagesBlockId] = useState<string | null>(null);
   const [lastQueueSignature, setLastQueueSignature] = useState<string | null>(null);
-  const [draggedQueuePromptId, setDraggedQueuePromptId] = useState<string | null>(null);
   const [height, setHeight] = useState<number | null>(null);
   const stripRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{
@@ -723,14 +722,27 @@ export function TodoStrip({
               key={prompt.id}
               prompt={prompt}
               index={index}
-              draggingId={draggedQueuePromptId}
-              onDragStart={setDraggedQueuePromptId}
-              onDragEnd={() => setDraggedQueuePromptId(null)}
-              onMove={(targetId) => {
-                if (!draggedQueuePromptId || draggedQueuePromptId === targetId) return;
-                onQueuedPromptMove?.(draggedQueuePromptId, targetId);
-                setDraggedQueuePromptId(null);
-              }}
+              canMoveUp={index > 0}
+              canMoveDown={index < visibleQueuedPrompts.length - 1}
+              onMoveUp={
+                onQueuedPromptMove && index > 0
+                  ? () =>
+                      onQueuedPromptMove(
+                        prompt.id,
+                        visibleQueuedPrompts[index - 1].id,
+                      )
+                  : undefined
+              }
+              onMoveDown={
+                onQueuedPromptMove &&
+                index < visibleQueuedPrompts.length - 1
+                  ? () =>
+                      onQueuedPromptMove(
+                        prompt.id,
+                        visibleQueuedPrompts[index + 1].id,
+                      )
+                  : undefined
+              }
               onEdit={onQueuedPromptEdit}
               onDelete={onQueuedPromptDelete}
             />
@@ -797,19 +809,19 @@ function panelCount(
 function QueuedPromptRow({
   prompt,
   index,
-  draggingId,
-  onDragStart,
-  onDragEnd,
-  onMove,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
   onEdit,
   onDelete,
 }: {
   prompt: QueuedPromptStripItem;
   index: number;
-  draggingId: string | null;
-  onDragStart: (id: string) => void;
-  onDragEnd: () => void;
-  onMove: (targetId: string) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) {
@@ -818,37 +830,7 @@ function QueuedPromptRow({
     isImageAttachment(attachment),
   );
   return (
-    <div
-      className="todo-strip__queue-item"
-      draggable
-      data-dragging={draggingId === prompt.id ? "true" : "false"}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", prompt.id);
-        const ghost = document.createElement("div");
-        ghost.style.width = "0";
-        ghost.style.height = "0";
-        ghost.style.opacity = "0";
-        ghost.style.position = "absolute";
-        ghost.style.top = "-1000px";
-        document.body.appendChild(ghost);
-        event.dataTransfer.setDragImage(ghost, 0, 0);
-        window.setTimeout(() => {
-          if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
-        }, 0);
-        onDragStart(prompt.id);
-      }}
-      onDragEnd={onDragEnd}
-      onDragOver={(event) => {
-        if (!draggingId || draggingId === prompt.id) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        onMove(prompt.id);
-      }}
-    >
+    <div className="todo-strip__queue-item">
       <button
         type="button"
         className="todo-strip__queue-body"
@@ -868,18 +850,46 @@ function QueuedPromptRow({
           </span>
         )}
       </button>
-      <button
-        type="button"
-        className="todo-strip__queue-delete"
-        onClick={(event) => {
-          event.stopPropagation();
-          onDelete?.(prompt.id);
-        }}
-        aria-label="Remove queued prompt"
-        title="Remove"
-      >
-        <Icon icon="solar:close-circle-linear" width={13} height={13} />
-      </button>
+      <div className="todo-strip__queue-actions">
+        <button
+          type="button"
+          className="todo-strip__queue-action"
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveUp?.();
+          }}
+          disabled={!canMoveUp || !onMoveUp}
+          aria-label="Move queued prompt up"
+          title="Move up"
+        >
+          <Icon icon="solar:alt-arrow-up-linear" width={13} height={13} />
+        </button>
+        <button
+          type="button"
+          className="todo-strip__queue-action"
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveDown?.();
+          }}
+          disabled={!canMoveDown || !onMoveDown}
+          aria-label="Move queued prompt down"
+          title="Move down"
+        >
+          <Icon icon="solar:alt-arrow-down-linear" width={13} height={13} />
+        </button>
+        <button
+          type="button"
+          className="todo-strip__queue-action todo-strip__queue-action--delete"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete?.(prompt.id);
+          }}
+          aria-label="Remove queued prompt"
+          title="Remove"
+        >
+          <Icon icon="solar:close-circle-linear" width={13} height={13} />
+        </button>
+      </div>
     </div>
   );
 }

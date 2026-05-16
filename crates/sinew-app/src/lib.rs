@@ -8,6 +8,7 @@ pub mod mcp;
 pub mod patch;
 pub mod question;
 pub mod read;
+mod ripgrep;
 pub mod skill;
 pub mod store;
 pub mod subagent;

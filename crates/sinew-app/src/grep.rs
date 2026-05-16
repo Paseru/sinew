@@ -16,6 +16,7 @@ use tokio::{
 };
 
 use crate::{
+    ripgrep::ripgrep_executable,
     tool_run::ToolRunResult,
     workspace::{normalize_workspace_relative_path, resolve_workspace_path},
 };
@@ -181,7 +182,7 @@ impl GrepTool {
 
         let mut child = command
             .spawn()
-            .context("unable to spawn ripgrep (`rg` must be installed)")?;
+            .context("unable to spawn ripgrep (`rg` was not found in the app bundle or PATH)")?;
 
         let stdout = child
             .stdout
@@ -233,25 +234,6 @@ impl GrepTool {
             total_matches,
         })
     }
-}
-
-fn ripgrep_executable() -> PathBuf {
-    find_executable_in_path("rg")
-        .or_else(|| existing_path("/opt/homebrew/bin/rg"))
-        .or_else(|| existing_path("/usr/local/bin/rg"))
-        .unwrap_or_else(|| PathBuf::from("rg"))
-}
-
-fn find_executable_in_path(name: &str) -> Option<PathBuf> {
-    let paths = std::env::var_os("PATH")?;
-    std::env::split_paths(&paths)
-        .map(|path| path.join(name))
-        .find(|path| path.is_file())
-}
-
-fn existing_path(path: &str) -> Option<PathBuf> {
-    let path = PathBuf::from(path);
-    path.is_file().then_some(path)
 }
 
 #[derive(Debug, Deserialize)]

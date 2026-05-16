@@ -6830,21 +6830,17 @@ textarea {
 
 .todo-strip__queue-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 20px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-height: 24px;
   border-radius: var(--r-small);
   color: var(--text-1);
-  transition: background 120ms ease, opacity 120ms ease;
+  transition: background 120ms ease;
 }
 
 .todo-strip__queue-item:hover {
   background: var(--bg-3);
-}
-
-.todo-strip__queue-item[data-dragging="true"] {
-  opacity: 0.45;
 }
 
 .todo-strip__queue-body {
@@ -6898,7 +6894,22 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.todo-strip__queue-delete {
+.todo-strip__queue-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+
+.todo-strip__queue-item:hover .todo-strip__queue-actions,
+.todo-strip__queue-item:focus-within .todo-strip__queue-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.todo-strip__queue-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -6909,15 +6920,19 @@ textarea {
   border-radius: var(--r-med);
   background: transparent;
   color: var(--text-3);
-  opacity: 0.65;
   cursor: pointer;
-  transition: color 120ms ease, opacity 120ms ease, background 120ms ease;
+  transition: color 120ms ease, background 120ms ease;
 }
 
-.todo-strip__queue-delete:hover {
-  background: var(--bg-3);
+.todo-strip__queue-action:hover:not(:disabled) {
+  background: var(--bg-4, var(--bg-3));
   color: var(--text-1);
-  opacity: 1;
+}
+
+.todo-strip__queue-action:disabled {
+  color: var(--text-3);
+  opacity: 0.3;
+  cursor: default;
 }
 
 .todo-strip__message {

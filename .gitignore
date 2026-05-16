@@ -1,6 +1,7 @@
 /target
 /dist
 /node_modules
+/src-tauri/binaries/rg-*
 /.history
 /.sinew/
 .DS_Store
