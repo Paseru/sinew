@@ -2,6 +2,7 @@
 /dist
 /node_modules
 /src-tauri/binaries/rg-*
+/src-tauri/gen/schemas/windows-schema.json
 /.history
 /.sinew/
 .DS_Store

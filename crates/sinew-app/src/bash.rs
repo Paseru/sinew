@@ -819,9 +819,14 @@ mod tests {
         let root = temp_workspace("interactive_session_accepts_input");
         let tool = BashTool::new(&root);
 
+        #[cfg(windows)]
+        let command = "[Console]::Write('Name: '); $name = [Console]::In.ReadLine(); [Console]::WriteLine(\"Hello $name\")";
+        #[cfg(not(windows))]
+        let command = "printf 'Name: '; read name; printf 'Hello %s\\n' \"$name\"";
+
         let started = tool
             .run(json!({
-                "command": "printf 'Name: '; read name; printf 'Hello %s\\n' \"$name\"",
+                "command": command,
                 "yield_time_ms": 500
             }))
             .await;
