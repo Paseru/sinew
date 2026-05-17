@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useLanguage } from "../lib/i18n";
 import type { ConversationSummary } from "../types";
 
 type Props = {
@@ -21,8 +22,16 @@ export function ConversationList({
   onRename,
   onDelete,
 }: Props) {
+  const language = useLanguage();
+  const copy = conversationCopy[language];
   const [editingId, setEditingId] = useState<string | null>(null);
   const editRef = useRef<HTMLSpanElement | null>(null);
+
+  const displayTitle = (title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed) return copy.untitled;
+    return trimmed === "New conversation" ? copy.newConversation : trimmed;
+  };
 
   const commitRename = (id: string) => {
     const value = editRef.current?.textContent?.trim() ?? "";
@@ -37,12 +46,12 @@ export function ConversationList({
       <div className="sidebar__head">
         <span className="sidebar__head-title">
           <Icon icon="solar:chat-round-dots-bold-duotone" width={16} height={16} />
-          <span>Conversations</span>
+          <span>{copy.title}</span>
         </span>
         <button
           className="sidebar__head-btn"
           onClick={onCreate}
-          title="New conversation"
+          title={copy.newConversation}
         >
           <Icon icon="solar:add-square-linear" width={15} height={15} />
         </button>
@@ -50,7 +59,7 @@ export function ConversationList({
       <div className="sidebar__body">
         <div className="conv-list">
           {conversations.length === 0 && (
-            <div className="conv-empty">No conversations yet.</div>
+            <div className="conv-empty">{copy.empty}</div>
           )}
           {conversations.map((conv) => {
             const isEditing = editingId === conv.id;
@@ -66,7 +75,7 @@ export function ConversationList({
               >
                 <span className="conv-row__icon">
                   {isStreaming ? (
-                    <span className="conv-row__spinner" aria-label="Streaming" />
+                    <span className="conv-row__spinner" aria-label={copy.streaming} />
                   ) : (
                     <Icon
                       icon={
@@ -97,12 +106,12 @@ export function ConversationList({
                     if (isEditing) commitRename(conv.id);
                   }}
                 >
-                  {conv.title || "Untitled"}
+                  {displayTitle(conv.title)}
                 </span>
                 <span className="conv-row__actions">
                   <button
                     className="conv-row__btn"
-                    title="Rename"
+                    title={copy.rename}
                     onClick={(event) => {
                       event.stopPropagation();
                       setEditingId(conv.id);
@@ -123,10 +132,10 @@ export function ConversationList({
                   </button>
                   <button
                     className="conv-row__btn conv-row__btn--danger"
-                    title="Delete"
+                    title={copy.delete}
                     onClick={(event) => {
                       event.stopPropagation();
-                      if (confirm("Delete this conversation?")) {
+                      if (confirm(copy.deleteConfirm)) {
                         onDelete(conv.id);
                       }
                     }}
@@ -142,3 +151,25 @@ export function ConversationList({
     </div>
   );
 }
+const conversationCopy = {
+  en: {
+    title: "Conversations",
+    newConversation: "New conversation",
+    empty: "No conversations yet.",
+    streaming: "Streaming",
+    untitled: "Untitled",
+    rename: "Rename",
+    delete: "Delete",
+    deleteConfirm: "Delete this conversation?",
+  },
+  fr: {
+    title: "Conversations",
+    newConversation: "Nouvelle conversation",
+    empty: "Aucune conversation pour le moment.",
+    streaming: "Génération en cours",
+    untitled: "Sans titre",
+    rename: "Renommer",
+    delete: "Supprimer",
+    deleteConfirm: "Supprimer cette conversation ?",
+  },
+} as const;

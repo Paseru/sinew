@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Icon } from "@iconify/react";
 import { loadRecents } from "../lib/recents";
 import { api } from "../lib/ipc";
+import { useLanguage } from "../lib/i18n";
 import type {
   ActiveTurnSummary,
   ActiveTurnsChangedPayload,
@@ -30,6 +31,8 @@ function activeWorkspaceSet(turns: ActiveTurnSummary[]): Set<string> {
 }
 
 export function Welcome({ onPick, error, deriveName }: Props) {
+  const language = useLanguage();
+  const copy = welcomeCopy[language];
   const [recents, setRecents] = useState<RecentWorkspace[]>([]);
   const [picking, setPicking] = useState(false);
   const [activeWorkspaces, setActiveWorkspaces] = useState<Set<string>>(
@@ -92,6 +95,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     }
   };
 
+
   return (
     <div className="welcome">
       {IS_WINDOWS && (
@@ -116,9 +120,8 @@ export function Welcome({ onPick, error, deriveName }: Props) {
           <h1 className="welcome__title">
             Sinew<span className="welcome__title-dot">.</span>
           </h1>
-          <p className="welcome__tag">Your personal Agentic IDE</p>
+          <p className="welcome__tag">{copy.tagline}</p>
         </header>
-
         <button
           className="welcome__cta"
           onClick={pickFolder}
@@ -128,9 +131,9 @@ export function Welcome({ onPick, error, deriveName }: Props) {
             <Icon icon="solar:folder-with-files-bold-duotone" width={22} height={22} />
           </span>
           <span className="welcome__cta-body">
-            <span className="welcome__cta-title">Open a folder</span>
+            <span className="welcome__cta-title">{copy.openFolder}</span>
             <span className="welcome__cta-sub">
-              {picking ? "Opening…" : "Choose any directory to start a session"}
+              {picking ? copy.opening : copy.openFolderSub}
             </span>
           </span>
           <span className="welcome__cta-chev">
@@ -144,7 +147,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
 
         {recents.length > 0 ? (
           <section className="welcome__section">
-            <h2 className="welcome__section-heading">Recent</h2>
+            <h2 className="welcome__section-heading">{copy.recent}</h2>
             <div className="welcome__recents">
               {recents.slice(0, MAX_VISIBLE_RECENTS).map((recent) => {
                 const isActive = activeWorkspaces.has(recent.path);
@@ -160,7 +163,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
                         <span
                           className="welcome__recent-spinner"
                           role="status"
-                          aria-label="Agent running"
+                          aria-label={copy.agentRunning}
                         />
                       ) : (
                         <Icon
@@ -183,10 +186,30 @@ export function Welcome({ onPick, error, deriveName }: Props) {
           </section>
         ) : (
           <div className="welcome__empty">
-            No recent workspaces yet. Pick a folder to get started.
+            {copy.empty}
           </div>
         )}
       </main>
     </div>
   );
 }
+const welcomeCopy = {
+  en: {
+    tagline: "Your personal Agentic IDE",
+    openFolder: "Open a folder",
+    openFolderSub: "Choose any directory to start a session",
+    opening: "Opening...",
+    recent: "Recent",
+    agentRunning: "Agent running",
+    empty: "No recent workspaces yet. Pick a folder to get started.",
+  },
+  fr: {
+    tagline: "Votre IDE agentique personnel",
+    openFolder: "Ouvrir un dossier",
+    openFolderSub: "Choisissez un dossier pour démarrer une session",
+    opening: "Ouverture...",
+    recent: "Récents",
+    agentRunning: "Agent en cours",
+    empty: "Aucun workspace récent. Choisissez un dossier pour commencer.",
+  },
+} as const;
