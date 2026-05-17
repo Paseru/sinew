@@ -27,6 +27,7 @@ import {
 import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
 import { api } from "../../lib/ipc";
+import { useLanguage } from "../../lib/i18n";
 import {
   MODELS,
   PROVIDERS,
@@ -174,6 +175,70 @@ type Props = {
   dropZoneRef: RefObject<HTMLDivElement>;
 };
 
+const chatPaneCopy = {
+  en: {
+    dropTitle: "Drop files to attach",
+    dropSub: "They'll be included as context in your next message.",
+    backToMainChat: "Back to main chat",
+    back: "Back",
+    chat: "Chat",
+    startingSubAgent: "Starting sub-agent",
+    saySomething: "Say something",
+    enterHint: "Enter to send · Shift+Enter for newline",
+    previewAttachment: "Click to preview",
+    removeAttachment: "Remove attachment",
+    fileMentions: "File mentions",
+    loadingFiles: "Loading files...",
+    noMatches: "No matches",
+    queueNextPrompt: "Queue next prompt...",
+    messagePlaceholder: "Message the agent... (type @ to mention a file)",
+    attachFiles: "Attach files",
+    modeLocked: "Mode locked while streaming",
+    mode: "Mode",
+    modelLocked: "Model locked while streaming",
+    model: "Model",
+    noModels: "No models",
+    thinkingLocked: "Thinking locked while streaming",
+    thinking: "Thinking",
+    compactContext: "Compact context",
+    compaction: "Compaction",
+    stop: "Stop",
+    send: "Send",
+    context: "Context",
+    full: "Full",
+  },
+  fr: {
+    dropTitle: "Déposez les fichiers à joindre",
+    dropSub: "Ils seront ajoutés comme contexte au prochain message.",
+    backToMainChat: "Retour au chat principal",
+    back: "Retour",
+    chat: "Chat",
+    startingSubAgent: "Démarrage du sous-agent",
+    saySomething: "Écrivez quelque chose",
+    enterHint: "Entrée pour envoyer · Maj+Entrée pour une nouvelle ligne",
+    previewAttachment: "Cliquer pour prévisualiser",
+    removeAttachment: "Retirer la pièce jointe",
+    fileMentions: "Mentions de fichiers",
+    loadingFiles: "Chargement des fichiers...",
+    noMatches: "Aucun résultat",
+    queueNextPrompt: "Mettre le prochain prompt en file...",
+    messagePlaceholder: "Message à l'agent... (tapez @ pour mentionner un fichier)",
+    attachFiles: "Joindre des fichiers",
+    modeLocked: "Mode verrouillé pendant le streaming",
+    mode: "Mode",
+    modelLocked: "Modèle verrouillé pendant le streaming",
+    model: "Modèle",
+    noModels: "Aucun modèle",
+    thinkingLocked: "Raisonnement verrouillé pendant le streaming",
+    thinking: "Raisonnement",
+    compactContext: "Compacter le contexte",
+    compaction: "Compaction",
+    stop: "Arrêter",
+    send: "Envoyer",
+    context: "Contexte",
+    full: "plein",
+  },
+} as const;
 function preserveTrailingTurnDuration(
   next: ChatViewState,
   current: ChatViewState,
@@ -367,6 +432,8 @@ export function ChatPane({
   externalDrops,
   dropZoneRef,
 }: Props) {
+  const language = useLanguage();
+  const copy = chatPaneCopy[language];
   const conversationViewsRef = useRef<Map<string, ChatViewState>>(new Map());
   const composerDraftsRef = useRef<Map<string, ComposerDraft>>(new Map());
   const [view, setView] = useState<ChatViewState>(() => {
@@ -2535,9 +2602,9 @@ export function ChatPane({
             <span className="chat-drop-overlay__mark">
               <Icon icon="solar:paperclip-bold" width={24} height={24} />
             </span>
-            <div className="chat-drop-overlay__title">Drop files to attach</div>
+            <div className="chat-drop-overlay__title">{copy.dropTitle}</div>
             <div className="chat-drop-overlay__sub">
-              They&rsquo;ll be included as context in your next message.
+              {copy.dropSub}
             </div>
           </div>
         </div>
@@ -2548,8 +2615,8 @@ export function ChatPane({
             type="button"
             className="chat-head__back"
             onClick={handleCloseSubAgent}
-            aria-label="Back to main chat"
-            title="Back"
+            aria-label={copy.backToMainChat}
+            title={copy.back}
           >
             <Icon icon="solar:alt-arrow-left-linear" width={16} height={16} />
           </button>
@@ -2567,7 +2634,7 @@ export function ChatPane({
               style={{ color: "var(--text-3)" }}
             />
           )}
-          <span>{activeSubAgent?.title ?? "Chat"}</span>
+          <span>{activeSubAgent?.title ?? copy.chat}</span>
         </span>
         <span className="chat-head__dot" data-status={displayView.status} />
       </div>
@@ -2587,11 +2654,11 @@ export function ChatPane({
                 )}
               </span>
               <span className="chat-empty__title">
-                {viewingSubAgent ? "Starting sub-agent" : "Say something"}
+                {viewingSubAgent ? copy.startingSubAgent : copy.saySomething}
               </span>
               {!viewingSubAgent && (
                 <span className="chat-empty__sub">
-                  Enter to send · Shift+Enter for newline
+                  {copy.enterHint}
                 </span>
               )}
             </div>
@@ -2695,7 +2762,7 @@ export function ChatPane({
                       onClick={
                         image ? () => setPreviewImage(att.path) : undefined
                       }
-                      title={image ? "Click to preview" : att.path}
+                      title={image ? copy.previewAttachment : att.path}
                     >
                       <span className="chip__icon">
                         <Icon
@@ -2713,7 +2780,7 @@ export function ChatPane({
                             prev.filter((x) => x.path !== att.path),
                           );
                         }}
-                        title="Remove attachment"
+                        title={copy.removeAttachment}
                       >
                         <Icon
                           icon="solar:close-circle-linear"
@@ -2741,7 +2808,7 @@ export function ChatPane({
             <div
               className="mention-popover"
               role="listbox"
-              aria-label="File mentions"
+              aria-label={copy.fileMentions}
             >
               {matches.length === 0 ? (
                 <div className="mention-popover__empty">
@@ -2804,8 +2871,8 @@ export function ChatPane({
               value={text}
               placeholder={
                 view.status === "streaming" || isStreaming
-                  ? "Queue next prompt..."
-                  : "Message the agent… (type @ to mention a file)"
+                  ? copy.queueNextPrompt
+                  : copy.messagePlaceholder
               }
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
@@ -2839,8 +2906,8 @@ export function ChatPane({
                 type="button"
                 className="composer__iconbtn"
                 onClick={() => void pickAttachments()}
-                title="Attach files"
-                aria-label="Attach files"
+                title={copy.attachFiles}
+                aria-label={copy.attachFiles}
               >
                 <Icon icon="solar:add-circle-linear" width={18} height={18} />
               </button>
@@ -2858,7 +2925,7 @@ export function ChatPane({
                     setModelOpen(false);
                     setThinkingOpen(false);
                   }}
-                  title={selectorLocked ? "Mode locked while streaming" : "Mode"}
+                  title={selectorLocked ? copy.modeLocked : copy.mode}
                 >
                   <span className="composer__picker-label">{modeEntry.label}</span>
                   <Icon
@@ -2871,7 +2938,7 @@ export function ChatPane({
                   <div
                     className="composer__popover"
                     role="menu"
-                    aria-label="Mode"
+                    aria-label={copy.mode}
                   >
                     {MODES.map((entry) => {
                       const selected = entry.value === effectiveMode;
@@ -2920,10 +2987,10 @@ export function ChatPane({
                     setThinkingOpen(false);
                     setModeOpen(false);
                   }}
-                  title={selectorLocked ? "Model locked while streaming" : "Model"}
+                  title={selectorLocked ? copy.modelLocked : copy.model}
                 >
                   <span className="composer__picker-label">
-                    {displayModelEntry?.label ?? "No models"}
+                    {displayModelEntry?.label ?? copy.noModels}
                   </span>
                   <Icon
                     icon="solar:alt-arrow-down-linear"
@@ -2935,7 +3002,7 @@ export function ChatPane({
                   <div
                     className="composer__popover"
                     role="menu"
-                    aria-label="Model"
+                    aria-label={copy.model}
                   >
                     {availableModels.map((m) => {
                       const selected = m.value === model;
@@ -2988,7 +3055,7 @@ export function ChatPane({
                     setModelOpen(false);
                     setModeOpen(false);
                   }}
-                  title={selectorLocked ? "Thinking locked while streaming" : "Thinking"}
+                  title={selectorLocked ? copy.thinkingLocked : copy.thinking}
                 >
                   <span className="composer__picker-label">{thinkingLabel}</span>
                   <Icon
@@ -3001,7 +3068,7 @@ export function ChatPane({
                   <div
                     className="composer__popover"
                     role="menu"
-                    aria-label="Thinking"
+                    aria-label={copy.thinking}
                   >
                     {availableThinking.map((level) => {
                       const selected = level.value === thinking;
@@ -3042,11 +3109,11 @@ export function ChatPane({
                   history.length === 0 ||
                   !modelEntry
                 }
-                aria-label="Compact context"
+                aria-label={copy.compactContext}
               >
                 <Icon icon="solar:archive-linear" width={16} height={16} />
                 <span className="composer__iconbtn-tip" role="tooltip" aria-hidden="true">
-                  Compaction
+                  {copy.compaction}
                 </span>
               </button>
               <ContextMeter state={visibleContextEstimate} />
@@ -3056,7 +3123,7 @@ export function ChatPane({
                   data-variant="stop"
                   onClick={() => void onStop()}
                 >
-                  <span className="composer__send-label">Stop</span>
+                  <span className="composer__send-label">{copy.stop}</span>
                 </button>
               ) : (
                 <button
@@ -3067,7 +3134,7 @@ export function ChatPane({
                     !modelEntry
                   }
                 >
-                  <span className="composer__send-label">Send</span>
+                  <span className="composer__send-label">{copy.send}</span>
                 </button>
               )}
             </div>
@@ -3179,6 +3246,8 @@ function SubAgentRuntimeCard({
 }
 
 function ContextMeter({ state }: { state: ContextEstimateState }) {
+  const language = useLanguage();
+  const copy = chatPaneCopy[language];
   const estimate = state.estimate;
   const hasEstimate = estimate !== null;
   const ratio = estimate
@@ -3209,13 +3278,13 @@ function ContextMeter({ state }: { state: ContextEstimateState }) {
       }
       tabIndex={hasEstimate ? 0 : -1}
       aria-hidden={hasEstimate ? undefined : true}
-      aria-label={estimate ? `Context ${percent}%` : undefined}
+      aria-label={estimate ? `${copy.context} ${percent}%` : undefined}
     >
       <span className="context-meter__ring" aria-hidden="true" />
       {estimate ? (
         <div className="context-meter__popover" role="tooltip">
           <div className="context-meter__head">
-            <span className="context-meter__title">Context</span>
+            <span className="context-meter__title">{copy.context}</span>
             <span className="context-meter__token-total">
               {estimate.exact ? "" : "~"}
               {formatFullTokenCount(estimate.usedTokens)} /{" "}
@@ -3223,7 +3292,7 @@ function ContextMeter({ state }: { state: ContextEstimateState }) {
             </span>
           </div>
           <div className="context-meter__summary">
-            <span>{percent}% Full</span>
+            <span>{percent}% {copy.full}</span>
           </div>
           {breakdown.length > 0 && (
             <>
@@ -5411,6 +5480,8 @@ function PlanCard({
   onImplementFresh: (plan: PlanArtifact) => void;
   onImplementFreshWithSwarm: (plan: PlanArtifact) => void;
 }) {
+  const language = useLanguage();
+  const copy = chatPaneCopy[language];
   const [step, setStep] = useState<"choose" | "runner">("choose");
   const [implementMode, setImplementMode] =
     useState<PlanImplementMode>("continue");
@@ -5490,7 +5561,7 @@ function PlanCard({
               className="plan-card__back"
               onClick={() => setStep("choose")}
               aria-label="Back"
-              title="Back"
+              title={copy.back}
             >
               <Icon icon="solar:alt-arrow-left-linear" width={13} height={13} />
             </button>

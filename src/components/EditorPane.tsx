@@ -9,6 +9,7 @@ import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
+import { useLanguage } from "../lib/i18n";
 import { languageForPath } from "../lib/language";
 import { fileIcon } from "../lib/fileIcon";
 import { Markdown } from "./chat/Markdown";
@@ -72,6 +73,8 @@ export function EditorPane({
   onSettingsActivate,
   onSettingsClose,
 }: Props) {
+  const language = useLanguage();
+  const copy = editorCopy[language];
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const searchDecorationsRef =
     useRef<Monaco.editor.IEditorDecorationsCollection | null>(null);
@@ -332,7 +335,7 @@ export function EditorPane({
                 event.stopPropagation();
                 onClose(index);
               }}
-              title="Close tab"
+              title={copy.closeTab}
             >
               <Icon icon="solar:close-circle-linear" width={13} height={13} />
             </button>
@@ -343,19 +346,19 @@ export function EditorPane({
             className="tab"
             data-active={settingsActive ? "true" : "false"}
             onClick={onSettingsActivate}
-            title="Settings"
+            title={copy.settings}
           >
             <span className="tab__icon">
               <Icon icon="solar:settings-linear" width={14} height={14} />
             </span>
-            <span className="tab__name">Settings</span>
+            <span className="tab__name">{copy.settings}</span>
             <button
               className="tab__close"
               onClick={(event) => {
                 event.stopPropagation();
                 onSettingsClose?.();
               }}
-              title="Close tab"
+              title={copy.closeTab}
             >
               <Icon icon="solar:close-circle-linear" width={13} height={13} />
             </button>
@@ -370,8 +373,8 @@ export function EditorPane({
             onClick={toggleMarkdownPreview}
             title={
               activePreview
-                ? "Show raw markdown source"
-                : "Show rendered markdown preview"
+                ? copy.showSource
+                : copy.showPreview
             }
           >
             <Icon
@@ -383,7 +386,7 @@ export function EditorPane({
               width={13}
               height={13}
             />
-            <span>{activePreview ? "Source" : "Preview"}</span>
+            <span>{activePreview ? copy.source : copy.preview}</span>
           </button>
         )}
       </div>
@@ -403,9 +406,9 @@ export function EditorPane({
               <span className="editor-empty__mark">
                 <Icon icon="solar:document-text-linear" width={18} height={18} />
               </span>
-              <span className="editor-empty__title">Nothing open</span>
+              <span className="editor-empty__title">{copy.nothingOpen}</span>
               <span className="editor-empty__sub">
-                Click a file in the sidebar to get started
+                {copy.clickFile}
               </span>
             </div>
           ) : isPreviewableImagePath(activeTab.relativePath) ? (
@@ -480,8 +483,8 @@ export function EditorPane({
             </div>
           ) : !activeTab.doc.editable ? (
             <div className="editor-noneditable">
-              <div>This file can&rsquo;t be edited here.</div>
-              <code>{activeTab.doc.reason ?? "binary or too large"}</code>
+              <div>{copy.cannotEdit}</div>
+              <code>{activeTab.doc.reason ?? copy.binaryOrTooLarge}</code>
               <small style={{ color: "var(--text-3)" }}>
                 {activeTab.doc.relativePath} &middot;{" "}
                 {formatBytes(activeTab.doc.size)}
@@ -629,3 +632,29 @@ function isMarkdownPath(relativePath: string): boolean {
 function isPlanMarkdownPath(relativePath: string): boolean {
   return /^\.sinew\/plans\/.+\.md$/i.test(relativePath);
 }
+const editorCopy = {
+  en: {
+    settings: "Settings",
+    closeTab: "Close tab",
+    showSource: "Show raw markdown source",
+    showPreview: "Show rendered markdown preview",
+    source: "Source",
+    preview: "Preview",
+    nothingOpen: "Nothing open",
+    clickFile: "Click a file in the sidebar to get started",
+    cannotEdit: "This file can't be edited here.",
+    binaryOrTooLarge: "binary or too large",
+  },
+  fr: {
+    settings: "Paramètres",
+    closeTab: "Fermer l'onglet",
+    showSource: "Afficher la source markdown",
+    showPreview: "Afficher l'aperçu markdown",
+    source: "Source",
+    preview: "Aperçu",
+    nothingOpen: "Aucun fichier ouvert",
+    clickFile: "Cliquez sur un fichier dans la barre latérale pour commencer",
+    cannotEdit: "Ce fichier ne peut pas être modifié ici.",
+    binaryOrTooLarge: "binaire ou trop volumineux",
+  },
+} as const;

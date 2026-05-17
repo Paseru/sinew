@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Welcome } from "./components/Welcome";
 import { Workspace } from "./components/Workspace";
+import { shouldShowOnboarding } from "./lib/onboarding";
 import { loadLastWorkspace, recordRecent, deriveName } from "./lib/recents";
 import { api } from "./lib/ipc";
 import type { WorkspaceBootstrap } from "./types";
@@ -30,7 +31,7 @@ export default function App() {
   // Try to auto-open last workspace on boot. Silent fallback to the
   // welcome screen if the folder no longer exists or fails to open.
   useEffect(() => {
-    if (startsEmpty) return;
+    if (startsEmpty || shouldShowOnboarding()) return;
     const last = loadLastWorkspace();
     if (!last) return;
     (async () => {

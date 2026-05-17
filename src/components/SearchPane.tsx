@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
 import { api } from "../lib/ipc";
+import { useLanguage } from "../lib/i18n";
 import { fileIcon } from "../lib/fileIcon";
 import type {
   EditorRevealTarget,
@@ -21,6 +22,8 @@ type Props = {
 const SEARCH_DELAY_MS = 180;
 
 export function SearchPane({ workspacePath, refreshToken, onOpenFile }: Props) {
+  const language = useLanguage();
+  const copy = searchPaneCopy[language];
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<WorkspaceSearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,7 +105,7 @@ export function SearchPane({ workspacePath, refreshToken, onOpenFile }: Props) {
         <input
           ref={inputRef}
           value={query}
-          placeholder="Search"
+          placeholder={copy.search}
           spellCheck={false}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
@@ -116,7 +119,7 @@ export function SearchPane({ workspacePath, refreshToken, onOpenFile }: Props) {
           <button
             type="button"
             className="search-pane__clear"
-            title="Clear"
+            title={copy.clear}
             onClick={() => setQuery("")}
           >
             <Icon icon="solar:close-circle-linear" width={14} height={14} />
@@ -126,12 +129,12 @@ export function SearchPane({ workspacePath, refreshToken, onOpenFile }: Props) {
 
       <div className="search-pane__meta">
         {loading
-          ? "Searching..."
+          ? copy.searching
           : error
             ? error
             : hasQuery
               ? `${files.length} files, ${result?.totalMatches ?? 0} matches`
-              : "Search in files"}
+              : copy.searchInFiles}
       </div>
 
       <div className="search-pane__results">
@@ -168,12 +171,12 @@ export function SearchPane({ workspacePath, refreshToken, onOpenFile }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="search-result__path-match">Path match</div>
+              <div className="search-result__path-match">{copy.pathMatch}</div>
             )}
           </div>
         ))}
         {hasQuery && !loading && !error && files.length === 0 && (
-          <div className="search-pane__empty">No results</div>
+          <div className="search-pane__empty">{copy.noResults}</div>
         )}
       </div>
     </div>
@@ -192,3 +195,21 @@ function highlightMatch(match: WorkspaceSearchMatch): ReactNode {
     </>
   );
 }
+const searchPaneCopy = {
+  en: {
+    search: "Search",
+    clear: "Clear",
+    searching: "Searching...",
+    searchInFiles: "Search in files",
+    pathMatch: "Path match",
+    noResults: "No results",
+  },
+  fr: {
+    search: "Rechercher",
+    clear: "Effacer",
+    searching: "Recherche...",
+    searchInFiles: "Rechercher dans les fichiers",
+    pathMatch: "Chemin correspondant",
+    noResults: "Aucun résultat",
+  },
+} as const;

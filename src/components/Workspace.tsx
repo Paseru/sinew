@@ -10,12 +10,15 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "@iconify/react";
 import { api } from "../lib/ipc";
+import { useLanguage } from "../lib/i18n";
+import { ONBOARDING_REPLAY_EVENT, shouldShowOnboarding } from "../lib/onboarding";
 import { modelRefWithThinking, thinkingFromRef } from "../lib/models";
 import { Splitter } from "./Splitter";
 import { FileTree, type FileTreeHandle } from "./FileTree";
 import { ConversationList } from "./ConversationList";
 import { EditorPane } from "./EditorPane";
 import { SettingsPane } from "./SettingsPane";
+import { WorkspaceOnboarding } from "./WorkspaceOnboarding";
 import { TerminalPanel } from "./TerminalPanel";
 import { SearchPane } from "./SearchPane";
 import { ChatPane, type ExternalDropFeed } from "./chat/ChatPane";
@@ -69,6 +72,8 @@ export function Workspace({
   onSwitchWorkspace,
   onBootstrapReplace,
 }: Props) {
+  const language = useLanguage();
+  const copy = workspaceCopy[language];
   const workspacePath = bootstrap.workspace.path;
 
   const [conversations, setConversations] = useState<ConversationSummary[]>(
@@ -111,6 +116,16 @@ export function Workspace({
     setActiveConv(bootstrap.activeConversation);
     setGlobalModeModelSettings(bootstrap.modeModelSettings);
   }, [bootstrap]);
+
+  useEffect(() => {
+    const replay = () => {
+      setShowWorkspaceOnboarding(true);
+      setSettingsOpen(false);
+      setSettingsActive(false);
+    };
+    window.addEventListener(ONBOARDING_REPLAY_EVENT, replay);
+    return () => window.removeEventListener(ONBOARDING_REPLAY_EVENT, replay);
+  }, []);
 
   useEffect(() => {
     navigationSeqRef.current += 1;
@@ -290,6 +305,8 @@ export function Workspace({
   const [activeTabIndex, setActiveTabIndex] = useState<number>(-1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsActive, setSettingsActive] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<"about" | "providers">("about");
+  const [showWorkspaceOnboarding, setShowWorkspaceOnboarding] = useState(shouldShowOnboarding);
   const [fileTreeRefreshToken, setFileTreeRefreshToken] = useState(0);
   const [fileSearchOpen, setFileSearchOpen] = useState(false);
   const [pendingRootCreate, setPendingRootCreate] = useState<
@@ -497,6 +514,13 @@ export function Workspace({
   }, []);
 
   const openSettings = useCallback(() => {
+    setSettingsInitialSection("about");
+    setSettingsOpen(true);
+    setSettingsActive(true);
+  }, []);
+
+  const openProviderSettings = useCallback(() => {
+    setSettingsInitialSection("providers");
     setSettingsOpen(true);
     setSettingsActive(true);
   }, []);
@@ -1599,7 +1623,7 @@ export function Workspace({
             className="titlebar__btn"
             data-on={terminalVisible ? "true" : "false"}
             onClick={toggleTerminal}
-            title={terminalVisible ? "Hide terminal" : "Show terminal"}
+            title={terminalVisible ? copy.hideTerminal : copy.showTerminal}
           >
             <Icon
               icon={
@@ -1610,24 +1634,24 @@ export function Workspace({
               width={12}
               height={12}
             />
-            Terminal
+            {copy.terminal}
           </button>
           <button
             className="titlebar__btn"
             data-on={settingsActive ? "true" : "false"}
             onClick={openSettings}
-            title="Settings"
+            title={copy.settings}
           >
             <Icon icon="solar:settings-linear" width={12} height={12} />
-            Settings
+            {copy.settings}
           </button>
           <button
             className="titlebar__btn"
             onClick={onSwitchWorkspace}
-            title="Switch workspace"
+            title={copy.switchWorkspace}
           >
             <Icon icon="solar:folder-with-files-linear" width={12} height={12} />
-            Switch
+            {copy.switch}
           </button>
         </div>
         <div className="titlebar__brand" data-tauri-drag-region>
@@ -1661,7 +1685,7 @@ export function Workspace({
                 <button
                   type="button"
                   className="sidebar__head-btn"
-                  title="New file"
+                  title={copy.newFile}
                   onClick={() => startRootCreate("file")}
                 >
                   <Icon icon="solar:document-add-linear" width={15} height={15} />
@@ -1669,7 +1693,7 @@ export function Workspace({
                 <button
                   type="button"
                   className="sidebar__head-btn"
-                  title="New folder"
+                  title={copy.newFolder}
                   onClick={() => startRootCreate("directory")}
                 >
                   <Icon
@@ -1682,7 +1706,7 @@ export function Workspace({
                   type="button"
                   className="sidebar__head-btn"
                   data-active={fileSearchOpen ? "true" : "false"}
-                  title={fileSearchOpen ? "Show files" : "Search files"}
+                  title={fileSearchOpen ? copy.showFiles : copy.searchFiles}
                   onClick={() => setFileSearchOpen((value) => !value)}
                 >
                   <Icon
@@ -1722,7 +1746,7 @@ export function Workspace({
               <div
                 className="sidebar__import-error"
                 onClick={() => setImportError(null)}
-                title="click to dismiss"
+                title={copy.dismiss}
               >
                 {importError}
               </div>
@@ -1758,7 +1782,12 @@ export function Workspace({
               onOpenFile={openChatFile}
               settingsOpen={settingsOpen}
               settingsActive={settingsActive}
-              settingsView={<SettingsPane workspacePath={workspacePath} />}
+              settingsView={(
+                <SettingsPane
+                  workspacePath={workspacePath}
+                  initialSection={settingsInitialSection}
+                />
+              )}
               revealTarget={editorRevealTarget}
               onSettingsActivate={() => setSettingsActive(true)}
               onSettingsClose={closeSettings}
@@ -1807,7 +1836,7 @@ export function Workspace({
                 type="button"
                 className="terminal-restore__button"
                 onClick={showTerminal}
-                title="Show terminal"
+                title={copy.showTerminal}
               >
                 <Icon icon="solar:square-alt-arrow-up-linear" width={14} height={14} />
               </button>
@@ -1818,6 +1847,12 @@ export function Workspace({
           orientation="vertical"
           onDelta={(delta) => setRightWidth((v) => clampColumn(v - delta))}
         />
+        {showWorkspaceOnboarding && (
+          <WorkspaceOnboarding
+            onOpenProviders={openProviderSettings}
+            onFinish={() => setShowWorkspaceOnboarding(false)}
+          />
+        )}
         <div
           style={{
             width: rightWidth,
@@ -1901,6 +1936,34 @@ function sortConversationSummaries(
   return [...conversations].sort((a, b) => b.updatedAtMs - a.updatedAtMs);
 }
 
+const workspaceCopy = {
+  en: {
+    terminal: "Terminal",
+    settings: "Settings",
+    switch: "Switch",
+    switchWorkspace: "Switch workspace",
+    showTerminal: "Show terminal",
+    hideTerminal: "Hide terminal",
+    newFile: "New file",
+    newFolder: "New folder",
+    showFiles: "Show files",
+    searchFiles: "Search files",
+    dismiss: "Click to dismiss",
+  },
+  fr: {
+    terminal: "Terminal",
+    settings: "Paramètres",
+    switch: "Changer",
+    switchWorkspace: "Changer d'espace de travail",
+    showTerminal: "Afficher le terminal",
+    hideTerminal: "Masquer le terminal",
+    newFile: "Nouveau fichier",
+    newFolder: "Nouveau dossier",
+    showFiles: "Afficher les fichiers",
+    searchFiles: "Rechercher des fichiers",
+    dismiss: "Cliquer pour fermer",
+  },
+} as const;
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }

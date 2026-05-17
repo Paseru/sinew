@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
-import { Wrench } from "lucide-react";
+import { Languages, Wrench } from "lucide-react";
 import { api } from "../lib/ipc";
+import { setLanguage, useLanguage, type AppLanguage } from "../lib/i18n";
+import { replayOnboarding } from "../lib/onboarding";
 import { Markdown } from "./chat/Markdown";
 import { SinewMark } from "./SinewMark";
 import {
@@ -56,14 +58,17 @@ const FALLBACK_TOOL_SETTINGS: ToolSettings = {
 const PROVIDERS_CHANGED_EVENT = "sinew:providers-changed";
 const TOOL_SETTINGS_CHANGED_EVENT = "sinew:tool-settings-changed";
 
-type Props = {
-  workspacePath: string;
-};
-
 type Section = "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
 
-export function SettingsPane({ workspacePath }: Props) {
-  const [section, setSection] = useState<Section>("about");
+type Props = {
+  workspacePath: string;
+  initialSection?: Section;
+};
+
+export function SettingsPane({ workspacePath, initialSection = "about" }: Props) {
+  const language = useLanguage();
+  const copy = settingsPaneCopy[language];
+  const [section, setSection] = useState<Section>(initialSection);
   const [settings, setSettings] = useState<McpSettings>(EMPTY_SETTINGS);
   const [savedJson, setSavedJson] = useState("");
   const [jsonText, setJsonText] = useState("");
@@ -111,6 +116,10 @@ export function SettingsPane({ workspacePath }: Props) {
   const [providersBusy, setProvidersBusy] = useState(false);
   const [providersMessage, setProvidersMessage] = useState<string | null>(null);
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSection(initialSection);
+  }, [initialSection]);
 
   useEffect(() => {
     setToolSettings(null);
@@ -972,7 +981,7 @@ export function SettingsPane({ workspacePath }: Props) {
 
   return (
     <div className="settings-pane">
-      <nav className="settings-pane__nav" aria-label="Settings sections">
+      <nav className="settings-pane__nav" aria-label={copy.sectionsLabel}>
         <button
           type="button"
           className="settings-pane__nav-item"
@@ -985,7 +994,7 @@ export function SettingsPane({ workspacePath }: Props) {
             height={15}
             className="settings-pane__nav-icon"
           />
-          <span className="settings-pane__nav-label">About</span>
+          <span className="settings-pane__nav-label">{copy.about}</span>
           <span className="settings-pane__nav-count" />
         </button>
         <button
@@ -1000,7 +1009,7 @@ export function SettingsPane({ workspacePath }: Props) {
             height={15}
             className="settings-pane__nav-icon"
           />
-          <span className="settings-pane__nav-label">Providers</span>
+          <span className="settings-pane__nav-label">{copy.providers}</span>
           <span className="settings-pane__nav-count">
             {configuredProviders.length}
           </span>
@@ -1012,7 +1021,7 @@ export function SettingsPane({ workspacePath }: Props) {
           onClick={() => setSection("tools")}
         >
           <WrenchIcon size={15} className="settings-pane__nav-icon" />
-          <span className="settings-pane__nav-label">Tools</span>
+          <span className="settings-pane__nav-label">{copy.tools}</span>
           <span className="settings-pane__nav-count">
             {toolSettings?.tools.length ?? "·"}
           </span>
@@ -1044,7 +1053,7 @@ export function SettingsPane({ workspacePath }: Props) {
             height={15}
             className="settings-pane__nav-icon"
           />
-          <span className="settings-pane__nav-label">Skills</span>
+          <span className="settings-pane__nav-label">{copy.skills}</span>
           <span className="settings-pane__nav-count">{skills?.length ?? "·"}</span>
         </button>
         <button
@@ -1059,7 +1068,7 @@ export function SettingsPane({ workspacePath }: Props) {
             height={15}
             className="settings-pane__nav-icon"
           />
-          <span className="settings-pane__nav-label">Agents</span>
+          <span className="settings-pane__nav-label">{copy.agents}</span>
           <span className="settings-pane__nav-count">
             {subAgentSettings.agents.length}
           </span>
@@ -1183,9 +1192,31 @@ export function SettingsPane({ workspacePath }: Props) {
   );
 }
 
+const settingsPaneCopy = {
+  en: {
+    sectionsLabel: "Settings sections",
+    about: "About",
+    providers: "Providers",
+    tools: "Tools",
+    skills: "Skills",
+    agents: "Agents",
+  },
+  fr: {
+    sectionsLabel: "Sections des paramètres",
+    about: "À propos",
+    providers: "Modèles",
+    tools: "Outils",
+    skills: "Compétences",
+    agents: "Agents",
+  },
+} as const;
 // ---- About section -----------------------------------------------------
 
 function AboutSection() {
+  const language = useLanguage();
+  const copy = aboutCopy[language];
+  const nextLanguage = language === "fr" ? "en" : "fr";
+
   return (
     <div className="settings-pane__body settings-pane__body--about">
       <div className="settings-pane__about-hero">
@@ -1197,15 +1228,27 @@ function AboutSection() {
         </div>
       </div>
 
-      <p className="settings-pane__about-line">
-        Sinew is a flexible AI coding harness. You shape it: tweak the description of
-        every tool, turn the ones you don&apos;t need off, and the assistant only sees
-        what you keep.
-      </p>
-      <p className="settings-pane__about-line">
-        Run it minimal with a couple of tools, or unlock the full set : shell, search,
-        MCP, web, images, sub-agents. Multi-provider by default.
-      </p>
+      <p className="settings-pane__about-line">{copy.description}</p>
+      <p className="settings-pane__about-line">{copy.capabilities}</p>
+
+      <div className="settings-pane__about-actions">
+        <button
+          type="button"
+          className="settings-pane__about-action"
+          onClick={() => setLanguage(nextLanguage)}
+        >
+          <Languages size={13} aria-hidden />
+          <span>{copy.languageAction}</span>
+        </button>
+        <button
+          type="button"
+          className="settings-pane__about-action"
+          onClick={replayOnboarding}
+        >
+          <Icon icon="solar:play-circle-linear" width={13} height={13} />
+          <span>{copy.replayOnboarding}</span>
+        </button>
+      </div>
 
       <div className="settings-pane__about-links">
         <a
@@ -1231,6 +1274,332 @@ function AboutSection() {
   );
 }
 
+const aboutCopy = {
+  en: {
+    description:
+      "Sinew is a flexible AI coding harness. You shape it: tweak the description of every tool, turn the ones you don't need off, and the assistant only sees what you keep.",
+    capabilities:
+      "Run it minimal with a couple of tools, or unlock the full set: shell, search, MCP, web, images, sub-agents. Multi-provider by default.",
+    languageAction: "Passer en français",
+    replayOnboarding: "Replay onboarding",
+  },
+  fr: {
+    description:
+      "Sinew est un environnement de code assisté par IA. Vous le façonnez: ajustez les outils, désactivez ceux dont vous n'avez pas besoin, et l'assistant ne voit que ce que vous gardez.",
+    capabilities:
+      "Utilisez-le simplement avec quelques outils, ou activez l'ensemble complet: shell, recherche, MCP, web, images et sous-agents. Multi-fournisseur par défaut.",
+    languageAction: "Passer en anglais",
+    replayOnboarding: "Rejouer l'onboarding",
+  },
+} as const;
+const providersCopy = {
+  en: {
+    title: "Providers",
+    subtitle: "Connect model providers for Sinew.",
+    refresh: "Refresh",
+    refreshing: "Refreshing...",
+    signedIn: "Signed in",
+    project: "Project",
+    anthropicDescription: "Use OAuth to connect your Claude account for Anthropic models.",
+    openAiDescription: "Use OAuth to connect your ChatGPT account for OpenAI models.",
+    googleDescription: "Use OAuth to connect your Google account for Gemini models.",
+    kimiDescription: "Use OAuth to connect your Kimi account for Kimi 2.6.",
+  },
+  fr: {
+    title: "Modèles",
+    subtitle: "Connectez les fournisseurs de modèles pour Sinew.",
+    refresh: "Actualiser",
+    refreshing: "Actualisation...",
+    signedIn: "Connecté",
+    project: "Projet",
+    anthropicDescription: "Connectez votre compte Claude avec OAuth pour les modèles Anthropic.",
+    openAiDescription: "Connectez votre compte ChatGPT avec OAuth pour les modèles OpenAI.",
+    googleDescription: "Connectez votre compte Google avec OAuth pour les modèles Gemini.",
+    kimiDescription: "Connectez votre compte Kimi avec OAuth pour Kimi 2.6.",
+  },
+} as const;
+
+const providerCardCopy = {
+  en: {
+    connecting: "Connecting",
+    connected: "Connected",
+    needsAttention: "Needs attention",
+    notConnected: "Not connected",
+    cancel: "Cancel",
+    disconnecting: "Disconnecting...",
+    disconnect: "Disconnect",
+    opening: "Opening...",
+    connect: "Connect",
+  },
+  fr: {
+    connecting: "Connexion",
+    connected: "Connecté",
+    needsAttention: "À vérifier",
+    notConnected: "Non connecté",
+    cancel: "Annuler",
+    disconnecting: "Déconnexion...",
+    disconnect: "Déconnecter",
+    opening: "Ouverture...",
+    connect: "Connecter",
+  },
+} as const;
+
+const settingsDetailCopy = {
+  en: {
+    openRouter: {
+      description: "Use any OpenRouter model with your own API key.",
+      keySaved: "Key saved",
+      hideKey: "Hide key",
+      showKey: "Show key",
+      removeKey: "Remove API key",
+      search: "Search",
+      typeModel: "Type a model name...",
+      saveKeyFirst: "Save a valid key first",
+      searching: "Searching...",
+      noMatchingModel: "No matching model.",
+      added: "Added",
+      adding: "Adding...",
+      add: "Add",
+      removeModel: "Remove model",
+    },
+    tools: {
+      title: "Tools",
+      loading: "Loading...",
+      enabled: "enabled",
+      save: "Save",
+      saving: "Saving...",
+      planPromptTitle: "Plan mode prompt",
+      default: "Default",
+      custom: "Custom",
+      imageGeneration: "Image generation",
+      imageProvider: "Image provider",
+      webSearch: "Web search",
+      webSearchProvider: "Web search provider",
+      openAiSubscription: "Use OpenAI subscription",
+      openAiSubscriptionConnected: "Authenticate image requests with your connected OpenAI account instead of an API key.",
+      openAiSubscriptionDisconnected: "Connect OpenAI in Settings -> Providers to use your subscription.",
+      disableOpenAiSubscription: "Disable OpenAI subscription mode",
+      enableOpenAiSubscription: "Enable OpenAI subscription mode",
+      mainAgent: "Main Agent",
+      swarmAgents: "Swarm Agents",
+      noTools: "No tools",
+      promptInjected: "Prompt injected into Plan mode",
+      resetPlanPrompt: "Reset Plan mode prompt",
+      resetPrompt: "Reset prompt",
+      planPromptHelp: "This text is appended to the system prompt only when the conversation is in Plan mode.",
+      planInstructions: "Plan mode instructions...",
+      resetDescription: "Reset description",
+      disable: "Disable",
+      enable: "Enable",
+      description: "description",
+    },
+    mcp: {
+      title: "MCP servers",
+      subtitle: "Add a server in the JSON config to extend the agent.",
+      checking: "Checking...",
+      saveProbe: "Save & probe",
+      servers: "Servers",
+      probing: "probing...",
+      rawConfig: "Raw config",
+      unsaved: "Unsaved",
+      synced: "Synced",
+      untitled: "Untitled",
+      noServers: "No servers yet - add one in the raw config.",
+      disabled: "disabled",
+      pending: "pending",
+      failed: "failed",
+      error: "error",
+      tools: "Tools",
+      tool: "tool",
+      noDescription: "No description provided.",
+      noTools: "Server returned no tools.",
+      probingServer: "Probing server...",
+      noProbe: "No probe data yet.",
+      disable: "Disable",
+      enable: "Enable",
+    },
+    agents: {
+      title: "Sub-agents",
+      emptySubtitle: "Create focused agents the main agent can call as tools.",
+      available: "available to the main agent",
+      save: "Save",
+      saving: "Saving...",
+      agents: "Agents",
+      newAgent: "New agent",
+      untitled: "Untitled",
+      noAgents: "No sub-agents yet - click + to start.",
+      selectOrCreate: "Select or create an agent",
+      untitledAgent: "Untitled agent",
+      agentName: "Agent name",
+      clickConfirm: "Click again to confirm",
+      deleteAgent: "Delete agent",
+      confirmDelete: "Confirm delete",
+      deleteConfirmShort: "Delete?",
+      disable: "Disable",
+      enable: "Enable",
+      description: "Description seen by the main agent",
+      model: "Model",
+      thinking: "Thinking",
+      internalPrompt: "Internal prompt",
+    },
+    skills: {
+      title: "Skills",
+      scanning: "Scanning...",
+      drop: "Drop SKILL.md files in .agents/skills or ~/.agents/skills.",
+      available: "available to the agent",
+      rescan: "Rescan",
+      save: "Save",
+      saving: "Saving...",
+      search: "Search skills",
+      searchCount: "Search {count} skills",
+      workspace: "workspace",
+      global: "global",
+      enabled: "enabled",
+      off: "off",
+      disable: "Disable",
+      enable: "Enable",
+      noMatch: "No skills match.",
+      noSkills: "No skills yet",
+      createFolder: "Create a folder under",
+      withSkill: "with a SKILL.md file.",
+      nothingPreview: "Nothing to preview",
+      selectSkill: "Select a skill",
+      revealFinder: "Reveal in Finder",
+      deleteSkill: "Delete skill",
+      confirmSkillDelete: "Confirm skill delete",
+      deleting: "Deleting...",
+      confirmDelete: "Confirm delete",
+      delete: "Delete",
+    },
+  },
+  fr: {
+    openRouter: {
+      description: "Utilisez n'importe quel modèle OpenRouter avec votre propre clé API.",
+      keySaved: "Clé enregistrée",
+      hideKey: "Masquer la clé",
+      showKey: "Afficher la clé",
+      removeKey: "Supprimer la clé API",
+      search: "Rechercher",
+      typeModel: "Tapez un nom de modèle...",
+      saveKeyFirst: "Enregistrez d'abord une clé valide",
+      searching: "Recherche...",
+      noMatchingModel: "Aucun modèle correspondant.",
+      added: "Ajouté",
+      adding: "Ajout...",
+      add: "Ajouter",
+      removeModel: "Retirer le modèle",
+    },
+    tools: {
+      title: "Outils",
+      loading: "Chargement...",
+      enabled: "activés",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      planPromptTitle: "Prompt du mode Plan",
+      default: "Par défaut",
+      custom: "Personnalisé",
+      imageGeneration: "Génération d'image",
+      imageProvider: "Fournisseur d'images",
+      webSearch: "Recherche web",
+      webSearchProvider: "Fournisseur de recherche web",
+      openAiSubscription: "Utiliser l'abonnement OpenAI",
+      openAiSubscriptionConnected: "Authentifie les requêtes d'image avec votre compte OpenAI connecté au lieu d'une clé API.",
+      openAiSubscriptionDisconnected: "Connectez OpenAI dans Paramètres -> Modèles pour utiliser votre abonnement.",
+      disableOpenAiSubscription: "Désactiver le mode abonnement OpenAI",
+      enableOpenAiSubscription: "Activer le mode abonnement OpenAI",
+      mainAgent: "Agent principal",
+      swarmAgents: "Agents parallèles",
+      noTools: "Aucun outil",
+      promptInjected: "Prompt injecté dans le mode Plan",
+      resetPlanPrompt: "Réinitialiser le prompt du mode Plan",
+      resetPrompt: "Réinitialiser le prompt",
+      planPromptHelp: "Ce texte est ajouté au prompt système uniquement quand la conversation est en mode Plan.",
+      planInstructions: "Instructions du mode Plan...",
+      resetDescription: "Réinitialiser la description",
+      disable: "Désactiver",
+      enable: "Activer",
+      description: "description",
+    },
+    mcp: {
+      title: "Serveurs MCP",
+      subtitle: "Ajoutez un serveur dans la configuration JSON pour étendre l'agent.",
+      checking: "Vérification...",
+      saveProbe: "Enregistrer et tester",
+      servers: "Serveurs",
+      probing: "test...",
+      rawConfig: "Configuration brute",
+      unsaved: "Non enregistré",
+      synced: "Synchronisé",
+      untitled: "Sans titre",
+      noServers: "Aucun serveur pour le moment - ajoutez-en un dans la configuration brute.",
+      disabled: "désactivé",
+      pending: "en attente",
+      failed: "échec",
+      error: "erreur",
+      tools: "Outils",
+      tool: "outil",
+      noDescription: "Aucune description fournie.",
+      noTools: "Le serveur n'a retourné aucun outil.",
+      probingServer: "Test du serveur...",
+      noProbe: "Aucune donnée de test pour le moment.",
+      disable: "Désactiver",
+      enable: "Activer",
+    },
+    agents: {
+      title: "Agents",
+      emptySubtitle: "Créez des agents spécialisés que l'agent principal peut appeler comme outils.",
+      available: "disponibles pour l'agent principal",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      agents: "Agents",
+      newAgent: "Nouvel agent",
+      untitled: "Sans titre",
+      noAgents: "Aucun agent pour le moment - cliquez sur + pour commencer.",
+      selectOrCreate: "Sélectionnez ou créez un agent",
+      untitledAgent: "Agent sans titre",
+      agentName: "Nom de l'agent",
+      clickConfirm: "Cliquez encore pour confirmer",
+      deleteAgent: "Supprimer l'agent",
+      confirmDelete: "Confirmer la suppression",
+      deleteConfirmShort: "Supprimer ?",
+      disable: "Désactiver",
+      enable: "Activer",
+      description: "Description vue par l'agent principal",
+      model: "Modèle",
+      thinking: "Raisonnement",
+      internalPrompt: "Prompt interne",
+    },
+    skills: {
+      title: "Compétences",
+      scanning: "Analyse...",
+      drop: "Déposez des fichiers SKILL.md dans .agents/skills ou ~/.agents/skills.",
+      available: "disponibles pour l'agent",
+      rescan: "Réanalyser",
+      save: "Enregistrer",
+      saving: "Enregistrement...",
+      search: "Rechercher des compétences",
+      searchCount: "Rechercher parmi {count} compétences",
+      workspace: "workspace",
+      global: "global",
+      enabled: "activée",
+      off: "désactivée",
+      disable: "Désactiver",
+      enable: "Activer",
+      noMatch: "Aucune compétence ne correspond.",
+      noSkills: "Aucune compétence",
+      createFolder: "Créez un dossier dans",
+      withSkill: "avec un fichier SKILL.md.",
+      nothingPreview: "Rien à prévisualiser",
+      selectSkill: "Sélectionnez une compétence",
+      revealFinder: "Afficher dans l'explorateur",
+      deleteSkill: "Supprimer la compétence",
+      confirmSkillDelete: "Confirmer la suppression de la compétence",
+      deleting: "Suppression...",
+      confirmDelete: "Confirmer la suppression",
+      delete: "Supprimer",
+    },
+  },
+} as const;
 // ---- Providers section -------------------------------------------------
 
 type ProvidersSectionProps = {
@@ -1290,13 +1659,15 @@ function ProvidersSection({
   onOpenRouterModelsChange,
   onOpenRouterChanged,
 }: ProvidersSectionProps) {
+  const language = useLanguage();
+  const copy = providersCopy[language];
   return (
     <>
       <header className="settings-pane__header">
         <div className="settings-pane__header-text">
-          <h1 className="settings-pane__title">Providers</h1>
+          <h1 className="settings-pane__title">{copy.title}</h1>
           <p className="settings-pane__subtitle">
-            Connect model providers for Sinew.
+            {copy.subtitle}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -1315,7 +1686,7 @@ function ProvidersSection({
             disabled={loading || busy}
           >
             <Icon icon="solar:refresh-linear" width={13} height={13} />
-            <span>{loading ? "Refreshing…" : "Refresh"}</span>
+            <span>{loading ? copy.refreshing : copy.refresh}</span>
           </button>
         </div>
       </header>
@@ -1324,7 +1695,7 @@ function ProvidersSection({
         <ProviderCard
           name="Anthropic"
           icon="simple-icons:anthropic"
-          description="Use OAuth to connect your Claude account for Anthropic models."
+          description={copy.anthropicDescription}
           status={anthropicStatus}
           connectedMeta={["Claude OAuth"]}
           loading={loading}
@@ -1336,10 +1707,10 @@ function ProvidersSection({
         <ProviderCard
           name="OpenAI"
           icon="simple-icons:openai"
-          description="Use OAuth to connect your ChatGPT account for OpenAI models."
+          description={copy.openAiDescription}
           status={openAiStatus}
           connectedMeta={[
-            openAiStatus?.email || "Signed in",
+            openAiStatus?.email || copy.signedIn,
             openAiStatus?.planType ?? null,
           ]}
           loading={loading}
@@ -1351,13 +1722,13 @@ function ProvidersSection({
         <ProviderCard
           name="Google"
           icon="simple-icons:google"
-          description="Use OAuth to connect your Google account for Gemini models."
+          description={copy.googleDescription}
           status={googleStatus}
           connectedMeta={[
-            googleStatus?.email || "Signed in",
+            googleStatus?.email || copy.signedIn,
             googleStatus?.userTier ?? null,
             googleStatus?.projectId
-              ? `Project ${googleStatus.projectId}`
+              ? `${copy.project} ${googleStatus.projectId}`
               : null,
           ]}
           loading={loading}
@@ -1369,7 +1740,7 @@ function ProvidersSection({
         <ProviderCard
           name="Kimi"
           icon="local:kimi"
-          description="Use OAuth to connect your Kimi account for Kimi 2.6."
+          description={copy.kimiDescription}
           status={kimiStatus}
           connectedMeta={["Kimi OAuth"]}
           loading={loading}
@@ -1425,17 +1796,19 @@ function ProviderCard({
   onCancel,
   onDisconnect,
 }: ProviderCardProps) {
+  const language = useLanguage();
+  const copy = providerCardCopy[language];
   const state = status?.connectionState ?? "disconnected";
   const connected = Boolean(status?.connected);
   const connecting = state === "connecting";
   const error = state === "error" ? status?.error : null;
   const statusLabel = connecting
-    ? "Connecting"
+    ? copy.connecting
     : connected
-      ? "Connected"
+      ? copy.connected
       : state === "error"
-        ? "Needs attention"
-        : "Not connected";
+        ? copy.needsAttention
+        : copy.notConnected;
   const statusTone = connecting
     ? "pending"
     : connected
@@ -1479,7 +1852,7 @@ function ProviderCard({
             disabled={busy}
           >
             <Icon icon="solar:close-circle-linear" width={13} height={13} />
-            <span>Cancel</span>
+            <span>{copy.cancel}</span>
           </button>
         ) : connected ? (
           <button
@@ -1489,7 +1862,7 @@ function ProviderCard({
             disabled={busy}
           >
             <Icon icon="solar:logout-2-linear" width={13} height={13} />
-            <span>{busy ? "Disconnecting..." : "Disconnect"}</span>
+            <span>{busy ? copy.disconnecting : copy.disconnect}</span>
           </button>
         ) : (
           <button
@@ -1504,7 +1877,7 @@ function ProviderCard({
               width={13}
               height={13}
             />
-            <span>{busy ? "Opening..." : "Connect"}</span>
+            <span>{busy ? copy.opening : copy.connect}</span>
           </button>
         )}
       </div>
@@ -1533,6 +1906,9 @@ function OpenRouterProviderCard({
   onModelsChange,
   onChanged,
 }: OpenRouterProviderCardProps) {
+  const language = useLanguage();
+  const copy = providerCardCopy[language];
+  const openRouterCopy = settingsDetailCopy[language].openRouter;
   const [apiKey, setApiKey] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [validating, setValidating] = useState(false);
@@ -1561,12 +1937,12 @@ function OpenRouterProviderCard({
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
   const statusLabel = connecting
-    ? "Connecting"
+    ? copy.connecting
     : connected
-      ? "Connected"
+      ? copy.connected
       : state === "error"
-        ? "Needs attention"
-        : "Not connected";
+        ? copy.needsAttention
+        : copy.notConnected;
   const statusTone = connecting
     ? "pending"
     : connected
@@ -1705,7 +2081,7 @@ function OpenRouterProviderCard({
               {statusLabel}
             </span>
           </div>
-          <p>Use any OpenRouter model with your own API key.</p>
+          <p>{openRouterCopy.description}</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
         </div>
       </div>
@@ -1717,7 +2093,7 @@ function OpenRouterProviderCard({
             <input
               type={revealed ? "text" : "password"}
               value={apiKey}
-              placeholder={connected ? displayStatus.keyPreview ?? "Key saved" : "sk-or-..."}
+              placeholder={connected ? displayStatus.keyPreview ?? openRouterCopy.keySaved : "sk-or-..."}
               onChange={(event) => setApiKey(event.target.value)}
               autoComplete="off"
               spellCheck={false}
@@ -1727,8 +2103,8 @@ function OpenRouterProviderCard({
                 type="button"
                 className="settings-pane__icon-btn"
                 onClick={() => setRevealed((value) => !value)}
-                title={revealed ? "Hide key" : "Show key"}
-                aria-label={revealed ? "Hide key" : "Show key"}
+                title={revealed ? openRouterCopy.hideKey : openRouterCopy.showKey}
+                aria-label={revealed ? openRouterCopy.hideKey : openRouterCopy.showKey}
               >
                 <Icon
                   icon={revealed ? "solar:eye-closed-linear" : "solar:eye-linear"}
@@ -1742,8 +2118,8 @@ function OpenRouterProviderCard({
                   className="settings-pane__icon-btn"
                   onClick={onDisconnect}
                   disabled={busy}
-                  title="Remove API key"
-                  aria-label="Remove API key"
+                  title={openRouterCopy.removeKey}
+                  aria-label={openRouterCopy.removeKey}
                 >
                   <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
                 </button>
@@ -1753,13 +2129,13 @@ function OpenRouterProviderCard({
         </label>
 
         <label className="settings-pane__tool-credential">
-          <span className="settings-pane__tool-credential-label">Search</span>
+          <span className="settings-pane__tool-credential-label">{openRouterCopy.search}</span>
           <div className="settings-pane__tool-credential-field">
             <input
               type="text"
               value={query}
               disabled={!searchEnabled}
-              placeholder={searchEnabled ? "Type a model name…" : "Save a valid key first"}
+              placeholder={searchEnabled ? openRouterCopy.typeModel : openRouterCopy.saveKeyFirst}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
@@ -1768,11 +2144,11 @@ function OpenRouterProviderCard({
         {searchEnabled && query.trim() !== "" && (
           <div className="settings-pane__openrouter-results" aria-live="polite">
             {searching ? (
-              <div className="settings-pane__openrouter-hint">Searching…</div>
+              <div className="settings-pane__openrouter-hint">{openRouterCopy.searching}</div>
             ) : searchError ? (
               <div className="settings-pane__provider-error">{searchError}</div>
             ) : results.length === 0 ? (
-              <div className="settings-pane__openrouter-hint">No matching model.</div>
+              <div className="settings-pane__openrouter-hint">{openRouterCopy.noMatchingModel}</div>
             ) : (
               results.map((model) => {
                 const added = modelIds.has(model.id);
@@ -1781,7 +2157,7 @@ function OpenRouterProviderCard({
                   <div key={model.id} className="settings-pane__openrouter-row">
                     <span title={model.id}>{label}</span>
                     {added ? (
-                      <span className="settings-pane__openrouter-added">Added</span>
+                      <span className="settings-pane__openrouter-added">{openRouterCopy.added}</span>
                     ) : (
                       <button
                         type="button"
@@ -1790,7 +2166,7 @@ function OpenRouterProviderCard({
                         disabled={mutatingModelId === model.id}
                       >
                         <Icon icon="solar:add-circle-linear" width={13} height={13} />
-                        <span>{mutatingModelId === model.id ? "Adding…" : "Add"}</span>
+                        <span>{mutatingModelId === model.id ? openRouterCopy.adding : openRouterCopy.add}</span>
                       </button>
                     )}
                   </div>
@@ -1812,8 +2188,8 @@ function OpenRouterProviderCard({
                     className="settings-pane__icon-btn"
                     onClick={() => void removeModel(model.id)}
                     disabled={mutatingModelId === model.id}
-                    title="Remove model"
-                    aria-label={`Remove ${label}`}
+                    title={openRouterCopy.removeModel}
+                    aria-label={`${openRouterCopy.removeModel}: ${label}`}
                   >
                     <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
                   </button>
@@ -1876,6 +2252,8 @@ function ToolsSection({
   onLinkupApiKeyChange,
   openAiStatus,
 }: ToolsSectionProps) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].tools;
   const tools = settings?.tools ?? [];
   const planModePrompt = settings?.planModePrompt ?? "";
   const defaultPlanModePrompt = settings?.defaultPlanModePrompt ?? "";
@@ -1908,9 +2286,9 @@ function ToolsSection({
     <>
       <header className="settings-pane__header">
         <div className="settings-pane__header-text">
-          <h1 className="settings-pane__title">Tools</h1>
+          <h1 className="settings-pane__title">{copy.title}</h1>
           <p className="settings-pane__subtitle">
-            {loading ? "Loading…" : `${enabledCount}/${tools.length} enabled`}
+            {loading ? copy.loading : `${enabledCount}/${tools.length} ${copy.enabled}`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -1934,7 +2312,7 @@ function ToolsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving…" : "Save"}</span>
+            <span>{saving ? copy.saving : copy.save}</span>
           </button>
         </div>
       </header>
@@ -1943,9 +2321,9 @@ function ToolsSection({
         <div className="settings-pane__tool-settings-list">
           <section className="settings-pane__tool-group">
             <div className="settings-pane__tool-group-head">
-              <h2>Plan mode prompt</h2>
+              <h2>{copy.planPromptTitle}</h2>
               <span>
-                {planModePrompt === defaultPlanModePrompt ? "Default" : "Custom"}
+                {planModePrompt === defaultPlanModePrompt ? copy.default : copy.custom}
               </span>
             </div>
             <PlanModePromptSettingsItem
@@ -1957,12 +2335,12 @@ function ToolsSection({
           {hasImageTool && (
             <section className="settings-pane__tool-group">
               <div className="settings-pane__tool-group-head">
-                <h2>Image generation</h2>
+                <h2>{copy.imageGeneration}</h2>
               </div>
               <div
                 className="settings-pane__tool-provider-switch"
                 role="group"
-                aria-label="Image provider"
+                aria-label={copy.imageProvider}
               >
                 <button
                   type="button"
@@ -1986,12 +2364,12 @@ function ToolsSection({
                 >
                   <div className="settings-pane__tool-toggle-text">
                     <span className="settings-pane__tool-toggle-label">
-                      Use OpenAI subscription
+                      {copy.openAiSubscription}
                     </span>
                     <span className="settings-pane__tool-toggle-hint">
                       {openAiConnected
-                        ? "Authenticate image requests with your connected OpenAI account instead of an API key."
-                        : "Connect OpenAI in Settings → Providers to use your subscription."}
+                        ? copy.openAiSubscriptionConnected
+                        : copy.openAiSubscriptionDisconnected}
                     </span>
                   </div>
                   <button
@@ -2001,8 +2379,8 @@ function ToolsSection({
                     aria-checked={subscriptionActive}
                     aria-label={
                       subscriptionActive
-                        ? "Disable OpenAI subscription mode"
-                        : "Enable OpenAI subscription mode"
+                        ? copy.disableOpenAiSubscription
+                        : copy.enableOpenAiSubscription
                     }
                     data-on={subscriptionActive ? "true" : "false"}
                     disabled={!openAiConnected}
@@ -2035,12 +2413,12 @@ function ToolsSection({
           {hasWebSearchTool && (
             <section className="settings-pane__tool-group">
               <div className="settings-pane__tool-group-head">
-                <h2>Web search</h2>
+                <h2>{copy.webSearch}</h2>
               </div>
               <div
                 className="settings-pane__tool-provider-switch"
                 role="group"
-                aria-label="Web search provider"
+                aria-label={copy.webSearchProvider}
               >
                 <button
                   type="button"
@@ -2070,7 +2448,7 @@ function ToolsSection({
           {groups.map((group) => (
             <section className="settings-pane__tool-group" key={group.id}>
               <div className="settings-pane__tool-group-head">
-                <h2>{group.label}</h2>
+                <h2>{group.id === "swarm" ? copy.swarmAgents : copy.mainAgent}</h2>
                 <span>
                   {group.enabled}/{group.tools.length}
                 </span>
@@ -2089,7 +2467,7 @@ function ToolsSection({
           {!loading && tools.length === 0 && (
             <div className="settings-pane__empty settings-pane__empty--main">
               <WrenchIcon size={22} />
-              <span className="settings-pane__empty-title">No tools</span>
+              <span className="settings-pane__empty-title">{copy.noTools}</span>
             </div>
           )}
         </div>
@@ -2102,6 +2480,43 @@ function toolGroupId(tool: ToolConfig): ToolGroupId {
   return SWARM_TOOL_NAMES.has(tool.name) ? "swarm" : "main";
 }
 
+const DEFAULT_PLAN_MODE_PROMPT_FR = [
+  "Vous \u00eates en mode Plan.",
+  "",
+  "R\u00e8gles:",
+  "- Construisez votre compr\u00e9hension en lisant, recherchant ou lan\u00e7ant des commandes de diagnostic si n\u00e9cessaire.",
+  "- Ne modifiez pas les fichiers de l'espace de travail et n'utilisez pas apply_patch.",
+  "- Gardez l'utilisateur dans une boucle de questions jusqu'\u00e0 ce qu'il clique explicitement sur \"Send and stop questions\".",
+  "- Si le message utilisateur ne contient pas <plan_mode_control action=\"stop_questions\">, terminez votre tour avec l'outil Question. N'\u00e9crivez pas encore le plan final.",
+  "- Apr\u00e8s chaque r\u00e9ponse normale \u00e0 une Question, inspectez ou explorez davantage si besoin, puis posez la question suivante.",
+  "- S'il ne reste aucune question substantielle, demandez \u00e0 l'utilisateur de confirmer que vous devez cr\u00e9er le plan maintenant. Utilisez quand m\u00eame l'outil Question.",
+  "- Uniquement quand le message utilisateur contient <plan_mode_control action=\"stop_questions\">, arr\u00eatez les questions et \u00e9crivez le plan complet.",
+  "- Quand le plan est pr\u00eat, r\u00e9pondez uniquement avec le plan en Markdown. Ne l'impl\u00e9mentez pas.",
+  "",
+  "STRICTEMENT INTERDIT dans le plan, sauf demande explicite de l'utilisateur:",
+  "- Extraits de code, pseudo-code ou code inline",
+  "- Chemins de fichiers, structures de dossiers ou vues en arbre",
+  "- Noms de fonctions, classes, variables ou modules",
+  "- Commandes shell ou instructions CLI",
+  "- D\u00e9tails de configuration technique",
+  "- Toute notation sp\u00e9cifique \u00e0 l'impl\u00e9mentation",
+  "",
+  "Le plan doit se lire comme une description claire de l'intention et du comportement attendu, compr\u00e9hensible sans bagage technique. Les listes \u00e0 puces et les paragraphes sont accept\u00e9s. L'objectif est d'expliquer CE que le syst\u00e8me doit faire, pas COMMENT le code doit \u00eatre \u00e9crit.",
+  "",
+  "Si des pr\u00e9cisions techniques deviennent n\u00e9cessaires pour lever une ambigu\u00eft\u00e9, l'IA peut les inclure \u00e0 sa discr\u00e9tion, naturellement dans le plan, mais cela doit rester l'exception.",
+].join("\n");
+
+function planModePromptForDisplay(
+  value: string,
+  defaultValue: string,
+  language: AppLanguage,
+): string {
+  if (language === "fr" && value === defaultValue) {
+    return DEFAULT_PLAN_MODE_PROMPT_FR;
+  }
+  return value;
+}
+
 function PlanModePromptSettingsItem({
   value,
   defaultValue,
@@ -2111,8 +2526,11 @@ function PlanModePromptSettingsItem({
   defaultValue: string;
   onChange: (value: string) => void;
 }) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].tools;
   const canReset = value !== defaultValue;
-  const rows = Math.min(18, Math.max(10, value.split("\n").length + 1));
+  const displayValue = planModePromptForDisplay(value, defaultValue, language);
+  const rows = Math.min(18, Math.max(10, displayValue.split("\n").length + 1));
 
   return (
     <div className="settings-pane__tool-config" data-on="true">
@@ -2122,15 +2540,15 @@ function PlanModePromptSettingsItem({
             <Icon icon="solar:document-text-linear" width={15} height={15} />
           </span>
           <span className="settings-pane__tool-config-label">
-            Prompt injected into Plan mode
+            {copy.promptInjected}
           </span>
         </span>
         <div className="settings-pane__tool-config-actions">
           <button
             type="button"
             className="settings-pane__icon-btn"
-            aria-label="Reset Plan mode prompt"
-            title="Reset prompt"
+            aria-label={copy.resetPlanPrompt}
+            title={copy.resetPrompt}
             disabled={!canReset}
             onClick={() => onChange(defaultValue)}
           >
@@ -2139,15 +2557,14 @@ function PlanModePromptSettingsItem({
         </div>
       </div>
       <p className="settings-pane__tool-config-help">
-        This text is appended to the system prompt only when the conversation is in
-        Plan mode.
+        {copy.planPromptHelp}
       </p>
       <textarea
         className="settings-pane__tool-config-desc settings-pane__tool-config-desc--prompt"
-        aria-label="Plan mode prompt"
-        value={value}
+        aria-label={copy.planPromptTitle}
+        value={displayValue}
         rows={rows}
-        placeholder="Plan mode instructions…"
+        placeholder={copy.planInstructions}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
@@ -2161,8 +2578,11 @@ function ToolSettingsItem({
   tool: ToolConfig;
   onUpdate: (patch: Partial<ToolConfig>) => void;
 }) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].tools;
   const canReset = tool.description !== tool.defaultDescription;
-  const rows = Math.min(8, Math.max(3, tool.description.split("\n").length + 1));
+  const displayDescription = descriptionForTool(tool, language);
+  const rows = Math.min(8, Math.max(3, displayDescription.split("\n").length + 1));
 
   return (
     <div
@@ -2178,15 +2598,15 @@ function ToolSettingsItem({
             <ToolGlyph name={tool.name} />
           </span>
           <span className="settings-pane__tool-config-label">
-            {labelForTool(tool)}
+            {labelForTool(tool, language)}
           </span>
         </span>
         <div className="settings-pane__tool-config-actions">
           <button
             type="button"
             className="settings-pane__icon-btn"
-            aria-label={`Reset ${tool.name} description`}
-            title="Reset description"
+            aria-label={`${copy.resetDescription}: ${tool.name}`}
+            title={copy.resetDescription}
             disabled={!canReset}
             onClick={() => onUpdate({ description: tool.defaultDescription })}
           >
@@ -2197,7 +2617,7 @@ function ToolSettingsItem({
             className="settings-pane__switch"
             role="switch"
             aria-checked={tool.enabled}
-            aria-label={`${tool.enabled ? "Disable" : "Enable"} ${tool.name}`}
+            aria-label={`${tool.enabled ? copy.disable : copy.enable} ${tool.name}`}
             data-on={tool.enabled ? "true" : "false"}
             onClick={() => onUpdate({ enabled: !tool.enabled })}
           >
@@ -2207,8 +2627,8 @@ function ToolSettingsItem({
       </div>
       <textarea
         className="settings-pane__tool-config-desc"
-        aria-label={`${tool.name} description`}
-        value={tool.description}
+        aria-label={`${tool.name} ${copy.description}`}
+        value={displayDescription}
         rows={rows}
         onChange={(event) => onUpdate({ description: event.target.value })}
       />
@@ -2257,16 +2677,18 @@ function McpSection({
   onToggleEnabled,
   onMount,
 }: McpSectionProps) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].mcp;
   const detailOpen = Boolean(selectedServer);
 
   return (
     <>
       <header className="settings-pane__header">
         <div className="settings-pane__header-text">
-          <h1 className="settings-pane__title">MCP servers</h1>
+          <h1 className="settings-pane__title">{copy.title}</h1>
           {servers.length === 0 && (
             <p className="settings-pane__subtitle">
-              Add a server in the JSON config to extend the agent.
+              {copy.subtitle}
             </p>
           )}
         </div>
@@ -2288,7 +2710,7 @@ function McpSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Checking…" : "Save & probe"}</span>
+            <span>{saving ? copy.checking : copy.saveProbe}</span>
           </button>
         </div>
       </header>
@@ -2296,9 +2718,9 @@ function McpSection({
       <div className="settings-pane__body settings-pane__body--mcp">
         <aside className="settings-pane__nav-list">
           <div className="settings-pane__nav-list-head">
-            <span>Servers</span>
+            <span>{copy.servers}</span>
             {probing && (
-              <span className="settings-pane__servers-meta">probing…</span>
+              <span className="settings-pane__servers-meta">{copy.probing}</span>
             )}
           </div>
           <div className="settings-pane__nav-list-items">
@@ -2315,13 +2737,13 @@ function McpSection({
                 className="settings-pane__nav-list-item-glyph"
               />
               <span className="settings-pane__nav-list-item-name">
-                Raw config
+                {copy.rawConfig}
               </span>
               {dirty && (
                 <span
                   className="settings-pane__nav-list-item-dot"
                   data-tone="dirty"
-                  aria-label="Unsaved"
+                  aria-label={copy.unsaved}
                 />
               )}
             </button>
@@ -2354,14 +2776,14 @@ function McpSection({
                     aria-hidden
                   />
                   <span className="settings-pane__nav-list-item-name">
-                    {server.name || "Untitled"}
+                    {server.name || copy.untitled}
                   </span>
                 </button>
               );
             })}
             {servers.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No servers yet — add one in the raw config.
+                {copy.noServers}
               </div>
             )}
           </div>
@@ -2385,11 +2807,11 @@ function McpSection({
                   {dirty ? (
                     <span className="settings-pane__pill" data-tone="dirty">
                       <span className="settings-pane__pill-dot" />
-                      Unsaved
+                      {copy.unsaved}
                     </span>
                   ) : (
                     <span className="settings-pane__pill" data-tone="ok">
-                      Synced
+                      {copy.synced}
                     </span>
                   )}
                 </div>
@@ -2456,6 +2878,8 @@ function ServerCard({
   onOpen,
   onToggle,
 }: ServerCardProps) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].mcp;
   const tone = !server.enabled
     ? "off"
     : !probe
@@ -2465,13 +2889,13 @@ function ServerCard({
         : "error";
 
   const label = !server.enabled
-    ? "disabled"
+    ? copy.disabled
     : !probe
       ? probing
-        ? "probing…"
-        : "pending"
+        ? copy.probing
+        : copy.pending
       : probe.ok
-        ? `${probe.tools.length} tool${probe.tools.length === 1 ? "" : "s"}`
+        ? `${probe.tools.length} ${copy.tool}${probe.tools.length === 1 ? "" : "s"}`
         : "error";
 
   const command = [server.command, ...server.args].join(" ").trim();
@@ -2483,13 +2907,13 @@ function ServerCard({
       onClick={onOpen}
     >
       <div className="settings-pane__server-row">
-        <span className="settings-pane__server-name">{server.name || "Untitled"}</span>
+        <span className="settings-pane__server-name">{server.name || copy.untitled}</span>
         <button
           type="button"
           className="settings-pane__switch"
           role="switch"
           aria-checked={server.enabled}
-          aria-label={`${server.enabled ? "Disable" : "Enable"} ${server.name}`}
+          aria-label={`${server.enabled ? copy.disable : copy.enable} ${server.name}`}
           data-on={server.enabled ? "true" : "false"}
           disabled={disabled}
           onClick={(event) => {
@@ -2522,6 +2946,8 @@ type ServerDetailProps = {
 };
 
 function ServerDetail({ server, probe, probing }: ServerDetailProps) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].mcp;
   const [expandedTools, setExpandedTools] = useState<Set<string>>(
     () => new Set<string>(),
   );
@@ -2544,14 +2970,14 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
         ? "ok"
         : "error";
   const statusLabel = !server.enabled
-    ? "disabled"
+    ? copy.disabled
     : !probe
       ? probing
-        ? "probing…"
-        : "pending"
+        ? copy.probing
+        : copy.pending
       : !probe.ok
-        ? "failed"
-        : `${probe.tools.length} tool${probe.tools.length === 1 ? "" : "s"}`;
+        ? copy.failed
+        : `${probe.tools.length} ${copy.tool}${probe.tools.length === 1 ? "" : "s"}`;
   const command = [server.command, ...server.args].join(" ").trim();
 
   return (
@@ -2587,7 +3013,7 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
           <div className="settings-pane__tools-error">{probe.error}</div>
         )}
 
-        <div className="settings-pane__detail-section">Tools</div>
+        <div className="settings-pane__detail-section">{copy.tools}</div>
         <div className="settings-pane__tool-list">
           {probe?.tools.map((tool) => {
             const isOpen = expandedTools.has(tool.toolName);
@@ -2625,7 +3051,7 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
                       />
                     ) : (
                       <div className="settings-pane__muted">
-                        No description provided.
+                        {copy.noDescription}
                       </div>
                     )}
                   </div>
@@ -2634,11 +3060,11 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
             );
           })}
           {probe?.ok && probe.tools.length === 0 && (
-            <div className="settings-pane__muted">Server returned no tools.</div>
+            <div className="settings-pane__muted">{copy.noTools}</div>
           )}
           {!probe && (
             <div className="settings-pane__muted">
-              {probing ? "Probing server…" : "No probe data yet."}
+              {probing ? copy.probingServer : copy.noProbe}
             </div>
           )}
         </div>
@@ -2678,17 +3104,19 @@ function SubAgentsSection({
   onSave,
   onUpdate,
 }: SubAgentsSectionProps) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].agents;
   const enabledCount = settings.agents.filter((agent) => agent.enabled).length;
 
   return (
     <>
       <header className="settings-pane__header">
         <div className="settings-pane__header-text">
-          <h1 className="settings-pane__title">Sub-agents</h1>
+          <h1 className="settings-pane__title">{copy.title}</h1>
           <p className="settings-pane__subtitle">
             {settings.agents.length === 0
-              ? "Create focused agents the main agent can call as tools."
-              : `${enabledCount}/${settings.agents.length} available to the main agent`}
+              ? copy.emptySubtitle
+              : `${enabledCount}/${settings.agents.length} ${copy.available}`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -2712,7 +3140,7 @@ function SubAgentsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving…" : "Save"}</span>
+            <span>{saving ? copy.saving : copy.save}</span>
           </button>
         </div>
       </header>
@@ -2720,13 +3148,13 @@ function SubAgentsSection({
       <div className="settings-pane__body settings-pane__body--subagents">
         <aside className="settings-pane__nav-list">
           <div className="settings-pane__nav-list-head">
-            <span>Agents</span>
+            <span>{copy.agents}</span>
             <button
               type="button"
               className="settings-pane__nav-list-add"
               onClick={onAdd}
-              aria-label="New agent"
-              title="New agent"
+              aria-label={copy.newAgent}
+              title={copy.newAgent}
             >
               <Icon icon="solar:add-circle-linear" width={13} height={13} />
             </button>
@@ -2747,13 +3175,13 @@ function SubAgentsSection({
                   aria-hidden
                 />
                 <span className="settings-pane__nav-list-item-name">
-                  {agent.name || "Untitled"}
+                  {agent.name || copy.untitled}
                 </span>
               </button>
             ))}
             {!loading && settings.agents.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No sub-agents yet — click + to start.
+                {copy.noAgents}
               </div>
             )}
           </div>
@@ -2775,7 +3203,7 @@ function SubAgentsSection({
                 height={22}
               />
               <span className="settings-pane__empty-title">
-                Select or create an agent
+                {copy.selectOrCreate}
               </span>
             </div>
           )}
@@ -2886,6 +3314,8 @@ function SubAgentEditor({
   onUpdate: (patch: Partial<SubAgentConfig>) => void;
   onDelete: () => void;
 }) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].agents;
   const rawModelId = modelIdFromRef(agent.model);
   const thinking = thinkingFromRef(agent.model);
   const modelEntry =
@@ -2934,8 +3364,8 @@ function SubAgentEditor({
           className="settings-pane__detail-title-input"
           value={agent.name}
           onChange={(event) => onUpdate({ name: event.target.value })}
-          placeholder="Untitled agent"
-          aria-label="Agent name"
+          placeholder={copy.untitledAgent}
+          aria-label={copy.agentName}
         />
         <div className="settings-pane__detail-head-actions">
           <button
@@ -2949,11 +3379,11 @@ function SubAgentEditor({
                 setConfirmDelete(true);
               }
             }}
-            title={confirmDelete ? "Click again to confirm" : "Delete agent"}
-            aria-label={confirmDelete ? "Confirm delete" : "Delete agent"}
+            title={confirmDelete ? copy.clickConfirm : copy.deleteAgent}
+            aria-label={confirmDelete ? copy.confirmDelete : copy.deleteAgent}
           >
             {confirmDelete ? (
-              <span className="settings-pane__icon-btn-confirm">Delete?</span>
+              <span className="settings-pane__icon-btn-confirm">{copy.deleteConfirmShort}</span>
             ) : (
               <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
             )}
@@ -2963,7 +3393,7 @@ function SubAgentEditor({
             className="settings-pane__switch"
             role="switch"
             aria-checked={agent.enabled}
-            aria-label={`${agent.enabled ? "Disable" : "Enable"} ${agent.name}`}
+            aria-label={`${agent.enabled ? copy.disable : copy.enable} ${agent.name}`}
             data-on={agent.enabled ? "true" : "false"}
             onClick={() => onUpdate({ enabled: !agent.enabled })}
           >
@@ -2974,7 +3404,7 @@ function SubAgentEditor({
 
       <div className="settings-pane__subagent-form">
         <label className="settings-pane__field settings-pane__field--grow">
-          <span>Description seen by the main agent</span>
+          <span>{copy.description}</span>
           <textarea
             value={agent.description}
             onChange={(event) => onUpdate({ description: event.target.value })}
@@ -2983,7 +3413,7 @@ function SubAgentEditor({
 
         <div className="settings-pane__subagent-row">
           <label className="settings-pane__field">
-            <span>Model</span>
+            <span>{copy.model}</span>
             <SettingsPicker
               value={modelId}
               options={availableModels.map((model) => ({
@@ -2995,7 +3425,7 @@ function SubAgentEditor({
             />
           </label>
           <label className="settings-pane__field">
-            <span>Thinking</span>
+            <span>{copy.thinking}</span>
             <SettingsPicker
               value={thinking}
               options={thinkingOptions.map((level) => ({
@@ -3008,7 +3438,7 @@ function SubAgentEditor({
         </div>
 
         <label className="settings-pane__field settings-pane__field--grow settings-pane__field--code">
-          <span>Internal prompt</span>
+          <span>{copy.internalPrompt}</span>
           <textarea
             value={agent.prompt}
             onChange={(event) => onUpdate({ prompt: event.target.value })}
@@ -3060,6 +3490,8 @@ function SkillsSection({
   onRevealSkill,
   onDeleteSkill,
 }: SkillsSectionProps) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].skills;
   const total = allSkills?.length ?? 0;
   const visible = skills.length;
   const enabled = allSkills?.filter((skill) => skill.enabled).length ?? 0;
@@ -3068,13 +3500,13 @@ function SkillsSection({
     <>
       <header className="settings-pane__header">
         <div className="settings-pane__header-text">
-          <h1 className="settings-pane__title">Skills</h1>
+          <h1 className="settings-pane__title">{copy.title}</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Scanning…"
+              ? copy.scanning
               : total === 0
-                ? "Drop SKILL.md files in .agents/skills or ~/.agents/skills."
-                : `${enabled}/${total} available to the agent`}
+                ? copy.drop
+                : `${enabled}/${total} ${copy.available}`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -3093,7 +3525,7 @@ function SkillsSection({
             disabled={loading || deleting}
           >
             <Icon icon="solar:refresh-linear" width={13} height={13} />
-            <span>Rescan</span>
+            <span>{copy.rescan}</span>
           </button>
           <button
             type="button"
@@ -3107,7 +3539,7 @@ function SkillsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving…" : "Save"}</span>
+            <span>{saving ? copy.saving : copy.save}</span>
           </button>
         </div>
       </header>
@@ -3120,7 +3552,7 @@ function SkillsSection({
               type="search"
               value={filter}
               onChange={(event) => onFilterChange(event.target.value)}
-              placeholder={total ? `Search ${total} skills` : "Search skills"}
+              placeholder={total ? copy.searchCount.replace("{count}", String(total)) : copy.search}
             />
           </div>
 
@@ -3153,13 +3585,13 @@ function SkillsSection({
                       className="settings-pane__skill-source"
                       data-source={skill.source}
                     >
-                      {skill.source === "workspace" ? "workspace" : "global"}
+                      {skill.source === "workspace" ? copy.workspace : copy.global}
                     </span>
                     <span
                       className="settings-pane__skill-state"
                       data-enabled={skill.enabled ? "true" : "false"}
                     >
-                      {skill.enabled ? "enabled" : "off"}
+                      {skill.enabled ? copy.enabled : copy.off}
                     </span>
                   </div>
                   <button
@@ -3167,7 +3599,7 @@ function SkillsSection({
                     className="settings-pane__switch"
                     role="switch"
                     aria-checked={skill.enabled}
-                    aria-label={`${skill.enabled ? "Disable" : "Enable"} ${skill.name}`}
+                    aria-label={`${skill.enabled ? copy.disable : copy.enable} ${skill.name}`}
                     data-on={skill.enabled ? "true" : "false"}
                     onKeyDown={(event) => {
                       event.stopPropagation();
@@ -3189,16 +3621,16 @@ function SkillsSection({
             ))}
             {!loading && visible === 0 && total > 0 && (
               <div className="settings-pane__muted settings-pane__muted--center">
-                No skills match.
+                {copy.noMatch}
               </div>
             )}
             {!loading && total === 0 && (
               <div className="settings-pane__empty">
                 <Icon icon="solar:magic-stick-3-linear" width={22} height={22} />
-                <span className="settings-pane__empty-title">No skills yet</span>
+                <span className="settings-pane__empty-title">{copy.noSkills}</span>
                 <span className="settings-pane__empty-sub">
-                  Create a folder under <code>.agents/skills/&lt;name&gt;/</code>{" "}
-                  with a <code>SKILL.md</code> file.
+                  {copy.createFolder} <code>.agents/skills/&lt;name&gt;/</code>{" "}
+                  {copy.withSkill}
                 </span>
               </div>
             )}
@@ -3217,7 +3649,7 @@ function SkillsSection({
             <div className="settings-pane__empty settings-pane__empty--main">
               <Icon icon="solar:document-text-linear" width={22} height={22} />
               <span className="settings-pane__empty-title">
-                {total === 0 ? "Nothing to preview" : "Select a skill"}
+                {total === 0 ? copy.nothingPreview : copy.selectSkill}
               </span>
             </div>
           )}
@@ -3238,6 +3670,8 @@ function SkillPreview({
   onReveal: () => void;
   onDelete: () => void;
 }) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].skills;
   const body = stripFrontmatter(skill.content);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -3261,7 +3695,7 @@ function SkillPreview({
               className="settings-pane__skill-source"
               data-source={skill.source}
             >
-              {skill.source === "workspace" ? "workspace" : "global"}
+              {skill.source === "workspace" ? copy.workspace : copy.global}
             </span>
           </div>
           <div className="settings-pane__skill-doc-actions">
@@ -3270,11 +3704,11 @@ function SkillPreview({
               className="settings-pane__skill-doc-action"
               onClick={onReveal}
               disabled={deleting}
-              title="Reveal in Finder"
-              aria-label={`Reveal ${skill.name} in Finder`}
+              title={copy.revealFinder}
+              aria-label={`${copy.revealFinder}: ${skill.name}`}
             >
               <Icon icon="solar:folder-open-linear" width={13} height={13} />
-              <span>Reveal in Finder</span>
+              <span>{copy.revealFinder}</span>
             </button>
             <button
               type="button"
@@ -3282,8 +3716,8 @@ function SkillPreview({
               data-danger="true"
               data-confirm={confirmDelete ? "true" : "false"}
               disabled={deleting}
-              title={confirmDelete ? "Click again to confirm" : "Delete skill"}
-              aria-label={confirmDelete ? "Confirm skill delete" : `Delete ${skill.name}`}
+              title={confirmDelete ? copy.confirmDelete : copy.deleteSkill}
+              aria-label={confirmDelete ? copy.confirmSkillDelete : `${copy.deleteSkill}: ${skill.name}`}
               onClick={() => {
                 if (confirmDelete) {
                   onDelete();
@@ -3303,10 +3737,10 @@ function SkillPreview({
               />
               <span>
                 {deleting
-                  ? "Deleting..."
+                  ? copy.deleting
                   : confirmDelete
-                    ? "Confirm delete"
-                    : "Delete"}
+                    ? copy.confirmDelete
+                    : copy.delete}
               </span>
             </button>
           </div>
@@ -3599,6 +4033,8 @@ function ApiKeyField({
   placeholder?: string;
   onChange: (value: string) => void;
 }) {
+  const language = useLanguage();
+  const copy = settingsDetailCopy[language].openRouter;
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -3635,8 +4071,8 @@ function ApiKeyField({
             type="button"
             className="settings-pane__icon-btn"
             onClick={() => setRevealed((v) => !v)}
-            title={revealed ? "Hide key" : "Show key"}
-            aria-label={revealed ? "Hide key" : "Show key"}
+            title={revealed ? copy.hideKey : copy.showKey}
+            aria-label={revealed ? copy.hideKey : copy.showKey}
             disabled={!value}
           >
             <Icon
@@ -3827,29 +4263,77 @@ function ToolGlyph({ name }: { name: string }) {
   return <Icon icon={icon} width={13} height={13} />;
 }
 
-const TOOL_LABEL: Record<string, string> = {
-  bash: "Shell",
-  bash_input: "Shell input",
-  read: "Read",
-  apply_patch: "Patch",
-  Glob: "Glob",
-  Grep: "Grep",
-  WebSearch: "Web search",
-  WebFetch: "Web fetch",
-  CreateImage: "Create image",
-  Question: "Question",
-  ToDoList: "To-do list",
-  LoadMcpTool: "Load MCP tool",
-  LoadSkill: "Load skill",
-  TeamRun: "Team run",
-  TeamStatus: "Team status",
-  TeamStop: "Team stop",
-  SendMessage: "Send message",
-  clean_context: "Clean context",
-  update_goal: "Update goal",
-  context_compaction: "Compact context",
+const TOOL_LABELS: Record<AppLanguage, Record<string, string>> = {
+  en: {
+    bash: "Shell",
+    bash_input: "Shell input",
+    read: "Read",
+    apply_patch: "Patch",
+    Glob: "Glob",
+    Grep: "Grep",
+    WebSearch: "Web search",
+    WebFetch: "Web fetch",
+    CreateImage: "Create image",
+    Question: "Question",
+    ToDoList: "To-do list",
+    TaskList: "Task list",
+    LoadMcpTool: "Load MCP tool",
+    LoadSkill: "Load skill",
+    TeamRun: "Team run",
+    TeamStatus: "Team status",
+    TeamStop: "Team stop",
+    SendMessage: "Send message",
+    clean_context: "Clean context",
+    update_goal: "Update goal",
+    context_compaction: "Compact context",
+  },
+  fr: {
+    bash: "Shell",
+    bash_input: "Entr\u00e9e shell",
+    read: "Lecture",
+    apply_patch: "Patch",
+    Glob: "Recherche glob",
+    Grep: "Recherche grep",
+    WebSearch: "Recherche web",
+    WebFetch: "Lecture web",
+    CreateImage: "Cr\u00e9er une image",
+    Question: "Question",
+    ToDoList: "Liste de t\u00e2ches",
+    TaskList: "Liste des t\u00e2ches",
+    LoadMcpTool: "Charger un outil MCP",
+    LoadSkill: "Charger une comp\u00e9tence",
+    TeamRun: "Lancer l'\u00e9quipe",
+    TeamStatus: "Statut de l'\u00e9quipe",
+    TeamStop: "Arr\u00eater l'\u00e9quipe",
+    SendMessage: "Envoyer un message",
+    clean_context: "Nettoyer le contexte",
+    update_goal: "Mettre \u00e0 jour l'objectif",
+    context_compaction: "Compacter le contexte",
+  },
 };
-
+const TOOL_DESCRIPTION_FR: Record<string, string> = {
+  bash: "Ex\u00e9cute une commande shell dans l'espace de travail.",
+  bash_input: "Envoie du texte \u00e0 une session shell interactive, r\u00e9cup\u00e8re sa sortie ou l'arr\u00eate.",
+  read: "Lit des fichiers texte ou joint visuellement les fichiers image pris en charge.",
+  apply_patch: "Applique une modification cibl\u00e9e aux fichiers de l'espace de travail.",
+  Glob: "Trouve des fichiers de l'espace de travail avec un motif glob.",
+  Grep: "Recherche du texte ou des expressions r\u00e9guli\u00e8res dans les fichiers avec ripgrep.",
+  WebSearch: "Recherche sur le web, consulte la documentation ou r\u00e9cup\u00e8re des informations r\u00e9centes.",
+  WebFetch: "R\u00e9cup\u00e8re une URL pr\u00e9cise, souvent une source issue de la recherche web, et retourne un texte lisible pour l'inspecter.",
+  CreateImage: "G\u00e9n\u00e8re ou cr\u00e9e une nouvelle image quand l'utilisateur le demande, puis affiche le r\u00e9sultat visuellement.",
+  Question: "Pose une ou plusieurs questions \u00e0 l'utilisateur dans l'interface de chat quand une clarification est n\u00e9cessaire avant de continuer.",
+  ToDoList: "Met \u00e0 jour la liste de t\u00e2ches courante avec un petit patch ligne par ligne.",
+  TaskList: "Modifie le tableau de t\u00e2ches partag\u00e9 de l'\u00e9quipe d'agents: cr\u00e9er, mettre \u00e0 jour, supprimer ou prendre une t\u00e2che.",
+  LoadMcpTool: "Charge un outil MCP par serveur et par nom avant de l'appeler.",
+  LoadSkill: "Charge une comp\u00e9tence par son nom exact avant de l'utiliser.",
+  TeamRun: "Lance une \u00e9quipe d'agents pour travailler en parall\u00e8le.",
+  TeamStatus: "Inspecte l'\u00e9quipe d'agents active, les co\u00e9quipiers, les messages, les t\u00e2ches et les derniers r\u00e9sum\u00e9s.",
+  TeamStop: "Arr\u00eate un co\u00e9quipier ou toute l'\u00e9quipe d'agents.",
+  SendMessage: "Envoie un message asynchrone \u00e0 un co\u00e9quipier par nom, ou diffuse \u00e0 toute l'\u00e9quipe avec le destinataire \"*\". Les co\u00e9quipiers re\u00e7oivent le message \u00e0 leur prochain tour.",
+  clean_context: "Nettoie les r\u00e9sultats d'outils inutiles dans le contexte de l'agent.",
+  update_goal: "Marque l'objectif actif du mode Goal comme termin\u00e9 apr\u00e8s v\u00e9rification.",
+  context_compaction: "Compacte le contexte courant pour continuer avec un historique plus l\u00e9ger.",
+};
 const TOOL_ICON: Record<string, string> = {
   read: "solar:document-text-linear",
   apply_patch: "solar:pen-new-square-linear",
@@ -3863,14 +4347,25 @@ const TOOL_ICON: Record<string, string> = {
   context_compaction: "solar:archive-linear",
 };
 
-function labelForTool(tool: ToolConfig | string): string {
+function labelForTool(
+  tool: ToolConfig | string,
+  language: AppLanguage = "en",
+): string {
+  const name = typeof tool === "string" ? tool : tool.name;
+  const translatedLabel = TOOL_LABELS[language][name];
+  if (translatedLabel) return translatedLabel;
+
   if (typeof tool !== "string") {
     const displayName = tool.displayName?.trim();
     if (displayName) return displayName;
-    return TOOL_LABEL[tool.name] ?? humanizeToolName(tool.name);
   }
-  const name = tool;
-  return TOOL_LABEL[name] ?? humanizeToolName(name);
+  return TOOL_LABELS.en[name] ?? humanizeToolName(name);
+}
+
+function descriptionForTool(tool: ToolConfig, language: AppLanguage): string {
+  if (language !== "fr") return tool.description;
+  if (tool.description !== tool.defaultDescription) return tool.description;
+  return TOOL_DESCRIPTION_FR[tool.name] ?? tool.description;
 }
 
 function humanizeToolName(name: string): string {
