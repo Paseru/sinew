@@ -9,8 +9,8 @@ import type {
   ActiveTurnsChangedPayload,
   RecentWorkspace,
 } from "../types";
-import { ClaakeCodeMark } from "./ClaakeCodeMark";
 import { WindowControls, isWindowsPlatform } from "./WindowControls";
+import iconUrl from "../assets/claakecode-icon.png";
 
 type Props = {
   onPick: (path: string) => void;
@@ -108,11 +108,14 @@ export function Welcome({ onPick, error, deriveName }: Props) {
       )}
       <main className="welcome__stage">
         <header className="welcome__head">
-          <span className="welcome__mark-dot" aria-hidden="true">
-            <span className="welcome__mark-inner">
-              <ClaakeCodeMark size={22} className="welcome__mark-glyph" />
-            </span>
-          </span>
+          <img
+            src={iconUrl}
+            width={72}
+            height={72}
+            alt="Claake Code"
+            className="welcome__mark-app-icon"
+            draggable={false}
+          />
           <h1 className="welcome__title">
             Claake Code<span className="welcome__title-dot">.</span>
           </h1>

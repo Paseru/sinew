@@ -341,6 +341,10 @@ textarea {
 .welcome__mark-glyph rect {
   fill: currentColor;
 }
+.welcome__mark-app-icon {
+  display: block;
+  object-fit: contain;
+}
 
 
 .welcome__title {
