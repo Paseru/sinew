@@ -4,6 +4,7 @@
 /FEATURES.md
 /idea.md
 /src-tauri/binaries/rg-*
+/src-tauri/gen/schemas/windows-schema.json
 /.history
 /.sinew/
 .DS_Store
