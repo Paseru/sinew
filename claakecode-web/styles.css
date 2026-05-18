@@ -71,6 +71,8 @@
   .btn-primary:hover { background: var(--forest-deep); }
   .btn-windows { background: var(--forest-ink); }
   .btn-windows:hover { background: var(--ink); }
+  .btn-linux { background: var(--accent); }
+  .btn-linux:hover { background: #8f3924; }
   .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
   .btn-ghost:hover { border-color: var(--forest); color: var(--forest); }
 
@@ -198,6 +200,10 @@
     font-size: 17px;
     line-height: 1.6;
     max-width: 520px;
+  }
+  .showcase-video {
+    width: 200%;
+    margin-left: -50%;
   }
   .showcase-video .video-frame {
     border-radius: 24px;
@@ -509,6 +515,7 @@
     .pillar-grid { grid-template-columns: 1fr; }
     .video-frame { aspect-ratio: 16 / 11; }
     .video-frame-wide { aspect-ratio: 16 / 10; }
+    .showcase-video { width: 100%; margin-left: 0; }
     .install-grid { grid-template-columns: 1fr !important; }
     .harness-wrap, .oss-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
   }
