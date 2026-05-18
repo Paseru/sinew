@@ -609,10 +609,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  background: var(--bg-3);
+  width: 20px;
+  height: 20px;
   color: var(--text-1);
 }
 .titlebar__brand-name {

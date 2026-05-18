@@ -1660,7 +1660,7 @@ export function Workspace({
         </div>
         <div className="titlebar__brand" data-tauri-drag-region>
           <span className="titlebar__brand-mark">
-            <ClaakeCodeMark size={11} />
+            <ClaakeCodeMark size={20} />
           </span>
           <span className="titlebar__brand-name">Claake Code</span>
         </div>
