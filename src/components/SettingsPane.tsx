@@ -714,7 +714,61 @@ export function SettingsPane({ workspacePath }: Props) {
           server.id === id ? { ...server, enabled: !server.enabled } : server,
         ),
       };
+      setSettings(next);
       setJsonText(settingsToJson(next));
+    },
+    [parseError, settings],
+  );
+
+  const addNewServer = useCallback(() => {
+    if (parseError) return;
+    const taken = new Set(settings.servers.map((server) => server.id));
+    let counter = settings.servers.length + 1;
+    let candidate = `mcp_new_server_${counter}`;
+    while (taken.has(candidate)) {
+      counter += 1;
+      candidate = `mcp_new_server_${counter}`;
+    }
+    const newServer: McpServerConfig = {
+      id: candidate,
+      name: `New server ${counter}`,
+      command: "",
+      args: [],
+      env: [],
+      cwd: null,
+      enabled: false,
+    };
+    const next: McpSettings = {
+      servers: [...settings.servers, newServer],
+    };
+    setSettings(next);
+    setJsonText(settingsToJson(next));
+    setSelectedServerId(newServer.id);
+  }, [parseError, settings]);
+
+  const updateServer = useCallback(
+    (id: string, patch: Partial<McpServerConfig>) => {
+      if (parseError) return;
+      const next: McpSettings = {
+        servers: settings.servers.map((server) =>
+          server.id === id ? { ...server, ...patch } : server,
+        ),
+      };
+      setSettings(next);
+      setJsonText(settingsToJson(next));
+    },
+    [parseError, settings],
+  );
+
+  const deleteServer = useCallback(
+    (id: string) => {
+      if (parseError) return;
+      const next: McpSettings = {
+        servers: settings.servers.filter((server) => server.id !== id),
+      };
+      setSettings(next);
+      setJsonText(settingsToJson(next));
+      setSelectedServerId((current) => (current === id ? null : current));
     },
     [parseError, settings],
   );
@@ -1154,6 +1208,9 @@ export function SettingsPane({ workspacePath }: Props) {
             selectedServer={selectedServer}
             selectedProbe={selectedProbe}
             onToggleEnabled={toggleEnabled}
+            onAddServer={addNewServer}
+            onUpdateServer={updateServer}
+            onDeleteServer={deleteServer}
             onMount={handleEditorMount}
           />
         ) : section === "skills" ? (
@@ -2249,6 +2306,9 @@ type McpSectionProps = {
   selectedServer: McpServerConfig | null;
   selectedProbe: McpServerProbe | null;
   onToggleEnabled: (id: string) => void;
+  onAddServer: () => void;
+  onUpdateServer: (id: string, patch: Partial<McpServerConfig>) => void;
+  onDeleteServer: (id: string) => void;
   onMount: OnMount;
 };
 
@@ -2269,6 +2329,9 @@ function McpSection({
   selectedServer,
   selectedProbe,
   onToggleEnabled,
+  onAddServer,
+  onUpdateServer,
+  onDeleteServer,
   onMount,
 }: McpSectionProps) {
   const detailOpen = Boolean(selectedServer);
@@ -2316,6 +2379,25 @@ function McpSection({
             )}
           </div>
           <div className="settings-pane__nav-list-items">
+            <button
+              type="button"
+              className="settings-pane__nav-list-item"
+              data-active="false"
+              onClick={onAddServer}
+              disabled={loading || saving || Boolean(parseError)}
+              title="Add a new MCP server"
+            >
+              <Icon
+                icon="solar:add-circle-linear"
+                width={12}
+                height={12}
+                className="settings-pane__nav-list-item-glyph"
+              />
+              <span className="settings-pane__nav-list-item-name">
+                Add server
+              </span>
+            </button>
+            <div className="settings-pane__nav-list-divider" />
             <button
               type="button"
               className="settings-pane__nav-list-item"
@@ -2383,10 +2465,14 @@ function McpSection({
 
         <main className="settings-pane__detail-pane">
           {detailOpen && selectedServer ? (
-            <ServerDetail
+            <ServerEditor
               server={selectedServer}
               probe={selectedProbe}
               probing={probing}
+              disabled={Boolean(parseError) || loading || saving}
+              onChange={(patch) => onUpdateServer(selectedServer.id, patch)}
+              onDelete={() => onDeleteServer(selectedServer.id)}
+              onToggleEnabled={() => onToggleEnabled(selectedServer.id)}
             />
           ) : (
             <div className="settings-pane__editor-card">
@@ -2529,16 +2615,29 @@ function ServerCard({
   );
 }
 
-type ServerDetailProps = {
+type ServerEditorProps = {
   server: McpServerConfig;
   probe: McpServerProbe | null;
   probing: boolean;
+  disabled: boolean;
+  onChange: (patch: Partial<McpServerConfig>) => void;
+  onDelete: () => void;
+  onToggleEnabled: () => void;
 };
 
-function ServerDetail({ server, probe, probing }: ServerDetailProps) {
+function ServerEditor({
+  server,
+  probe,
+  probing,
+  disabled,
+  onChange,
+  onDelete,
+  onToggleEnabled,
+}: ServerEditorProps) {
   const [expandedTools, setExpandedTools] = useState<Set<string>>(
     () => new Set<string>(),
   );
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const toggleTool = useCallback((toolName: string) => {
     setExpandedTools((prev) => {
       const next = new Set(prev);
@@ -2550,6 +2649,12 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
       return next;
     });
   }, []);
+
+  // Reset confirm state when switching servers
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [server.id]);
+
   const tone = !server.enabled
     ? "off"
     : !probe
@@ -2566,36 +2671,192 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
       : !probe.ok
         ? "failed"
         : `${probe.tools.length} tool${probe.tools.length === 1 ? "" : "s"}`;
-  const command = [server.command, ...server.args].join(" ").trim();
+  const argsText = server.args.join(" ");
 
   return (
     <div className="settings-pane__detail">
       <div className="settings-pane__detail-head">
-        <span className="settings-pane__detail-title">{server.name}</span>
+        <input
+          type="text"
+          className="settings-pane__detail-title-input"
+          value={server.name}
+          placeholder="Server name"
+          onChange={(event) => onChange({ name: event.target.value })}
+          disabled={disabled}
+          aria-label="Server name"
+        />
         <span className="settings-pane__chip" data-tone={tone}>
           <span className="settings-pane__chip-dot" />
           {statusLabel}
         </span>
+        <button
+          type="button"
+          className="settings-pane__switch"
+          role="switch"
+          aria-checked={server.enabled}
+          aria-label={server.enabled ? "Disable server" : "Enable server"}
+          data-on={server.enabled ? "true" : "false"}
+          disabled={disabled}
+          onClick={onToggleEnabled}
+        >
+          <span className="settings-pane__switch-thumb" />
+        </button>
       </div>
 
       <div className="settings-pane__detail-body">
-        {command && (
-          <code className="settings-pane__detail-cmd" title={command}>
-            {command}
-          </code>
-        )}
-        {server.cwd && (
-          <div className="settings-pane__detail-meta">
-            <span className="settings-pane__detail-key">cwd</span>
-            <code>{server.cwd}</code>
+        <div className="settings-pane__field">
+          <label className="settings-pane__field-label" htmlFor={`mcp-${server.id}-command`}>
+            Command
+          </label>
+          <input
+            id={`mcp-${server.id}-command`}
+            type="text"
+            className="settings-pane__field-input"
+            value={server.command}
+            placeholder="npx, uvx, /path/to/binary…"
+            onChange={(event) => onChange({ command: event.target.value })}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="settings-pane__field">
+          <label className="settings-pane__field-label" htmlFor={`mcp-${server.id}-args`}>
+            Arguments (space-separated)
+          </label>
+          <input
+            id={`mcp-${server.id}-args`}
+            type="text"
+            className="settings-pane__field-input"
+            value={argsText}
+            placeholder="--flag value"
+            onChange={(event) => {
+              const next = event.target.value
+                .split(/\s+/)
+                .filter((piece) => piece.length > 0);
+              onChange({ args: next });
+            }}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="settings-pane__field">
+          <label className="settings-pane__field-label" htmlFor={`mcp-${server.id}-cwd`}>
+            Working directory (optional)
+          </label>
+          <input
+            id={`mcp-${server.id}-cwd`}
+            type="text"
+            className="settings-pane__field-input"
+            value={server.cwd ?? ""}
+            placeholder="/absolute/path"
+            onChange={(event) => {
+              const value = event.target.value.trim();
+              onChange({ cwd: value.length > 0 ? value : null });
+            }}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="settings-pane__field">
+          <div className="settings-pane__field-label-row">
+            <span className="settings-pane__field-label">Environment variables</span>
+            <button
+              type="button"
+              className="settings-pane__field-add"
+              onClick={() => onChange({ env: [...server.env, { key: "", value: "" }] })}
+              disabled={disabled}
+            >
+              <Icon icon="solar:add-circle-linear" width={11} height={11} />
+              <span>Add var</span>
+            </button>
           </div>
-        )}
-        {server.env.length > 0 && (
-          <div className="settings-pane__detail-meta">
-            <span className="settings-pane__detail-key">env</span>
-            <code>{server.env.map((item) => item.key).join(", ")}</code>
-          </div>
-        )}
+          {server.env.length === 0 ? (
+            <div className="settings-pane__muted">No environment variables.</div>
+          ) : (
+            <div className="settings-pane__env-list">
+              {server.env.map((entry, index) => (
+                <div className="settings-pane__env-row" key={index}>
+                  <input
+                    type="text"
+                    className="settings-pane__field-input"
+                    value={entry.key}
+                    placeholder="KEY"
+                    onChange={(event) => {
+                      const next = [...server.env];
+                      next[index] = { ...entry, key: event.target.value };
+                      onChange({ env: next });
+                    }}
+                    disabled={disabled}
+                  />
+                  <input
+                    type="text"
+                    className="settings-pane__field-input"
+                    value={entry.value}
+                    placeholder="value"
+                    onChange={(event) => {
+                      const next = [...server.env];
+                      next[index] = { ...entry, value: event.target.value };
+                      onChange({ env: next });
+                    }}
+                    disabled={disabled}
+                  />
+                  <button
+                    type="button"
+                    className="settings-pane__icon-btn"
+                    onClick={() => {
+                      const next = server.env.filter((_, i) => i !== index);
+                      onChange({ env: next });
+                    }}
+                    disabled={disabled}
+                    aria-label="Remove environment variable"
+                    title="Remove"
+                  >
+                    <Icon icon="solar:trash-bin-trash-linear" width={12} height={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="settings-pane__field-actions">
+          {confirmingDelete ? (
+            <>
+              <span className="settings-pane__muted">Delete this server?</span>
+              <button
+                type="button"
+                className="settings-pane__btn"
+                data-tone="danger"
+                onClick={() => {
+                  setConfirmingDelete(false);
+                  onDelete();
+                }}
+                disabled={disabled}
+              >
+                <Icon icon="solar:trash-bin-trash-bold" width={12} height={12} />
+                <span>Confirm delete</span>
+              </button>
+              <button
+                type="button"
+                className="settings-pane__btn"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="settings-pane__btn"
+              data-tone="danger-ghost"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={disabled}
+            >
+              <Icon icon="solar:trash-bin-trash-linear" width={12} height={12} />
+              <span>Delete server</span>
+            </button>
+          )}
+        </div>
 
         {probe?.error && (
           <div className="settings-pane__tools-error">{probe.error}</div>
@@ -2652,7 +2913,7 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
           )}
           {!probe && (
             <div className="settings-pane__muted">
-              {probing ? "Probing server…" : "No probe data yet."}
+              {probing ? "Probing server…" : "No probe data yet — save to apply and probe."}
             </div>
           )}
         </div>

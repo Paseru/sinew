@@ -7280,3 +7280,134 @@ textarea {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* ----- MCP server editor (Phase 3) ------------------------------------ */
+
+.settings-pane__detail-title-input {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--r-med);
+  background: transparent;
+  color: var(--text-0);
+  padding: 6px 9px;
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  transition: background 140ms ease;
+}
+
+.settings-pane__detail-title-input:focus,
+.settings-pane__detail-title-input:hover {
+  background: var(--bg-2);
+}
+
+.settings-pane__detail-title-input:disabled {
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+.settings-pane__field-label {
+  display: block;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.settings-pane__field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.settings-pane__field-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  padding: 2px 6px;
+  border-radius: var(--r-med);
+  cursor: pointer;
+}
+
+.settings-pane__field-add:hover:not(:disabled) {
+  background: var(--bg-2);
+  color: var(--text-0);
+}
+
+.settings-pane__field-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-pane__field-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--r-med);
+  background: var(--bg-2);
+  color: var(--text-0);
+  padding: 6px 9px;
+  outline: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  transition: background 140ms ease;
+}
+
+.settings-pane__field-input:focus {
+  background: var(--bg-3);
+}
+
+.settings-pane__field-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.settings-pane__env-list {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-pane__env-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.settings-pane__field-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.settings-pane__btn[data-tone="danger"] {
+  background: #c33a3a;
+  color: white;
+}
+
+.settings-pane__btn[data-tone="danger"]:hover {
+  background: #d04545;
+}
+
+.settings-pane__btn[data-tone="danger-ghost"] {
+  background: transparent;
+  color: #d76b6b;
+  border: 1px solid rgba(215, 107, 107, 0.4);
+}
+
+.settings-pane__btn[data-tone="danger-ghost"]:hover:not(:disabled) {
+  background: rgba(215, 107, 107, 0.12);
+  color: #e88080;
+  border-color: rgba(215, 107, 107, 0.6);
+}
