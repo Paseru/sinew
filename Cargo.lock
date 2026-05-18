@@ -369,7 +369,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -400,7 +400,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-anthropic"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -422,7 +422,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-app"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -446,7 +446,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-core"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "futures",
@@ -457,7 +457,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-google"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-kimi"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -497,7 +497,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-openai"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -518,7 +518,7 @@ dependencies = [
 
 [[package]]
 name = "claakecode-openrouter"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "async-trait",
  "bytes",
