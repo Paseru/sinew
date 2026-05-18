@@ -129,6 +129,151 @@
   }
   .install-bar .copy-btn:hover { background: #2C5645; color: var(--cream); border-color: var(--forest); }
 
+  /* ─── hero chips (replaces brew install bar) ─────────────── */
+  .hero-chips {
+    margin-top: 32px;
+    display: flex; flex-wrap: wrap; gap: 10px;
+    max-width: 540px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+  }
+  .chip-num {
+    font-family: 'Instrument Serif'; font-style: italic;
+    font-size: 22px; line-height: 1; color: var(--forest);
+    letter-spacing: -0.02em;
+  }
+  .chip-label {
+    font-family: 'Geist Mono'; font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* ─── video card (hero, right column) ────────────────────── */
+  .video-card {
+    margin: 0;
+    background: var(--forest-ink);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -30px rgba(15, 34, 24, 0.4),
+                0 1px 0 rgba(255,255,255,0.04) inset;
+    color: var(--cream);
+    display: flex; flex-direction: column;
+  }
+  .video-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    background: #0a1a12;
+    border-bottom: 1px solid #1a3328;
+    font-family: 'Geist Mono'; font-size: 11px;
+    color: #6c8a7a;
+  }
+  .video-title {
+    margin-left: 8px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: #6c8a7a;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .video-tag {
+    background: #1a3328; color: var(--cream);
+    padding: 3px 9px; border-radius: 4px;
+    font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .video-frame {
+    position: relative;
+    background: #0a1a12;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+  }
+  .video-el {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    background: #0a1a12;
+  }
+  .video-cap {
+    padding: 10px 16px 12px;
+    font-size: 11px; color: #8a9e91;
+    background: #0a1a12;
+    border-top: 1px solid #1a3328;
+    letter-spacing: 0.04em;
+  }
+
+  /* ─── full-width video stage (replaces IDE mockup) ───────── */
+  .video-stage {
+    margin: 0;
+    background: var(--forest-ink);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 50px 100px -50px rgba(15, 34, 24, 0.5);
+    color: var(--cream);
+    display: flex; flex-direction: column;
+  }
+  .video-frame-wide {
+    aspect-ratio: 16 / 9;
+  }
+  .video-frame-wide .video-el {
+    object-fit: contain;
+    background: #0a1a12;
+  }
+  .video-stage-cap {
+    padding: 14px 20px;
+    background: #0a1a12;
+    border-top: 1px solid #1a3328;
+    font-size: 12px; color: #8a9e91;
+    display: flex; justify-content: space-between; gap: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ─── tools / skills / providers pillar grid ─────────────── */
+  .pillar-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 48px;
+  }
+  .pillar {
+    background: var(--paper);
+    padding: 30px 28px 32px;
+    display: flex; flex-direction: column; gap: 12px;
+    scroll-margin-top: 90px;
+  }
+  .pillar-accent {
+    background: var(--cream);
+    box-shadow: inset 0 0 0 1px rgba(44, 86, 69, 0.12);
+  }
+  .pillar-tag {
+    font-size: 11px;
+    color: var(--forest);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .pillar h3 {
+    font-size: 22px; line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .pillar p {
+    color: var(--ink-soft);
+    font-size: 14.5px; line-height: 1.6;
+    margin: 0;
+  }
+  .pillar .mono {
+    background: rgba(44, 86, 69, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--forest-deep);
+  }
+  .pillar-accent .mono { background: rgba(44, 86, 69, 0.14); }
+
   .terminal {
     background: var(--forest-ink);
     border-radius: 16px;
@@ -259,6 +404,11 @@
     .ide-tree, .ide-chat { border-right: 0; border-left: 0; border-top: 1px solid #1a3328; }
     .foot { grid-template-columns: 1fr 1fr; }
     .nav-links { display: none; }
+    .pillar-grid { grid-template-columns: 1fr; }
+    .video-frame { aspect-ratio: 16 / 11; }
+    .video-frame-wide { aspect-ratio: 16 / 10; }
+    .install-grid { grid-template-columns: 1fr !important; }
+    .harness-wrap, .oss-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
   }
   @media (max-width: 560px) {
     .page { padding: 0 22px; }
@@ -267,4 +417,7 @@
     .stats { grid-template-columns: 1fr; }
     .stat { border-right: 0; border-bottom: 1px solid var(--rule); }
     .foot { grid-template-columns: 1fr; }
+    .hero-chips { flex-direction: column; align-items: stretch; }
+    .chip { justify-content: flex-start; }
+    .video-frame-wide { aspect-ratio: 4 / 3; }
   }

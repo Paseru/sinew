@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <title>Claake Code — agentic IDE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="Claake Code is a desktop AI coding harness you can actually reshape. Rewrite every tool, run any provider (Anthropic, OpenAI, Google, Kimi, OpenRouter), and the assistant only sees what you keep. Open source, MIT." />
+<meta name="description" content="Claake Code is a desktop AI coding harness with free, in-app management of every tool, every skill and every provider. Anthropic, OpenAI, Google, Kimi, OpenRouter — toggle, rewrite, swap. Open source, MIT." />
 <link rel="icon" type="image/png" href="assets/claakecode-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,13 +24,14 @@
       <span class="mono" style="font-size:11px;color:var(--ink-soft);margin-left:6px">v0.1.12</span>
     </div>
     <div class="nav-links">
-      <a href="#editor">Editor</a>
+      <a href="#tools">Tools</a>
+      <a href="#skills">Skills</a>
+      <a href="#providers">Providers</a>
       <a href="#agent">Agent</a>
-      <a href="#harness">Harness</a>
       <a href="#features">Features</a>
       <a href="#compare">Compare</a>
       <a href="#oss">Open source</a>
-      <a href="#install">Install</a>
+      <a href="#install">Download</a>
     </div>
     <div class="nav-cta">
       <a href="https://github.com/WilliamPeynichou/ClaakeCode" class="pill" style="text-decoration:none">
@@ -49,37 +50,47 @@
     </div>
     <div class="hero-grid">
       <div>
-        <h1>The coding<br/>harness <em>you</em><br/><em>shape</em>.</h1>
+        <h1>Every tool.<br/>Every skill.<br/><em>Any</em> <em>provider</em>.</h1>
         <p class="hero-sub">
-          Claake Code is a desktop AI coding harness you can actually reshape. Rewrite the description of every tool, turn the ones you don't need off, and the assistant only sees what you keep.
+          Claake Code hands the harness back to you. Toggle every tool, rewrite every skill, swap providers mid-conversation — Anthropic, OpenAI, Google, Kimi, OpenRouter. No gatekeepers, no hidden prompts. The agent only ever sees what you decide to ship.
         </p>
         <div class="hero-cta">
           <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases/latest" class="btn btn-primary">Download for macOS ↗</a>
           <a href="https://github.com/WilliamPeynichou/ClaakeCode" class="btn btn-ghost">View on GitHub</a>
         </div>
-        <div class="install-bar">
-          <span class="prompt">$</span>
-          <code id="hero-cmd">brew install --cask claakecode</code>
-          <button class="copy-btn" data-copy="brew install --cask claakecode">copy</button>
+        <div class="hero-chips">
+          <span class="chip"><span class="chip-num">14</span><span class="chip-label">built-in tools · all toggleable</span></span>
+          <span class="chip"><span class="chip-num">∞</span><span class="chip-label">skills · plain markdown, fully yours</span></span>
+          <span class="chip"><span class="chip-num">5</span><span class="chip-label">providers · one click, zero lock-in</span></span>
         </div>
       </div>
       <div>
-        <div class="terminal">
-          <div class="term-head">
+        <figure class="video-card hero-video">
+          <div class="video-head">
             <span class="term-dot r"></span>
             <span class="term-dot y"></span>
             <span class="term-dot g"></span>
-            <span class="term-title">claake — agent · zsh</span>
-            <span class="term-tabs">
-              <span class="term-tab active">agent</span>
-              <span class="term-tab">build</span>
-              <span class="term-tab">+</span>
-            </span>
+            <span class="video-title">claake — tools · skills · providers</span>
+            <span class="video-tag">live preview</span>
           </div>
-          <div class="term-body" id="term-body">
-            <span class="t-bar"></span>
+          <div class="video-frame">
+            <video
+              class="video-el"
+              autoplay
+              loop
+              muted
+              playsinline
+              preload="metadata"
+              poster="assets/claakecode-icon.png"
+            >
+              <source src="assets/tools-presentation.mov" type="video/mp4" />
+              <source src="assets/tools-presentation.mov" type="video/quicktime" />
+            </video>
           </div>
-        </div>
+          <figcaption class="video-cap">
+            <span class="mono">↳ in-app management · no JSON spelunking · no CLI</span>
+          </figcaption>
+        </figure>
       </div>
     </div>
   </section>
@@ -103,141 +114,71 @@
   </div>
 
   <!-- EDITOR SECTION -->
-  <section id="editor">
+  <section id="tools">
     <div class="section-tag">
       <span class="num">§ 01</span>
-      <span>The editor, with an agent in the seat next to you</span>
+      <span>Free management of tools · skills · providers</span>
       <span class="rule"></span>
     </div>
-    <h2 style="max-width:900px">
-      A real editor. A real terminal.<br/>
-      <em class="serif" style="color:var(--forest)">And a teammate</em> that can fan out across the repo.
+    <h2 style="max-width:980px">
+      One workspace. <em class="serif" style="color:var(--forest)">Every tool, every skill, every provider</em><br/>
+      under your control — from a UI, not a config file.
     </h2>
+    <p style="color:var(--ink-soft);font-size:17px;line-height:1.55;margin-top:22px;max-width:760px">
+      No CLI gymnastics. No hidden system prompt. Open the panel, flip a tool on, rewrite its description, drop in a new skill, swap from Sonnet to GPT to Gemini in a click. The agent runs exactly the harness you assembled.
+    </p>
 
     <div style="margin-top:36px"></div>
 
-    <div class="ide">
-      <div class="ide-head">
+    <figure class="video-stage">
+      <div class="video-head">
         <span class="term-dot r"></span>
         <span class="term-dot y"></span>
         <span class="term-dot g"></span>
-        <span class="term-title" style="margin-left:8px">claakecode — billing/charges.ts</span>
-        <span class="term-tabs" style="margin-left:auto">
-          <span class="term-tab">stash</span>
-          <span class="term-tab active">agent/refactor-invoice</span>
-        </span>
+        <span class="video-title">claakecode — settings · tools · skills · providers</span>
+        <span class="video-tag">full walkthrough</span>
       </div>
-      <div class="ide-body">
-        <div class="ide-tree">
-          <div class="tree-item dir open">src</div>
-          <div class="tree-indent">
-            <div class="tree-item dir open">billing</div>
-            <div class="tree-indent">
-              <div class="tree-item file active changed">charges.ts</div>
-              <div class="tree-item file changed">refunds.ts</div>
-              <div class="tree-item file">webhooks.ts</div>
-            </div>
-            <div class="tree-item dir">services</div>
-            <div class="tree-indent">
-              <div class="tree-item file added">invoice.ts</div>
-            </div>
-            <div class="tree-item dir">vendor</div>
-            <div class="tree-item dir">utils</div>
-          </div>
-          <div class="tree-item dir">tests</div>
-          <div class="tree-item file">package.json</div>
-          <div class="tree-item file">tsconfig.json</div>
-          <div class="tree-item file">AGENTS.md</div>
-        </div>
+      <div class="video-frame video-frame-wide">
+        <video
+          class="video-el"
+          autoplay
+          loop
+          muted
+          playsinline
+          preload="metadata"
+          poster="assets/claakecode-icon.png"
+        >
+          <source src="assets/presentation.mov" type="video/mp4" />
+          <source src="assets/presentation.mov" type="video/quicktime" />
+        </video>
+      </div>
+      <figcaption class="video-stage-cap">
+        <span class="mono">↳ everything you see is editable · everything ships open source</span>
+      </figcaption>
+    </figure>
 
-        <div class="ide-editor">
-          <div class="ed-tabs">
-            <span class="ed-tab active">charges.ts</span>
-            <span class="ed-tab">invoice.ts</span>
-            <span class="ed-tab">charges.test.ts</span>
-          </div>
-          <div class="ed-code">
-            <div><span class="ln">1</span><span class="cmt">// billing/charges.ts</span></div>
-            <div><span class="ln">2</span><span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">"zod"</span>;</div>
-            <div class="added"><span class="ln">3</span><span class="kw">import</span> { InvoiceService } <span class="kw">from</span> <span class="str">"../services/invoice"</span>;</div>
-            <div><span class="ln">4</span></div>
-            <div><span class="ln">5</span><span class="kw">const</span> <span class="fn">ChargeInput</span> = z.<span class="fn">object</span>({</div>
-            <div><span class="ln">6</span>&nbsp;&nbsp;amount: z.<span class="fn">number</span>().<span class="fn">positive</span>(),</div>
-            <div><span class="ln">7</span>&nbsp;&nbsp;currency: z.<span class="fn">enum</span>([<span class="str">"usd"</span>, <span class="str">"eur"</span>]),</div>
-            <div><span class="ln">8</span>&nbsp;&nbsp;customerId: z.<span class="fn">string</span>().<span class="fn">uuid</span>(),</div>
-            <div><span class="ln">9</span>});</div>
-            <div><span class="ln">10</span></div>
-            <div class="focus"><span class="ln">11</span><span class="kw">export async function</span> <span class="fn">createCharge</span>(input: z.infer&lt;<span class="kw">typeof</span> ChargeInput&gt;) {</div>
-            <div class="focus"><span class="ln">12</span>&nbsp;&nbsp;<span class="kw">const</span> parsed = ChargeInput.<span class="fn">parse</span>(input);</div>
-            <div class="focus added"><span class="ln">13</span>&nbsp;&nbsp;<span class="kw">const</span> charge = <span class="kw">await</span> InvoiceService.<span class="fn">charge</span>(parsed);</div>
-            <div class="focus"><span class="ln">14</span>&nbsp;&nbsp;<span class="kw">return</span> { id: charge.id, status: charge.status };</div>
-            <div class="focus"><span class="ln">15</span>}</div>
-            <div><span class="ln">16</span></div>
-            <div><span class="ln">17</span><span class="kw">export async function</span> <span class="fn">getCharge</span>(id: <span class="kw">string</span>) {</div>
-            <div><span class="ln">18</span>&nbsp;&nbsp;<span class="kw">return</span> InvoiceService.<span class="fn">find</span>(id);</div>
-            <div><span class="ln">19</span>}</div>
-          </div>
-        </div>
-
-        <div class="ide-chat">
-          <div class="chat-head">
-            <span>Agent · plan-mode</span>
-            <span style="color:#8ec19a">● connected</span>
-          </div>
-          <div class="chat-body">
-            <div class="chat-msg user">
-              <div class="who">you</div>
-              <div class="bubble">Refactor billing to use the new InvoiceService. Keep the public API.</div>
-            </div>
-            <div class="chat-msg agent">
-              <div class="who">claake</div>
-              <div class="bubble">
-                I traced 12 stripeClient call sites across 4 files. Plan: swap the import in <span class="mono" style="color:#c9b87a">charges.ts</span> and <span class="mono" style="color:#c9b87a">refunds.ts</span>, add a thin adapter at <span class="mono" style="color:#8ec19a">services/invoice.ts</span>, and re-run the billing tests.
-              </div>
-            </div>
-            <div class="tool-call"><span class="check">✓</span> edit · billing/charges.ts (+2 −2)</div>
-            <div class="tool-call"><span class="check">✓</span> create · services/invoice.ts (+48)</div>
-            <div class="tool-call"><span class="check">✓</span> run · pnpm test billing → 14 passed</div>
-            <div class="chat-msg agent">
-              <div class="who">claake</div>
-              <div class="bubble">Branch <span class="mono" style="color:#c9b87a">agent/refactor-invoice</span> is ready. Want me to open a PR or keep iterating?</div>
-            </div>
-          </div>
-          <div class="chat-input">
-            <div class="field">open a PR with the diff summary<span class="t-bar" style="height:11px;margin-left:2px"></span></div>
-            <button class="send">send</button>
-          </div>
-        </div>
-      </div>
-      <div class="ide-status">
-        <span>main ← agent/refactor-invoice</span>
-        <span class="ok">● tests passing</span>
-        <span>ts 5.4</span>
-        <span>node 22</span>
-        <span style="margin-left:auto">model · sonnet 4.6</span>
-        <span>tokens · 18.4k</span>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:48px">
-      <div>
-        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">A real IDE</div>
-        <p style="color:var(--ink-soft);font-size:15px;line-height:1.55">
-          Monaco editor and xterm terminal. Not a chat box with a file picker — you get a workspace, a file tree, and a real shell next to the agent.
+    <div class="pillar-grid">
+      <article id="tools-pillar" class="pillar">
+        <div class="pillar-tag mono">↳ tools</div>
+        <h3>Toggle, rewrite, ship.</h3>
+        <p>
+          Every built-in tool — read, edit, grep, bash, web, image, MCP — has an on/off switch and an editable description. Run a minimal pair-programmer or unlock the full agentic surface. Your call, per workspace.
         </p>
-      </div>
-      <div>
-        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">An agent in the loop</div>
-        <p style="color:var(--ink-soft);font-size:15px;line-height:1.55">
-          Plan mode, act mode, goal mode. The assistant can grep, edit, run shell commands, hit the web, generate images, or load any MCP server you've configured.
+      </article>
+      <article id="skills" class="pillar">
+        <div class="pillar-tag mono">↳ skills</div>
+        <h3>Plain markdown, fully yours.</h3>
+        <p>
+          Long-form skills live on disk in <span class="mono">~/.claakecode/skills</span>. Create, edit, delete from the UI. The agent loads them on demand — no SDK, no plugin store, no review queue.
         </p>
-      </div>
-      <div>
-        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">Agent swarm</div>
-        <p style="color:var(--ink-soft);font-size:15px;line-height:1.55">
-          Launch a team of sub-agents from a single prompt — each with its own context, role, and tool subset. They coordinate through a shared task board and direct messaging.
+      </article>
+      <article id="providers" class="pillar pillar-accent">
+        <div class="pillar-tag mono">↳ providers</div>
+        <h3>Swap models without leaving the chat.</h3>
+        <p>
+          Anthropic, OpenAI, Google, Kimi, OpenRouter — wired into the same agent loop. OAuth where it makes sense, API keys where it doesn't. Switch provider, model, or context window mid-conversation. Zero lock-in.
         </p>
-      </div>
+      </article>
     </div>
   </section>
 
@@ -492,16 +433,16 @@ skill : long-form on-disk in ~/.claakecode/skills</pre>
   <section id="install" style="padding-bottom:96px">
     <div class="section-tag">
       <span class="num">§ 07</span>
-      <span>Install</span>
+      <span>Download</span>
       <span class="rule"></span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center" class="install-grid">
       <div>
-        <h2>One download.<br/>
-          <em class="serif" style="color:var(--forest)">No account</em>, no setup wizard.
+        <h2>One double-click.<br/>
+          <em class="serif" style="color:var(--forest)">No terminal</em>, no setup wizard.
         </h2>
         <p style="color:var(--ink-soft);font-size:17px;line-height:1.55;margin-top:20px;max-width:480px">
-          Drop in your provider keys when you're ready. Anthropic, OpenAI, Google, Kimi, and OpenRouter are all supported out of the box.
+          Grab the native build for your OS, open the app, and drop in whichever provider keys you want — Anthropic, OpenAI, Google, Kimi, OpenRouter. The tool, skill and provider panels take care of the rest. No package manager, no shell scripts, no setup wizard.
         </p>
       </div>
       <div style="display:grid;gap:12px">
@@ -520,11 +461,11 @@ skill : long-form on-disk in ~/.claakecode/skills</pre>
           <span style="flex:1">Download .AppImage / .deb</span>
           <span class="copy-btn">open ↗</span>
         </a>
-        <div class="install-bar">
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode" class="install-bar" style="text-decoration:none">
           <span class="prompt">source</span>
-          <code style="flex:1">git clone github.com/WilliamPeynichou/ClaakeCode</code>
-          <button class="copy-btn" data-copy="git clone https://github.com/WilliamPeynichou/ClaakeCode.git">copy</button>
-        </div>
+          <span style="flex:1">Browse the repo on GitHub</span>
+          <span class="copy-btn">open ↗</span>
+        </a>
       </div>
     </div>
   </section>
@@ -546,7 +487,9 @@ skill : long-form on-disk in ~/.claakecode/skills</pre>
       </div>
       <div>
         <h4>Product</h4>
-        <a href="#editor">Editor</a>
+        <a href="#tools">Tools</a>
+        <a href="#skills">Skills</a>
+        <a href="#providers">Providers</a>
         <a href="#agent">Agent</a>
         <a href="#features">Features</a>
         <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases">Releases</a>
@@ -572,86 +515,16 @@ skill : long-form on-disk in ~/.claakecode/skills</pre>
 </div>
 
 <script>
-  // ─── copy-to-clipboard buttons ───────────────────────────────
-  document.querySelectorAll('.copy-btn[data-copy]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const text = btn.getAttribute('data-copy') || '';
-      try {
-        await navigator.clipboard.writeText(text);
-        const prev = btn.textContent;
-        btn.textContent = 'copied';
-        setTimeout(() => (btn.textContent = prev), 1200);
-      } catch {
-        /* clipboard might be unavailable in file:// — silently ignore */
-      }
-    });
+  // ─── make sure embedded videos autoplay on every browser ─────
+  document.querySelectorAll('video.video-el').forEach((v) => {
+    v.muted = true;
+    v.setAttribute('muted', '');
+    v.setAttribute('playsinline', '');
+    const tryPlay = () => v.play().catch(() => { /* ignore — user gesture will trigger */ });
+    if (v.readyState >= 2) tryPlay();
+    v.addEventListener('loadeddata', tryPlay, { once: true });
+    v.addEventListener('canplay', tryPlay, { once: true });
   });
-
-  // ─── animated agent terminal ─────────────────────────────────
-  const TERM_SCRIPT = [
-    { d: 200, cls: 't-prompt', text: '~/projects/atlas ' },
-    { d: 0,   cls: 't-user',   text: 'claake ' },
-    { d: 350, cls: 't-user',   text: '"refactor billing/* to use the new InvoiceService"\n' },
-    { d: 500, cls: 't-dim',    text: '↳ planning · 3 files in scope · 412 LOC\n\n' },
-    { d: 400, cls: 't-tool',   text: '⟶ read   billing/charges.ts\n' },
-    { d: 200, cls: 't-tool',   text: '⟶ read   billing/refunds.ts\n' },
-    { d: 200, cls: 't-tool',   text: '⟶ grep   "stripeClient" --in src/\n' },
-    { d: 350, cls: 't-dim',    text: '   12 references found across 4 files\n\n' },
-    { d: 400, cls: 't-ok',     text: '✓ plan accepted (3 edits, 1 test)\n' },
-    { d: 0,   cls: 'diff',     diff: {
-      file: 'billing/charges.ts',
-      hunks: [
-        { type: 'rm',  text: '- import { stripeClient } from "../vendor/stripe";' },
-        { type: 'add', text: '+ import { InvoiceService } from "../services/invoice";' },
-        { type: 'rm',  text: '- const charge = await stripeClient.charges.create({...});' },
-        { type: 'add', text: '+ const charge = await InvoiceService.charge(input);' },
-      ]
-    }},
-    { d: 500, cls: 't-tool', text: '⟶ run    pnpm test billing\n' },
-    { d: 600, cls: 't-ok',   text: '✓ 14 passed, 0 failed · 1.84s\n' },
-    { d: 400, cls: 't-dim',  text: '\nbranch: agent/refactor-invoice · ready for review\n' },
-  ];
-
-  const termBody = document.getElementById('term-body');
-  let bar = termBody.querySelector('.t-bar');
-  function renderSeg(seg) {
-    if (seg.cls === 'diff') {
-      const wrap = document.createElement('div');
-      wrap.className = 't-diff';
-      const head = document.createElement('div');
-      head.className = 't-diff-head';
-      head.innerHTML = `<span>edit · ${seg.diff.file}</span><span>+2 −2</span>`;
-      wrap.appendChild(head);
-      seg.diff.hunks.forEach((h) => {
-        const row = document.createElement('div');
-        row.className = `t-diff-row ${h.type}`;
-        row.textContent = h.text;
-        wrap.appendChild(row);
-      });
-      termBody.insertBefore(wrap, bar);
-    } else {
-      const span = document.createElement('span');
-      span.className = seg.cls;
-      span.textContent = seg.text;
-      termBody.insertBefore(span, bar);
-    }
-  }
-  function playTerminal(i) {
-    if (i >= TERM_SCRIPT.length) {
-      setTimeout(() => {
-        // wipe and restart
-        while (termBody.firstChild && termBody.firstChild !== bar) {
-          termBody.removeChild(termBody.firstChild);
-        }
-        playTerminal(0);
-      }, 6000);
-      return;
-    }
-    renderSeg(TERM_SCRIPT[i]);
-    setTimeout(() => playTerminal(i + 1), TERM_SCRIPT[i].d || 200);
-  }
-  // start after the page has settled
-  setTimeout(() => playTerminal(0), 600);
 </script>
 
 </body>
