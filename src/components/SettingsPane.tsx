@@ -3852,8 +3852,11 @@ function serverFromUnknown(value: unknown, fallbackName: string): McpServerConfi
   }
 
   const name = stringValue(value.name) || fallbackName;
+  // Accept an empty command while the form is being edited; the actual save
+  // (api.saveMcpSettings → probe) will surface a missing-command error so
+  // the user can't ship a half-filled config, but the live re-parse must
+  // not throw or every field locks behind `disabled={parseError}`.
   const command = stringValue(value.command);
-  if (!command) throw new Error(`Missing command for ${name}`);
 
   return {
     id: stringValue(value.id) || deterministicId(name),
