@@ -3894,6 +3894,10 @@ function settingsToJson(settings: McpSettings): string {
     const entry: Record<string, unknown> = {
       command: server.command,
     };
+    // Persist the id explicitly so the parse → serialize → parse round-trip
+    // is stable. Without it, parseMcpJson would re-derive the id from the
+    // name slug on every keystroke, which dropped focus from form inputs.
+    if (server.id) entry.id = server.id;
     if (server.args.length) entry.args = server.args;
     if (server.cwd) entry.cwd = server.cwd;
     if (server.env.length) entry.env = envToObject(server.env);

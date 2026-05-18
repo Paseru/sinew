@@ -7362,6 +7362,16 @@ textarea {
 
 /* ----- MCP server editor (Phase 3) ------------------------------------ */
 
+/* Body needs more vertical room when used in edit mode (form fields) */
+.settings-pane__body--mcp .settings-pane__detail-head {
+  padding: 14px 16px 8px;
+}
+
+.settings-pane__body--mcp .settings-pane__detail-body {
+  padding: 8px 16px 16px;
+  gap: 14px;
+}
+
 .settings-pane__detail-title-input {
   flex: 1 1 0;
   min-width: 0;
@@ -7371,10 +7381,15 @@ textarea {
   color: var(--text-0);
   padding: 6px 9px;
   outline: none;
-  font-family: var(--font-ui);
-  font-size: var(--fs-md);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
   transition: background 140ms ease;
+}
+
+.settings-pane__detail-title-input::placeholder {
+  color: var(--text-3);
 }
 
 .settings-pane__detail-title-input:focus,
@@ -7387,39 +7402,51 @@ textarea {
   cursor: not-allowed;
 }
 
+/* Each labelled form field stacks the label on top of the control. */
+.settings-pane__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
 .settings-pane__field-label {
   display: block;
   color: var(--text-3);
   font-family: var(--font-ui);
   font-size: var(--fs-xs);
   font-weight: 500;
-  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
 }
 
 .settings-pane__field-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .settings-pane__field-add {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 0;
+  border: 1px solid var(--line);
   background: transparent;
   color: var(--text-2);
   font-family: var(--font-ui);
   font-size: var(--fs-xs);
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: var(--r-med);
   cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
 .settings-pane__field-add:hover:not(:disabled) {
   background: var(--bg-2);
   color: var(--text-0);
+  border-color: var(--line-strong);
 }
 
 .settings-pane__field-add:disabled {
@@ -7430,19 +7457,26 @@ textarea {
 .settings-pane__field-input {
   width: 100%;
   min-width: 0;
-  border: 0;
+  border: 1px solid var(--line);
   border-radius: var(--r-med);
   background: var(--bg-2);
   color: var(--text-0);
-  padding: 6px 9px;
+  padding: 7px 10px;
   outline: none;
   font-family: var(--font-ui);
-  font-size: var(--fs-xs);
-  transition: background 140ms ease;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  transition: background 140ms ease, border-color 140ms ease;
 }
 
+.settings-pane__field-input::placeholder {
+  color: var(--text-3);
+}
+
+.settings-pane__field-input:hover:not(:disabled),
 .settings-pane__field-input:focus {
   background: var(--bg-3);
+  border-color: var(--line-strong);
 }
 
 .settings-pane__field-input:disabled {
@@ -7452,22 +7486,35 @@ textarea {
 
 .settings-pane__env-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .settings-pane__env-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
+}
+
+/* Stack env rows vertically when the editor pane gets narrow. */
+@media (max-width: 720px) {
+  .settings-pane__env-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-med);
+  }
 }
 
 .settings-pane__field-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
 }
 
 .settings-pane__btn[data-tone="danger"] {
