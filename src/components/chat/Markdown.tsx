@@ -10,6 +10,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { api } from "../../lib/ipc";
+import { MermaidDiagram } from "./MermaidDiagram";
 
 type Props = {
   text: string;
@@ -22,6 +23,13 @@ type LinkifyOptions = {
 
 const FILE_TOKEN =
   /((?:\.{1,2}\/)?(?:[A-Za-z0-9_.+-]+\/)+[A-Za-z0-9_.+-]+\.[A-Za-z0-9]+(?::\d+(?::\d+)?)?|[A-Za-z0-9_.+-]+\.(?:tsx?|jsx?|rs|toml|json|md|css|scss|html|ya?ml|lock|sh|zsh|bash|py|go|java|kt|swift|sql|env|mjs|cjs|config)(?::\d+(?::\d+)?)?)/g;
+
+function isMermaidLanguage(className?: string): boolean {
+  if (!className) return false;
+  return className
+    .split(/\s+/)
+    .some((name) => name === "mermaid" || name === "language-mermaid");
+}
 
 function isFileToken(value: string): boolean {
   FILE_TOKEN.lastIndex = 0;
@@ -84,7 +92,13 @@ function linkifyText(text: string, { onOpenFile }: LinkifyOptions): ReactNode[] 
 
 function childrenToString(children: ReactNode): string {
   return Children.toArray(children)
-    .map((child) => (typeof child === "string" ? child : ""))
+    .map((child) => {
+      if (typeof child === "string") return child;
+      if (typeof child === "number") return String(child);
+      if (!isValidElement(child)) return "";
+      const props = child.props as { children?: ReactNode };
+      return childrenToString(props.children);
+    })
     .join("");
 }
 
@@ -122,6 +136,27 @@ export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
+          pre({ children }) {
+            // `code` already swaps fenced ```mermaid blocks for an
+            // interactive <MermaidDiagram />. Unwrap the surrounding
+            // <pre> in that case so the diagram isn't boxed by code
+            // styling; otherwise render a plain <pre>.
+            const only =
+              Children.count(children) === 1
+                ? Children.toArray(children)[0]
+                : null;
+            if (isValidElement(only) && only.type === MermaidDiagram) {
+              return only;
+            }
+            if (isValidElement<{ className?: string; children?: ReactNode }>(only)) {
+              if (isMermaidLanguage(only.props.className)) {
+                return (
+                  <MermaidDiagram source={childrenToString(only.props.children)} />
+                );
+              }
+            }
+            return <pre>{children}</pre>;
+          },
           p({ children }) {
             return <p>{linkifyChildren(children, { onOpenFile })}</p>;
           },
@@ -142,6 +177,9 @@ export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
           },
           code({ children, className }) {
             const value = childrenToString(children);
+            if (isMermaidLanguage(className)) {
+              return <MermaidDiagram source={value} />;
+            }
             if (!className && isFileToken(value)) {
               return (
                 <FileLink

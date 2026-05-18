@@ -10,6 +10,7 @@ Code map:
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
+├── test-mermaid.md
 ├── README.md
 ├── scripts
 │   └── prepare-sidecars.mjs
@@ -253,6 +254,7 @@ Code map:
     │       ├── DotmSquare5.tsx
     │       ├── FileChangeBlock.tsx
     │       ├── Markdown.tsx
+    │       ├── MermaidDiagram.tsx
     │       ├── PlanningNextMoveBlock.tsx
     │       ├── Questionnaire.tsx
     │       ├── TodoStrip.tsx

@@ -1,7 +1,7 @@
 {
   "name": "sinew",
   "private": true,
-  "version": "0.1.12",
+  "version": "0.1.13",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,6 +25,7 @@
     "@xterm/xterm": "6.1.0-beta.218",
     "highlight.js": "^11.10.0",
     "lucide-react": "1.8.0",
+    "mermaid": "11.15.0",
     "monaco-editor": "^0.52.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -38,6 +38,9 @@ export default defineConfig(async () => ({
             return "monaco";
           }
           if (id.includes("@xterm/")) return "xterm";
+          if (id.includes("mermaid") || id.includes("@mermaid-js")) {
+            return "mermaid";
+          }
           if (
             id.includes("react-markdown") ||
             id.includes("remark-") ||

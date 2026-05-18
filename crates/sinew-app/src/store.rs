@@ -51,7 +51,9 @@ STRICTLY FORBIDDEN in the plan (unless the user explicitly requests it):
 
 The plan should read as a clear description of intent and expected behavior that anyone could understand without technical background. Bullet points and paragraphs are both acceptable. The focus is on WHAT the system should do, not HOW the code should be written.
 
-If technical specifics become necessary to avoid ambiguity, the AI may include them at its discretion, integrated naturally into the plan - but this should remain the exception, not the default."#;
+If technical specifics become necessary to avoid ambiguity, the AI may include them at its discretion, integrated naturally into the plan - but this should remain the exception, not the default.
+
+You may include Mermaid diagrams (in ```mermaid fenced blocks) when a flow, decision tree, sequence, or set of relationships would be clearer as a picture than as prose. Keep diagram labels at the same level of abstraction as the rest of the plan: describe intent and behavior, not files, functions, or implementation details."#;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
