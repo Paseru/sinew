@@ -105,8 +105,9 @@
   .hero { padding: 56px 0 110px; border-bottom: 1px solid var(--rule); }
   .hero-meta { display: flex; gap: 12px; margin-bottom: 36px; flex-wrap: wrap; }
   .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: start; }
+  .hero-grid-solo { grid-template-columns: minmax(0, 760px); }
   .hero h1 em { font-family: 'Instrument Serif'; font-style: italic; font-weight: 400; color: var(--forest); letter-spacing: -0.01em; }
-  .hero-sub { margin-top: 28px; font-size: 18px; line-height: 1.5; color: var(--ink-soft); max-width: 460px; }
+  .hero-sub { margin-top: 28px; font-size: 18px; line-height: 1.5; color: var(--ink-soft); max-width: 620px; }
   .hero-cta { margin-top: 36px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
   .install-bar {
@@ -153,20 +154,7 @@
     text-transform: uppercase; letter-spacing: 0.06em;
   }
 
-  /* ─── video card (hero, right column) ────────────────────── */
-  .video-card {
-    margin: 0;
-    background: transparent;
-    border-radius: 0;
-    overflow: visible;
-    box-shadow: none;
-    color: inherit;
-  }
-  .hero-video {
-    margin-top: -8px;
-    width: 200%;
-    margin-left: -100%;
-  }
+  /* ─── video stage ─────────────────────────────────────────── */
   .video-head {
     display: none;
   }
@@ -201,7 +189,6 @@
     display: none;
   }
 
-  /* ─── full-width video stage (replaces IDE mockup) ───────── */
   .video-stage {
     margin: 0;
     background: transparent;
@@ -397,7 +384,6 @@
     .pillar-grid { grid-template-columns: 1fr; }
     .video-frame { aspect-ratio: 16 / 11; }
     .video-frame-wide { aspect-ratio: 16 / 10; }
-    .hero-video { margin-top: 0; width: 100%; margin-left: 0; }
     .install-grid { grid-template-columns: 1fr !important; }
     .harness-wrap, .oss-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
   }
