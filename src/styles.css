@@ -3324,9 +3324,11 @@ textarea {
 
 .settings-pane__skill-doc-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  row-gap: 8px;
   min-width: 0;
 }
 
@@ -3335,6 +3337,7 @@ textarea {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1 1 220px;
 }
 
 .settings-pane__skill-doc-actions {
@@ -3387,9 +3390,14 @@ textarea {
 
 .settings-pane__skill-doc-title h2 {
   margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-display);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--text-0);
   letter-spacing: -0.005em;
   overflow: hidden;
