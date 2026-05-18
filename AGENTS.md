@@ -21,6 +21,7 @@ Code map:
 │   │   ├── architecture.png
 │   │   ├── harness.png
 │   │   ├── hero.png
+│   │   ├── modes.png
 │   │   ├── screenshot.png
 │   │   └── swarm.png
 │   └── workflows

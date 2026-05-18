@@ -19,6 +19,9 @@ const CODE_SYSTEM_PREFIX: &str = "You are Claude Code, Anthropic's official CLI 
 const COMMON_BETA: &str = "fine-grained-tool-streaming-2025-05-14,context-1m-2025-08-07";
 const OAUTH_BETA: &str = "claude-code-20250219,oauth-2025-04-20";
 const CACHE_BREAKPOINTS: usize = 4;
+const ANTHROPIC_MAX_IMAGE_BASE64_BYTES: usize = 5 * 1024 * 1024;
+const ANTHROPIC_SKIPPED_IMAGE_TOO_LARGE: &str =
+    "[Skipped: image is too large for Anthropic and exceeds the 5 MiB limit. Try compressing it first.]";
 
 #[derive(Clone)]
 pub struct AnthropicConfig {
@@ -392,10 +395,19 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
             }
             Part::Image {
                 media_type, data, ..
-            } => content.push(wire::WirePart::Image {
-                source: wire::ImageSource::Base64 { media_type, data },
-                cache_control,
-            }),
+            } => {
+                if image_base64_fits_anthropic(data) {
+                    content.push(wire::WirePart::Image {
+                        source: wire::ImageSource::Base64 { media_type, data },
+                        cache_control,
+                    });
+                } else {
+                    content.push(wire::WirePart::Text {
+                        text: ANTHROPIC_SKIPPED_IMAGE_TOO_LARGE,
+                        cache_control,
+                    });
+                }
+            }
             Part::Thinking { text, meta } => {
                 let signature = meta
                     .as_ref()
@@ -425,11 +437,17 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
                 is_error,
                 ..
             } => {
+                let mut skipped_oversized_image = false;
                 let inline_images = images
                     .iter()
                     .filter(|image| !image.data.trim().is_empty())
+                    .filter(|image| {
+                        let keep = image_base64_fits_anthropic(&image.data);
+                        skipped_oversized_image |= !keep;
+                        keep
+                    })
                     .collect::<Vec<_>>();
-                let result_content = if inline_images.is_empty() {
+                let result_content = if inline_images.is_empty() && !skipped_oversized_image {
                     wire::ToolResultContent::Text(text)
                 } else {
                     let mut blocks = Vec::new();
@@ -444,6 +462,11 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
                             },
                         }
                     }));
+                    if skipped_oversized_image {
+                        blocks.push(wire::ToolResultBlock::Text {
+                            text: ANTHROPIC_SKIPPED_IMAGE_TOO_LARGE,
+                        });
+                    }
                     wire::ToolResultContent::Blocks(blocks)
                 };
                 content.push(wire::WirePart::ToolResult {
@@ -457,6 +480,10 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
     }
 
     Ok((!content.is_empty()).then_some(wire::WireMessage { role, content }))
+}
+
+fn image_base64_fits_anthropic(data: &str) -> bool {
+    data.len() <= ANTHROPIC_MAX_IMAGE_BASE64_BYTES
 }
 
 fn part_is_ui_only(part: &Part) -> bool {
@@ -507,5 +534,54 @@ async fn read_http_error(response: reqwest::Response) -> AppError {
         }
     } else {
         AppError::Provider(format!("HTTP {status}: {message}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sinew_core::{ChatMessage, Part, Role, ToolResultImage};
+
+    use super::*;
+
+    #[test]
+    fn oversized_tool_result_images_are_replaced_with_text_note() {
+        let message = ChatMessage {
+            role: Role::User,
+            parts: vec![Part::ToolResult {
+                tool_call_id: "call_1".into(),
+                content: "path: hero.png".into(),
+                images: vec![ToolResultImage {
+                    media_type: "image/png".into(),
+                    data: "a".repeat(ANTHROPIC_MAX_IMAGE_BASE64_BYTES + 1),
+                    path: None,
+                }],
+                is_error: false,
+                meta: None,
+            }],
+        };
+
+        let wire_message = to_wire_message(&message, false)
+            .expect("tool result should convert")
+            .expect("message should not be empty");
+
+        let [wire::WirePart::ToolResult { content, .. }] = wire_message.content.as_slice() else {
+            panic!("expected a single tool result part");
+        };
+        let wire::ToolResultContent::Blocks(blocks) = content else {
+            panic!("expected block tool result content");
+        };
+
+        assert_eq!(blocks.len(), 2);
+        assert!(matches!(
+            &blocks[0],
+            wire::ToolResultBlock::Text { text } if *text == "path: hero.png"
+        ));
+        assert!(matches!(
+            &blocks[1],
+            wire::ToolResultBlock::Text { text } if *text == ANTHROPIC_SKIPPED_IMAGE_TOO_LARGE
+        ));
+        assert!(blocks
+            .iter()
+            .all(|block| !matches!(block, wire::ToolResultBlock::Image { .. })));
     }
 }
