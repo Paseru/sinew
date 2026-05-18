@@ -10,7 +10,6 @@ import type {
   RecentWorkspace,
 } from "../types";
 import { WindowControls, isWindowsPlatform } from "./WindowControls";
-import iconUrl from "../assets/claakecode-icon.png";
 
 type Props = {
   onPick: (path: string) => void;
@@ -108,14 +107,6 @@ export function Welcome({ onPick, error, deriveName }: Props) {
       )}
       <main className="welcome__stage">
         <header className="welcome__head">
-          <img
-            src={iconUrl}
-            width={72}
-            height={72}
-            alt="Claake Code"
-            className="welcome__mark-app-icon"
-            draggable={false}
-          />
           <h1 className="welcome__title">
             Claake Code<span className="welcome__title-dot">.</span>
           </h1>
