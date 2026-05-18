@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Claake Code — agentic IDE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Claake Code is a local-first, open source desktop AI coding harness. Reshape every tool, run any provider, ship in the open." />
+<link rel="icon" type="image/png" href="assets/claakecode-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+
+</head>
+<body>
+
+<div class="page">
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <div class="mark"><img src="assets/claakecode-icon.png" alt="Claake Code"/></div>
+      <div class="name">claake <em>code</em></div>
+      <span class="mono" style="font-size:11px;color:var(--ink-soft);margin-left:6px">v0.1.12</span>
+    </div>
+    <div class="nav-links">
+      <a href="#editor">Editor</a>
+      <a href="#agent">Agent</a>
+      <a href="#features">Features</a>
+      <a href="#oss">Open source</a>
+      <a href="#install">Install</a>
+    </div>
+    <div class="nav-cta">
+      <a href="https://github.com/WilliamPeynichou/ClaakeCode" class="pill" style="text-decoration:none">
+        <span class="dot"></span>Star on GitHub
+      </a>
+      <a href="#install" class="btn btn-primary">Download</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="pill"><span class="dot"></span>Open source · MIT</span>
+      <span class="pill">v0.1.12</span>
+      <span class="pill">macOS · linux · windows</span>
+    </div>
+    <div class="hero-grid">
+      <div>
+        <h1>An <em>agentic</em><br/>code editor<br/>that <em>thinks</em><br/>in repos.</h1>
+        <p class="hero-sub">
+          Claake Code is a desktop coding harness you can actually reshape. Rewrite every tool description, toggle the ones you don't need, and the assistant only sees what you keep. Multi-provider, MCP-native, no telemetry.
+        </p>
+        <div class="hero-cta">
+          <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases/latest" class="btn btn-primary">Download for macOS ↗</a>
+          <a href="https://github.com/WilliamPeynichou/ClaakeCode" class="btn btn-ghost">View on GitHub</a>
+        </div>
+        <div class="install-bar">
+          <span class="prompt">$</span>
+          <code id="hero-cmd">brew install --cask claakecode</code>
+          <button class="copy-btn" data-copy="brew install --cask claakecode">copy</button>
+        </div>
+      </div>
+      <div>
+        <div class="terminal">
+          <div class="term-head">
+            <span class="term-dot r"></span>
+            <span class="term-dot y"></span>
+            <span class="term-dot g"></span>
+            <span class="term-title">claake — agent · zsh</span>
+            <span class="term-tabs">
+              <span class="term-tab active">agent</span>
+              <span class="term-tab">build</span>
+              <span class="term-tab">+</span>
+            </span>
+          </div>
+          <div class="term-body" id="term-body">
+            <span class="t-bar"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUPPORT STRIP -->
+  <div class="support">
+    <span class="label">RUNS ON →</span>
+    <span>TypeScript</span><span>·</span>
+    <span>Python</span><span>·</span>
+    <span>Rust</span><span>·</span>
+    <span>Go</span><span>·</span>
+    <span>Swift</span><span>·</span>
+    <span>Elixir</span><span>·</span>
+    <span>Ruby</span>
+    <span style="margin-left:auto" class="label">MODELS →</span>
+    <span>Anthropic</span><span>·</span>
+    <span>OpenAI</span><span>·</span>
+    <span>Google</span><span>·</span>
+    <span>Kimi</span><span>·</span>
+    <span>OpenRouter</span>
+  </div>
+
+  <!-- EDITOR SECTION -->
+  <section id="editor">
+    <div class="section-tag">
+      <span class="num">§ 01</span>
+      <span>The editor, with an agent in the seat next to you</span>
+      <span class="rule"></span>
+    </div>
+    <h2 style="max-width:900px">
+      A real editor. A real terminal.<br/>
+      <em class="serif" style="color:var(--forest)">And a teammate</em> that can fan out across the repo.
+    </h2>
+
+    <div style="margin-top:36px"></div>
+
+    <div class="ide">
+      <div class="ide-head">
+        <span class="term-dot r"></span>
+        <span class="term-dot y"></span>
+        <span class="term-dot g"></span>
+        <span class="term-title" style="margin-left:8px">claakecode — billing/charges.ts</span>
+        <span class="term-tabs" style="margin-left:auto">
+          <span class="term-tab">stash</span>
+          <span class="term-tab active">agent/refactor-invoice</span>
+        </span>
+      </div>
+      <div class="ide-body">
+        <div class="ide-tree">
+          <div class="tree-item dir open">src</div>
+          <div class="tree-indent">
+            <div class="tree-item dir open">billing</div>
+            <div class="tree-indent">
+              <div class="tree-item file active changed">charges.ts</div>
+              <div class="tree-item file changed">refunds.ts</div>
+              <div class="tree-item file">webhooks.ts</div>
+            </div>
+            <div class="tree-item dir">services</div>
+            <div class="tree-indent">
+              <div class="tree-item file added">invoice.ts</div>
+            </div>
+            <div class="tree-item dir">vendor</div>
+            <div class="tree-item dir">utils</div>
+          </div>
+          <div class="tree-item dir">tests</div>
+          <div class="tree-item file">package.json</div>
+          <div class="tree-item file">tsconfig.json</div>
+          <div class="tree-item file">AGENTS.md</div>
+        </div>
+
+        <div class="ide-editor">
+          <div class="ed-tabs">
+            <span class="ed-tab active">charges.ts</span>
+            <span class="ed-tab">invoice.ts</span>
+            <span class="ed-tab">charges.test.ts</span>
+          </div>
+          <div class="ed-code">
+            <div><span class="ln">1</span><span class="cmt">// billing/charges.ts</span></div>
+            <div><span class="ln">2</span><span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">"zod"</span>;</div>
+            <div class="added"><span class="ln">3</span><span class="kw">import</span> { InvoiceService } <span class="kw">from</span> <span class="str">"../services/invoice"</span>;</div>
+            <div><span class="ln">4</span></div>
+            <div><span class="ln">5</span><span class="kw">const</span> <span class="fn">ChargeInput</span> = z.<span class="fn">object</span>({</div>
+            <div><span class="ln">6</span>&nbsp;&nbsp;amount: z.<span class="fn">number</span>().<span class="fn">positive</span>(),</div>
+            <div><span class="ln">7</span>&nbsp;&nbsp;currency: z.<span class="fn">enum</span>([<span class="str">"usd"</span>, <span class="str">"eur"</span>]),</div>
+            <div><span class="ln">8</span>&nbsp;&nbsp;customerId: z.<span class="fn">string</span>().<span class="fn">uuid</span>(),</div>
+            <div><span class="ln">9</span>});</div>
+            <div><span class="ln">10</span></div>
+            <div class="focus"><span class="ln">11</span><span class="kw">export async function</span> <span class="fn">createCharge</span>(input: z.infer&lt;<span class="kw">typeof</span> ChargeInput&gt;) {</div>
+            <div class="focus"><span class="ln">12</span>&nbsp;&nbsp;<span class="kw">const</span> parsed = ChargeInput.<span class="fn">parse</span>(input);</div>
+            <div class="focus added"><span class="ln">13</span>&nbsp;&nbsp;<span class="kw">const</span> charge = <span class="kw">await</span> InvoiceService.<span class="fn">charge</span>(parsed);</div>
+            <div class="focus"><span class="ln">14</span>&nbsp;&nbsp;<span class="kw">return</span> { id: charge.id, status: charge.status };</div>
+            <div class="focus"><span class="ln">15</span>}</div>
+            <div><span class="ln">16</span></div>
+            <div><span class="ln">17</span><span class="kw">export async function</span> <span class="fn">getCharge</span>(id: <span class="kw">string</span>) {</div>
+            <div><span class="ln">18</span>&nbsp;&nbsp;<span class="kw">return</span> InvoiceService.<span class="fn">find</span>(id);</div>
+            <div><span class="ln">19</span>}</div>
+          </div>
+        </div>
+
+        <div class="ide-chat">
+          <div class="chat-head">
+            <span>Agent · plan-mode</span>
+            <span style="color:#8ec19a">● connected</span>
+          </div>
+          <div class="chat-body">
+            <div class="chat-msg user">
+              <div class="who">you</div>
+              <div class="bubble">Refactor billing to use the new InvoiceService. Keep the public API.</div>
+            </div>
+            <div class="chat-msg agent">
+              <div class="who">claake</div>
+              <div class="bubble">
+                I traced 12 stripeClient call sites across 4 files. Plan: swap the import in <span class="mono" style="color:#c9b87a">charges.ts</span> and <span class="mono" style="color:#c9b87a">refunds.ts</span>, add a thin adapter at <span class="mono" style="color:#8ec19a">services/invoice.ts</span>, and re-run the billing tests.
+              </div>
+            </div>
+            <div class="tool-call"><span class="check">✓</span> edit · billing/charges.ts (+2 −2)</div>
+            <div class="tool-call"><span class="check">✓</span> create · services/invoice.ts (+48)</div>
+            <div class="tool-call"><span class="check">✓</span> run · pnpm test billing → 14 passed</div>
+            <div class="chat-msg agent">
+              <div class="who">claake</div>
+              <div class="bubble">Branch <span class="mono" style="color:#c9b87a">agent/refactor-invoice</span> is ready. Want me to open a PR or keep iterating?</div>
+            </div>
+          </div>
+          <div class="chat-input">
+            <div class="field">open a PR with the diff summary<span class="t-bar" style="height:11px;margin-left:2px"></span></div>
+            <button class="send">send</button>
+          </div>
+        </div>
+      </div>
+      <div class="ide-status">
+        <span>main ← agent/refactor-invoice</span>
+        <span class="ok">● tests passing</span>
+        <span>ts 5.4</span>
+        <span>node 22</span>
+        <span style="margin-left:auto">model · sonnet 4.6</span>
+        <span>tokens · 18.4k</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:48px">
+      <div>
+        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">Plan mode</div>
+        <p style="color:var(--ink-soft);font-size:15px;line-height:1.55">
+          The agent proposes a structured plan before touching a single byte. Approve, edit, or rewrite the plan in plain English.
+        </p>
+      </div>
+      <div>
+        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">Diffs you can trust</div>
+        <p style="color:var(--ink-soft);font-size:15px;line-height:1.55">
+          Every edit lands as a reviewable hunk on a feature branch. Tests run before anything touches your working tree.
+        </p>
+      </div>
+      <div>
+        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">Agent swarm</div>
+        <p style="color:var(--ink-soft);font-size:15px;line-height:1.55">
+          Fan a task out to a team of sub-agents with their own context and tool subset. Shared task board, live coordination.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOOP DIAGRAM -->
+  <section id="agent">
+    <div class="section-tag">
+      <span class="num">§ 02</span>
+      <span>How the agent works</span>
+      <span class="rule"></span>
+    </div>
+    <div class="loop-wrap">
+      <div>
+        <h2>Plan. Act. Observe.<br/><em class="serif" style="color:var(--forest)">Reflect.</em> Repeat.</h2>
+        <p style="color:var(--ink-soft);font-size:17px;line-height:1.55;margin-top:24px;max-width:480px">
+          Claake runs a tight loop with explicit checkpoints. After each tool call the agent re-reads the world, scores its progress against the plan, and decides whether to continue, branch, or ask you a question.
+        </p>
+        <p style="color:var(--ink-soft);font-size:14px;line-height:1.55;margin-top:18px;max-width:480px">
+          No hidden chain-of-thought. Every step lands in your terminal as a structured event you can replay, fork, or pipe into your CI.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:24px">
+          <span class="pill">read</span>
+          <span class="pill">edit</span>
+          <span class="pill">grep</span>
+          <span class="pill">bash</span>
+          <span class="pill">skill</span>
+          <span class="pill">subagent</span>
+          <span class="pill">team</span>
+          <span class="pill">MCP · any server</span>
+        </div>
+      </div>
+      <div>
+        <svg class="loop-svg" viewBox="0 0 480 360" fill="none">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--forest)"/>
+            </marker>
+          </defs>
+          <path d="M 280 70 Q 380 90, 400 160" stroke="var(--forest)" stroke-width="1.4" marker-end="url(#arrow)" />
+          <path d="M 410 210 Q 380 290, 280 300" stroke="var(--forest)" stroke-width="1.4" marker-end="url(#arrow)" />
+          <path d="M 200 300 Q 100 290, 70 210" stroke="var(--forest)" stroke-width="1.4" marker-end="url(#arrow)" />
+          <path d="M 80 160 Q 100 90, 200 70" stroke="var(--forest)" stroke-width="1.4" marker-end="url(#arrow)" />
+          <g>
+            <circle cx="240" cy="40" r="38" fill="var(--cream)" stroke="var(--forest)" stroke-width="1.4"/>
+            <text x="240" y="45" text-anchor="middle" style="font-family:'Geist Mono';font-size:13px;fill:var(--forest-deep);letter-spacing:0.05em;text-transform:uppercase">plan</text>
+          </g>
+          <g>
+            <circle cx="420" cy="180" r="38" fill="var(--cream)" stroke="var(--forest)" stroke-width="1.4"/>
+            <text x="420" y="185" text-anchor="middle" style="font-family:'Geist Mono';font-size:13px;fill:var(--forest-deep);letter-spacing:0.05em;text-transform:uppercase">act</text>
+          </g>
+          <g>
+            <circle cx="240" cy="320" r="38" fill="var(--cream)" stroke="var(--forest)" stroke-width="1.4"/>
+            <text x="240" y="325" text-anchor="middle" style="font-family:'Geist Mono';font-size:13px;fill:var(--forest-deep);letter-spacing:0.05em;text-transform:uppercase">observe</text>
+          </g>
+          <g>
+            <circle cx="60" cy="180" r="38" fill="var(--cream)" stroke="var(--forest)" stroke-width="1.4"/>
+            <text x="60" y="185" text-anchor="middle" style="font-family:'Geist Mono';font-size:13px;fill:var(--forest-deep);letter-spacing:0.05em;text-transform:uppercase">reflect</text>
+          </g>
+          <text x="240" y="180" text-anchor="middle" style="font-family:'Instrument Serif';font-style:italic;font-size:26px;fill:var(--forest)">loop</text>
+          <text x="240" y="202" text-anchor="middle" style="font-family:'Geist Mono';font-size:10px;fill:var(--ink-soft);letter-spacing:0.1em">until done</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES GRID -->
+  <section id="features">
+    <div class="section-tag">
+      <span class="num">§ 03</span>
+      <span>Built for people who don't trust black boxes</span>
+      <span class="rule"></span>
+    </div>
+    <h2 style="margin-bottom:36px;max-width:980px">Six things we will <em class="serif" style="color:var(--forest)">never</em> compromise on.</h2>
+    <div class="feat-grid">
+
+      <div class="feat">
+        <div>
+          <div class="feat-num">↳ 01</div>
+          <h3>Reshape every tool</h3>
+          <p>Every tool description is editable, every tool is toggleable. Run minimal like Pi, or unlock the full set with MCP, skills, and a sub-agent swarm.</p>
+        </div>
+        <svg class="feat-icon" viewBox="0 0 36 36"><rect x="4" y="8" width="28" height="20" rx="3" fill="none" stroke="var(--forest)" stroke-width="1.4"/><path d="M10 14 H 26 M10 18 H 22 M10 22 H 18" stroke="var(--forest)" stroke-width="1.4"/></svg>
+      </div>
+
+      <div class="feat">
+        <div>
+          <div class="feat-num">↳ 02</div>
+          <h3>Bring your own model</h3>
+          <p>Same agent loop across Anthropic, OpenAI, Google, Kimi, and OpenRouter. OAuth where it makes sense, API keys where it doesn't. Switch mid-project.</p>
+        </div>
+        <svg class="feat-icon" viewBox="0 0 36 36"><circle cx="10" cy="10" r="4" fill="none" stroke="var(--forest)" stroke-width="1.4"/><circle cx="26" cy="10" r="4" fill="none" stroke="var(--forest)" stroke-width="1.4"/><circle cx="18" cy="26" r="4" fill="none" stroke="var(--forest)" stroke-width="1.4"/><path d="M12 13 L 17 23 M24 13 L 19 23 M14 10 H 22" stroke="var(--forest)" stroke-width="1.4"/></svg>
+      </div>
+
+      <div class="feat">
+        <div>
+          <div class="feat-num">↳ 03</div>
+          <h3>Native MCP support</h3>
+          <p>The Model Context Protocol is wired into the core. Add a server from a UI form — the agent picks it up on the next turn. No restart, no JSON spelunking.</p>
+        </div>
+        <svg class="feat-icon" viewBox="0 0 36 36"><path d="M6 6 L 30 6 L 30 30 L 6 30 Z" fill="none" stroke="var(--forest)" stroke-width="1.4"/><path d="M6 12 H 30 M12 6 V 30" stroke="var(--forest)" stroke-width="1.4"/></svg>
+      </div>
+
+      <div class="feat">
+        <div>
+          <div class="feat-num">↳ 04</div>
+          <h3>1M context, only when you want it</h3>
+          <p>Sonnet 4.6's 1M beta window is one toggle away — without forcing the beta header on accounts that don't have access.</p>
+        </div>
+        <svg class="feat-icon" viewBox="0 0 36 36"><circle cx="18" cy="18" r="11" fill="none" stroke="var(--forest)" stroke-width="1.4"/><path d="M18 10 V 18 L 24 22" stroke="var(--forest)" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </div>
+
+      <div class="feat">
+        <div>
+          <div class="feat-num">↳ 05</div>
+          <h3>Skills, in the open</h3>
+          <p>Long-form, on-disk skills the agent can invoke. Create, edit, and delete them from the UI — they live as plain markdown in <span class="mono">~/.claakecode/skills</span>.</p>
+        </div>
+        <svg class="feat-icon" viewBox="0 0 36 36"><path d="M18 4 L 30 10 V 22 C 30 28 24 32 18 32 C 12 32 6 28 6 22 V 10 Z" fill="none" stroke="var(--forest)" stroke-width="1.4"/><path d="M13 18 L 17 22 L 24 14" stroke="var(--forest)" stroke-width="1.4" fill="none"/></svg>
+      </div>
+
+      <div class="feat">
+        <div>
+          <div class="feat-num">↳ 06</div>
+          <h3>Forkable, hackable core</h3>
+          <p>MIT licensed, written in Rust + React on Tauri 2. Read the source, send a PR, or fork it for your team's house style — that's literally how this project started.</p>
+        </div>
+        <svg class="feat-icon" viewBox="0 0 36 36"><circle cx="9" cy="10" r="3" fill="none" stroke="var(--forest)" stroke-width="1.4"/><circle cx="27" cy="10" r="3" fill="none" stroke="var(--forest)" stroke-width="1.4"/><circle cx="18" cy="28" r="3" fill="none" stroke="var(--forest)" stroke-width="1.4"/><path d="M9 13 V 19 Q 9 22 12 22 H 24 Q 27 22 27 19 V 13 M18 22 V 25" stroke="var(--forest)" stroke-width="1.4" fill="none"/></svg>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- OPEN SOURCE -->
+  <section id="oss">
+    <div class="section-tag">
+      <span class="num">§ 04</span>
+      <span>Open source</span>
+      <span class="rule"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:64px;align-items:start" class="oss-grid">
+      <div>
+        <h2>The contract is simple:<br/>
+          <em class="serif" style="color:var(--forest)">you own the tools you build with.</em>
+        </h2>
+        <p style="color:var(--ink-soft);font-size:17px;line-height:1.6;margin-top:24px;max-width:560px">
+          Claake Code is MIT licensed. The agent runtime, the editor, the prompt library, the providers — everything is in a single Cargo workspace with a React UI on top. If you can read Rust and TypeScript, you can read everything we ship.
+        </p>
+        <p style="color:var(--ink-soft);font-size:15px;line-height:1.6;margin-top:16px;max-width:560px">
+          No telemetry. No training on your transcripts. No enterprise tier hiding the good features. The same binary the maintainers use is the binary you download.
+        </p>
+        <div style="display:flex;gap:10px;margin-top:32px;flex-wrap:wrap">
+          <a class="btn btn-primary" href="https://github.com/WilliamPeynichou/ClaakeCode">Read the source ↗</a>
+          <a class="btn btn-ghost" href="https://github.com/WilliamPeynichou/ClaakeCode/issues">Issues</a>
+          <a class="btn btn-ghost" href="https://github.com/WilliamPeynichou/ClaakeCode/discussions">Discussions</a>
+        </div>
+      </div>
+      <div style="background:var(--cream);border:1px solid var(--rule);border-radius:16px;padding:28px 28px 24px">
+        <div class="mono" style="font-size:11px;color:var(--forest);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:14px">AGENTS.md · project memory</div>
+<pre class="mono" style="margin:0;font-size:12.5px;line-height:1.65;color:var(--ink);white-space:pre-wrap">
+# House rules
+
+- Run `cargo check --workspace` before committing.
+- Prefer the dedicated tool over `bash`.
+- Keep the surface editable: every tool description
+  lives in settings, every tool has an on/off toggle.
+
+## tools
+mcp.* : configured per-workspace, hot-reloaded
+skill : long-form on-disk in ~/.claakecode/skills</pre>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-top:56px">
+      <div class="stat"><div class="v">5</div><div class="l">Providers wired</div></div>
+      <div class="stat"><div class="v">14</div><div class="l">Built-in tools</div></div>
+      <div class="stat"><div class="v">∞</div><div class="l">MCP servers supported</div></div>
+      <div class="stat"><div class="v">MIT</div><div class="l">Forever and ever</div></div>
+    </div>
+  </section>
+
+  <!-- INSTALL CTA -->
+  <section id="install" style="padding-bottom:96px">
+    <div class="section-tag">
+      <span class="num">§ 05</span>
+      <span>Install</span>
+      <span class="rule"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center" class="install-grid">
+      <div>
+        <h2>One download.<br/>
+          <em class="serif" style="color:var(--forest)">No account</em>, no setup wizard.
+        </h2>
+        <p style="color:var(--ink-soft);font-size:17px;line-height:1.55;margin-top:20px;max-width:480px">
+          Drop in your provider keys when you're ready. Anthropic, OpenAI, Google, Kimi, and OpenRouter are all supported out of the box.
+        </p>
+      </div>
+      <div style="display:grid;gap:12px">
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases/latest" class="install-bar" style="text-decoration:none">
+          <span class="prompt">macOS</span>
+          <span style="flex:1">Download .dmg from GitHub Releases</span>
+          <span class="copy-btn">open ↗</span>
+        </a>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases/latest" class="install-bar" style="text-decoration:none">
+          <span class="prompt">windows</span>
+          <span style="flex:1">Download .msi / .exe</span>
+          <span class="copy-btn">open ↗</span>
+        </a>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases/latest" class="install-bar" style="text-decoration:none">
+          <span class="prompt">linux</span>
+          <span style="flex:1">Download .AppImage / .deb</span>
+          <span class="copy-btn">open ↗</span>
+        </a>
+        <div class="install-bar">
+          <span class="prompt">source</span>
+          <code style="flex:1">git clone github.com/WilliamPeynichou/ClaakeCode</code>
+          <button class="copy-btn" data-copy="git clone https://github.com/WilliamPeynichou/ClaakeCode.git">copy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="foot">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="nav-brand"><div class="mark" style="width:42px;height:42px;border-radius:11px"><img src="assets/claakecode-icon.png" alt=""/></div></div>
+          <div>
+            <div style="font-size:18px;font-weight:600">claake <em class="serif" style="color:var(--forest)">code</em></div>
+            <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:2px">An agentic editor, in the open.</div>
+          </div>
+        </div>
+        <p class="serif" style="font-size:22px;line-height:1.35;margin-top:28px;max-width:380px;color:var(--ink-soft)">
+          "The best tools are the ones you can read all the way down to the metal."
+        </p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <a href="#editor">Editor</a>
+        <a href="#agent">Agent</a>
+        <a href="#features">Features</a>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases">Releases</a>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode">Source</a>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/blob/main/README.md">README</a>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/blob/main/AGENTS.md">AGENTS.md</a>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/issues">Issues</a>
+        <a href="https://github.com/WilliamPeynichou/ClaakeCode/discussions">Discussions</a>
+        <a href="https://github.com/Paseru/sinew">Forked from Sinew</a>
+      </div>
+    </div>
+    <div class="foot-tag">
+      <span>© 2026 · MIT licensed</span>
+      <span>fork it, ship it</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // ─── copy-to-clipboard buttons ───────────────────────────────
+  document.querySelectorAll('.copy-btn[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.getAttribute('data-copy') || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = btn.textContent;
+        btn.textContent = 'copied';
+        setTimeout(() => (btn.textContent = prev), 1200);
+      } catch {
+        /* clipboard might be unavailable in file:// — silently ignore */
+      }
+    });
+  });
+
+  // ─── animated agent terminal ─────────────────────────────────
+  const TERM_SCRIPT = [
+    { d: 200, cls: 't-prompt', text: '~/projects/atlas ' },
+    { d: 0,   cls: 't-user',   text: 'claake ' },
+    { d: 350, cls: 't-user',   text: '"refactor billing/* to use the new InvoiceService"\n' },
+    { d: 500, cls: 't-dim',    text: '↳ planning · 3 files in scope · 412 LOC\n\n' },
+    { d: 400, cls: 't-tool',   text: '⟶ read   billing/charges.ts\n' },
+    { d: 200, cls: 't-tool',   text: '⟶ read   billing/refunds.ts\n' },
+    { d: 200, cls: 't-tool',   text: '⟶ grep   "stripeClient" --in src/\n' },
+    { d: 350, cls: 't-dim',    text: '   12 references found across 4 files\n\n' },
+    { d: 400, cls: 't-ok',     text: '✓ plan accepted (3 edits, 1 test)\n' },
+    { d: 0,   cls: 'diff',     diff: {
+      file: 'billing/charges.ts',
+      hunks: [
+        { type: 'rm',  text: '- import { stripeClient } from "../vendor/stripe";' },
+        { type: 'add', text: '+ import { InvoiceService } from "../services/invoice";' },
+        { type: 'rm',  text: '- const charge = await stripeClient.charges.create({...});' },
+        { type: 'add', text: '+ const charge = await InvoiceService.charge(input);' },
+      ]
+    }},
+    { d: 500, cls: 't-tool', text: '⟶ run    pnpm test billing\n' },
+    { d: 600, cls: 't-ok',   text: '✓ 14 passed, 0 failed · 1.84s\n' },
+    { d: 400, cls: 't-dim',  text: '\nbranch: agent/refactor-invoice · ready for review\n' },
+  ];
+
+  const termBody = document.getElementById('term-body');
+  let bar = termBody.querySelector('.t-bar');
+  function renderSeg(seg) {
+    if (seg.cls === 'diff') {
+      const wrap = document.createElement('div');
+      wrap.className = 't-diff';
+      const head = document.createElement('div');
+      head.className = 't-diff-head';
+      head.innerHTML = `<span>edit · ${seg.diff.file}</span><span>+2 −2</span>`;
+      wrap.appendChild(head);
+      seg.diff.hunks.forEach((h) => {
+        const row = document.createElement('div');
+        row.className = `t-diff-row ${h.type}`;
+        row.textContent = h.text;
+        wrap.appendChild(row);
+      });
+      termBody.insertBefore(wrap, bar);
+    } else {
+      const span = document.createElement('span');
+      span.className = seg.cls;
+      span.textContent = seg.text;
+      termBody.insertBefore(span, bar);
+    }
+  }
+  function playTerminal(i) {
+    if (i >= TERM_SCRIPT.length) {
+      setTimeout(() => {
+        // wipe and restart
+        while (termBody.firstChild && termBody.firstChild !== bar) {
+          termBody.removeChild(termBody.firstChild);
+        }
+        playTerminal(0);
+      }, 6000);
+      return;
+    }
+    renderSeg(TERM_SCRIPT[i]);
+    setTimeout(() => playTerminal(i + 1), TERM_SCRIPT[i].d || 200);
+  }
+  // start after the page has settled
+  setTimeout(() => playTerminal(0), 600);
+</script>
+
+</body>
+</html>
