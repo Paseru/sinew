@@ -168,7 +168,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DMG_PATH=$(ls target/universal-apple-darwin/release/bundle/dmg/Claake_Code_*_universal.dmg | head -1)
+          DMG_PATH=$(ls target/universal-apple-darwin/release/bundle/dmg/Claake*_*_universal.dmg | head -1)
           if [ -z "$DMG_PATH" ]; then
             echo "No DMG produced — skipping alias upload."
             exit 0
@@ -188,8 +188,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          NSIS_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/nsis/Claake_Code_*_x64-setup.exe 2>/dev/null | head -1 || true)
-          MSI_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/msi/Claake_Code_*_x64_*.msi 2>/dev/null | head -1 || true)
+          NSIS_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/nsis/Claake*_*_x64-setup.exe 2>/dev/null | head -1 || true)
+          MSI_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/msi/Claake*_*_x64_*.msi 2>/dev/null | head -1 || true)
           if [ -n "$NSIS_SRC" ]; then
             ALIAS="$(dirname "$NSIS_SRC")/Claake_Code_x64-setup.exe"
             cp "$NSIS_SRC" "$ALIAS"
