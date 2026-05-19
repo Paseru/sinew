@@ -58,6 +58,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         web_search,
         web_fetch,
         skill,
+        database,
         mcp,
         subagents,
         teams,
@@ -114,6 +115,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         if let Some(descriptor) = skill.descriptor() {
             tool_descriptors.push(descriptor);
         }
+        tool_descriptors.extend(database.descriptors());
         if mode != AgentMode::Plan {
             tool_descriptors.insert(4, apply_patch.descriptor());
             tool_descriptors.push(create_image.descriptor());
@@ -515,6 +517,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         &web_search,
                         &web_fetch,
                         &skill,
+                        &database,
                         &mcp,
                         subagents.as_deref(),
                         teams.as_deref(),
@@ -555,6 +558,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                             &web_search,
                             &web_fetch,
                             &skill,
+                            &database,
                             &mcp,
                             subagents.as_deref(),
                             teams.as_deref(),

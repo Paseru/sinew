@@ -5,9 +5,9 @@ use tokio::sync::mpsc;
 use claakecode_core::{ChatMessage, Provider};
 
 use crate::{
-    ApplyPatchTool, BashTool, CreateImageTool, GlobTool, GoalWorkflowState, GrepTool,
-    McpToolRegistry, QuestionTool, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool,
-    TodoListState, ToolSettings, WebFetchTool, WebSearchTool,
+    ApplyPatchTool, BashTool, CreateImageTool, DatabaseTool, GlobTool, GoalWorkflowState,
+    GrepTool, McpToolRegistry, QuestionTool, ReadTool, SkillTool, SubAgentTool, TeamTool,
+    ToDoListTool, TodoListState, ToolSettings, WebFetchTool, WebSearchTool,
 };
 
 use super::{
@@ -46,6 +46,7 @@ pub struct TurnContext {
     pub web_search: Arc<WebSearchTool>,
     pub web_fetch: Arc<WebFetchTool>,
     pub skill: Arc<SkillTool>,
+    pub database: Arc<DatabaseTool>,
     pub mcp: Arc<McpToolRegistry>,
     pub subagents: Option<Arc<SubAgentTool>>,
     pub teams: Option<Arc<TeamTool>>,

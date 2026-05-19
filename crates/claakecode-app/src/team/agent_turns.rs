@@ -96,6 +96,7 @@ impl TeamTool {
                 self.workspace_root.clone(),
                 self.skill_settings.clone(),
             )),
+            database: Arc::new(self.database.clone()),
             mcp: Arc::new(McpToolRegistry::new(self.mcp_settings.clone())),
             subagents: None,
             teams: Some(team_tool),

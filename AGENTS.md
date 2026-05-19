@@ -54,6 +54,7 @@ Code map:
 │   │       │   └── turn.rs
 │   │       ├── bash.rs
 │   │       ├── compact.rs
+│   │       ├── database.rs
 │   │       ├── glob.rs
 │   │       ├── grep.rs
 │   │       ├── image.rs
@@ -237,8 +238,9 @@ Code map:
     │   ├── EditorPane.tsx
     │   ├── FileTree.tsx
     │   ├── SearchPane.tsx
-    │   ├── SettingsPane.tsx
     │   ├── ClaakeCodeMark.tsx
+    │   ├── DatabaseSettingsSection.tsx
+    │   ├── SettingsPane.tsx
     │   ├── Splitter.tsx
     │   ├── TerminalPanel.tsx
     │   ├── UpdateBadge.tsx
@@ -260,6 +262,7 @@ Code map:
     │       ├── dotmatrix-hooks.ts
     │       └── stream.ts
     ├── lib
+    │   ├── databaseSettings.ts
     │   ├── fileIcon.ts
     │   ├── ipc.ts
     │   ├── language.ts

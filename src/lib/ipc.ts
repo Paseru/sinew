@@ -9,6 +9,10 @@ import type {
   ClipboardImageAttachment,
   ContextEstimate,
   ConversationSummary,
+  DatabaseActivityEntry,
+  DatabaseConnectionTestResult,
+  DatabaseSettings,
+  DatabaseSourceConfig,
   FileDocument,
   GoogleProviderStatus,
   InstalledSkill,
@@ -290,6 +294,29 @@ export const api = {
   saveToolSettings(workspacePath: string, settings: ToolSettings) {
     return invoke<ToolSettings>("save_tool_settings", {
       input: { workspacePath, settings },
+    });
+  },
+  listDatabaseSettings() {
+    return invoke<DatabaseSettings>("list_database_settings");
+  },
+  saveDatabaseSettings(settings: DatabaseSettings) {
+    return invoke<DatabaseSettings>("save_database_settings", {
+      input: { settings },
+    });
+  },
+  testDatabaseConnection(source: DatabaseSourceConfig) {
+    return invoke<DatabaseConnectionTestResult>("test_database_connection", {
+      input: { source },
+    });
+  },
+  listDatabaseSourceActivity(sourceId: string, limit?: number) {
+    return invoke<DatabaseActivityEntry[]>("list_database_source_activity", {
+      input: { sourceId, limit },
+    });
+  },
+  clearDatabaseSourceActivity(sourceId: string) {
+    return invoke<DatabaseActivityEntry[]>("clear_database_source_activity", {
+      input: { sourceId },
     });
   },
   listSubAgentSettings() {

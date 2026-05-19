@@ -78,15 +78,18 @@ pub(super) async fn estimate_context(
         mcp_settings,
         tool_settings.clone(),
         skill_settings,
+        DatabaseTool::new(state.store.clone()),
         state.max_tool_rounds,
         TurnCancel::empty(),
     )
     .descriptors();
     let team_tools = TeamTool::descriptors_static();
+    let database_tools = DatabaseTool::descriptors_static();
     let mut sub_agent_tool_names = tool_name_set(&sub_agent_tools);
     sub_agent_tool_names.extend(tool_name_set(&team_tools));
     tools.extend(sub_agent_tools);
     tools.extend(team_tools);
+    tools.extend(database_tools);
     let tools = tool_settings.apply_to_descriptors(tools);
     let system = system_prompt_with_todo(&effective_system_prompt, &conversation.todo_list);
     let system_prompt =

@@ -1,6 +1,8 @@
 pub mod agent;
 pub mod bash;
 pub mod compact;
+pub mod database;
+pub mod database_tool;
 pub mod glob;
 pub mod grep;
 pub mod image;
@@ -26,6 +28,18 @@ pub use agent::{
 };
 pub use bash::{active_shell_display_name, shell_system_prompt, BashTool};
 pub use compact::{compact_conversation_history, CompactConversationOutput};
+pub use database::{
+    classify_sql_operation, sanitize_query_preview, test_database_source_connection,
+    DatabaseActivityEntry, DatabaseActivityOperation, DatabaseActivityStatus,
+    DatabaseConnectionFields, DatabaseConnectionStatus, DatabaseConnectionState,
+    DatabaseConnectionTestResult, DatabaseConnectionTestState, DatabaseCredentialMode,
+    DatabaseSettings, DatabaseSourceConfig, DatabaseSourceEngine, DatabaseSourceSummary,
+    DatabaseSqliteConfig, DatabaseSslMode, DatabaseSupabaseRestConfig,
+};
+pub use database_tool::{
+    DatabaseTool, DATABASE_DESCRIBE_SCHEMA_TOOL, DATABASE_EXECUTE_QUERY_TOOL,
+    DATABASE_LIST_SOURCES_TOOL,
+};
 pub use glob::GlobTool;
 pub use grep::GrepTool;
 pub use image::CreateImageTool;

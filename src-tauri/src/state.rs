@@ -9,6 +9,7 @@ pub(super) const TERMINAL_DATA_EVENT_NAME: &str = "terminal-data";
 pub(super) const TERMINAL_EXIT_EVENT_NAME: &str = "terminal-exit";
 pub(super) const TERMINAL_OPEN_EVENT_NAME: &str = "terminal-open-requested";
 pub(super) const ACTIVE_TURNS_EVENT_NAME: &str = "active-turns-changed";
+pub(super) const DATABASE_SOURCES_EVENT_NAME: &str = "database-sources-changed";
 pub(super) const TERMINAL_OPEN_MENU_ID: &str = "terminal-open";
 pub(super) const NEW_WINDOW_MENU_ID: &str = "new-window";
 pub(super) const NEW_WINDOW_LABEL_PREFIX: &str = "claakecode-window";

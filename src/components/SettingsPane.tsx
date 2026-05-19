@@ -1,11 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { api } from "../lib/ipc";
+import {
+  createDatabaseSource,
+  createDatabaseSourceFromTemplate,
+  type EnvDatabaseDetection,
+  databaseSettingsEventDetail,
+  databaseSettingsFingerprint,
+  errorMessage,
+  normalizeDatabaseActivityEntry,
+  normalizeDatabaseSettings,
+  normalizeDatabaseSource,
+  sanitizeDatabaseMessage,
+  validateDatabaseSettings,
+} from "../lib/databaseSettings";
 import { attachMonacoTheme, monacoThemeForDocument } from "../lib/monacoThemes";
 import { Markdown } from "./chat/Markdown";
 import { ClaakeCodeMark } from "./ClaakeCodeMark";
+import { DatabaseSection } from "./DatabaseSettingsSection";
 import {
   MODELS,
   PROVIDERS,
@@ -21,6 +36,11 @@ import {
 } from "../lib/models";
 import type {
   AnthropicProviderStatus,
+  DatabaseActivityEntry,
+  DatabaseConnectionStatusState,
+  DatabaseEngine,
+  DatabaseSettings,
+  DatabaseSourceConfig,
   GoogleProviderStatus,
   ImageProvider,
   InstalledSkill,
@@ -43,6 +63,7 @@ import type {
 } from "../types";
 
 const EMPTY_SETTINGS: McpSettings = { servers: [] };
+const EMPTY_DATABASE_SETTINGS: DatabaseSettings = { sources: [] };
 const FALLBACK_TOOL_SETTINGS: ToolSettings = {
   tools: [],
   planModePrompt: "",
@@ -56,12 +77,21 @@ const FALLBACK_TOOL_SETTINGS: ToolSettings = {
 };
 const PROVIDERS_CHANGED_EVENT = "claakecode:providers-changed";
 const TOOL_SETTINGS_CHANGED_EVENT = "claakecode:tool-settings-changed";
+const DATABASE_SOURCES_CHANGED_EVENT = "claakecode:database-sources-changed";
+const BACKEND_DATABASE_SOURCES_CHANGED_EVENT = "database-sources-changed";
 
 type Props = {
   workspacePath: string;
 };
 
-type Section = "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
+type Section =
+  | "about"
+  | "providers"
+  | "tools"
+  | "database"
+  | "mcp"
+  | "skills"
+  | "subagents";
 
 export function SettingsPane({ workspacePath }: Props) {
   const [section, setSection] = useState<Section>("about");
@@ -102,6 +132,18 @@ export function SettingsPane({ workspacePath }: Props) {
   const [toolsSaving, setToolsSaving] = useState(false);
   const [toolsStatus, setToolsStatus] = useState<string | null>(null);
 
+  const [databaseSettings, setDatabaseSettings] = useState<DatabaseSettings>(
+    EMPTY_DATABASE_SETTINGS,
+  );
+  const [savedDatabaseJson, setSavedDatabaseJson] = useState("");
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [databaseSaving, setDatabaseSaving] = useState(false);
+  const [databaseTestingId, setDatabaseTestingId] = useState<string | null>(null);
+  const [databaseStatus, setDatabaseStatus] = useState<string | null>(null);
+  const [selectedDatabaseSourceId, setSelectedDatabaseSourceId] = useState<string | null>(null);
+  const [databaseActivity, setDatabaseActivity] = useState<DatabaseActivityEntry[]>([]);
+  const [databaseActivityLoading, setDatabaseActivityLoading] = useState(false);
+
   const [openAiStatus, setOpenAiStatus] = useState<OpenAiProviderStatus | null>(null);
   const [anthropicStatus, setAnthropicStatus] = useState<AnthropicProviderStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleProviderStatus | null>(null);
@@ -123,6 +165,30 @@ export function SettingsPane({ workspacePath }: Props) {
     setSkillsError(null);
     setSelectedSkillName(null);
   }, [workspacePath]);
+
+  const loadDatabaseSettings = useCallback(async () => {
+    setDatabaseLoading(true);
+    setDatabaseStatus(null);
+    try {
+      const loaded = normalizeDatabaseSettings(await api.listDatabaseSettings());
+      setDatabaseSettings(loaded);
+      setSavedDatabaseJson(databaseSettingsFingerprint(loaded));
+      setSelectedDatabaseSourceId((current) => {
+        if (current && loaded.sources.some((source) => source.id === current)) {
+          return current;
+        }
+        return loaded.sources[0]?.id ?? null;
+      });
+    } catch (err) {
+      const fallback = normalizeDatabaseSettings(EMPTY_DATABASE_SETTINGS);
+      setDatabaseSettings(fallback);
+      setSavedDatabaseJson(databaseSettingsFingerprint(fallback));
+      setSelectedDatabaseSourceId(null);
+      setDatabaseStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDatabaseLoading(false);
+    }
+  }, []);
 
   // Outside callers (e.g. the composer's "Connect a provider" CTA) can jump
   // straight to a specific section by dispatching this window event. We
@@ -226,9 +292,50 @@ export function SettingsPane({ workspacePath }: Props) {
     void loadToolSettings();
   }, [toolSettings, loadToolSettings]);
 
+  useEffect(() => {
+    if (savedDatabaseJson) return;
+    void loadDatabaseSettings();
+  }, [savedDatabaseJson, loadDatabaseSettings]);
+
+  useEffect(() => {
+    let disposed = false;
+    let backendUnlisten: UnlistenFn | null = null;
+
+    const refresh = () => {
+      if (!disposed) void loadDatabaseSettings();
+    };
+
+    window.addEventListener(DATABASE_SOURCES_CHANGED_EVENT, refresh);
+    void listen(BACKEND_DATABASE_SOURCES_CHANGED_EVENT, refresh)
+      .then((unlisten) => {
+        if (disposed) {
+          unlisten();
+        } else {
+          backendUnlisten = unlisten;
+        }
+      })
+      .catch(() => {
+        // Non-fatal: local renderer events and explicit saves still refresh the UI.
+      });
+
+    return () => {
+      disposed = true;
+      window.removeEventListener(DATABASE_SOURCES_CHANGED_EVENT, refresh);
+      if (backendUnlisten) backendUnlisten();
+    };
+  }, [loadDatabaseSettings]);
+
   const toolsDirty =
     toolSettings !== null &&
     toolSettingsFingerprint(toolSettings) !== savedToolSettingsJson;
+
+  const databaseDirty =
+    databaseSettingsFingerprint(databaseSettings) !== savedDatabaseJson;
+  const selectedDatabaseSource =
+    databaseSettings.sources.find((source) => source.id === selectedDatabaseSourceId) ?? null;
+  const activeDatabaseSourceCount = databaseSettings.sources.filter(
+    (source) => source.enabled,
+  ).length;
 
   const saveToolSettings = useCallback(async () => {
     if (!toolSettings) return;
@@ -248,6 +355,156 @@ export function SettingsPane({ workspacePath }: Props) {
       setToolsSaving(false);
     }
   }, [toolSettings, workspacePath]);
+
+  const loadDatabaseActivity = useCallback(async (sourceId: string) => {
+    setDatabaseActivityLoading(true);
+    try {
+      const entries = await api.listDatabaseSourceActivity(sourceId, 25);
+      setDatabaseActivity(entries.map(normalizeDatabaseActivityEntry));
+    } catch {
+      setDatabaseActivity([]);
+    } finally {
+      setDatabaseActivityLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDatabaseSourceId) {
+      setDatabaseActivity([]);
+      return;
+    }
+    void loadDatabaseActivity(selectedDatabaseSourceId);
+  }, [selectedDatabaseSourceId, loadDatabaseActivity]);
+
+  const updateDatabaseSource = useCallback(
+    (id: string, patch: Partial<DatabaseSourceConfig>) => {
+      setDatabaseSettings((current) => ({
+        sources: current.sources.map((source) =>
+          source.id === id ? { ...source, ...patch } : source,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const saveDatabaseSettings = useCallback(async () => {
+    setDatabaseSaving(true);
+    setDatabaseStatus(null);
+    try {
+      const normalized = normalizeDatabaseSettings(databaseSettings);
+      validateDatabaseSettings(normalized);
+      const saved = normalizeDatabaseSettings(
+        await api.saveDatabaseSettings(normalized),
+      );
+      setDatabaseSettings(saved);
+      setSavedDatabaseJson(databaseSettingsFingerprint(saved));
+      setSelectedDatabaseSourceId((current) => {
+        if (current && saved.sources.some((source) => source.id === current)) {
+          return current;
+        }
+        return saved.sources[0]?.id ?? null;
+      });
+      setDatabaseStatus("Saved");
+      window.dispatchEvent(
+        new CustomEvent(DATABASE_SOURCES_CHANGED_EVENT, {
+          detail: databaseSettingsEventDetail(saved),
+        }),
+      );
+    } catch (err) {
+      setDatabaseStatus(sanitizeDatabaseMessage(errorMessage(err), databaseSettings));
+    } finally {
+      setDatabaseSaving(false);
+    }
+  }, [databaseSettings]);
+
+  const addDatabaseSource = useCallback((engine: DatabaseEngine) => {
+    setDatabaseSettings((current) => {
+      const next = createDatabaseSource(engine, current.sources);
+      setSelectedDatabaseSourceId(next.id);
+      setDatabaseStatus(null);
+      return { sources: [...current.sources, next] };
+    });
+  }, []);
+
+  const addDatabaseSourceFromTemplate = useCallback(
+    (detection: EnvDatabaseDetection) => {
+      setDatabaseSettings((current) => {
+        const next = createDatabaseSourceFromTemplate(
+          detection.prefill,
+          detection.suggestedName,
+          current.sources,
+        );
+        setSelectedDatabaseSourceId(next.id);
+        setDatabaseStatus(null);
+        return { sources: [...current.sources, next] };
+      });
+    },
+    [],
+  );
+
+  const deleteDatabaseSource = useCallback((id: string) => {
+    setDatabaseSettings((current) => {
+      const sources = current.sources.filter((source) => source.id !== id);
+      setSelectedDatabaseSourceId((selected) => {
+        if (selected !== id) return selected;
+        return sources[0]?.id ?? null;
+      });
+      setDatabaseActivity([]);
+      setDatabaseStatus(null);
+      return { sources };
+    });
+  }, []);
+
+  const testDatabaseSource = useCallback(async (source: DatabaseSourceConfig) => {
+    const normalized = normalizeDatabaseSource(source, 0);
+    setDatabaseTestingId(normalized.id);
+    setDatabaseStatus(null);
+    try {
+      const result = await api.testDatabaseConnection(normalized);
+      const status: DatabaseConnectionStatusState = result.ok ? "ok" : "error";
+      const message = sanitizeDatabaseMessage(
+        result.message || (result.ok ? "Connection OK" : "Connection failed"),
+        normalized,
+      );
+      const timestampMs = result.timestampMs ?? Date.now();
+      updateDatabaseSource(normalized.id, {
+        lastConnectionStatus: { status, message, timestampMs },
+      });
+      setDatabaseStatus(result.ok ? "Connection OK" : message);
+      void loadDatabaseActivity(normalized.id);
+    } catch (err) {
+      const message = sanitizeDatabaseMessage(errorMessage(err), normalized);
+      updateDatabaseSource(normalized.id, {
+        lastConnectionStatus: {
+          status: "error",
+          message,
+          timestampMs: Date.now(),
+        },
+      });
+      setDatabaseStatus(message);
+    } finally {
+      setDatabaseTestingId(null);
+    }
+  }, [loadDatabaseActivity, updateDatabaseSource]);
+
+  const clearDatabaseActivity = useCallback(async (sourceId: string) => {
+    setDatabaseActivityLoading(true);
+    setDatabaseStatus(null);
+    try {
+      const entries = await api.clearDatabaseSourceActivity(sourceId);
+      setDatabaseActivity(entries.map(normalizeDatabaseActivityEntry));
+      setDatabaseStatus("Activity cleared");
+      window.dispatchEvent(
+        new CustomEvent(DATABASE_SOURCES_CHANGED_EVENT, {
+          detail: databaseSettingsEventDetail(databaseSettings),
+        }),
+      );
+    } catch (err) {
+      setDatabaseStatus(sanitizeDatabaseMessage(errorMessage(err), databaseSettings));
+    } finally {
+      setDatabaseActivityLoading(false);
+    }
+  }, [databaseSettings]);
 
   const updateTool = useCallback((name: string, patch: Partial<ToolConfig>) => {
     setToolSettings((current) => {
@@ -1098,6 +1355,23 @@ export function SettingsPane({ workspacePath }: Props) {
         <button
           type="button"
           className="settings-pane__nav-item"
+          data-active={section === "database" ? "true" : "false"}
+          onClick={() => setSection("database")}
+        >
+          <Icon
+            icon="solar:database-linear"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">Database</span>
+          <span className="settings-pane__nav-count">
+            {databaseLoading && savedDatabaseJson === "" ? "·" : activeDatabaseSourceCount}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
           data-active={section === "mcp" ? "true" : "false"}
           onClick={() => setSection("mcp")}
         >
@@ -1199,6 +1473,29 @@ export function SettingsPane({ workspacePath }: Props) {
             onWebSearchProviderChange={updateWebSearchProvider}
             onLinkupApiKeyChange={updateLinkupApiKey}
             openAiStatus={openAiStatus}
+          />
+        ) : section === "database" ? (
+          <DatabaseSection
+            settings={databaseSettings}
+            selectedSource={selectedDatabaseSource}
+            activity={databaseActivity}
+            loading={databaseLoading}
+            saving={databaseSaving}
+            testingSourceId={databaseTestingId}
+            activityLoading={databaseActivityLoading}
+            dirty={databaseDirty}
+            status={databaseStatus}
+            activeCount={activeDatabaseSourceCount}
+            onSelectSource={setSelectedDatabaseSourceId}
+            onAddSource={addDatabaseSource}
+            onAddSourceFromTemplate={addDatabaseSourceFromTemplate}
+            onUpdateSource={updateDatabaseSource}
+            onDeleteSource={deleteDatabaseSource}
+            onSave={() => void saveDatabaseSettings()}
+            onRefresh={() => void loadDatabaseSettings()}
+            onTestSource={(source) => void testDatabaseSource(source)}
+            onRefreshActivity={(sourceId) => void loadDatabaseActivity(sourceId)}
+            onClearActivity={(sourceId) => void clearDatabaseActivity(sourceId)}
           />
         ) : section === "mcp" ? (
           <McpSection
@@ -4192,8 +4489,19 @@ function ToolGlyph({ name }: { name: string }) {
   if (name === "clean_context") {
     return <BroomGlyph />;
   }
+  if (
+    name === "database_list_sources" ||
+    name === "database_describe_schema" ||
+    name === "database_execute_query"
+  ) {
+    return <DatabaseGlyph />;
+  }
   const icon = TOOL_ICON[name] ?? "solar:tuning-2-linear";
   return <Icon icon={icon} width={13} height={13} />;
+}
+
+function DatabaseGlyph() {
+  return <Icon icon="solar:database-linear" width={13} height={13} />;
 }
 
 const TOOL_LABEL: Record<string, string> = {
@@ -4217,6 +4525,9 @@ const TOOL_LABEL: Record<string, string> = {
   clean_context: "Clean context",
   update_goal: "Update goal",
   context_compaction: "Compact context",
+  database_list_sources: "List database sources",
+  database_describe_schema: "Describe database schema",
+  database_execute_query: "Execute database query",
 };
 
 const TOOL_ICON: Record<string, string> = {
@@ -4230,6 +4541,9 @@ const TOOL_ICON: Record<string, string> = {
   SendMessage: "solar:chat-round-dots-linear",
   update_goal: "solar:flag-2-linear",
   context_compaction: "solar:archive-linear",
+  database_list_sources: "solar:database-linear",
+  database_describe_schema: "solar:structure-linear",
+  database_execute_query: "solar:database-bold-duotone",
 };
 
 function labelForTool(tool: ToolConfig | string): string {

@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 use crate::agent::AgentMode;
 use crate::bash::active_shell_display_name;
+use crate::database::{DatabaseActivityEntry, DatabaseSettings};
 use crate::mcp::McpSettings;
 use crate::skill::SkillSettings;
 use crate::subagent::SubAgentSettings;
@@ -26,6 +27,8 @@ const MCP_SETTINGS_KEY: &str = "mcp_settings";
 const SUB_AGENT_SETTINGS_KEY: &str = "sub_agent_settings";
 const TOOL_SETTINGS_KEY: &str = "tool_settings";
 const SKILL_SETTINGS_KEY: &str = "skill_settings";
+const DATABASE_SETTINGS_KEY: &str = "database_settings";
+const DATABASE_ACTIVITY_KEY: &str = "database_activity";
 const OPENROUTER_MODELS_KEY: &str = "openrouter_models";
 const HIDDEN_TOOL_SETTING_NAMES: &[&str] = &["skill"];
 
@@ -491,6 +494,9 @@ fn default_tool_display_name(name: &str) -> String {
         "WebSearch" => "Web search".to_string(),
         "WebFetch" => "Web fetch".to_string(),
         "CreateImage" => "Create image".to_string(),
+        "database_list_sources" => "List database sources".to_string(),
+        "database_describe_schema" => "Describe database schema".to_string(),
+        "database_execute_query" => "Execute database query".to_string(),
         "Question" => "Question".to_string(),
         "ToDoList" => "To-do list".to_string(),
         "LoadMcpTool" => "Load MCP tool".to_string(),
@@ -554,6 +560,22 @@ impl AppStore {
 
         let store = Self {
             path: dirs.data_local_dir().join("desktop-state.sqlite3"),
+        };
+        store.migrate()?;
+        Ok(store)
+    }
+
+    /// Build an in-memory store backed by a unique temporary SQLite file.
+    /// Intended for tests only.
+    pub fn in_memory() -> Result<Self> {
+        let dir = std::env::temp_dir();
+        let unique = format!(
+            "claakecode-test-{}-{}.sqlite3",
+            std::process::id(),
+            now_ms()
+        );
+        let store = Self {
+            path: dir.join(unique),
         };
         store.migrate()?;
         Ok(store)
@@ -1117,6 +1139,125 @@ impl AppStore {
         )
         .context("unable to save tool settings")?;
         Ok(normalized)
+    }
+
+    pub fn load_database_settings(&self) -> Result<DatabaseSettings> {
+        let conn = self.connection()?;
+        let stored = conn
+            .query_row(
+                "select value_json from app_settings where key = ?1",
+                params![DATABASE_SETTINGS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .context("unable to read database settings")?;
+
+        if let Some(json) = stored {
+            if let Ok(settings) = serde_json::from_str::<DatabaseSettings>(&json) {
+                return Ok(settings.normalized());
+            }
+        }
+
+        Ok(DatabaseSettings::default())
+    }
+
+    pub fn save_database_settings(&self, settings: &DatabaseSettings) -> Result<DatabaseSettings> {
+        let normalized = settings.clone().normalized_for_save()?;
+        let conn = self.connection()?;
+        conn.execute(
+            "insert into app_settings (key, value_json, updated_at_ms)
+             values (?1, ?2, ?3)
+             on conflict(key) do update set
+                value_json = excluded.value_json,
+                updated_at_ms = excluded.updated_at_ms",
+            params![
+                DATABASE_SETTINGS_KEY,
+                serde_json::to_string(&normalized)?,
+                now_ms(),
+            ],
+        )
+        .context("unable to save database settings")?;
+        Ok(normalized)
+    }
+
+    pub fn list_database_source_activity(
+        &self,
+        source_id: &str,
+        limit: Option<usize>,
+    ) -> Result<Vec<DatabaseActivityEntry>> {
+        let mut entries = self.load_database_activity_entries()?;
+        let source_id = source_id.trim();
+        if !source_id.is_empty() {
+            entries.retain(|entry| entry.source_id == source_id);
+        }
+        entries.sort_by(|left, right| right.timestamp_ms.cmp(&left.timestamp_ms));
+        if let Some(limit) = limit.filter(|limit| *limit > 0) {
+            entries.truncate(limit);
+        }
+        Ok(entries)
+    }
+
+    pub fn append_database_source_activity(&self, entry: &DatabaseActivityEntry) -> Result<()> {
+        let mut entries = self.load_database_activity_entries()?;
+        entries.push(entry.clone().normalized());
+        entries.sort_by(|left, right| right.timestamp_ms.cmp(&left.timestamp_ms));
+        entries.truncate(500);
+        self.save_database_activity_entries(&entries)
+    }
+
+    pub fn clear_database_source_activity(
+        &self,
+        source_id: &str,
+    ) -> Result<Vec<DatabaseActivityEntry>> {
+        let source_id = source_id.trim();
+        let entries = self
+            .load_database_activity_entries()?
+            .into_iter()
+            .filter(|entry| entry.source_id != source_id)
+            .collect::<Vec<_>>();
+        self.save_database_activity_entries(&entries)?;
+        Ok(Vec::new())
+    }
+
+    fn load_database_activity_entries(&self) -> Result<Vec<DatabaseActivityEntry>> {
+        let conn = self.connection()?;
+        let stored = conn
+            .query_row(
+                "select value_json from app_settings where key = ?1",
+                params![DATABASE_ACTIVITY_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .context("unable to read database activity")?;
+
+        if let Some(json) = stored {
+            if let Ok(entries) = serde_json::from_str::<Vec<DatabaseActivityEntry>>(&json) {
+                return Ok(entries
+                    .into_iter()
+                    .map(DatabaseActivityEntry::normalized)
+                    .collect());
+            }
+        }
+
+        Ok(Vec::new())
+    }
+
+    fn save_database_activity_entries(&self, entries: &[DatabaseActivityEntry]) -> Result<()> {
+        let conn = self.connection()?;
+        conn.execute(
+            "insert into app_settings (key, value_json, updated_at_ms)
+             values (?1, ?2, ?3)
+             on conflict(key) do update set
+                value_json = excluded.value_json,
+                updated_at_ms = excluded.updated_at_ms",
+            params![
+                DATABASE_ACTIVITY_KEY,
+                serde_json::to_string(entries)?,
+                now_ms()
+            ],
+        )
+        .context("unable to save database activity")?;
+        Ok(())
     }
 
     pub fn load_skill_settings(&self) -> Result<SkillSettings> {
@@ -1707,5 +1848,123 @@ mod tests {
             settings.apply_to_descriptors(vec![descriptor("apply_patch", "new code default")]);
 
         assert_eq!(tools[0].description, "custom patch instructions");
+    }
+
+    #[test]
+    fn database_settings_round_trip_and_activity_cap() {
+        use crate::database::{
+            DatabaseActivityEntry, DatabaseActivityOperation, DatabaseActivityStatus,
+            DatabaseSettings, DatabaseSourceConfig, DatabaseSourceEngine,
+        };
+
+        let store = AppStore::in_memory().expect("in-memory store");
+        let settings = DatabaseSettings {
+            sources: vec![DatabaseSourceConfig {
+                id: "src-1".into(),
+                name: "primary".into(),
+                engine: DatabaseSourceEngine::Sqlite,
+                enabled: true,
+                sqlite: crate::database::DatabaseSqliteConfig {
+                    file_path: "/tmp/claake-test.sqlite".into(),
+                    create_if_missing: true,
+                },
+                ..DatabaseSourceConfig::default()
+            }],
+        };
+        let saved = store
+            .save_database_settings(&settings)
+            .expect("save database settings");
+        assert_eq!(saved.sources.len(), 1);
+        let loaded = store.load_database_settings().expect("load database settings");
+        assert_eq!(loaded.sources.len(), 1);
+        assert_eq!(loaded.sources[0].name, "primary");
+
+        for i in 0..600 {
+            let entry = DatabaseActivityEntry {
+                id: format!("e-{i}"),
+                source_id: "src-1".into(),
+                source_name: "primary".into(),
+                engine: DatabaseSourceEngine::Sqlite,
+                operation: DatabaseActivityOperation::Read,
+                query_preview: String::new(),
+                status: DatabaseActivityStatus::Ok,
+                timestamp_ms: i as i64,
+                duration_ms: 1,
+                rows_returned: None,
+                rows_affected: None,
+                error: None,
+            };
+            store
+                .append_database_source_activity(&entry)
+                .expect("append activity");
+        }
+        let listed = store
+            .list_database_source_activity("src-1", Some(1000))
+            .expect("list activity");
+        assert!(listed.len() <= 500, "activity cap 500 (got {})", listed.len());
+        // Most recent first.
+        assert_eq!(listed.first().unwrap().id, "e-599");
+
+        store
+            .clear_database_source_activity("src-1")
+            .expect("clear activity");
+        let listed = store
+            .list_database_source_activity("src-1", None)
+            .expect("relist activity");
+        assert!(listed.is_empty());
+    }
+
+    #[test]
+    fn database_settings_normalize_and_validate_unique_names() {
+        use crate::database::{
+            DatabaseSettings, DatabaseSourceConfig, DatabaseSourceEngine, DatabaseSqliteConfig,
+        };
+        let settings = DatabaseSettings {
+            sources: vec![DatabaseSourceConfig {
+                id: "".to_string(),
+                name: " local ".to_string(),
+                engine: DatabaseSourceEngine::Sqlite,
+                sqlite: DatabaseSqliteConfig {
+                    file_path: "/tmp/example.sqlite".to_string(),
+                    create_if_missing: true,
+                },
+                default_row_limit: 50_000,
+                default_timeout_ms: 10,
+                ..DatabaseSourceConfig::default()
+            }],
+        }
+        .normalized_for_save()
+        .expect("valid database settings");
+
+        assert_eq!(settings.sources[0].name, "local");
+        assert!(!settings.sources[0].id.is_empty());
+        assert_eq!(settings.sources[0].default_row_limit, 10_000);
+        assert_eq!(settings.sources[0].default_timeout_ms, 1_000);
+
+        let duplicate = DatabaseSettings {
+            sources: vec![
+                DatabaseSourceConfig {
+                    id: "a".to_string(),
+                    name: "Prod".to_string(),
+                    engine: DatabaseSourceEngine::Sqlite,
+                    sqlite: DatabaseSqliteConfig {
+                        file_path: "/tmp/a.sqlite".to_string(),
+                        create_if_missing: true,
+                    },
+                    ..DatabaseSourceConfig::default()
+                },
+                DatabaseSourceConfig {
+                    id: "b".to_string(),
+                    name: "prod".to_string(),
+                    engine: DatabaseSourceEngine::Sqlite,
+                    sqlite: DatabaseSqliteConfig {
+                        file_path: "/tmp/b.sqlite".to_string(),
+                        create_if_missing: true,
+                    },
+                    ..DatabaseSourceConfig::default()
+                },
+            ],
+        };
+        assert!(duplicate.normalized_for_save().is_err());
     }
 }

@@ -162,6 +162,94 @@ export type ToolSettings = {
   linkupApiKey: string;
 };
 
+export type DatabaseEngine =
+  | "postgres"
+  | "mysql"
+  | "sqlite"
+  | "mssql"
+  | "supabaseRest";
+
+export type DatabaseCredentialMode = "connectionString" | "fields";
+
+export type DatabaseSslMode = "disabled" | "required" | "strict";
+
+export type DatabaseConnectionStatusState = "ok" | "error" | "untested";
+
+export type DatabaseConnectionStatus = {
+  status: DatabaseConnectionStatusState;
+  message?: string | null;
+  timestampMs?: number | null;
+};
+
+export type DatabaseConnectionFields = {
+  host: string;
+  port: number | null;
+  user: string;
+  password: string;
+  database: string;
+  sslMode: DatabaseSslMode;
+  sslCertificate?: string | null;
+};
+
+export type DatabaseSqliteConfig = {
+  filePath: string;
+  createIfMissing: boolean;
+};
+
+export type DatabaseSupabaseRestConfig = {
+  projectUrl: string;
+  anonKey: string;
+  serviceRoleKey: string;
+  useServiceRole: boolean;
+  allowRpc: boolean;
+};
+
+export type DatabaseSourceConfig = {
+  id: string;
+  name: string;
+  engine: DatabaseEngine;
+  enabled: boolean;
+  note: string;
+  defaultSchema?: string | null;
+  defaultRowLimit: number;
+  defaultTimeoutMs: number;
+  readOnly: boolean;
+  requireConfirmationForDestructive: boolean;
+  lastConnectionStatus: DatabaseConnectionStatus;
+  credentialMode?: DatabaseCredentialMode;
+  connectionString?: string;
+  fields?: DatabaseConnectionFields;
+  sqlite?: DatabaseSqliteConfig;
+  supabaseRest?: DatabaseSupabaseRestConfig;
+};
+
+export type DatabaseSettings = {
+  sources: DatabaseSourceConfig[];
+};
+
+export type DatabaseConnectionTestResult = {
+  ok: boolean;
+  message: string;
+  status?: DatabaseConnectionStatusState | null;
+  timestampMs?: number | null;
+  durationMs?: number | null;
+};
+
+export type DatabaseActivityStatus = "success" | "error" | "cancelled" | "pending";
+
+export type DatabaseActivityEntry = {
+  id: string;
+  sourceId: string;
+  timestampMs: number;
+  status: DatabaseActivityStatus;
+  operation?: string | null;
+  queryPreview: string;
+  durationMs?: number | null;
+  rowsAffected?: number | null;
+  rowsReturned?: number | null;
+  error?: string | null;
+};
+
 export type ProviderConnectionState =
   | "connected"
   | "connecting"
