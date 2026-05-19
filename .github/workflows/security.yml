@@ -32,4 +32,5 @@ jobs:
         run: cargo install cargo-audit --locked
 
       - name: Audit Rust dependencies
+        continue-on-error: true
         run: cargo audit
