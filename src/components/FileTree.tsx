@@ -10,8 +10,21 @@ import {
 } from "react";
 import { Icon } from "@iconify/react";
 import { api } from "../lib/ipc";
+import {
+  FILETREE_SHOW_HIDDEN_CHANGED_EVENT,
+  getFileTreeShowHidden,
+} from "../lib/appearance";
 import { fileIcon, folderIcon } from "../lib/fileIcon";
 import type { WorkspaceDeletedEntry, WorkspaceEntry } from "../types";
+
+function filterHiddenEntries(
+  entries: WorkspaceEntry[] | undefined,
+  showHidden: boolean,
+): WorkspaceEntry[] {
+  if (!entries) return [];
+  if (showHidden) return entries;
+  return entries.filter((entry) => !entry.name.startsWith("."));
+}
 
 type NodeState = {
   entry: WorkspaceEntry;
@@ -111,6 +124,16 @@ export const FileTree = forwardRef<FileTreeHandle, Props>(function FileTree(
   ref,
 ) {
   const [roots, setRoots] = useState<WorkspaceEntry[]>([]);
+  const [showHidden, setShowHidden] = useState<boolean>(() => getFileTreeShowHidden());
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail;
+      if (typeof detail === "boolean") setShowHidden(detail);
+    };
+    window.addEventListener(FILETREE_SHOW_HIDDEN_CHANGED_EVENT, handler);
+    return () =>
+      window.removeEventListener(FILETREE_SHOW_HIDDEN_CHANGED_EVENT, handler);
+  }, []);
   const [expanded, setExpanded] = useState<Record<string, NodeState>>({});
   const [rootError, setRootError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1160,7 +1183,7 @@ export const FileTree = forwardRef<FileTreeHandle, Props>(function FileTree(
           onCancel={cancelEdit}
         />
       )}
-      {roots.map((entry) => (
+      {filterHiddenEntries(roots, showHidden).map((entry) => (
         <TreeNode
           key={entry.relativePath}
           entry={entry}
@@ -1171,6 +1194,7 @@ export const FileTree = forwardRef<FileTreeHandle, Props>(function FileTree(
           cutRelativePaths={cutRelativePaths}
           toggle={toggle}
           activeFile={activeFile}
+          showHidden={showHidden}
           onOpenFile={onOpenFile}
           onDragStart={handleEntryDragStart}
           onDragEnd={handleEntryDragEnd}
@@ -1254,6 +1278,7 @@ type NodeProps = {
   cutRelativePaths: Set<string>;
   toggle: (entry: WorkspaceEntry) => void;
   activeFile: string | null;
+  showHidden: boolean;
   onOpenFile: (entry: WorkspaceEntry) => void;
   onDragStart: (entry: WorkspaceEntry, event: React.DragEvent) => void;
   onDragEnd: () => void;
@@ -1279,6 +1304,7 @@ const TreeNode = memo(function TreeNode({
   cutRelativePaths,
   toggle,
   activeFile,
+  showHidden,
   onOpenFile,
   onDragStart,
   onDragEnd,
@@ -1425,7 +1451,7 @@ const TreeNode = memo(function TreeNode({
               </span>
             </div>
           )}
-          {state.children?.map((child) => (
+          {filterHiddenEntries(state.children, showHidden).map((child) => (
             <TreeNode
               key={child.relativePath}
               entry={child}
@@ -1436,6 +1462,7 @@ const TreeNode = memo(function TreeNode({
               cutRelativePaths={cutRelativePaths}
               toggle={toggle}
               activeFile={activeFile}
+              showHidden={showHidden}
               onOpenFile={onOpenFile}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}

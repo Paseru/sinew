@@ -5,6 +5,7 @@
   "windows": ["main", "sinew-window-*"],
   "permissions": [
     "core:default",
+    "core:webview:allow-set-webview-zoom",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-start-dragging",

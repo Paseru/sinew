@@ -457,6 +457,15 @@ pub(super) struct TerminalSpawnInput {
     pub(super) pixel_width: u16,
     #[serde(default)]
     pub(super) pixel_height: u16,
+    #[serde(default)]
+    pub(super) shell: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct TerminalShellOption {
+    pub(super) label: String,
+    pub(super) path: String,
 }
 
 #[derive(Debug, Serialize)]

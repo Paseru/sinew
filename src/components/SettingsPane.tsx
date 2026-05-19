@@ -1,10 +1,88 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
+import * as monacoNs from "monaco-editor";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { api } from "../lib/ipc";
+import { defineMonacoThemes, monacoThemeName } from "../lib/monacoTheme";
 import { Markdown } from "./chat/Markdown";
 import { SinewMark } from "./SinewMark";
+import {
+  ACCENT_CHANGED_EVENT,
+  ACCENT_SWATCHES,
+  CHAT_FONT_CHANGED_EVENT,
+  CHAT_FONT_DEFAULT,
+  CHAT_FONT_MAX,
+  CHAT_FONT_MIN,
+  EDITOR_AUTOSAVE_DELAY_DEFAULT,
+  EDITOR_AUTOSAVE_DELAY_MAX,
+  EDITOR_AUTOSAVE_DELAY_MIN,
+  EDITOR_FONT_CHANGED_EVENT,
+  EDITOR_FONT_DEFAULT,
+  EDITOR_FONT_MAX,
+  EDITOR_FONT_MIN,
+  exportSettings,
+  getAccent,
+  getChatFontSize,
+  getChatShowTimestamps,
+  getEditorAutosaveDelay,
+  getEditorAutosaveMode,
+  getEditorFontSize,
+  getEditorLineNumbers,
+  getEditorRenderWhitespace,
+  getEffectiveTheme,
+  getFileTreeShowHidden,
+  getTerminalCopyOnSelect,
+  getTerminalCursorBlink,
+  getTerminalCursorStyle,
+  getTerminalFontSize,
+  getTerminalShell,
+  getTheme,
+  getWorkspaceConfirmClose,
+  getZoomLevel,
+  importSettings,
+  PRIMARY_MOD_LABEL,
+  resetChatFontSize,
+  resetEditorFontSize,
+  resetTerminalFontSize,
+  resetZoomLevel,
+  setAccent,
+  setChatFontSize,
+  setChatShowTimestamps,
+  setEditorAutosaveDelay,
+  setEditorAutosaveMode,
+  setEditorFontSize,
+  setEditorLineNumbers,
+  setEditorRenderWhitespace,
+  setFileTreeShowHidden,
+  setTerminalCopyOnSelect,
+  setTerminalCursorBlink,
+  setTerminalCursorStyle,
+  setTerminalFontSize,
+  setTerminalShell,
+  setTheme,
+  setWorkspaceConfirmClose,
+  setZoomLevel,
+  TERMINAL_CURSOR_CHANGED_EVENT,
+  TERMINAL_FONT_CHANGED_EVENT,
+  TERMINAL_FONT_DEFAULT,
+  TERMINAL_FONT_MAX,
+  TERMINAL_FONT_MIN,
+  TERMINAL_SHELL_CHANGED_EVENT,
+  THEME_CHANGED_EVENT,
+  ZOOM_CHANGED_EVENT,
+  ZOOM_LEVEL_DEFAULT,
+  ZOOM_LEVEL_MAX,
+  ZOOM_LEVEL_MIN,
+  zoomLevelToPercent,
+  type Accent,
+  type EditorAutosaveMode,
+  type EditorLineNumbers,
+  type EditorRenderWhitespace,
+  type EffectiveTheme,
+  type TerminalCursorStyle,
+  type Theme,
+} from "../lib/appearance";
 import {
   MODELS,
   PROVIDERS,
@@ -60,10 +138,38 @@ type Props = {
   workspacePath: string;
 };
 
-type Section = "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
+type Section =
+  | "about"
+  | "appearance"
+  | "providers"
+  | "tools"
+  | "mcp"
+  | "skills"
+  | "subagents";
 
 export function SettingsPane({ workspacePath }: Props) {
   const [section, setSection] = useState<Section>("about");
+  const [monacoTheme, setMonacoTheme] = useState<EffectiveTheme>(() =>
+    getEffectiveTheme(),
+  );
+  useEffect(() => {
+    const onTheme = (event: Event) => {
+      const detail = (event as CustomEvent<EffectiveTheme>).detail;
+      if (detail === "dark" || detail === "light") setMonacoTheme(detail);
+    };
+    const onAccent = (event: Event) => {
+      const detail = (event as CustomEvent<Accent>).detail;
+      if (!detail) return;
+      defineMonacoThemes(monacoNs, detail);
+      monacoNs.editor.setTheme(monacoThemeName(getEffectiveTheme()));
+    };
+    window.addEventListener(THEME_CHANGED_EVENT, onTheme);
+    window.addEventListener(ACCENT_CHANGED_EVENT, onAccent);
+    return () => {
+      window.removeEventListener(THEME_CHANGED_EVENT, onTheme);
+      window.removeEventListener(ACCENT_CHANGED_EVENT, onAccent);
+    };
+  }, []);
   const [settings, setSettings] = useState<McpSettings>(EMPTY_SETTINGS);
   const [savedJson, setSavedJson] = useState("");
   const [jsonText, setJsonText] = useState("");
@@ -930,49 +1036,7 @@ export function SettingsPane({ workspacePath }: Props) {
   }, []);
 
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
-    monaco.editor.defineTheme("sinew-cool", {
-      base: "vs-dark",
-      inherit: true,
-      rules: [
-        { token: "comment", foreground: "52555c" },
-        { token: "keyword", foreground: "c4b5fd" },
-        { token: "string", foreground: "86efac" },
-        { token: "number", foreground: "f5a683" },
-        { token: "type", foreground: "e8bb6a" },
-        { token: "function", foreground: "9fc2ff" },
-        { token: "variable", foreground: "e8e9ec" },
-        { token: "constant", foreground: "f5a683" },
-        { token: "regexp", foreground: "86efac" },
-        { token: "tag", foreground: "f5a1ab" },
-        { token: "attribute.name", foreground: "c4b5fd" },
-      ],
-      colors: {
-        "editor.background": "#08090b",
-        "editor.foreground": "#e8e9ec",
-        "editor.lineHighlightBackground": "#0f1013",
-        "editorLineNumber.foreground": "#3a3d44",
-        "editorLineNumber.activeForeground": "#9aa0a8",
-        "editorCursor.foreground": "#3b82f6",
-        "editor.selectionBackground": "#1e2b4a",
-        "editor.inactiveSelectionBackground": "#141518",
-        "editorIndentGuide.background1": "#141518",
-        "editorIndentGuide.activeBackground1": "#23252b",
-        "editorGutter.background": "#08090b",
-        "editorWidget.background": "#0f1013",
-        "editorWidget.border": "#23252b",
-        "editorHoverWidget.background": "#0f1013",
-        "editorHoverWidget.border": "#23252b",
-        "editorSuggestWidget.background": "#0f1013",
-        "editorSuggestWidget.border": "#23252b",
-        "editorSuggestWidget.selectedBackground": "#1e2b4a",
-        "editorBracketMatch.background": "#1e2b4a",
-        "editorBracketMatch.border": "#3b82f6",
-        "scrollbarSlider.background": "#23252bcc",
-        "scrollbarSlider.hoverBackground": "#2b2e35cc",
-        "scrollbarSlider.activeBackground": "#3a3d44cc",
-      },
-    });
-    monaco.editor.setTheme("sinew-cool");
+    defineMonacoThemes(monaco, getAccent());
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       void saveAndDetectRef.current();
     });
@@ -1000,6 +1064,21 @@ export function SettingsPane({ workspacePath }: Props) {
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">About</span>
+          <span className="settings-pane__nav-count" />
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
+          data-active={section === "appearance" ? "true" : "false"}
+          onClick={() => setSection("appearance")}
+        >
+          <Icon
+            icon="solar:palette-linear"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">Appearance</span>
           <span className="settings-pane__nav-count" />
         </button>
         <button
@@ -1083,6 +1162,8 @@ export function SettingsPane({ workspacePath }: Props) {
       <section className="settings-pane__main">
         {section === "about" ? (
           <AboutSection />
+        ) : section === "appearance" ? (
+          <AppearanceSection />
         ) : section === "providers" ? (
           <ProvidersSection
             openAiStatus={openAiStatus}
@@ -1155,6 +1236,7 @@ export function SettingsPane({ workspacePath }: Props) {
             selectedProbe={selectedProbe}
             onToggleEnabled={toggleEnabled}
             onMount={handleEditorMount}
+            monacoTheme={monacoTheme}
           />
         ) : section === "skills" ? (
           <SkillsSection
@@ -1244,6 +1326,809 @@ function AboutSection() {
     </div>
   );
 }
+
+// ---- Appearance section ------------------------------------------------
+
+const CURSOR_STYLES: { value: TerminalCursorStyle; label: string }[] = [
+  { value: "block", label: "Block" },
+  { value: "underline", label: "Underline" },
+  { value: "bar", label: "Bar" },
+];
+
+function AppearanceSection() {
+  const [theme, setThemeState] = useState<Theme>(() => getTheme());
+  const [accent, setAccentState] = useState<Accent>(() => getAccent());
+  const [zoomLevel, setZoomLevelState] = useState<number>(() => getZoomLevel());
+  const [editorFont, setEditorFontState] = useState<number>(() =>
+    getEditorFontSize(),
+  );
+  const [terminalFont, setTerminalFontState] = useState<number>(() =>
+    getTerminalFontSize(),
+  );
+  const [chatFont, setChatFontState] = useState<number>(() => getChatFontSize());
+  const [cursorStyle, setCursorStyleState] = useState<TerminalCursorStyle>(() =>
+    getTerminalCursorStyle(),
+  );
+  const [cursorBlink, setCursorBlinkState] = useState<boolean>(() =>
+    getTerminalCursorBlink(),
+  );
+  const [shell, setShellState] = useState<string>(() => getTerminalShell());
+  const [detectedShells, setDetectedShells] = useState<
+    { label: string; path: string }[] | null
+  >(null);
+  const [autosaveMode, setAutosaveModeState] = useState<EditorAutosaveMode>(() =>
+    getEditorAutosaveMode(),
+  );
+  const [autosaveDelay, setAutosaveDelayState] = useState<number>(() =>
+    getEditorAutosaveDelay(),
+  );
+  const [editorLineNumbers, setEditorLineNumbersState] =
+    useState<EditorLineNumbers>(() => getEditorLineNumbers());
+  const [editorRenderWhitespace, setEditorRenderWhitespaceState] =
+    useState<EditorRenderWhitespace>(() => getEditorRenderWhitespace());
+  const [chatTimestamps, setChatTimestampsState] = useState<boolean>(() =>
+    getChatShowTimestamps(),
+  );
+  const [copyOnSelect, setCopyOnSelectState] = useState<boolean>(() =>
+    getTerminalCopyOnSelect(),
+  );
+  const [showHiddenFiles, setShowHiddenFilesState] = useState<boolean>(() =>
+    getFileTreeShowHidden(),
+  );
+  const [confirmClose, setConfirmCloseState] = useState<boolean>(() =>
+    getWorkspaceConfirmClose(),
+  );
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .listTerminalShells()
+      .then((list) => {
+        if (!cancelled) setDetectedShells(list);
+      })
+      .catch((err) => {
+        console.error("[appearance] listTerminalShells failed", err);
+        if (!cancelled) setDetectedShells([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onZoom = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") setZoomLevelState(detail);
+    };
+    const onEditor = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") setEditorFontState(detail);
+    };
+    const onTerminal = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") setTerminalFontState(detail);
+    };
+    const onChat = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") setChatFontState(detail);
+    };
+    const onCursor = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        style: TerminalCursorStyle;
+        blink: boolean;
+      }>).detail;
+      if (!detail) return;
+      setCursorStyleState(detail.style);
+      setCursorBlinkState(detail.blink);
+    };
+    const onShell = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail === "string") setShellState(detail);
+    };
+    const onAccent = (event: Event) => {
+      const detail = (event as CustomEvent<Accent>).detail;
+      if (detail) setAccentState(detail);
+    };
+    window.addEventListener(ACCENT_CHANGED_EVENT, onAccent);
+    window.addEventListener(ZOOM_CHANGED_EVENT, onZoom);
+    window.addEventListener(EDITOR_FONT_CHANGED_EVENT, onEditor);
+    window.addEventListener(TERMINAL_FONT_CHANGED_EVENT, onTerminal);
+    window.addEventListener(CHAT_FONT_CHANGED_EVENT, onChat);
+    window.addEventListener(TERMINAL_CURSOR_CHANGED_EVENT, onCursor);
+    window.addEventListener(TERMINAL_SHELL_CHANGED_EVENT, onShell);
+    return () => {
+      window.removeEventListener(ZOOM_CHANGED_EVENT, onZoom);
+      window.removeEventListener(EDITOR_FONT_CHANGED_EVENT, onEditor);
+      window.removeEventListener(TERMINAL_FONT_CHANGED_EVENT, onTerminal);
+      window.removeEventListener(CHAT_FONT_CHANGED_EVENT, onChat);
+      window.removeEventListener(TERMINAL_CURSOR_CHANGED_EVENT, onCursor);
+      window.removeEventListener(TERMINAL_SHELL_CHANGED_EVENT, onShell);
+      window.removeEventListener(ACCENT_CHANGED_EVENT, onAccent);
+    };
+  }, []);
+
+  return (
+    <>
+      <header className="settings-pane__header">
+        <div className="settings-pane__header-text">
+          <h1 className="settings-pane__title">Appearance</h1>
+          <p className="settings-pane__subtitle">
+            Theme, zoom, fonts, and editor behaviour.
+          </p>
+        </div>
+      </header>
+    <div className="settings-pane__body settings-pane__body--appearance">
+      <div className="settings-pane__tool-settings-list">
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>Theme</h2>
+          </div>
+          <div className="settings-pane__tool-toggle-row">
+            <div className="settings-pane__tool-toggle-text">
+              <span className="settings-pane__tool-toggle-label">Color theme</span>
+              <span className="settings-pane__tool-toggle-hint">
+                System follows your OS preference. Light uses a soft cream
+                palette.
+              </span>
+            </div>
+            <div
+              className="settings-pane__tool-provider-switch settings-pane__tool-provider-switch--three"
+              role="group"
+              aria-label="Color theme"
+            >
+              <button
+                type="button"
+                data-active={theme === "system" ? "true" : "false"}
+                onClick={() => {
+                  setTheme("system");
+                  setThemeState("system");
+                }}
+              >
+                System
+              </button>
+              <button
+                type="button"
+                data-active={theme === "dark" ? "true" : "false"}
+                onClick={() => {
+                  setTheme("dark");
+                  setThemeState("dark");
+                }}
+              >
+                Dark
+              </button>
+              <button
+                type="button"
+                data-active={theme === "light" ? "true" : "false"}
+                onClick={() => {
+                  setTheme("light");
+                  setThemeState("light");
+                }}
+              >
+                Light
+              </button>
+            </div>
+          </div>
+          <div className="settings-pane__tool-toggle-row">
+            <div className="settings-pane__tool-toggle-text">
+              <span className="settings-pane__tool-toggle-label">Accent color</span>
+              <span className="settings-pane__tool-toggle-hint">
+                Affects buttons, links, and selection highlights.
+              </span>
+            </div>
+            <div
+              className="settings-pane__accent-swatches"
+              role="group"
+              aria-label="Accent color"
+            >
+              {ACCENT_SWATCHES.map((swatch) => (
+                <button
+                  key={swatch.value}
+                  type="button"
+                  className="settings-pane__accent-swatch"
+                  data-active={accent === swatch.value ? "true" : "false"}
+                  style={{ background: swatch.color }}
+                  onClick={() => {
+                    setAccent(swatch.value);
+                    setAccentState(swatch.value);
+                  }}
+                  title={swatch.label}
+                  aria-label={swatch.label}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>Window & fonts</h2>
+            <span>
+              {PRIMARY_MOD_LABEL} = / {PRIMARY_MOD_LABEL} - / {PRIMARY_MOD_LABEL} 0
+            </span>
+          </div>
+          <div className="settings-pane__tool-group-list">
+            <AppearanceItem
+              label="Window zoom level"
+              hint={`${zoomLevelToPercent(zoomLevel)}% — scales the entire app`}
+              value={zoomLevel}
+              min={ZOOM_LEVEL_MIN}
+              max={ZOOM_LEVEL_MAX}
+              step={1}
+              onChange={setZoomLevel}
+              onReset={resetZoomLevel}
+              isDefault={zoomLevel === ZOOM_LEVEL_DEFAULT}
+            />
+            <AppearanceItem
+              label="Editor font size"
+              hint="Monaco code editor"
+              value={editorFont}
+              min={EDITOR_FONT_MIN}
+              max={EDITOR_FONT_MAX}
+              step={1}
+              onChange={setEditorFontSize}
+              onReset={resetEditorFontSize}
+              isDefault={editorFont === EDITOR_FONT_DEFAULT}
+              suffix="px"
+            />
+            <AppearanceItem
+              label="Chat font size"
+              hint="Conversation column"
+              value={chatFont}
+              min={CHAT_FONT_MIN}
+              max={CHAT_FONT_MAX}
+              step={1}
+              onChange={setChatFontSize}
+              onReset={resetChatFontSize}
+              isDefault={chatFont === CHAT_FONT_DEFAULT}
+              suffix="px"
+            />
+          </div>
+        </section>
+
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>Terminal</h2>
+          </div>
+          <div className="settings-pane__tool-group-list">
+            <AppearanceItem
+              label="Terminal font size"
+              hint="xterm session"
+              value={terminalFont}
+              min={TERMINAL_FONT_MIN}
+              max={TERMINAL_FONT_MAX}
+              step={1}
+              onChange={setTerminalFontSize}
+              onReset={resetTerminalFontSize}
+              isDefault={terminalFont === TERMINAL_FONT_DEFAULT}
+              suffix="px"
+            />
+            <div className="settings-pane__tool-toggle-row">
+              <div className="settings-pane__tool-toggle-text">
+                <span className="settings-pane__tool-toggle-label">
+                  Cursor style
+                </span>
+                <span className="settings-pane__tool-toggle-hint">
+                  Shape of the xterm caret.
+                </span>
+              </div>
+              <div
+                className="settings-pane__tool-provider-switch settings-pane__tool-provider-switch--three"
+                role="group"
+                aria-label="Terminal cursor style"
+              >
+                {CURSOR_STYLES.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    data-active={cursorStyle === opt.value ? "true" : "false"}
+                    onClick={() => {
+                      setTerminalCursorStyle(opt.value);
+                      setCursorStyleState(opt.value);
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-pane__tool-toggle-row">
+              <div className="settings-pane__tool-toggle-text">
+                <span className="settings-pane__tool-toggle-label">
+                  Cursor blink
+                </span>
+                <span className="settings-pane__tool-toggle-hint">
+                  Blink the caret while the terminal is idle.
+                </span>
+              </div>
+              <button
+                type="button"
+                className="settings-pane__switch"
+                role="switch"
+                aria-checked={cursorBlink}
+                aria-label={
+                  cursorBlink ? "Disable cursor blink" : "Enable cursor blink"
+                }
+                data-on={cursorBlink ? "true" : "false"}
+                onClick={() => {
+                  const next = !cursorBlink;
+                  setTerminalCursorBlink(next);
+                  setCursorBlinkState(next);
+                }}
+              >
+                <span className="settings-pane__switch-thumb" />
+              </button>
+            </div>
+            <ToggleRow
+              label="Copy on select"
+              hint="Auto-copy text to the clipboard whenever you select it in the terminal."
+              value={copyOnSelect}
+              onChange={(next) => {
+                setTerminalCopyOnSelect(next);
+                setCopyOnSelectState(next);
+              }}
+            />
+            <TerminalShellRow
+              value={shell}
+              detected={detectedShells}
+              onChange={(next) => {
+                setShellState(setTerminalShell(next));
+              }}
+            />
+          </div>
+        </section>
+
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>Editor</h2>
+          </div>
+          <div className="settings-pane__tool-group-list">
+            <SegmentedRow
+              label="Line numbers"
+              hint="How line numbers render in the gutter."
+              value={editorLineNumbers}
+              options={EDITOR_LINE_NUMBERS_OPTIONS}
+              onChange={(next) => {
+                setEditorLineNumbers(next);
+                setEditorLineNumbersState(next);
+              }}
+            />
+            <SegmentedRow
+              label="Render whitespace"
+              hint="Show whitespace characters in the editor."
+              value={editorRenderWhitespace}
+              options={EDITOR_RENDER_WHITESPACE_OPTIONS}
+              onChange={(next) => {
+                setEditorRenderWhitespace(next);
+                setEditorRenderWhitespaceState(next);
+              }}
+            />
+            <SegmentedRow
+              label="Auto save"
+              hint="Save automatically after a delay or when the editor loses focus."
+              value={autosaveMode}
+              options={EDITOR_AUTOSAVE_OPTIONS}
+              onChange={(next) => {
+                setEditorAutosaveMode(next);
+                setAutosaveModeState(next);
+              }}
+            />
+            {autosaveMode === "afterDelay" && (
+              <AppearanceItem
+                label="Auto save delay"
+                hint="Idle time before the editor saves itself."
+                value={autosaveDelay}
+                min={EDITOR_AUTOSAVE_DELAY_MIN}
+                max={EDITOR_AUTOSAVE_DELAY_MAX}
+                step={100}
+                onChange={(next) => {
+                  setAutosaveDelayState(setEditorAutosaveDelay(next));
+                }}
+                onReset={() => {
+                  const next = setEditorAutosaveDelay(EDITOR_AUTOSAVE_DELAY_DEFAULT);
+                  setAutosaveDelayState(next);
+                }}
+                isDefault={autosaveDelay === EDITOR_AUTOSAVE_DELAY_DEFAULT}
+                suffix="ms"
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>Chat</h2>
+          </div>
+          <div className="settings-pane__tool-group-list">
+            <ToggleRow
+              label="Show timestamps"
+              hint="Display the send time next to each message."
+              value={chatTimestamps}
+              onChange={(next) => {
+                setChatShowTimestamps(next);
+                setChatTimestampsState(next);
+              }}
+            />
+          </div>
+        </section>
+
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>File tree</h2>
+          </div>
+          <div className="settings-pane__tool-group-list">
+            <ToggleRow
+              label="Show hidden files"
+              hint="Reveal entries that start with a dot."
+              value={showHiddenFiles}
+              onChange={(next) => {
+                setFileTreeShowHidden(next);
+                setShowHiddenFilesState(next);
+              }}
+            />
+          </div>
+        </section>
+
+        <section className="settings-pane__tool-group">
+          <div className="settings-pane__tool-group-head">
+            <h2>Workspace</h2>
+            {importStatus && <span>{importStatus}</span>}
+          </div>
+          <div className="settings-pane__tool-group-list">
+            <ToggleRow
+              label="Confirm close with unsaved changes"
+              hint="Ask before closing the window when a buffer is dirty."
+              value={confirmClose}
+              onChange={(next) => {
+                setWorkspaceConfirmClose(next);
+                setConfirmCloseState(next);
+              }}
+            />
+            <SettingsBackupRow
+              onStatus={setImportStatus}
+            />
+          </div>
+        </section>
+      </div>
+    </div>
+    </>
+  );
+}
+
+const EDITOR_LINE_NUMBERS_OPTIONS: { value: EditorLineNumbers; label: string }[] = [
+  { value: "on", label: "On" },
+  { value: "off", label: "Off" },
+  { value: "relative", label: "Relative" },
+];
+
+const EDITOR_RENDER_WHITESPACE_OPTIONS: {
+  value: EditorRenderWhitespace;
+  label: string;
+}[] = [
+  { value: "none", label: "None" },
+  { value: "boundary", label: "Boundary" },
+  { value: "all", label: "All" },
+];
+
+const EDITOR_AUTOSAVE_OPTIONS: { value: EditorAutosaveMode; label: string }[] = [
+  { value: "off", label: "Off" },
+  { value: "afterDelay", label: "Delay" },
+  { value: "onBlur", label: "On blur" },
+];
+
+function SettingsBackupRow({
+  onStatus,
+}: {
+  onStatus: (status: string | null) => void;
+}) {
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  return (
+    <div className="settings-pane__tool-toggle-row">
+      <div className="settings-pane__tool-toggle-text">
+        <span className="settings-pane__tool-toggle-label">Backup settings</span>
+        <span className="settings-pane__tool-toggle-hint">
+          Export or import every Sinew preference as JSON.
+        </span>
+      </div>
+      <div className="settings-pane__appearance-control">
+        <button
+          type="button"
+          className="settings-pane__appearance-action"
+          onClick={() => {
+            const blob = new Blob([exportSettings()], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = "sinew-settings.json";
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(url);
+            onStatus("Exported");
+          }}
+        >
+          Export
+        </button>
+        <button
+          type="button"
+          className="settings-pane__appearance-action"
+          onClick={() => importInputRef.current?.click()}
+        >
+          Import…
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              const text = typeof reader.result === "string" ? reader.result : "";
+              const applied = importSettings(text);
+              onStatus(
+                applied > 0
+                  ? `Imported ${applied} setting${applied === 1 ? "" : "s"} — restart to apply.`
+                  : "No settings imported",
+              );
+            };
+            reader.onerror = () => onStatus("Import failed");
+            reader.readAsText(file);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="settings-pane__tool-toggle-row">
+      <div className="settings-pane__tool-toggle-text">
+        <span className="settings-pane__tool-toggle-label">{label}</span>
+        <span className="settings-pane__tool-toggle-hint">{hint}</span>
+      </div>
+      <button
+        type="button"
+        className="settings-pane__switch"
+        role="switch"
+        aria-checked={value}
+        data-on={value ? "true" : "false"}
+        onClick={() => onChange(!value)}
+      >
+        <span className="settings-pane__switch-thumb" />
+      </button>
+    </div>
+  );
+}
+
+function SegmentedRow<T extends string>({
+  label,
+  hint,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (next: T) => void;
+}) {
+  const cols =
+    options.length === 3
+      ? "settings-pane__tool-provider-switch--three"
+      : "";
+  return (
+    <div className="settings-pane__tool-toggle-row">
+      <div className="settings-pane__tool-toggle-text">
+        <span className="settings-pane__tool-toggle-label">{label}</span>
+        <span className="settings-pane__tool-toggle-hint">{hint}</span>
+      </div>
+      <div
+        className={`settings-pane__tool-provider-switch ${cols}`.trim()}
+        role="group"
+        aria-label={label}
+      >
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            data-active={opt.value === value ? "true" : "false"}
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TerminalShellRow({
+  value,
+  detected,
+  onChange,
+}: {
+  value: string;
+  detected: { label: string; path: string }[] | null;
+  onChange: (path: string) => void;
+}) {
+  const knownPaths = useMemo(
+    () => new Set((detected ?? []).map((s) => s.path)),
+    [detected],
+  );
+  const valueIsCustom = value !== "" && !knownPaths.has(value);
+  const [customMode, setCustomMode] = useState(valueIsCustom);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => {
+    setDraft(value);
+    if (valueIsCustom) setCustomMode(true);
+  }, [value, valueIsCustom]);
+
+  const selectValue =
+    customMode || valueIsCustom ? "__custom" : value === "" ? "" : value;
+
+  const commitDraft = () => {
+    const next = draft.trim();
+    if (next === value) return;
+    onChange(next);
+    if (next === "") setCustomMode(false);
+  };
+
+  return (
+    <div className="settings-pane__tool-toggle-row">
+      <div className="settings-pane__tool-toggle-text">
+        <span className="settings-pane__tool-toggle-label">Shell</span>
+        <span className="settings-pane__tool-toggle-hint">
+          {detected === null
+            ? "Detecting installed shells…"
+            : "Applied to new terminal sessions."}
+        </span>
+      </div>
+      <div className="settings-pane__appearance-control">
+        <select
+          className="settings-pane__appearance-select"
+          value={selectValue}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (next === "__custom") {
+              setCustomMode(true);
+            } else {
+              setCustomMode(false);
+              onChange(next);
+            }
+          }}
+        >
+          <option value="">System default</option>
+          {(detected ?? []).map((s) => (
+            <option key={s.path} value={s.path}>
+              {s.label}
+            </option>
+          ))}
+          <option value="__custom">Custom path…</option>
+        </select>
+        {(customMode || valueIsCustom) && (
+          <input
+            type="text"
+            className="settings-pane__appearance-shell-input"
+            placeholder="/usr/local/bin/fish"
+            value={draft}
+            spellCheck={false}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commitDraft}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            aria-label="Custom shell path"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+type AppearanceItemProps = {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  onReset: () => void;
+  isDefault: boolean;
+  suffix?: string;
+};
+
+function AppearanceItem({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  onReset,
+  isDefault,
+  suffix,
+}: AppearanceItemProps) {
+  const commit = (raw: number) => {
+    if (!Number.isFinite(raw)) return;
+    const clamped = Math.min(max, Math.max(min, raw));
+    if (clamped !== value) onChange(clamped);
+  };
+  return (
+    <div className="settings-pane__tool-toggle-row">
+      <div className="settings-pane__tool-toggle-text">
+        <span className="settings-pane__tool-toggle-label">{label}</span>
+        <span className="settings-pane__tool-toggle-hint">{hint}</span>
+      </div>
+      <div className="settings-pane__appearance-control">
+        <div className="settings-pane__appearance-stepper">
+          <button
+            type="button"
+            onClick={() => commit(value - step)}
+            disabled={value <= min}
+            title={`Decrease ${label.toLowerCase()}`}
+            aria-label={`Decrease ${label.toLowerCase()}`}
+          >
+            −
+          </button>
+          <input
+            type="number"
+            className="settings-pane__appearance-input"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => {
+              const parsed = parseFloat(event.target.value);
+              if (Number.isFinite(parsed)) commit(parsed);
+            }}
+            aria-label={label}
+          />
+          {suffix && (
+            <span className="settings-pane__appearance-suffix">{suffix}</span>
+          )}
+          <button
+            type="button"
+            onClick={() => commit(value + step)}
+            disabled={value >= max}
+            title={`Increase ${label.toLowerCase()}`}
+            aria-label={`Increase ${label.toLowerCase()}`}
+          >
+            +
+          </button>
+        </div>
+        <button
+          type="button"
+          className="settings-pane__icon-btn"
+          onClick={onReset}
+          disabled={isDefault}
+          title="Reset to default"
+          aria-label={`Reset ${label.toLowerCase()}`}
+        >
+          <Icon icon="solar:restart-linear" width={13} height={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 // ---- Providers section -------------------------------------------------
 
@@ -2250,6 +3135,7 @@ type McpSectionProps = {
   selectedProbe: McpServerProbe | null;
   onToggleEnabled: (id: string) => void;
   onMount: OnMount;
+  monacoTheme: EffectiveTheme;
 };
 
 function McpSection({
@@ -2270,6 +3156,7 @@ function McpSection({
   selectedProbe,
   onToggleEnabled,
   onMount,
+  monacoTheme,
 }: McpSectionProps) {
   const detailOpen = Boolean(selectedServer);
 
@@ -2412,7 +3299,7 @@ function McpSection({
                 <Editor
                   value={jsonText}
                   language="json"
-                  theme="sinew-cool"
+                  theme={monacoThemeName(monacoTheme)}
                   onChange={(value) => onJsonChange(value ?? "")}
                   onMount={onMount}
                   options={{

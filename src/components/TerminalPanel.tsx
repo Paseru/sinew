@@ -14,6 +14,18 @@ import {
 } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { api } from "../lib/ipc";
+import {
+  ACCENT_CHANGED_EVENT,
+  getTerminalCopyOnSelect,
+  getTerminalCursorBlink,
+  getTerminalCursorStyle,
+  getTerminalFontSize,
+  getTerminalShell,
+  TERMINAL_CURSOR_CHANGED_EVENT,
+  TERMINAL_FONT_CHANGED_EVENT,
+  THEME_CHANGED_EVENT,
+  type TerminalCursorState,
+} from "../lib/appearance";
 import type { TerminalDataPayload, TerminalExitPayload } from "../types";
 
 type TerminalStatus = "idle" | "starting" | "running" | "exited" | "error";
@@ -277,14 +289,13 @@ function TerminalSurface({
       "--font-mono",
       '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
     );
-    const fontSize =
-      parseFloat(cssVar("--fs-mono", "12")) || 12;
+    const fontSize = getTerminalFontSize();
 
     const terminal = new Terminal({
       // Required for `unicode11` and a few other addons we register below.
       allowProposedApi: true,
-      cursorBlink: true,
-      cursorStyle: "block",
+      cursorBlink: getTerminalCursorBlink(),
+      cursorStyle: getTerminalCursorStyle(),
       fontFamily,
       fontSize,
       letterSpacing: 0,
@@ -355,6 +366,14 @@ function TerminalSurface({
 
     disposablesRef.current = [
       linkProviderDisposable,
+      terminal.onSelectionChange(() => {
+        if (!getTerminalCopyOnSelect()) return;
+        const text = terminal.getSelection();
+        if (!text) return;
+        void navigator.clipboard.writeText(text).catch((err) =>
+          console.error("[terminal] copy-on-select failed", err),
+        );
+      }),
       terminal.onData((data) => {
         const currentToken = tokenRef.current;
         if (!currentToken) return;
@@ -430,6 +449,7 @@ function TerminalSurface({
             Math.max(terminal.rows, 4),
             Math.max(0, Math.round(rect.width)),
             Math.max(0, Math.round(rect.height)),
+            getTerminalShell() || undefined,
           )
           .then(() => {
             if (disposedRef.current || tokenRef.current !== token) return;
@@ -463,6 +483,44 @@ function TerminalSurface({
     });
     return () => cancelAnimationFrame(id);
   }, [active, fitTerminal]);
+
+  useEffect(() => {
+    const onFontSize = (event: Event) => {
+      const terminal = terminalRef.current;
+      if (!terminal) return;
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") {
+        terminal.options.fontSize = detail;
+      }
+      requestAnimationFrame(() => fitTerminal());
+    };
+    const onCursor = (event: Event) => {
+      const terminal = terminalRef.current;
+      if (!terminal) return;
+      const detail = (event as CustomEvent<TerminalCursorState>).detail;
+      if (!detail) return;
+      terminal.options.cursorStyle = detail.style;
+      terminal.options.cursorBlink = detail.blink;
+    };
+    const onTheme = () => {
+      const terminal = terminalRef.current;
+      if (!terminal) return;
+      // terminalTheme() reads the new CSS-var values on the next frame.
+      requestAnimationFrame(() => {
+        terminal.options.theme = terminalTheme();
+      });
+    };
+    window.addEventListener(TERMINAL_FONT_CHANGED_EVENT, onFontSize);
+    window.addEventListener(TERMINAL_CURSOR_CHANGED_EVENT, onCursor);
+    window.addEventListener(THEME_CHANGED_EVENT, onTheme);
+    window.addEventListener(ACCENT_CHANGED_EVENT, onTheme);
+    return () => {
+      window.removeEventListener(TERMINAL_FONT_CHANGED_EVENT, onFontSize);
+      window.removeEventListener(TERMINAL_CURSOR_CHANGED_EVENT, onCursor);
+      window.removeEventListener(THEME_CHANGED_EVENT, onTheme);
+      window.removeEventListener(ACCENT_CHANGED_EVENT, onTheme);
+    };
+  }, [fitTerminal]);
 
   useEffect(() => {
     return () => {
@@ -524,11 +582,37 @@ function terminalTheme() {
   const root = getComputedStyle(document.documentElement);
   const css = (name: string, fallback: string) =>
     root.getPropertyValue(name).trim() || fallback;
+  const isLight = document.documentElement.dataset.theme === "light";
+
+  if (isLight) {
+    return {
+      background: css("--bg-0", "#faf8f3"),
+      foreground: css("--editor-fg", "#2a2620"),
+      cursor: css("--accent", "#2563eb"),
+      selectionBackground: "rgba(48, 40, 30, 0.18)",
+      black: "#3c3830",
+      red: css("--danger", "#c43232"),
+      green: css("--ok", "#2f8a4a"),
+      yellow: "#a85a1a",
+      blue: css("--accent", "#2563eb"),
+      magenta: css("--accent-2", "#7c3aed"),
+      cyan: "#0e7490",
+      white: "#5c574d",
+      brightBlack: "#8a8478",
+      brightRed: "#dc2626",
+      brightGreen: "#16a34a",
+      brightYellow: "#d97706",
+      brightBlue: css("--accent-hi", "#1d4ed8"),
+      brightMagenta: "#8b5cf6",
+      brightCyan: "#0891b2",
+      brightWhite: "#2a2620",
+    };
+  }
 
   return {
     background: css("--bg-0", "#0b0b0d"),
     foreground: css("--editor-fg", "#e8e9ec"),
-    cursor: css("--text-0", "#e8e9ec"),
+    cursor: css("--accent", "#3b82f6"),
     selectionBackground: "rgba(232, 233, 236, 0.18)",
     black: "#111318",
     red: css("--danger", "#f5737f"),

@@ -50,7 +50,7 @@ pub(super) async fn spawn_terminal(
         ))
         .map_err(error_to_string)?;
 
-    let mut command = default_terminal_command();
+    let mut command = terminal_command_for(input.shell.as_deref());
     command.cwd(workspace_root.as_os_str());
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
@@ -105,6 +105,55 @@ fn default_terminal_command() -> CommandBuilder {
     {
         CommandBuilder::new_default_prog()
     }
+}
+
+fn terminal_command_for(shell: Option<&str>) -> CommandBuilder {
+    let Some(path) = shell.map(str::trim).filter(|s| !s.is_empty()) else {
+        return default_terminal_command();
+    };
+    let mut command = CommandBuilder::new(path);
+    let lower = std::path::Path::new(path)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(path)
+        .to_ascii_lowercase();
+    if lower.starts_with("powershell") || lower.starts_with("pwsh") {
+        command.arg("-NoLogo");
+        command.arg("-NoProfile");
+        command.arg("-ExecutionPolicy");
+        command.arg("Bypass");
+    }
+    command
+}
+
+#[tauri::command]
+pub(super) fn list_terminal_shells() -> Vec<TerminalShellOption> {
+    let candidates: &[(&str, &str)] = if cfg!(windows) {
+        &[
+            ("PowerShell Core", "pwsh.exe"),
+            ("Windows PowerShell", "powershell.exe"),
+            ("Command Prompt", "cmd.exe"),
+            ("WSL", "wsl.exe"),
+            ("Git Bash", "bash.exe"),
+        ]
+    } else {
+        &[
+            ("zsh", "zsh"),
+            ("bash", "bash"),
+            ("fish", "fish"),
+            ("nu", "nu"),
+            ("sh", "sh"),
+        ]
+    };
+    candidates
+        .iter()
+        .filter_map(|(label, exe)| {
+            which::which(exe).ok().map(|path| TerminalShellOption {
+                label: (*label).to_string(),
+                path: path.display().to_string(),
+            })
+        })
+        .collect()
 }
 
 #[tauri::command]

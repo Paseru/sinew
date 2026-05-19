@@ -11,6 +11,28 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Icon } from "@iconify/react";
 import { languageForPath } from "../lib/language";
 import { fileIcon } from "../lib/fileIcon";
+import {
+  ACCENT_CHANGED_EVENT,
+  EDITOR_AUTOSAVE_CHANGED_EVENT,
+  EDITOR_FONT_CHANGED_EVENT,
+  EDITOR_LINE_NUMBERS_CHANGED_EVENT,
+  EDITOR_RENDER_WHITESPACE_CHANGED_EVENT,
+  getAccent,
+  getEditorAutosaveDelay,
+  getEditorAutosaveMode,
+  getEditorFontSize,
+  getEditorLineNumbers,
+  getEditorRenderWhitespace,
+  getEffectiveTheme,
+  THEME_CHANGED_EVENT,
+  type Accent,
+  type EditorAutosaveMode,
+  type EditorAutosaveState,
+  type EditorLineNumbers,
+  type EditorRenderWhitespace,
+  type EffectiveTheme,
+} from "../lib/appearance";
+import { defineMonacoThemes, monacoThemeName } from "../lib/monacoTheme";
 import { Markdown } from "./chat/Markdown";
 import type { EditorRevealTarget, EditorTab } from "../types";
 import { ImageContextMenu } from "./ImageContextMenu";
@@ -89,6 +111,62 @@ export function EditorPane({
   const [imageMenu, setImageMenu] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const [editorFontSize, setEditorFontSize] = useState<number>(() =>
+    getEditorFontSize(),
+  );
+  const [lineNumbers, setLineNumbers] = useState<EditorLineNumbers>(() =>
+    getEditorLineNumbers(),
+  );
+  const [renderWhitespace, setRenderWhitespace] = useState<EditorRenderWhitespace>(
+    () => getEditorRenderWhitespace(),
+  );
+  const [theme, setTheme] = useState<EffectiveTheme>(() => getEffectiveTheme());
+  useEffect(() => {
+    const onFont = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") setEditorFontSize(detail);
+    };
+    const onTheme = (event: Event) => {
+      const detail = (event as CustomEvent<EffectiveTheme>).detail;
+      if (detail === "dark" || detail === "light") {
+        setTheme(detail);
+        monacoNs.editor.setTheme(monacoThemeName(detail));
+      }
+    };
+    const onAccent = (event: Event) => {
+      const detail = (event as CustomEvent<Accent>).detail;
+      if (!detail) return;
+      defineMonacoThemes(monacoNs, detail);
+      monacoNs.editor.setTheme(monacoThemeName(getEffectiveTheme()));
+    };
+    const onLineNumbers = (event: Event) => {
+      const detail = (event as CustomEvent<EditorLineNumbers>).detail;
+      if (detail === "on" || detail === "off" || detail === "relative") {
+        setLineNumbers(detail);
+      }
+    };
+    const onWhitespace = (event: Event) => {
+      const detail = (event as CustomEvent<EditorRenderWhitespace>).detail;
+      if (detail === "none" || detail === "boundary" || detail === "all") {
+        setRenderWhitespace(detail);
+      }
+    };
+    window.addEventListener(EDITOR_FONT_CHANGED_EVENT, onFont);
+    window.addEventListener(THEME_CHANGED_EVENT, onTheme);
+    window.addEventListener(ACCENT_CHANGED_EVENT, onAccent);
+    window.addEventListener(EDITOR_LINE_NUMBERS_CHANGED_EVENT, onLineNumbers);
+    window.addEventListener(EDITOR_RENDER_WHITESPACE_CHANGED_EVENT, onWhitespace);
+    return () => {
+      window.removeEventListener(EDITOR_FONT_CHANGED_EVENT, onFont);
+      window.removeEventListener(THEME_CHANGED_EVENT, onTheme);
+      window.removeEventListener(ACCENT_CHANGED_EVENT, onAccent);
+      window.removeEventListener(EDITOR_LINE_NUMBERS_CHANGED_EVENT, onLineNumbers);
+      window.removeEventListener(
+        EDITOR_RENDER_WHITESPACE_CHANGED_EVENT,
+        onWhitespace,
+      );
+    };
+  }, []);
   const activeTab: EditorTab | undefined = settingsActive ? undefined : tabs[activeIndex];
   // Close the image context menu whenever the user switches tabs or
   // toggles into the settings view, so it never lingers on the wrong file.
@@ -131,59 +209,25 @@ export function EditorPane({
     [onOpenFile],
   );
 
+  const saveActiveTab = useCallback(() => {
+    const path = currentPathRef.current;
+    if (!path) return;
+    const idx = tabsRef.current.findIndex((t) => t.relativePath === path);
+    if (idx >= 0) onSaveRef.current(idx);
+  }, []);
+
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     setEditorReadySeq((value) => value + 1);
-    monaco.editor.defineTheme("sinew-cool", {
-      base: "vs-dark",
-      inherit: true,
-      rules: [
-        { token: "comment", foreground: "52555c" },
-        { token: "keyword", foreground: "c4b5fd" },
-        { token: "string", foreground: "86efac" },
-        { token: "number", foreground: "f5a683" },
-        { token: "type", foreground: "e8bb6a" },
-        { token: "function", foreground: "9fc2ff" },
-        { token: "variable", foreground: "e8e9ec" },
-        { token: "constant", foreground: "f5a683" },
-        { token: "regexp", foreground: "86efac" },
-        { token: "tag", foreground: "f5a1ab" },
-        { token: "attribute.name", foreground: "c4b5fd" },
-      ],
-      colors: {
-        "editor.background": "#0b0b0d",
-        "editor.foreground": "#e8e9ec",
-        "editor.lineHighlightBackground": "#0f1013",
-        "editorLineNumber.foreground": "#3a3d44",
-        "editorLineNumber.activeForeground": "#9aa0a8",
-        "editorCursor.foreground": "#3b82f6",
-        "editor.selectionBackground": "#1e2b4a",
-        "editor.inactiveSelectionBackground": "#141518",
-        "editorIndentGuide.background1": "#141518",
-        "editorIndentGuide.activeBackground1": "#23252b",
-        "editorGutter.background": "#0b0b0d",
-        "editorWidget.background": "#0f1013",
-        "editorWidget.border": "#23252b",
-        "editorHoverWidget.background": "#0f1013",
-        "editorHoverWidget.border": "#23252b",
-        "editorSuggestWidget.background": "#0f1013",
-        "editorSuggestWidget.border": "#23252b",
-        "editorSuggestWidget.selectedBackground": "#1e2b4a",
-        "editorSuggestWidget.highlightForeground": "#5b8cff",
-        "editorBracketMatch.background": "#1e2b4a",
-        "editorBracketMatch.border": "#3b82f6",
-        "scrollbarSlider.background": "#23252bcc",
-        "scrollbarSlider.hoverBackground": "#2b2e35cc",
-        "scrollbarSlider.activeBackground": "#3a3d44cc",
-      },
-    });
-    monaco.editor.setTheme("sinew-cool");
+    defineMonacoThemes(monaco, getAccent());
+    monaco.editor.setTheme(monacoThemeName(getEffectiveTheme()));
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      const path = currentPathRef.current;
-      if (!path) return;
-      const idx = tabsRef.current.findIndex((t) => t.relativePath === path);
-      if (idx >= 0) onSaveRef.current(idx);
+      saveActiveTab();
+    });
+
+    editor.onDidBlurEditorWidget(() => {
+      if (autosaveRef.current.mode === "onBlur") saveActiveTab();
     });
 
     window.requestAnimationFrame(() => {
@@ -302,10 +346,44 @@ export function EditorPane({
     showTextEditor,
   ]);
 
+  const autosaveRef = useRef<EditorAutosaveState>({
+    mode: getEditorAutosaveMode(),
+    delayMs: getEditorAutosaveDelay(),
+  });
+  const autosaveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<EditorAutosaveState>).detail;
+      if (detail) autosaveRef.current = detail;
+    };
+    window.addEventListener(EDITOR_AUTOSAVE_CHANGED_EVENT, handler);
+    return () => {
+      window.removeEventListener(EDITOR_AUTOSAVE_CHANGED_EVENT, handler);
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const onEditorChange = useCallback(
     (value: string | undefined) => {
       if (!activeTab) return;
       onChange(activeIndex, value ?? "");
+      if (autosaveRef.current.mode !== "afterDelay") return;
+      if (autosaveTimerRef.current !== null) {
+        window.clearTimeout(autosaveTimerRef.current);
+      }
+      // Capture the path at scheduling time so a tab switch before the
+      // timer fires doesn't accidentally save a different file.
+      const pathAtSchedule = activeTab.relativePath;
+      autosaveTimerRef.current = window.setTimeout(() => {
+        autosaveTimerRef.current = null;
+        const idx = tabsRef.current.findIndex(
+          (t) => t.relativePath === pathAtSchedule,
+        );
+        if (idx >= 0) onSaveRef.current(idx);
+      }, autosaveRef.current.delayMs);
     },
     [activeTab, activeIndex, onChange],
   );
@@ -445,7 +523,7 @@ export function EditorPane({
                 <Editor
                   key={activeTab.relativePath}
                   height="100%"
-                  theme="sinew-cool"
+                  theme={monacoThemeName(theme)}
                   path={activeTab.relativePath}
                   value={activeTab.buffer}
                   language={languageForPath(activeTab.relativePath)}
@@ -454,8 +532,10 @@ export function EditorPane({
                   options={{
                     fontFamily:
                       '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace',
-                    fontSize: 12,
-                    lineHeight: 18,
+                    fontSize: editorFontSize,
+                    lineHeight: Math.round(editorFontSize * 1.5),
+                    lineNumbers: lineNumbers,
+                    renderWhitespace: renderWhitespace,
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
                     smoothScrolling: true,
