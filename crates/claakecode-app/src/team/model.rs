@@ -126,6 +126,7 @@ pub struct TeamTool {
     pub(super) mcp_settings: McpSettings,
     pub(super) tool_settings: ToolSettings,
     pub(super) skill_settings: SkillSettings,
+    pub(super) database: DatabaseTool,
     pub(super) default_model: ModelRef,
     pub(super) max_tool_rounds: usize,
     pub(super) runtime: Arc<RwLock<TeamRuntime>>,

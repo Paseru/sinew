@@ -8,9 +8,9 @@ use tokio::sync::mpsc;
 use crate::tool_run::FileChange;
 use crate::{
     run_turn, AgentEvent, AgentEventScope, AgentMode, ApplyPatchTool, BashTool, CreateImageTool,
-    GlobTool, GoalWorkflowState, GrepTool, McpSettings, McpToolRegistry, QuestionTool, ReadTool,
-    SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult, ToolSettings, TurnCancel,
-    TurnContext, WebFetchTool, WebSearchTool,
+    DatabaseTool, GlobTool, GoalWorkflowState, GrepTool, McpSettings, McpToolRegistry,
+    QuestionTool, ReadTool, SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult,
+    ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool,
 };
 
 const TOOL_PREFIX: &str = "subagent_";
@@ -65,6 +65,7 @@ pub struct SubAgentTool {
     mcp_settings: McpSettings,
     tool_settings: ToolSettings,
     skill_settings: SkillSettings,
+    database: DatabaseTool,
     max_tool_rounds: usize,
     cancel: TurnCancel,
 }
@@ -78,6 +79,7 @@ impl SubAgentTool {
         mcp_settings: McpSettings,
         tool_settings: ToolSettings,
         skill_settings: SkillSettings,
+        database: DatabaseTool,
         max_tool_rounds: usize,
         cancel: TurnCancel,
     ) -> Self {
@@ -89,6 +91,7 @@ impl SubAgentTool {
             mcp_settings,
             tool_settings,
             skill_settings,
+            database,
             max_tool_rounds,
             cancel,
         }
@@ -230,6 +233,7 @@ impl SubAgentTool {
                 self.workspace_root.clone(),
                 self.skill_settings.clone(),
             )),
+            database: Arc::new(self.database.clone()),
             mcp: Arc::new(McpToolRegistry::new(self.mcp_settings.clone())),
             subagents: None,
             teams: None,

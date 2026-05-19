@@ -139,6 +139,7 @@ pub(super) async fn send_message(
         })?;
 
     let providers = provider_registry_snapshot(&state)?;
+    let database_tool = Arc::new(DatabaseTool::new(state.store.clone()));
     let context = TurnContext {
         provider,
         model: conversation.model.clone(),
@@ -174,6 +175,7 @@ pub(super) async fn send_message(
             workspace_root.clone(),
             skill_settings.clone(),
         )),
+        database: database_tool.clone(),
         mcp: Arc::new(McpToolRegistry::new(mcp_settings.clone())),
         subagents: Some(Arc::new(SubAgentTool::new(
             workspace_root.clone(),
@@ -183,6 +185,7 @@ pub(super) async fn send_message(
             mcp_settings.clone(),
             tool_settings.clone(),
             skill_settings.clone(),
+            DatabaseTool::new(state.store.clone()),
             state.max_tool_rounds,
             cancel.clone(),
         ))),
@@ -195,6 +198,7 @@ pub(super) async fn send_message(
             mcp_settings,
             tool_settings.clone(),
             skill_settings,
+            DatabaseTool::new(state.store.clone()),
             conversation.model.clone(),
             state.max_tool_rounds,
             state.team_runtime.clone(),
@@ -781,6 +785,14 @@ pub(super) async fn emit_active_turns_changed(
         ACTIVE_TURNS_EVENT_NAME,
         ActiveTurnsChangedPayload { active_turns },
     );
+}
+
+pub(super) fn emit_database_sources_changed(app: &AppHandle, settings: &DatabaseSettings) {
+    let payload = DatabaseSourcesChangedPayload {
+        active_count: settings.active_count(),
+        source_count: settings.sources.len(),
+    };
+    let _ = app.emit(DATABASE_SOURCES_EVENT_NAME, payload);
 }
 
 pub(super) fn active_turn_summaries_from_map(

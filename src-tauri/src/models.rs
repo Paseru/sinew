@@ -379,6 +379,39 @@ pub(super) struct SaveToolSettingsInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(super) struct SaveDatabaseSettingsInput {
+    pub(super) settings: DatabaseSettings,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct TestDatabaseConnectionInput {
+    pub(super) source: DatabaseSourceConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ListDatabaseSourceActivityInput {
+    pub(super) source_id: String,
+    #[serde(default)]
+    pub(super) limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ClearDatabaseSourceActivityInput {
+    pub(super) source_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct DatabaseSourcesChangedPayload {
+    pub(super) active_count: usize,
+    pub(super) source_count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct SaveSkillSettingsInput {
     pub(super) workspace_path: String,
     pub(super) settings: SkillSettings,

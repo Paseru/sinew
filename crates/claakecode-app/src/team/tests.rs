@@ -533,6 +533,7 @@ fn test_team_tool() -> TeamTool {
         McpSettings::default(),
         ToolSettings::default(),
         SkillSettings::default(),
+        crate::DatabaseTool::new(crate::store::AppStore::in_memory().expect("in-memory store")),
         ModelRef::new("test", "model"),
         1,
         Arc::new(RwLock::new(TeamRuntime::default())),
