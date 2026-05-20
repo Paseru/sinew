@@ -36,6 +36,7 @@ tracing-subscriber = { workspace = true }
 url = { workspace = true }
 portable-pty = "0.9.0"
 reqwest = { workspace = true }
+which = "7"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.4"

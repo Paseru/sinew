@@ -28,6 +28,13 @@ import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
 import { api } from "../../lib/ipc";
 import {
+  CHAT_FONT_CHANGED_EVENT,
+  CHAT_FONT_DEFAULT,
+  CHAT_SHOW_TIMESTAMPS_CHANGED_EVENT,
+  getChatFontSize,
+  getChatShowTimestamps,
+} from "../../lib/appearance";
+import {
   MODELS,
   PROVIDERS,
   THINKING_LEVELS,
@@ -374,6 +381,28 @@ export function ChatPane({
 }: Props) {
   const conversationViewsRef = useRef<Map<string, ChatViewState>>(new Map());
   const composerDraftsRef = useRef<Map<string, ComposerDraft>>(new Map());
+  const [chatFontSize, setChatFontSize] = useState<number>(() =>
+    getChatFontSize(),
+  );
+  const [chatShowTimestamps, setChatShowTimestamps] = useState<boolean>(() =>
+    getChatShowTimestamps(),
+  );
+  useEffect(() => {
+    const onFont = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
+      if (typeof detail === "number") setChatFontSize(detail);
+    };
+    const onTimestamps = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail;
+      if (typeof detail === "boolean") setChatShowTimestamps(detail);
+    };
+    window.addEventListener(CHAT_FONT_CHANGED_EVENT, onFont);
+    window.addEventListener(CHAT_SHOW_TIMESTAMPS_CHANGED_EVENT, onTimestamps);
+    return () => {
+      window.removeEventListener(CHAT_FONT_CHANGED_EVENT, onFont);
+      window.removeEventListener(CHAT_SHOW_TIMESTAMPS_CHANGED_EVENT, onTimestamps);
+    };
+  }, []);
   const [view, setView] = useState<ChatViewState>(() => {
     const initial = initialStateFromHistory(history);
     return isStreaming ? beginTurn(initial) : initial;
@@ -2599,6 +2628,8 @@ export function ChatPane({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      style={{ zoom: chatFontSize / CHAT_FONT_DEFAULT }}
+      data-show-timestamps={chatShowTimestamps ? "true" : "false"}
     >
       {previewImage && (
         <div
@@ -4213,6 +4244,7 @@ function seedInitialSubAgentMessage(
         id: blockId,
         text,
         historyIndex: 0,
+        createdAtMs: Date.now(),
       },
     ],
   };
@@ -4727,6 +4759,7 @@ function appendTeamMessageTextToView(
         id: fresh.length === 1 && fresh[0].id ? `${id}-${fresh[0].id}` : `${id}-${view.blocks.length}`,
         text: fresh.map(formatTeamMessageXml).join("\n\n"),
         historyIndex: 0,
+        createdAtMs: Date.now(),
       },
     ],
   };
@@ -5285,6 +5318,36 @@ function ChatBlocks({
   );
 }
 
+// Keyed by block.id so a user-text message keeps the same timestamp
+// across view rebuilds (the agent stream rebuilds blocks but the id is
+// stable). Falls back to the moment the block is first seen for messages
+// that come back from history without a recorded send time. Capped FIFO
+// so a long-lived session does not grow the map without bound.
+const USER_TEXT_TIMESTAMP_CAP = 2000;
+const userTextTimestamps = new Map<string, number>();
+function rememberUserTextTime(id: string, ts: number): void {
+  if (userTextTimestamps.has(id)) {
+    userTextTimestamps.delete(id);
+  } else if (userTextTimestamps.size >= USER_TEXT_TIMESTAMP_CAP) {
+    const oldest = userTextTimestamps.keys().next().value;
+    if (oldest !== undefined) userTextTimestamps.delete(oldest);
+  }
+  userTextTimestamps.set(id, ts);
+}
+function resolveUserTextTime(
+  block: Extract<ChatBlock, { kind: "user-text" }>,
+): number {
+  if (typeof block.createdAtMs === "number") {
+    rememberUserTextTime(block.id, block.createdAtMs);
+    return block.createdAtMs;
+  }
+  const cached = userTextTimestamps.get(block.id);
+  if (typeof cached === "number") return cached;
+  const next = Date.now();
+  rememberUserTextTime(block.id, next);
+  return next;
+}
+
 function BlockView({
   block,
   onPreviewImage,
@@ -5334,8 +5397,18 @@ function BlockView({
         activeAgentName,
       );
       if (teamMessages && visibleTeamMessages.length === 0) return null;
+      const userTime = resolveUserTextTime(block);
       return (
         <div className="msg" data-role="user">
+          <time
+            className="msg__time"
+            dateTime={new Date(userTime).toISOString()}
+          >
+            {new Date(userTime).toLocaleTimeString(undefined, {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
           <div
             className="msg__body user-text"
             data-rewindable={rewindDisabled ? "false" : "true"}

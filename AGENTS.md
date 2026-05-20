@@ -262,8 +262,10 @@ Code map:
     │       ├── dotmatrix-hooks.ts
     │       └── stream.ts
     ├── lib
+    │   ├── appearance.ts
     │   ├── fileIcon.ts
     │   ├── ipc.ts
     │   ├── language.ts
     │   ├── models.ts
+    │   ├── monacoTheme.ts
     │   └── recents.ts

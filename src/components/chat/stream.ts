@@ -29,6 +29,7 @@ export type ChatBlock =
       id: string;
       text: string;
       historyIndex: number;
+      createdAtMs?: number;
       attachments?: UserAttachment[];
     }
   | {
@@ -1719,6 +1720,7 @@ export function appendUserMessage(
           id: `u-${Date.now()}`,
           text,
           historyIndex,
+          createdAtMs: Date.now(),
           attachments:
             attachments && attachments.length > 0 ? attachments : undefined,
         },

@@ -8,8 +8,11 @@ import {
 } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { Icon } from "@iconify/react";
 import { api } from "../lib/ipc";
+import { getWorkspaceConfirmClose } from "../lib/appearance";
 import { modelRefWithThinking, thinkingFromRef } from "../lib/models";
 import { Splitter } from "./Splitter";
 import { FileTree, type FileTreeHandle } from "./FileTree";
@@ -57,6 +60,9 @@ const INITIAL_TERMINAL_HEIGHT = 240;
 const MIN_TERMINAL_HEIGHT = 140;
 const MAX_TERMINAL_RATIO = 0.92;
 const TERMINAL_OPEN_EVENT = "terminal-open-requested";
+const SETTINGS_OPEN_EVENT = "settings-open-requested";
+const NEW_CONVERSATION_EVENT = "new-conversation-requested";
+const OPEN_WORKSPACE_EVENT = "open-workspace-requested";
 const SEND_BUSY_RETRY_DELAYS_MS = [160, 320, 640, 1000, 1400];
 const COMPACTION_CONTINUATION_PROMPT =
   "Continue from the compacted context. Do not repeat completed work. Pick up exactly where you left off and proceed with the next useful step.";
@@ -1539,23 +1545,46 @@ export function Workspace({
 
   useEffect(() => {
     let disposed = false;
-    let unlisten: UnlistenFn | null = null;
-
-    void listen(TERMINAL_OPEN_EVENT, () => {
-      showTerminal();
-    }).then((nextUnlisten) => {
-      if (disposed) {
-        nextUnlisten();
-      } else {
-        unlisten = nextUnlisten;
-      }
+    const unlisteners: UnlistenFn[] = [];
+    const subscribe = async (name: string, handler: () => void) => {
+      const off = await listen(name, handler);
+      if (disposed) off();
+      else unlisteners.push(off);
+    };
+    void subscribe(TERMINAL_OPEN_EVENT, showTerminal);
+    void subscribe(SETTINGS_OPEN_EVENT, () => openSettings());
+    void subscribe(NEW_CONVERSATION_EVENT, () => {
+      void createConversation();
     });
+    return () => {
+      disposed = true;
+      for (const off of unlisteners) off();
+    };
+  }, [showTerminal, createConversation, openSettings]);
 
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: UnlistenFn | null = null;
+    void getCurrentWindow()
+      .onCloseRequested(async (event) => {
+        if (!getWorkspaceConfirmClose()) return;
+        const dirty = tabsRef.current.some((tab) => tab.dirty && !tab.external);
+        if (!dirty) return;
+        const proceed = await ask("Discard unsaved changes and close?", {
+          title: "Sinew",
+          kind: "warning",
+        });
+        if (!proceed) event.preventDefault();
+      })
+      .then((off) => {
+        if (disposed) off();
+        else unlisten = off;
+      });
     return () => {
       disposed = true;
       unlisten?.();
     };
-  }, [showTerminal]);
+  }, []);
 
   const sidebarHeightRef = useRef<HTMLDivElement | null>(null);
   const applyTopDelta = useCallback((delta: number) => {

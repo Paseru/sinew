@@ -518,6 +518,7 @@ export const api = {
     rows: number,
     pixelWidth?: number,
     pixelHeight?: number,
+    shell?: string,
   ) {
     return invoke<TerminalSpawnResult>("spawn_terminal", {
       input: {
@@ -528,8 +529,12 @@ export const api = {
         rows,
         pixelWidth,
         pixelHeight,
+        shell,
       },
     });
+  },
+  listTerminalShells() {
+    return invoke<{ label: string; path: string }[]>("list_terminal_shells");
   },
   writeTerminal(sessionId: string, token: string, data: string) {
     return invoke<void>("write_terminal", {

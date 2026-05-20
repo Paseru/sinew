@@ -218,39 +218,151 @@ pub fn run() {
                 install_macos_dock_menu(app.handle());
             }
 
-            #[cfg(not(target_os = "windows"))]
+            #[cfg(unix)]
             {
                 let handle = app.handle();
-                let menu = tauri::menu::Menu::default(handle)?;
+                let new_conversation_item = tauri::menu::MenuItemBuilder::with_id(
+                    NEW_CONVERSATION_MENU_ID,
+                    "New Conversation",
+                )
+                .accelerator("CmdOrCtrl+N")
+                .build(handle)?;
                 let new_window_item =
                     tauri::menu::MenuItemBuilder::with_id(NEW_WINDOW_MENU_ID, "New Window")
                         .accelerator("CmdOrCtrl+Shift+N")
                         .build(handle)?;
-                let file_menu = tauri::menu::SubmenuBuilder::new(handle, "File")
-                    .item(&new_window_item)
+                let open_workspace_item = tauri::menu::MenuItemBuilder::with_id(
+                    OPEN_WORKSPACE_MENU_ID,
+                    "Open Workspace…",
+                )
+                .accelerator("CmdOrCtrl+O")
+                .build(handle)?;
+                let settings_item =
+                    tauri::menu::MenuItemBuilder::with_id(SETTINGS_OPEN_MENU_ID, "Settings…")
+                        .accelerator("CmdOrCtrl+,")
+                        .build(handle)?;
+                let terminal_open_item = tauri::menu::MenuItemBuilder::with_id(
+                    TERMINAL_OPEN_MENU_ID,
+                    "Open Terminal",
+                )
+                .accelerator("CmdOrCtrl+`")
+                .build(handle)?;
+                let edit_menu = tauri::menu::SubmenuBuilder::new(handle, "Edit")
+                    .undo()
+                    .redo()
+                    .separator()
+                    .cut()
+                    .copy()
+                    .paste()
+                    .select_all()
                     .build()?;
                 let terminal_menu = tauri::menu::SubmenuBuilder::new(handle, "Terminal")
-                    .text(TERMINAL_OPEN_MENU_ID, "Open Terminal")
+                    .item(&terminal_open_item)
                     .build()?;
-                menu.append(&file_menu)?;
-                menu.append(&terminal_menu)?;
+                let window_menu = tauri::menu::SubmenuBuilder::new(handle, "Window")
+                    .minimize()
+                    .maximize()
+                    .separator()
+                    .close_window()
+                    .build()?;
+
+                #[cfg(target_os = "macos")]
+                let menu = {
+                    // macOS convention: Settings + About live in the app
+                    // (Sinew) submenu, not in File. Native About dialog
+                    // gets the description / GitHub link from the
+                    // bundled metadata.
+                    let about_metadata = tauri::menu::AboutMetadataBuilder::new()
+                        .name(Some("Sinew"))
+                        .version(Some(env!("CARGO_PKG_VERSION")))
+                        .copyright(Some("MIT — github.com/Paseru/sinew"))
+                        .website(Some("https://github.com/Paseru/sinew"))
+                        .website_label(Some("github.com/Paseru/sinew"))
+                        .comments(Some(concat!(
+                            "Sinew is a flexible AI coding harness. ",
+                            "You shape it: tweak the description of every tool, turn the ",
+                            "ones you don't need off, and the assistant only sees what ",
+                            "you keep.\n\n",
+                            "Run it minimal with a couple of tools, or unlock the full ",
+                            "set: shell, search, MCP, web, images, sub-agents. ",
+                            "Multi-provider by default."
+                        )))
+                        .build();
+                    let app_menu = tauri::menu::SubmenuBuilder::new(handle, "Sinew")
+                        .about(Some(about_metadata))
+                        .separator()
+                        .item(&settings_item)
+                        .separator()
+                        .services()
+                        .separator()
+                        .hide()
+                        .hide_others()
+                        .show_all()
+                        .separator()
+                        .quit()
+                        .build()?;
+                    let file_menu = tauri::menu::SubmenuBuilder::new(handle, "File")
+                        .item(&new_conversation_item)
+                        .item(&new_window_item)
+                        .separator()
+                        .item(&open_workspace_item)
+                        .separator()
+                        .close_window()
+                        .build()?;
+                    tauri::menu::MenuBuilder::new(handle)
+                        .item(&app_menu)
+                        .item(&file_menu)
+                        .item(&edit_menu)
+                        .item(&terminal_menu)
+                        .item(&window_menu)
+                        .build()?
+                };
+
+                #[cfg(not(target_os = "macos"))]
+                let menu = {
+                    // Linux has no app submenu, so Settings lives at the
+                    // bottom of the File menu (matches GTK app convention).
+                    let file_menu = tauri::menu::SubmenuBuilder::new(handle, "File")
+                        .item(&new_conversation_item)
+                        .item(&new_window_item)
+                        .separator()
+                        .item(&open_workspace_item)
+                        .separator()
+                        .item(&settings_item)
+                        .separator()
+                        .close_window()
+                        .build()?;
+                    tauri::menu::MenuBuilder::new(handle)
+                        .item(&file_menu)
+                        .item(&edit_menu)
+                        .item(&terminal_menu)
+                        .item(&window_menu)
+                        .build()?
+                };
+
                 app.set_menu(menu)?;
             }
             Ok(())
         })
         .on_menu_event(|app, event| {
-            if event.id() == NEW_WINDOW_MENU_ID {
+            let id = event.id();
+            if id == NEW_WINDOW_MENU_ID {
                 create_new_window_detached(app);
-            } else if event.id() == TERMINAL_OPEN_MENU_ID {
-                let focused = app
-                    .webview_windows()
-                    .into_values()
-                    .find(|window| window.is_focused().unwrap_or(false));
-                if let Some(window) = focused {
-                    let _ = window.emit(TERMINAL_OPEN_EVENT_NAME, ());
-                } else {
-                    let _ = app.emit(TERMINAL_OPEN_EVENT_NAME, ());
-                }
+                return;
+            }
+            let event_name: Option<&'static str> = if id == TERMINAL_OPEN_MENU_ID {
+                Some(TERMINAL_OPEN_EVENT_NAME)
+            } else if id == SETTINGS_OPEN_MENU_ID {
+                Some(SETTINGS_OPEN_EVENT_NAME)
+            } else if id == NEW_CONVERSATION_MENU_ID {
+                Some(NEW_CONVERSATION_EVENT_NAME)
+            } else if id == OPEN_WORKSPACE_MENU_ID {
+                Some(OPEN_WORKSPACE_EVENT_NAME)
+            } else {
+                None
+            };
+            if let Some(name) = event_name {
+                let _ = app.emit(name, ());
             }
         })
         .manage(state)
@@ -339,6 +451,7 @@ pub fn run() {
             terminal::write_terminal,
             terminal::resize_terminal,
             terminal::kill_terminal,
+            terminal::list_terminal_shells,
             updater::updater_check,
             updater::updater_download_and_install,
             updater::updater_restart,

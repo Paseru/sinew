@@ -4,6 +4,41 @@ import App from "./App";
 import "./styles.css";
 import "./lib/customIcons";
 import { api } from "./lib/ipc";
+import {
+  applyStoredAppearance,
+  bumpZoomLevel,
+  IS_MAC,
+  resetZoomLevel,
+} from "./lib/appearance";
+
+// Apply persisted zoom before React mounts to avoid a flash at the
+// default factor.
+applyStoredAppearance();
+
+// Cmd/Ctrl + "=" / "-" / "0" zoom shortcuts. We match on `event.key` so
+// the same physical keys work on AZERTY layouts (where `event.code`
+// points at the wrong character), and gate on the platform's primary
+// modifier only so Ctrl-= on macOS — used by Terminal — still passes
+// through. Capture phase wins against Monaco / xterm.
+window.addEventListener(
+  "keydown",
+  (event) => {
+    const primary = IS_MAC ? event.metaKey : event.ctrlKey;
+    const wrong = IS_MAC ? event.ctrlKey : event.metaKey;
+    if (!primary || wrong) return;
+    const key = event.key;
+    const isPlus = key === "=" || key === "+";
+    const isMinus = key === "-" || key === "_";
+    const isZero = key === "0";
+    if (!isPlus && !isMinus && !isZero) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (isPlus) bumpZoomLevel(1);
+    else if (isMinus) bumpZoomLevel(-1);
+    else resetZoomLevel();
+  },
+  { capture: true },
+);
 
 // Suppress the native WebKit context menu everywhere except inside text
 // inputs (where the OS-level copy/paste menu is still useful). Components
