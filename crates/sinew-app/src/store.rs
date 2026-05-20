@@ -1311,7 +1311,7 @@ impl AppStore {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap_or(0);
 
-        if version >= 7 {
+        if version >= 8 {
             return Ok(());
         }
 
@@ -1358,7 +1358,11 @@ impl AppStore {
         ensure_conversations_mode_model_settings_column(&conn)?;
         ensure_app_settings_table(&conn)?;
         ensure_turn_checkpoints_table(&conn)?;
-        conn.pragma_update(None, "user_version", 7)
+        if version < 8 {
+            conn.execute("delete from turn_checkpoints", [])
+                .context("unable to clear legacy turn checkpoints")?;
+        }
+        conn.pragma_update(None, "user_version", 8)
             .context("unable to set sqlite schema version")?;
         Ok(())
     }

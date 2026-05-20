@@ -637,12 +637,15 @@ mod tests {
     use std::{
         fs,
         process::Command as StdCommand,
+        sync::atomic::{AtomicU64, Ordering},
         time::{SystemTime, UNIX_EPOCH},
     };
 
     use serde_json::json;
 
     use super::*;
+
+    static TEMP_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     #[tokio::test]
     async fn grep_returns_grouped_capped_output() {
@@ -1011,6 +1014,10 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("time should be after epoch")
             .as_nanos();
-        std::env::temp_dir().join(format!("sinew-grep-test-{}-{nanos}", std::process::id()))
+        let counter = TEMP_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "sinew-grep-test-{}-{nanos}-{counter}",
+            std::process::id()
+        ))
     }
 }

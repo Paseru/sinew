@@ -20,13 +20,12 @@ pub(super) async fn estimate_context(
         .ok_or_else(|| "conversation not found".to_string())?;
 
     if let Some(index) = input.rewrite_from_history_index {
-        if index > conversation.history.len() {
+        if index >= conversation.history.len() {
             return Err("rewrite index out of bounds".into());
         }
-        if let Some(message) = conversation.history.get(index) {
-            if !matches!(message.role, Role::User) {
-                return Err("rewrite index must point to a user message".into());
-            }
+        let message = &conversation.history[index];
+        if !is_rewritable_user_message(message) {
+            return Err("rewrite index must point to a rewritable user message".into());
         }
         conversation.history.truncate(index);
         conversation.todo_list = todo_list_from_history(&conversation.history);

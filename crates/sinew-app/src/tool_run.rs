@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     path::Path,
     time::UNIX_EPOCH,
@@ -165,6 +165,8 @@ pub struct TurnCheckpoint {
 pub struct TurnFileCheckpoint {
     pub relative_path: String,
     pub before: TurnFileState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<TurnFileState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -439,6 +441,7 @@ pub fn checkpoint_from_snapshots(before: &TurnSnapshot, after: &TurnSnapshot) ->
         files.push(TurnFileCheckpoint {
             relative_path: path,
             before: turn_file_state(before_entry),
+            after: Some(turn_file_state(after_entry)),
         });
     }
 
@@ -449,8 +452,9 @@ pub fn restore_turn_checkpoints(
     root: &Path,
     checkpoints: &[TurnCheckpoint],
 ) -> Result<Vec<String>> {
-    let mut states = HashMap::<String, TurnFileState>::new();
+    let mut states = HashMap::<String, (TurnFileState, Option<TurnFileState>)>::new();
     let mut ordered_paths = Vec::<String>::new();
+    let mut expected_after_by_path = BTreeMap::<String, TurnFileState>::new();
 
     for checkpoint in checkpoints {
         for file in &checkpoint.files {
@@ -459,12 +463,27 @@ pub fn restore_turn_checkpoints(
                 continue;
             }
             ordered_paths.push(normalized.clone());
-            states.insert(normalized, file.before.clone());
+            states.insert(normalized, (file.before.clone(), file.after.clone()));
+        }
+    }
+
+    for checkpoint in checkpoints {
+        for file in &checkpoint.files {
+            if let Some(after) = &file.after {
+                let normalized = normalize_workspace_relative_path(&file.relative_path)?;
+                expected_after_by_path.insert(normalized, after.clone());
+            }
         }
     }
     ordered_paths.sort_by(|left, right| {
-        let left_exists = states.get(left).map(|state| state.exists).unwrap_or(true);
-        let right_exists = states.get(right).map(|state| state.exists).unwrap_or(true);
+        let left_exists = states
+            .get(left)
+            .map(|(state, _)| state.exists)
+            .unwrap_or(true);
+        let right_exists = states
+            .get(right)
+            .map(|(state, _)| state.exists)
+            .unwrap_or(true);
         match (left_exists, right_exists) {
             (false, true) => std::cmp::Ordering::Less,
             (true, false) => std::cmp::Ordering::Greater,
@@ -478,8 +497,24 @@ pub fn restore_turn_checkpoints(
     });
 
     let mut restored = Vec::new();
+    for relative_path in &ordered_paths {
+        let Some((before, _)) = states.get(relative_path) else {
+            continue;
+        };
+        let Some(expected) = expected_after_by_path.get(relative_path) else {
+            continue;
+        };
+        ensure_current_file_state(
+            root,
+            relative_path,
+            before,
+            expected,
+            &expected_after_by_path,
+        )?;
+    }
+
     for relative_path in ordered_paths {
-        let state = states
+        let (state, _) = states
             .get(&relative_path)
             .ok_or_else(|| anyhow!("missing restore state"))?;
         restore_file_state(root, &relative_path, state)?;
@@ -491,6 +526,182 @@ pub fn restore_turn_checkpoints(
 
 fn path_depth(path: &str) -> usize {
     path.split('/').count()
+}
+
+fn path_to_slash_string(path: &Path) -> String {
+    path.components()
+        .filter_map(|component| {
+            component
+                .as_os_str()
+                .to_str()
+                .map(|value| value.to_string())
+        })
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+fn ensure_current_file_state(
+    root: &Path,
+    relative_path: &str,
+    before: &TurnFileState,
+    expected: &TurnFileState,
+    expected_after_by_path: &BTreeMap<String, TurnFileState>,
+) -> Result<()> {
+    let current = current_file_state(root, relative_path)?;
+    if file_state_matches(&current, expected)
+        || added_file_already_absent(before, expected, &current)
+        || expected_tree_absent(root, relative_path, expected, expected_after_by_path)?
+        || expected_checkpoint_tree_present(
+            root,
+            relative_path,
+            expected,
+            &current,
+            expected_after_by_path,
+        )?
+    {
+        return Ok(());
+    }
+
+    bail!("unable to restore {relative_path}: file changed since checkpoint was created");
+}
+
+fn added_file_already_absent(
+    before: &TurnFileState,
+    expected: &TurnFileState,
+    current: &TurnFileState,
+) -> bool {
+    !before.exists && expected.exists && !current.exists
+}
+
+fn expected_tree_absent(
+    root: &Path,
+    relative_path: &str,
+    expected: &TurnFileState,
+    expected_after_by_path: &BTreeMap<String, TurnFileState>,
+) -> Result<bool> {
+    if expected.exists {
+        return Ok(false);
+    }
+    let prefix = format!("{relative_path}/");
+    if !expected_after_by_path
+        .iter()
+        .any(|(path, state)| path.starts_with(&prefix) && state.exists)
+    {
+        return Ok(false);
+    }
+    let target = restore_target_path(root, relative_path)?;
+    Ok(!target.exists())
+}
+
+fn expected_checkpoint_tree_present(
+    root: &Path,
+    relative_path: &str,
+    expected: &TurnFileState,
+    current: &TurnFileState,
+    expected_after_by_path: &BTreeMap<String, TurnFileState>,
+) -> Result<bool> {
+    if expected.exists
+        || !current.exists
+        || current.content_base64.is_some()
+        || current.unavailable_reason.as_deref() != Some("current path is not a regular file")
+    {
+        return Ok(false);
+    }
+    let prefix = format!("{relative_path}/");
+    let expected_files = expected_after_by_path
+        .iter()
+        .filter_map(|(path, state)| (path.starts_with(&prefix) && state.exists).then_some(path))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    if expected_files.is_empty() {
+        return Ok(false);
+    }
+
+    let target = restore_target_path(root, relative_path)?;
+    let Ok(metadata) = fs::symlink_metadata(&target) else {
+        return Ok(false);
+    };
+    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        return Ok(false);
+    }
+
+    let mut current_files = BTreeSet::new();
+    for entry in WalkDir::new(&target).follow_links(false) {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(err) => {
+                warn!("skipping restore validation entry: {err}");
+                return Ok(false);
+            }
+        };
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let Ok(relative) = entry.path().strip_prefix(root) else {
+            return Ok(false);
+        };
+        current_files.insert(path_to_slash_string(relative));
+    }
+
+    Ok(current_files == expected_files)
+}
+
+fn current_file_state(root: &Path, relative_path: &str) -> Result<TurnFileState> {
+    let target = restore_target_path(root, relative_path)?;
+    let Ok(metadata) = fs::symlink_metadata(&target) else {
+        return Ok(TurnFileState {
+            exists: false,
+            content_base64: None,
+            mode: None,
+            unavailable_reason: None,
+        });
+    };
+
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Ok(TurnFileState {
+            exists: true,
+            content_base64: None,
+            mode: file_mode(&metadata),
+            unavailable_reason: Some("current path is not a regular file".into()),
+        });
+    }
+
+    if metadata.len() > CHECKPOINT_FILE_LIMIT {
+        return Ok(TurnFileState {
+            exists: true,
+            content_base64: None,
+            mode: file_mode(&metadata),
+            unavailable_reason: Some(format!(
+                "file is larger than {} bytes",
+                CHECKPOINT_FILE_LIMIT
+            )),
+        });
+    }
+
+    let bytes = fs::read(&target)
+        .with_context(|| format!("unable to read current state for {relative_path}"))?;
+    Ok(TurnFileState {
+        exists: true,
+        content_base64: Some(BASE64_STANDARD.encode(bytes)),
+        mode: file_mode(&metadata),
+        unavailable_reason: None,
+    })
+}
+
+fn file_state_matches(current: &TurnFileState, expected: &TurnFileState) -> bool {
+    if current.exists != expected.exists {
+        return false;
+    }
+    if !current.exists {
+        return true;
+    }
+    if current.mode != expected.mode {
+        return false;
+    }
+    match (&current.content_base64, &expected.content_base64) {
+        (Some(current), Some(expected)) => current == expected,
+        _ => false,
+    }
 }
 
 fn should_visit(entry: &DirEntry, root: &Path) -> bool {
@@ -875,6 +1086,47 @@ mod tests {
         restore_turn_checkpoints(&root, &[checkpoint]).expect("restore checkpoint");
 
         assert!(!root.join("nested").exists());
+        fs::remove_dir_all(root).expect("remove temp workspace");
+    }
+
+    #[test]
+    fn restore_checkpoint_refuses_changed_modified_file() {
+        let root = test_root();
+        fs::write(root.join("note.txt"), "one\n").expect("write original file");
+        let before = snapshot_workspace_for_checkpoint(&root);
+
+        fs::write(root.join("note.txt"), "two\n").expect("modify file");
+        let after = snapshot_workspace_for_checkpoint(&root);
+        let checkpoint = checkpoint_from_snapshots(&before, &after);
+
+        fs::write(root.join("note.txt"), "three\n").expect("external edit");
+        let err = restore_turn_checkpoints(&root, &[checkpoint]).expect_err("restore should fail");
+
+        assert!(err.to_string().contains("file changed since checkpoint"));
+        assert_eq!(
+            fs::read_to_string(root.join("note.txt")).expect("read current file"),
+            "three\n"
+        );
+        fs::remove_dir_all(root).expect("remove temp workspace");
+    }
+
+    #[test]
+    fn restore_checkpoint_refuses_recreated_added_file() {
+        let root = test_root();
+        let before = snapshot_workspace_for_checkpoint(&root);
+
+        fs::write(root.join("new.txt"), "created\n").expect("create file");
+        let after = snapshot_workspace_for_checkpoint(&root);
+        let checkpoint = checkpoint_from_snapshots(&before, &after);
+
+        fs::write(root.join("new.txt"), "other work\n").expect("external edit");
+        let err = restore_turn_checkpoints(&root, &[checkpoint]).expect_err("restore should fail");
+
+        assert!(err.to_string().contains("file changed since checkpoint"));
+        assert_eq!(
+            fs::read_to_string(root.join("new.txt")).expect("read current file"),
+            "other work\n"
+        );
         fs::remove_dir_all(root).expect("remove temp workspace");
     }
 

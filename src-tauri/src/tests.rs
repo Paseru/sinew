@@ -128,6 +128,43 @@ fn context_estimate_stays_in_plan_mode_for_active_workflows() {
 }
 
 #[test]
+fn rewritable_user_message_rejects_compaction_and_hidden_messages() {
+    let normal = ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            text: "change this".into(),
+            meta: None,
+        }],
+    };
+    let retained = ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            text: "old user message".into(),
+            meta: Some(json!({ "compaction_retained_user": true })),
+        }],
+    };
+    let summary = ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            text: "summary".into(),
+            meta: Some(json!({ "compaction_summary": true })),
+        }],
+    };
+    let reminder = ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            text: "continue".into(),
+            meta: Some(json!({ "system_reminder": true })),
+        }],
+    };
+
+    assert!(is_rewritable_user_message(&normal));
+    assert!(!is_rewritable_user_message(&retained));
+    assert!(!is_rewritable_user_message(&summary));
+    assert!(!is_rewritable_user_message(&reminder));
+}
+
+#[test]
 fn plan_implementation_reminder_uses_ready_plan_artifact() {
     let reminder = plan_implementation_turn_reminder(
         Path::new("/workspace"),

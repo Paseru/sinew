@@ -77,6 +77,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     mcp.refresh_catalog(&history).await;
 
     let mut cancelled = false;
+    let mut compacted = false;
     let mut loops = 0usize;
     let mut auto_compaction_attempts = 0usize;
     let mut current_turn_tool_result_ids = BTreeSet::new();
@@ -163,7 +164,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             )
             .await
             {
-                Ok(true) => continue,
+                Ok(true) => {
+                    compacted = true;
+                    continue;
+                }
                 Ok(false) => {}
                 Err(err) => {
                     send_event(
@@ -224,7 +228,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         )
                         .await
                         {
-                            Ok(()) => continue 'conversation,
+                            Ok(()) => {
+                                compacted = true;
+                                continue 'conversation;
+                            }
                             Err(compaction_err) => {
                                 send_event(
                                     &event_tx,
@@ -416,7 +423,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                     )
                     .await
                     {
-                        Ok(()) => continue 'conversation,
+                        Ok(()) => {
+                            compacted = true;
+                            continue 'conversation;
+                        }
                         Err(compaction_err) => {
                             send_event(
                                 &event_tx,
@@ -689,6 +699,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         todo_list,
         goal_workflow,
         interrupted: cancelled,
+        compacted,
     }
 }
 
