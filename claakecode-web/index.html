@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="assets/claakecode-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Spectral:ital,wght@0,400;0,500;1,400;1,500&family=Manrope:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 
 </head>
@@ -74,11 +74,52 @@
     </div>
   </section>
 
+  <!-- PATCH NOTES (moved to top, right after intro) -->
+  <section id="release">
+    <div class="section-tag">
+      <span class="num">§ 01</span>
+      <span>Patch notes</span>
+      <span class="rule"></span>
+    </div>
+    <div class="release-card">
+      <div class="release-kicker mono">Latest release · v0.1.16</div>
+      <div class="release-grid">
+        <div>
+          <h2>Database settings land in <em class="serif">Claake Code</em>.</h2>
+          <p class="release-intro">
+            Version 0.1.16 adds a dedicated Settings database section and updates the downloadable files so new installs pull the latest desktop build.
+          </p>
+          <div class="release-actions">
+            <a class="btn btn-primary" href="https://github.com/WilliamPeynichou/ClaakeCode/releases/tag/v0.1.16">Read release notes ↗</a>
+            <a class="btn btn-ghost" href="#install">Download v0.1.16</a>
+          </div>
+        </div>
+        <div class="release-notes">
+          <article>
+            <span class="release-num">I</span>
+            <h3>Settings database</h3>
+            <p>Configure database sources directly in the app: Postgres, MySQL, SQLite, MSSQL and Supabase REST. Sources can be enabled, tested and kept under your control from Settings.</p>
+          </article>
+          <article>
+            <span class="release-num">II</span>
+            <h3>Agent-safe data access</h3>
+            <p>The agent gets database tools only through configured sources, with schema inspection, query execution, row limits, read-only options, activity history and destructive-action confirmation.</p>
+          </article>
+          <article>
+            <span class="release-num">III</span>
+            <h3>Downloads refreshed</h3>
+            <p>The macOS, Windows and Linux download buttons now target the latest 0.1.16 assets from GitHub releases.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- PRODUCT SHOWCASE -->
   <section class="showcase" id="showcase">
     <div class="section-tag">
-      <span class="num">Live product</span>
-      <span>See the IDE before you download</span>
+      <span class="num">§ 02</span>
+      <span>Live product · see the IDE before you download</span>
       <span class="rule"></span>
     </div>
     <div class="showcase-head">
@@ -125,7 +166,7 @@
   <!-- EDITOR SECTION -->
   <section id="tools">
     <div class="section-tag">
-      <span class="num">§ 01</span>
+      <span class="num">§ 03</span>
       <span>Free management of tools · skills · providers · databases</span>
       <span class="rule"></span>
     </div>
@@ -170,9 +211,9 @@
   </section>
 
   <!-- LOOP DIAGRAM -->
-  <section id="agent">
+  <section id="agent" class="plate-green">
     <div class="section-tag">
-      <span class="num">§ 02</span>
+      <span class="num">§ 04</span>
       <span>How the agent works</span>
       <span class="rule"></span>
     </div>
@@ -224,7 +265,7 @@
             <circle cx="60" cy="180" r="38" fill="var(--cream)" stroke="var(--forest)" stroke-width="1.4"/>
             <text x="60" y="185" text-anchor="middle" style="font-family:'Geist Mono';font-size:13px;fill:var(--forest-deep);letter-spacing:0.05em;text-transform:uppercase">reflect</text>
           </g>
-          <text x="240" y="180" text-anchor="middle" style="font-family:'Instrument Serif';font-style:italic;font-size:26px;fill:var(--forest)">loop</text>
+          <text x="240" y="180" text-anchor="middle" style="font-family:'DM Serif Display';font-style:italic;font-size:26px;fill:var(--forest)">loop</text>
           <text x="240" y="202" text-anchor="middle" style="font-family:'Geist Mono';font-size:10px;fill:var(--ink-soft);letter-spacing:0.1em">until done</text>
         </svg>
       </div>
@@ -234,7 +275,7 @@
   <!-- SHAPE THE HARNESS -->
   <section id="harness">
     <div class="section-tag">
-      <span class="num">§ 03</span>
+      <span class="num">§ 05</span>
       <span>Shape the harness</span>
       <span class="rule"></span>
     </div>
@@ -269,7 +310,7 @@
   <!-- FEATURES GRID -->
   <section id="features">
     <div class="section-tag">
-      <span class="num">§ 04</span>
+      <span class="num">§ 06</span>
       <span>Built for people who don't trust black boxes</span>
       <span class="rule"></span>
     </div>
@@ -343,9 +384,9 @@
   </section>
 
   <!-- OPEN SOURCE -->
-  <section id="oss">
+  <section id="oss" class="plate-green">
     <div class="section-tag">
-      <span class="num">§ 05</span>
+      <span class="num">§ 07</span>
       <span>Open source</span>
       <span class="rule"></span>
     </div>
@@ -393,13 +434,13 @@ skill : long-form on-disk in ~/.claakecode/skills</pre>
   <!-- HOW IT COMPARES -->
   <section id="compare">
     <div class="section-tag">
-      <span class="num">§ 06</span>
+      <span class="num">§ 08</span>
       <span>How it compares</span>
       <span class="rule"></span>
     </div>
     <h2 style="margin-bottom:36px;max-width:980px">Everyone says "agentic". <em class="serif" style="color:var(--forest)">Few</em> let you see and rewrite the prompt.</h2>
     <div style="overflow-x:auto;border:1px solid var(--rule);border-radius:14px">
-      <table style="width:100%;border-collapse:collapse;font-family:'Geist';font-size:14px;background:var(--paper)">
+      <table style="width:100%;border-collapse:collapse;font-family:'Manrope';font-size:14px;background:var(--paper)">
         <thead>
           <tr style="background:var(--cream)">
             <th style="text-align:left;padding:14px 18px;font-family:'Geist Mono';font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-soft);font-weight:500">Capability</th>
@@ -427,51 +468,10 @@ skill : long-form on-disk in ~/.claakecode/skills</pre>
     </div>
   </section>
 
-  <!-- PATCH NOTES -->
-  <section id="release">
-    <div class="section-tag">
-      <span class="num">§ 07</span>
-      <span>Patch notes</span>
-      <span class="rule"></span>
-    </div>
-    <div class="release-card">
-      <div class="release-kicker mono">Latest release · v0.1.16</div>
-      <div class="release-grid">
-        <div>
-          <h2>Database settings land in Claake Code.</h2>
-          <p class="release-intro">
-            Version 0.1.16 adds a dedicated Settings database section and updates the downloadable files so new installs pull the latest desktop build.
-          </p>
-          <div class="release-actions">
-            <a class="btn btn-primary" href="https://github.com/WilliamPeynichou/ClaakeCode/releases/tag/v0.1.16">Read release notes ↗</a>
-            <a class="btn btn-ghost" href="#install">Download v0.1.16</a>
-          </div>
-        </div>
-        <div class="release-notes">
-          <article>
-            <span class="release-num">01</span>
-            <h3>Settings database</h3>
-            <p>Configure database sources directly in the app: Postgres, MySQL, SQLite, MSSQL and Supabase REST. Sources can be enabled, tested and kept under your control from Settings.</p>
-          </article>
-          <article>
-            <span class="release-num">02</span>
-            <h3>Agent-safe data access</h3>
-            <p>The agent gets database tools only through configured sources, with schema inspection, query execution, row limits, read-only options, activity history and destructive-action confirmation.</p>
-          </article>
-          <article>
-            <span class="release-num">03</span>
-            <h3>Downloads refreshed</h3>
-            <p>The macOS, Windows and Linux download buttons now target the latest 0.1.16 assets from GitHub releases.</p>
-          </article>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- INSTALL CTA -->
   <section id="install" style="padding-bottom:96px">
     <div class="section-tag">
-      <span class="num">§ 08</span>
+      <span class="num">§ 09</span>
       <span>Download</span>
       <span class="rule"></span>
     </div>
