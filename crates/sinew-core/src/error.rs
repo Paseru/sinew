@@ -18,6 +18,11 @@ pub enum AppError {
     Decode(String),
     #[error("stream error: {0}")]
     Stream(String),
+    #[error("retryable stream error: {message}")]
+    RetryableStream {
+        message: String,
+        delay_ms: Option<u64>,
+    },
     #[error("unsupported feature: {0}")]
     Unsupported(String),
     #[error("provider error: {0}")]

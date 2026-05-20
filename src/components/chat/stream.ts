@@ -235,17 +235,6 @@ function planArtifactFromMeta(meta: unknown): PlanArtifact | null {
   };
 }
 
-// Answers submitted via the Questionnaire widget — the widget itself
-// already renders the "Question answered" confirmation, so we hide the
-// echoed user message from the chat view.
-function isQuestionnaireAnswerText(text: string): boolean {
-  return /^\s*Answer to "/.test(text);
-}
-
-function isQuestionnaireAnswer(part: Part): boolean {
-  return part.type === "text" && isQuestionnaireAnswerText(part.text);
-}
-
 function attachmentFromValue(value: unknown): UserAttachment | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
@@ -281,7 +270,6 @@ function blocksFromHistory(history: ChatMessage[]): ChatBlock[] {
   const blocks: ChatBlock[] = [];
   let counter = 0;
   const id = (tag: string) => `h-${tag}-${counter++}`;
-  const answeredQuestions = collectAnsweredQuestions(history);
   // map tool_call id -> tool_result (may come as a user-role follow-up)
   const toolResults = new Map<string, ToolResultPart>();
   for (const message of history) {
@@ -320,7 +308,6 @@ function blocksFromHistory(history: ChatMessage[]): ChatBlock[] {
           continue;
         }
         if (isHiddenUserText(part)) continue;
-        if (isQuestionnaireAnswer(part)) continue;
         const trimmed = part.text.trim();
         if (!trimmed) continue;
         blocks.push({
@@ -405,14 +392,8 @@ function blocksFromHistory(history: ChatMessage[]): ChatBlock[] {
             output: result?.content ?? "Tool call interrupted before a result was saved.",
             isError: result?.is_error ?? true,
             cleaned: isToolResultCleaned(result),
-            answered:
-              tc.name === "Question"
-                ? answeredQuestions.has(tc.id)
-                : undefined,
-            answer:
-              tc.name === "Question"
-                ? answeredQuestions.get(tc.id)
-                : undefined,
+            answered: tc.name === "Question" ? !!result && !result.is_error : undefined,
+            answer: tc.name === "Question" ? questionAnswerFromResult(result) : undefined,
             fileChanges,
             images: result?.images,
             meta: result?.meta,
@@ -432,6 +413,23 @@ function isToolResultCleaned(result?: ToolResultPart): boolean {
     typeof meta === "object" &&
     (meta as Record<string, unknown>).tool_result_cleaned === true
   );
+}
+
+function questionAnswerFromResult(result?: ToolResultPart): string | undefined {
+  return questionAnswerFromMeta(result?.meta);
+}
+
+function questionAnswerFromMeta(meta?: Record<string, unknown> | null): string | undefined {
+  const raw = meta?.question_answers;
+  if (!Array.isArray(raw)) return undefined;
+  return raw
+    .map((item) =>
+      Array.isArray(item)
+        ? item.map((value) => String(value).trim()).filter(Boolean).join(", ")
+        : "",
+    )
+    .filter(Boolean)
+    .join("\n");
 }
 
 type BashInputInfo = {
@@ -575,87 +573,6 @@ function subAgentFromToolResult(
       ? (record.history as ChatMessage[])
       : undefined,
   };
-}
-
-function collectAnsweredQuestions(history: ChatMessage[]): Map<string, string> {
-  const answered = new Map<string, string>();
-  const pendingGroups: string[][] = [];
-  let currentGroup: string[] = [];
-
-  const flushGroup = () => {
-    if (currentGroup.length === 0) return;
-    pendingGroups.push(currentGroup);
-    currentGroup = [];
-  };
-
-  const markLatestGroupAnswered = (answers: string[], rawAnswerText: string) => {
-    const group = currentGroup.length > 0 ? currentGroup : pendingGroups.pop();
-    if (!group) return;
-    if (group.length === 1) {
-      answered.set(group[0], rawAnswerText || answers.join("\n"));
-      currentGroup = [];
-      return;
-    }
-    for (let i = 0; i < group.length; i++) {
-      answered.set(group[i], answers[i] ?? "");
-    }
-    currentGroup = [];
-  };
-
-  for (const message of history) {
-    if (message.role === "assistant") {
-      for (const part of message.parts) {
-        if (part.type === "tool_call" && part.name === "Question") {
-          currentGroup.push(part.id);
-        } else if (isVisibleAssistantPart(part)) {
-          flushGroup();
-        }
-      }
-      continue;
-    }
-
-    let hasQuestionnaireAnswer = false;
-    let hasVisibleUserText = false;
-    const answers: string[] = [];
-    const answerTexts: string[] = [];
-    for (const part of message.parts) {
-      if (part.type !== "text") continue;
-      if (isHiddenUserText(part)) continue;
-      if (!part.text.trim()) continue;
-      if (isQuestionnaireAnswerText(part.text)) {
-        hasQuestionnaireAnswer = true;
-        answerTexts.push(part.text.trim());
-        answers.push(...parseQuestionnaireAnswers(part.text));
-      } else {
-        hasVisibleUserText = true;
-      }
-    }
-
-    if (hasQuestionnaireAnswer) markLatestGroupAnswered(answers, answerTexts.join("\n"));
-    if (hasVisibleUserText) flushGroup();
-  }
-
-  return answered;
-}
-
-function parseQuestionnaireAnswers(text: string): string[] {
-  return text
-    .split(/\r?\n/)
-    .map((line) => {
-      const start = line.indexOf('Answer to "');
-      if (start < 0) return null;
-      const end = line.lastIndexOf('":');
-      if (end < start + 'Answer to "'.length) return null;
-      const answer = line.slice(end + 2).trim();
-      return answer.length > 0 ? answer : null;
-    })
-    .filter((answer): answer is string => answer !== null);
-}
-
-function isVisibleAssistantPart(part: Part): boolean {
-  if (part.type === "text") return part.text.trim().length > 0;
-  if (part.type === "thinking") return hasVisibleThinkingText(part.text);
-  return part.type === "tool_call" && part.name !== "Question";
 }
 
 function basename(path: string): string {
@@ -1451,6 +1368,7 @@ export function applyEvent(
         status: "running",
         hidden: event.name === "bash_input" ? true : undefined,
         summary: pendingSummary(event.name),
+        answered: event.name === "Question" ? false : undefined,
         subAgent: isSubAgentLikeTool(event.name)
           ? { id: event.id, name: event.name === "Agent" ? "Agent" : "Sub-agent" }
           : undefined,
@@ -1683,6 +1601,8 @@ export function applyEvent(
             block.name === "bash" &&
             !event.is_error &&
             bashSessionIdFromOutput(event.output) !== null;
+          const questionAnswered =
+            block.name === "Question" ? !event.is_error : block.answered;
           return {
             ...block,
             hidden: false,
@@ -1696,6 +1616,11 @@ export function applyEvent(
               : block.summary,
             output: event.output,
             isError: event.is_error,
+            answered: questionAnswered,
+            answer:
+              block.name === "Question"
+                ? questionAnswerFromMeta(event.meta)
+                : block.answer,
             fileChanges: hasFileChanges
               ? finishedFileChanges
               : patchWithoutChanges

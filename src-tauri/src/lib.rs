@@ -311,6 +311,8 @@ pub fn run() {
             conversations::list_installed_skills_command,
             conversations::save_skill_settings,
             turns::send_message,
+            turns::answer_question,
+            turns::reject_question,
             turns::compact_conversation,
             turns::list_active_turns,
             turns::replay_active_turn_events,

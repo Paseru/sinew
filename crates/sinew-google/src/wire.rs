@@ -7,9 +7,13 @@ pub struct CodeAssistGenerateRequest {
     pub model: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project: Option<String>,
-    #[serde(rename = "user_prompt_id")]
-    pub user_prompt_id: String,
     pub request: VertexGenerateContentRequest,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_type: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_agent: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -22,7 +26,6 @@ pub struct VertexGenerateContentRequest {
     pub tools: Vec<Tool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub generation_config: Option<GenerationConfig>,
-    #[serde(rename = "session_id")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
 }
@@ -51,6 +54,9 @@ pub enum Part {
     FunctionCall {
         #[serde(rename = "functionCall")]
         function_call: FunctionCall,
+        #[serde(rename = "thoughtSignature")]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        thought_signature: Option<String>,
     },
     FunctionResponse {
         #[serde(rename = "functionResponse")]
@@ -80,6 +86,8 @@ pub struct FunctionResponse {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub response: Value,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parts: Vec<Part>,
 }
 
 #[derive(Debug, Serialize)]
@@ -93,7 +101,7 @@ pub struct Tool {
 pub struct FunctionDeclaration {
     pub name: String,
     pub description: String,
-    pub parameters_json_schema: Value,
+    pub parameters: Value,
 }
 
 #[derive(Debug, Serialize)]
@@ -209,6 +217,8 @@ pub struct UsageMetadata {
     pub thoughts_token_count: u32,
     #[serde(default)]
     pub total_token_count: u32,
+    #[serde(default)]
+    pub cached_content_token_count: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -219,6 +229,23 @@ pub struct LoadCodeAssistRequest {
     pub metadata: ClientMetadata,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum CloudProjectRef {
+    Id(String),
+    Object(CloudProject),
+}
+
+impl CloudProjectRef {
+    pub fn into_id(self) -> Option<String> {
+        match self {
+            Self::Id(id) => Some(id),
+            Self::Object(project) => project.id,
+        }
+        .filter(|id| !id.trim().is_empty())
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -241,7 +268,7 @@ pub struct LoadCodeAssistResponse {
     #[serde(default)]
     pub ineligible_tiers: Vec<IneligibleTier>,
     #[serde(default)]
-    pub cloudaicompanion_project: Option<String>,
+    pub cloudaicompanion_project: Option<CloudProjectRef>,
     #[serde(default)]
     pub paid_tier: Option<GeminiUserTier>,
 }
@@ -295,7 +322,7 @@ pub struct OnboardUserResponse {
     pub cloudaicompanion_project: Option<CloudProject>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CloudProject {
     #[serde(default)]
     pub id: Option<String>,

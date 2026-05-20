@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sinew_core::ToolDescriptor;
 
-use crate::tool_run::ToolRunResult;
+use crate::{agent::QuestionReply, tool_run::ToolRunResult, TurnCancel};
 
 #[derive(Debug, Clone, Default)]
 pub struct QuestionTool;
@@ -103,7 +103,12 @@ impl QuestionTool {
         }
     }
 
-    pub async fn run(&self, input: Value) -> ToolRunResult {
+    pub async fn run(
+        &self,
+        tool_call_id: &str,
+        input: Value,
+        cancel: &TurnCancel,
+    ) -> ToolRunResult {
         let parsed: QuestionInput = match serde_json::from_value(input) {
             Ok(value) => value,
             Err(err) => {
@@ -130,41 +135,71 @@ impl QuestionTool {
             }
         }
 
-        if questions.len() == 1 {
-            let question = &questions[0];
-            let option_count = question.options.len();
-            return ToolRunResult::ok(
-                format!(
-                    "Question shown to the user ({}, {option_count} option{}): {}\nWait for the user's next message before continuing.",
-                    question.kind.label(),
-                    if option_count == 1 { "" } else { "s" },
-                    question.question.trim(),
-                ),
-                Vec::new(),
-            );
-        }
+        let receiver = match cancel.register_question(tool_call_id.to_string()) {
+            Ok(receiver) => receiver,
+            Err(()) => return ToolRunResult::err("question was cancelled", Vec::new()),
+        };
 
-        ToolRunResult::ok(
-            format!(
-                "{} questions shown to the user:\n{}\nWait for the user's next message before continuing.",
-                questions.len(),
-                questions
+        match receiver.await {
+            Ok(QuestionReply::Answer { answers, stop }) => {
+                let normalized = normalize_answers(&questions, answers);
+                let formatted = questions
                     .iter()
                     .enumerate()
-                    .map(|(idx, question)| format!(
-                        "{}. {} ({}, {} option{})",
-                        idx + 1,
-                        question.question.trim(),
-                        question.kind.label(),
-                        question.options.len(),
-                        if question.options.len() == 1 { "" } else { "s" },
-                    ))
+                    .map(|(idx, question)| {
+                        let answer = normalized
+                            .get(idx)
+                            .filter(|answers| !answers.is_empty())
+                            .map(|answers| answers.join(", "))
+                            .unwrap_or_else(|| "Unanswered".to_string());
+                        format!("\"{}\"=\"{}\"", question.question.trim(), answer)
+                    })
                     .collect::<Vec<_>>()
-                    .join("\n"),
-            ),
-            Vec::new(),
-        )
+                    .join(", ");
+                let mut output = format!(
+                    "User has answered your question{}: {formatted}. Continue with the user's answers in mind.",
+                    if questions.len() == 1 { "" } else { "s" },
+                );
+                if stop {
+                    output.push_str(" The user clicked Send and stop questions. Do not ask more questions in this turn.");
+                }
+                ToolRunResult::ok_with_meta(
+                    output,
+                    Vec::new(),
+                    json!({
+                        "question_answers": normalized,
+                        "question_stop_requested": stop,
+                    }),
+                )
+            }
+            Ok(QuestionReply::Rejected) => {
+                ToolRunResult::err("The user dismissed this question", Vec::new())
+            }
+            Err(_) => {
+                cancel.unregister_question(tool_call_id);
+                ToolRunResult::err("question was cancelled", Vec::new())
+            }
+        }
     }
+}
+
+fn normalize_answers(questions: &[QuestionPrompt], answers: Vec<Vec<String>>) -> Vec<Vec<String>> {
+    questions
+        .iter()
+        .enumerate()
+        .map(|(idx, question)| {
+            let mut answer = answers.get(idx).cloned().unwrap_or_default();
+            answer = answer
+                .into_iter()
+                .map(|item| item.trim().to_string())
+                .filter(|item| !item.is_empty())
+                .collect();
+            if !matches!(question.kind, QuestionKind::MultipleChoice) {
+                answer.truncate(1);
+            }
+            answer
+        })
+        .collect()
 }
 
 #[derive(Debug, Deserialize)]
@@ -195,7 +230,7 @@ impl QuestionInput {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct QuestionPrompt {
     question: String,
     #[serde(rename = "type")]
@@ -203,27 +238,16 @@ struct QuestionPrompt {
     options: Vec<QuestionOption>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 enum QuestionKind {
     SingleChoice,
     MultipleChoice,
 }
 
-impl QuestionKind {
-    fn label(self) -> &'static str {
-        match self {
-            Self::SingleChoice => "single choice",
-            Self::MultipleChoice => "multiple choice",
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct QuestionOption {
-    #[allow(dead_code)]
     id: Option<String>,
     label: String,
-    #[allow(dead_code)]
     description: Option<String>,
 }

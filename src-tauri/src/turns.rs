@@ -261,12 +261,17 @@ pub(super) async fn send_message(
                             if output.interrupted {
                                 goal_workflow = pause_goal_workflow(goal_workflow);
                             }
-                            if plan_requested {
+                            let question_stop_requested = latest_question_stop_requested(
+                                &history,
+                                turn_user_history_index,
+                            );
+                            if plan_requested || question_stop_requested {
                                 match attach_latest_plan_artifact(
                                     &workspace_root_for_output,
                                     &conversation_id,
                                     &mut history,
                                     turn_user_history_index,
+                                    !question_stop_requested,
                                 ) {
                                     Ok(Some(artifact)) => {
                                         emit_workspace_file_change(
@@ -276,7 +281,11 @@ pub(super) async fn send_message(
                                         );
                                         plan_workflow = PlanWorkflowState::PlanReady { artifact };
                                     }
-                                    Ok(None) => {}
+                                    Ok(None) => {
+                                        if question_stop_requested {
+                                            plan_workflow = PlanWorkflowState::PlanningQuestions;
+                                        }
+                                    }
                                     Err(err) => {
                                         let _ = emit_agent_event(
                                             &app,
@@ -624,6 +633,46 @@ pub(super) async fn cancel_turn(
         Some(sender) => sender.cancel_all(),
         None => false,
     })
+}
+
+#[tauri::command]
+pub(super) async fn answer_question(
+    state: State<'_, DesktopState>,
+    input: AnswerQuestionInput,
+) -> std::result::Result<bool, String> {
+    let _workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let sender = state
+        .active_turns
+        .lock()
+        .await
+        .get(&input.conversation_id)
+        .cloned();
+
+    Ok(sender
+        .map(|sender| {
+            sender.answer_question(&input.tool_call_id, input.answers, input.stop_questions)
+        })
+        .unwrap_or(false))
+}
+
+#[tauri::command]
+pub(super) async fn reject_question(
+    state: State<'_, DesktopState>,
+    input: RejectQuestionInput,
+) -> std::result::Result<bool, String> {
+    let _workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let sender = state
+        .active_turns
+        .lock()
+        .await
+        .get(&input.conversation_id)
+        .cloned();
+
+    Ok(sender
+        .map(|sender| sender.reject_question(&input.tool_call_id))
+        .unwrap_or(false))
 }
 
 #[tauri::command]
@@ -1023,8 +1072,9 @@ pub(super) fn attach_latest_plan_artifact(
     conversation_id: &str,
     history: &mut [ChatMessage],
     turn_user_history_index: usize,
+    skip_if_question_tool: bool,
 ) -> Result<Option<PlanArtifactState>> {
-    if turn_has_question_tool(history, turn_user_history_index) {
+    if skip_if_question_tool && turn_has_question_tool(history, turn_user_history_index) {
         return Ok(None);
     }
 
@@ -1088,6 +1138,25 @@ pub(super) fn turn_has_question_tool(
                 part,
                 Part::ToolCall { name, .. } if name == "Question"
             )
+        })
+}
+
+pub(super) fn latest_question_stop_requested(
+    history: &[ChatMessage],
+    turn_user_history_index: usize,
+) -> bool {
+    history
+        .iter()
+        .skip(turn_user_history_index.saturating_add(1))
+        .flat_map(|message| &message.parts)
+        .filter_map(|part| match part {
+            Part::ToolResult { meta, .. } => meta.as_ref(),
+            _ => None,
+        })
+        .any(|meta| {
+            meta.get("question_stop_requested")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
         })
 }
 

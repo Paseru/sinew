@@ -23,6 +23,7 @@ import type {
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
   PlanControl,
+  QuestionAnswer,
   SavedConversation,
   SkillSettings,
   StartAnthropicLoginOutput,
@@ -467,6 +468,32 @@ export const api = {
   cancelTurn(workspacePath: string, conversationId: string) {
     return invoke<boolean>("cancel_turn", {
       input: { workspacePath, conversationId },
+    });
+  },
+  answerQuestion(
+    workspacePath: string,
+    conversationId: string,
+    toolCallId: string,
+    answers: QuestionAnswer[],
+    stopQuestions = false,
+  ) {
+    return invoke<boolean>("answer_question", {
+      input: {
+        workspacePath,
+        conversationId,
+        toolCallId,
+        answers,
+        stopQuestions,
+      },
+    });
+  },
+  rejectQuestion(
+    workspacePath: string,
+    conversationId: string,
+    toolCallId: string,
+  ) {
+    return invoke<boolean>("reject_question", {
+      input: { workspacePath, conversationId, toolCallId },
     });
   },
   stopAgentSwarm(

@@ -72,6 +72,8 @@ export type Part =
   | ToolCallPart
   | ToolResultPart;
 
+export type QuestionAnswer = string[];
+
 export type ChatMessage = {
   role: Role;
   parts: Part[];

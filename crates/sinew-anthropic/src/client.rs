@@ -16,7 +16,16 @@ const BASE_URL: &str = "https://api.anthropic.com";
 const API_VERSION: &str = "2023-06-01";
 const USER_AGENT: &str = "claude-cli/2.1.75";
 const CODE_SYSTEM_PREFIX: &str = "You are Claude Code, Anthropic's official CLI for Claude.";
-const COMMON_BETA: &str = "fine-grained-tool-streaming-2025-05-14,context-1m-2025-08-07";
+// Note: we intentionally do NOT advertise `context-1m-2025-08-07` here.
+// All models currently shipped in the app (Opus 4.6/4.7, Sonnet 4.6) already
+// expose a 1M context window natively, and Haiku 4.5 does not support that
+// beta at all. Sending it inconditionally caused:
+//   * Sonnet 4.6 → server-side tier gating → `rate_limit_error: Extra usage
+//     is required for long context requests` even for trivial prompts.
+//   * Haiku 4.5 → `invalid_request_error: The long context beta is not yet
+//     available for this subscription` which we then mis-classified as a
+//     context-length overflow and triggered auto-compaction on tiny inputs.
+const COMMON_BETA: &str = "fine-grained-tool-streaming-2025-05-14";
 const OAUTH_BETA: &str = "claude-code-20250219,oauth-2025-04-20";
 const CACHE_BREAKPOINTS: usize = 4;
 const ANTHROPIC_MAX_IMAGE_BASE64_BYTES: usize = 5 * 1024 * 1024;
@@ -82,7 +91,6 @@ impl AnthropicProvider {
             ))
             .header("anthropic-version", &self.config.api_version)
             .header("content-type", "application/json")
-            .header("accept", "application/json")
             .header("anthropic-dangerous-direct-browser-access", "true")
             .header("anthropic-beta", self.beta_header(is_oauth));
 
@@ -103,8 +111,18 @@ impl AnthropicProvider {
         route: &str,
         body: &T,
     ) -> Result<reqwest::Response> {
+        self.send_json_accept(route, body, "application/json").await
+    }
+
+    async fn send_json_accept<T: Serialize + ?Sized>(
+        &self,
+        route: &str,
+        body: &T,
+        accept: &'static str,
+    ) -> Result<reqwest::Response> {
         let (request, token) = self.post(route).await?;
         let response = request
+            .header("accept", accept)
             .json(body)
             .send()
             .await
@@ -124,6 +142,7 @@ impl AnthropicProvider {
 
         let (request, _) = self.post(route).await?;
         request
+            .header("accept", accept)
             .json(body)
             .send()
             .await
@@ -185,7 +204,7 @@ impl Provider for AnthropicProvider {
         let response = self.send_json("/v1/messages/count_tokens", &body).await?;
 
         if !response.status().is_success() {
-            return Err(read_http_error(response).await);
+            return Err(read_http_error(response, false).await);
         }
 
         let counted: wire::CountTokensResponse = response
@@ -243,10 +262,12 @@ impl Provider for AnthropicProvider {
             stream: true,
         };
 
-        let response = self.send_json("/v1/messages", &body).await?;
+        let response = self
+            .send_json_accept("/v1/messages", &body, "text/event-stream")
+            .await?;
 
         if !response.status().is_success() {
-            return Err(read_http_error(response).await);
+            return Err(read_http_error(response, true).await);
         }
 
         Ok(map_stream(response.bytes_stream()))
@@ -513,8 +534,9 @@ fn map_refresh_failure(err: AppError) -> AppError {
     }
 }
 
-async fn read_http_error(response: reqwest::Response) -> AppError {
+async fn read_http_error(response: reqwest::Response, retry_transient: bool) -> AppError {
     let status = response.status();
+    let delay_ms = retry_after_ms(&response);
     let body = response.text().await.unwrap_or_default();
     let parsed: std::result::Result<wire::ApiErrorEnvelope, _> = serde_json::from_str(&body);
     let message = parsed
@@ -524,10 +546,15 @@ async fn read_http_error(response: reqwest::Response) -> AppError {
     if status == reqwest::StatusCode::UNAUTHORIZED {
         tracing::warn!(error = %message, "anthropic oauth request was rejected after refresh");
         AppError::Auth(ANTHROPIC_RECONNECT_MESSAGE.into())
+    } else if retry_transient && is_transient_http_status(status) {
+        AppError::RetryableStream {
+            message: format!("HTTP {status}: {message}"),
+            delay_ms,
+        }
     } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
         AppError::RateLimit(message)
     } else if status.is_client_error() {
-        if message.contains("context") || message.contains("too long") {
+        if is_context_length_message(&message) {
             AppError::ContextLength(message)
         } else {
             AppError::InvalidRequest(message)
@@ -535,6 +562,41 @@ async fn read_http_error(response: reqwest::Response) -> AppError {
     } else {
         AppError::Provider(format!("HTTP {status}: {message}"))
     }
+}
+
+fn is_transient_http_status(status: reqwest::StatusCode) -> bool {
+    matches!(
+        status.as_u16(),
+        408 | 409 | 429 | 500 | 502 | 503 | 504 | 529
+    )
+}
+
+fn retry_after_ms(response: &reqwest::Response) -> Option<u64> {
+    response
+        .headers()
+        .get(reqwest::header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(|seconds| seconds.saturating_mul(1_000).min(60_000))
+}
+
+/// Recognise the real "prompt is too long" family of errors and avoid
+/// false positives on every 4xx that happens to mention the word "context"
+/// (e.g. `The long context beta is not yet available for this subscription`),
+/// which would otherwise trick the agent into triggering auto-compaction on
+/// a perfectly small history.
+fn is_context_length_message(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("beta") || lower.contains("not yet available") {
+        return false;
+    }
+    lower.contains("prompt is too long")
+        || lower.contains("input is too long")
+        || lower.contains("too many tokens")
+        || lower.contains("context window")
+        || lower.contains("context length")
+        || lower.contains("maximum context")
+        || lower.contains("exceed") && lower.contains("context")
 }
 
 #[cfg(test)]
@@ -583,5 +645,36 @@ mod tests {
         assert!(blocks
             .iter()
             .all(|block| !matches!(block, wire::ToolResultBlock::Image { .. })));
+    }
+
+    #[test]
+    fn beta_unavailable_error_is_not_classified_as_context_length() {
+        // Real Anthropic 400 on Haiku 4.5 when we still sent the
+        // `context-1m-2025-08-07` beta header.
+        let message = "invalid_request_error: The long context beta is not yet available for this subscription.";
+        assert!(!is_context_length_message(message));
+    }
+
+    #[test]
+    fn real_context_overflow_is_classified_as_context_length() {
+        let cases = [
+            "invalid_request_error: prompt is too long: 250000 tokens > 200000 maximum",
+            "invalid_request_error: input length and `max_tokens` exceed context window: 12345",
+            "invalid_request_error: too many tokens in the request",
+        ];
+        for message in cases {
+            assert!(
+                is_context_length_message(message),
+                "expected `{message}` to be classified as a context-length error"
+            );
+        }
+    }
+
+    #[test]
+    fn common_beta_header_no_longer_advertises_long_context() {
+        assert!(
+            !COMMON_BETA.contains("context-1m"),
+            "context-1m beta must not be advertised globally; it triggers tier-gating on Sonnet 4.6 and 400s on Haiku 4.5"
+        );
     }
 }

@@ -32,33 +32,39 @@ Use this exact patch format:
 *** Begin Patch
 *** Add File: path/to/new_file
 +new line
++another line
 
 *** Update File: path/to/existing_file
-@@ optional context
+@@ optional code anchor (e.g. `def greet():` or `class Foo:`)
+ context line above
 -old line
 +new line
+ context line below
 
 *** Delete File: path/to/old_file
 *** End Patch
 
-For renames, use `*** Move to:` immediately after `*** Update File:`:
+A single patch can combine several operations atomically:
 
 *** Begin Patch
-*** Update File: old/path
-*** Move to: new/path
-@@
--old line
-+new line
+*** Add File: hello.txt
++Hello world
+*** Update File: src/app.py
+*** Move to: src/main.py
+@@ def greet():
+-print("Hi")
++print("Hello, world!")
+*** Delete File: obsolete.txt
 *** End Patch
 
 Rules:
 - Always start with `*** Begin Patch` and end with `*** End Patch`.
-- Use `*** Add File:`, `*** Update File:`, `*** Delete File:`, and optional `*** Move to:`.
+- The `@@` header takes a code-level anchor (function/class declaration line), not a unified-diff line range like `-N,M +N,M`.
+- For Update File hunks, include ~3 lines of unchanged context above and below your -/+ changes so the patch can be anchored unambiguously.
 - New file content lines must start with `+`.
-- Update hunks start with `@@`.
-- Hunk lines must start with a space, `-`, or `+`.
+- Update hunk lines start with ' ' (context), '-' (removal), or '+' (addition).
 - Paths must be relative, never absolute.
-- Operations are applied sequentially. If one operation fails, earlier operations stay on disk, later operations are not attempted, and the error output lists applied/failed/not-attempted operations. Re-send only the failed and not-attempted operations.
+- Operations apply sequentially. If one fails, earlier ops stay on disk; the error lists applied/failed/not-attempted. Re-send only failed and not-attempted operations.
 "#;
 
 #[derive(Debug, Clone)]
@@ -424,16 +430,25 @@ struct PatchChunk {
 
 fn parse_patch(patch: &str) -> Result<Vec<PatchOperation>> {
     let patch = patch.trim_matches(|char| matches!(char, '\n' | '\r'));
-    let lines = patch
+    let mut lines = patch
         .lines()
         .map(|line| line.strip_suffix('\r').unwrap_or(line).to_string())
         .collect::<Vec<_>>();
 
+    // Silent-fix the patch envelope: '+*** Begin Patch' / '+*** End Patch' (or
+    // '-' variants, or several signs stacked). These framing markers are
+    // positional and reserved: there is no legitimate use case for them to
+    // carry a hunk-style prefix, so we strip it before validation rather than
+    // forcing the model to retry on a deterministic mistake.
+    sanitize_envelope_markers(&mut lines);
+
     if lines.first().map(|line| line.trim()) != Some(BEGIN_PATCH_MARKER) {
-        bail!("invalid patch: first line must be '{BEGIN_PATCH_MARKER}'");
+        let received = lines.first().map(String::as_str).unwrap_or("");
+        bail!("{}", boundary_error("first", BEGIN_PATCH_MARKER, received));
     }
     if lines.last().map(|line| line.trim()) != Some(END_PATCH_MARKER) {
-        bail!("invalid patch: last line must be '{END_PATCH_MARKER}'");
+        let received = lines.last().map(String::as_str).unwrap_or("");
+        bail!("{}", boundary_error("last", END_PATCH_MARKER, received));
     }
     if lines.len() < 3 {
         bail!("invalid patch: at least one file operation is required");
@@ -450,10 +465,14 @@ fn parse_patch(patch: &str) -> Result<Vec<PatchOperation>> {
             index += 1;
             let mut added_lines = Vec::new();
             while index < end_index && !is_file_operation_header(&lines[index]) {
-                let Some(rest) = lines[index].strip_prefix('+') else {
-                    bail!("invalid add file line: new file contents must start with '+'");
-                };
-                added_lines.push(rest.to_string());
+                // Lenient mode: accept the line as content whether or not it
+                // carries the documented '+' prefix. The outer loop already
+                // exits on file-operation headers, and the envelope markers
+                // are sanitized upstream, so any line that lands here is
+                // unambiguously body content the model wanted to add.
+                let line = &lines[index];
+                let content = line.strip_prefix('+').unwrap_or(line.as_str());
+                added_lines.push(content.to_string());
                 index += 1;
             }
             if added_lines.is_empty() {
@@ -607,7 +626,12 @@ fn compute_replacements(
             ) {
                 line_index = index + 1;
             } else {
-                bail!("failed to find context '{context}' in {path}");
+                let hint = if looks_like_unified_diff_range(context) {
+                    " Hint: '@@' takes an optional source-code anchor (e.g. '@@ def greet():', '@@ class Foo:'), not a unified-diff line range. Use a bare '@@' for the first hunk, or anchor on a real code line above the change."
+                } else {
+                    ""
+                };
+                bail!("failed to find context '{context}' in {path}.{hint}");
             }
         }
 
@@ -678,6 +702,20 @@ fn seek_sequence(lines: &[String], pattern: &[String], start: usize, eof: bool) 
         }
     }
 
+    // 4th pass: normalise common Unicode punctuation (em-dashes, curly
+    // quotes, non-breaking spaces, ideographic spaces, etc.) to their ASCII
+    // equivalents before comparing. This mirrors `git apply`'s tolerance
+    // and rescues the (frequent) case where the model emits ASCII context
+    // for a source file that contains typographic characters.
+    for index in search_start..=lines.len().saturating_sub(pattern.len()) {
+        let matched = pattern.iter().enumerate().all(|(offset, expected)| {
+            normalize_for_match(&lines[index + offset]) == normalize_for_match(expected)
+        });
+        if matched {
+            return Some(index);
+        }
+    }
+
     None
 }
 
@@ -744,6 +782,111 @@ fn is_file_operation_header(line: &str) -> bool {
 
 fn is_chunk_header(line: &str) -> bool {
     line == "@@" || line.starts_with("@@ ")
+}
+
+/// Build a helpful error message when a Begin/End Patch boundary line is wrong.
+/// Echoes the received line and adds a targeted hint when the marker was
+/// prefixed with '+' or '-' (the most common LLM mistake on this format).
+fn boundary_error(position: &str, expected: &str, received: &str) -> String {
+    if received.is_empty() {
+        return format!(
+            "invalid patch: {position} line must be '{expected}' (patch is empty or whitespace-only)"
+        );
+    }
+    let trimmed = received.trim();
+    let after_strip = trimmed
+        .strip_prefix('+')
+        .or_else(|| trimmed.strip_prefix('-'))
+        .map(str::trim_start)
+        .unwrap_or(trimmed);
+    let hint = if after_strip == expected {
+        format!(
+            " Hint: '{expected}' was prefixed with '+' or '-'. Framing markers (*** Begin Patch, *** End Patch, *** Add/Update/Delete File:, *** Move to:) appear verbatim \u{2014} only file content lines inside a hunk carry '+' or '-'."
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "invalid patch: {position} line must be exactly '{expected}'. Received: '{received}'.{hint}"
+    )
+}
+
+/// Strip leading '+' or '-' signs (any number of them) from the patch envelope
+/// markers when they are the only thing wrong with the line. We intentionally
+/// limit this silent fix to the very first and very last line because those
+/// are the *positional* framing of the patch: there is no legitimate world
+/// where the model wants the literal text `*** Begin Patch` or `*** End Patch`
+/// as the first/last line of its payload. For any other occurrence of these
+/// markers (e.g. inside an Add File body) the lenient body parser will keep
+/// the `+` as content, which is the desired behaviour.
+fn sanitize_envelope_markers(lines: &mut [String]) {
+    fn strip_all_signs(mut s: &str) -> &str {
+        while let Some(rest) = s.strip_prefix('+').or_else(|| s.strip_prefix('-')) {
+            s = rest;
+        }
+        s
+    }
+    if let Some(first) = lines.first_mut() {
+        if strip_all_signs(first).trim() == BEGIN_PATCH_MARKER {
+            *first = BEGIN_PATCH_MARKER.to_string();
+        }
+    }
+    if let Some(last) = lines.last_mut() {
+        if strip_all_signs(last).trim() == END_PATCH_MARKER {
+            *last = END_PATCH_MARKER.to_string();
+        }
+    }
+}
+
+/// Normalise common typographic Unicode characters to their ASCII equivalents
+/// for the most permissive pass of `seek_sequence`. This rescues diffs whose
+/// `-`/context lines were authored with ASCII but target source files that
+/// contain em-dashes, smart quotes, or non-breaking spaces (very common in
+/// Markdown, prose, and even minified JS bundles).
+fn normalize_for_match(s: &str) -> String {
+    s.trim()
+        .chars()
+        .map(|c| match c {
+            // Various dash / hyphen code-points -> ASCII '-'
+            '\u{2010}' | '\u{2011}' | '\u{2012}' | '\u{2013}' | '\u{2014}' | '\u{2015}'
+            | '\u{2212}' => '-',
+            // Curly single quotes -> ASCII '
+            '\u{2018}' | '\u{2019}' | '\u{201A}' | '\u{201B}' => '\'',
+            // Curly double quotes -> ASCII "
+            '\u{201C}' | '\u{201D}' | '\u{201E}' | '\u{201F}' => '"',
+            // Non-breaking and other odd spaces -> normal space
+            '\u{00A0}' | '\u{2002}' | '\u{2003}' | '\u{2004}' | '\u{2005}' | '\u{2006}'
+            | '\u{2007}' | '\u{2008}' | '\u{2009}' | '\u{200A}' | '\u{202F}' | '\u{205F}'
+            | '\u{3000}' => ' ',
+            other => other,
+        })
+        .collect()
+}
+
+/// Heuristic that recognizes unified-diff hunk headers like `-10,7 +10,8` or
+/// `-1 +1`. Used to detect when the model wrote a git-style `@@ -N,M +N,M @@`
+/// header instead of our source-anchor `@@ <code line>`.
+fn looks_like_unified_diff_range(context: &str) -> bool {
+    let mut chars = context.trim().chars().peekable();
+    if chars.next() != Some('-') {
+        return false;
+    }
+    if !chars.peek().is_some_and(|c| c.is_ascii_digit()) {
+        return false;
+    }
+    while chars
+        .peek()
+        .is_some_and(|c| c.is_ascii_digit() || *c == ',')
+    {
+        chars.next();
+    }
+    if chars.next() != Some(' ') {
+        return false;
+    }
+    if chars.next() != Some('+') {
+        return false;
+    }
+    chars.next().is_some_and(|c| c.is_ascii_digit())
 }
 
 #[cfg(test)]
@@ -1009,6 +1152,138 @@ mod tests {
         assert_eq!(result.file_changes.len(), 1);
         assert_eq!(result.file_changes[0].relative_path, "first.txt");
 
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn silently_accepts_plus_prefix_on_end_patch_marker() {
+        // The model's most common mistake: prefixing the End Patch terminator
+        // with '+' because it forgot to break out of the Add File "+" mode.
+        // We absorb this rather than forcing a retry on a 20 KB patch.
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+
+        let tool = ApplyPatchTool::new(&root);
+        let result = tool
+            .run(json!({
+                "patch": "*** Begin Patch\n*** Add File: hi.txt\n+hello\n+*** End Patch\n"
+            }))
+            .await;
+
+        assert!(
+            !result.is_error,
+            "should silent-fix, got: {}",
+            result.content
+        );
+        let content = fs::read_to_string(root.join("hi.txt")).expect("read hi.txt");
+        assert_eq!(content, "hello\n");
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn silently_accepts_plus_prefix_on_begin_patch_marker() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+
+        let tool = ApplyPatchTool::new(&root);
+        let result = tool
+            .run(json!({
+                "patch": "+*** Begin Patch\n*** Add File: hi.txt\n+hello\n*** End Patch\n"
+            }))
+            .await;
+
+        assert!(
+            !result.is_error,
+            "should silent-fix, got: {}",
+            result.content
+        );
+        let content = fs::read_to_string(root.join("hi.txt")).expect("read hi.txt");
+        assert_eq!(content, "hello\n");
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn silently_accepts_unprefixed_lines_in_add_file_body() {
+        // Reproduces the conv-n°2 bug: the model interleaves '+' lines with
+        // bare (whitespace-prefixed) lines inside an Add File body. The
+        // intent is unambiguous, so we treat every body line as content.
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+
+        let tool = ApplyPatchTool::new(&root);
+        let patch = "*** Begin Patch\n*** Add File: index.html\n+<!DOCTYPE html>\n+<html>\n   <body>\n   </body>\n+</html>\n*** End Patch\n";
+        let result = tool.run(json!({ "patch": patch })).await;
+
+        assert!(
+            !result.is_error,
+            "should silent-fix, got: {}",
+            result.content
+        );
+        let content = fs::read_to_string(root.join("index.html")).expect("read index.html");
+        assert_eq!(
+            content,
+            "<!DOCTYPE html>\n<html>\n   <body>\n   </body>\n</html>\n"
+        );
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn fuzzy_match_normalizes_smart_quotes_and_em_dashes() {
+        // The source file uses typographic punctuation (em-dash, smart
+        // quote, non-breaking space). The model writes its diff with plain
+        // ASCII. The 4th seek_sequence pass normalises both sides before
+        // comparing so the patch still applies.
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        fs::write(
+            root.join("doc.md"),
+            "## Title \u{2014} with em-dash and \u{2018}smart\u{2019} quote\n",
+        )
+        .expect("write file");
+
+        let tool = ApplyPatchTool::new(&root);
+        let patch = "*** Begin Patch\n*** Update File: doc.md\n@@\n-## Title - with em-dash and 'smart' quote\n+## Title (rewritten)\n*** End Patch\n";
+        let result = tool.run(json!({ "patch": patch })).await;
+
+        assert!(
+            !result.is_error,
+            "should match across Unicode/ASCII boundary, got: {}",
+            result.content
+        );
+        let updated = fs::read_to_string(root.join("doc.md")).expect("read doc.md");
+        assert!(
+            updated.contains("## Title (rewritten)"),
+            "file should be updated, got: {updated}"
+        );
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn error_when_at_at_uses_unified_diff_range_gives_hint() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        fs::write(root.join("a.txt"), "line one\nline two\nline three\n").expect("write file");
+
+        let tool = ApplyPatchTool::new(&root);
+        let result = tool
+            .run(json!({
+                "patch": "*** Begin Patch\n*** Update File: a.txt\n@@ -1,3 +1,3 @@\n-line two\n+LINE TWO\n*** End Patch\n"
+            }))
+            .await;
+
+        assert!(result.is_error);
+        assert!(
+            result
+                .content
+                .contains("failed to find context '-1,3 +1,3 @@'"),
+            "error should echo the bogus context, got: {}",
+            result.content
+        );
+        assert!(
+            result.content.contains("unified-diff line range"),
+            "error should hint at the unified-diff confusion, got: {}",
+            result.content
+        );
         fs::remove_dir_all(root).ok();
     }
 

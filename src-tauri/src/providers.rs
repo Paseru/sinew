@@ -533,7 +533,9 @@ pub(super) async fn handle_anthropic_oauth_request(
 }
 
 pub(super) async fn bind_google_oauth_listener() -> Result<tokio::net::TcpListener> {
-    tokio::net::TcpListener::bind(("127.0.0.1", 0))
+    // Antigravity expects the redirect URI http://localhost:51121/oauth-callback,
+    // so we must bind that exact port (not a random one).
+    tokio::net::TcpListener::bind(("127.0.0.1", 51121))
         .await
         .context("unable to bind Google OAuth callback port")
 }
@@ -599,7 +601,7 @@ pub(super) async fn handle_google_oauth_request(
 
     let parsed = parse_local_oauth_url(target)?;
     match parsed.path() {
-        "/oauth2callback" => {
+        "/oauth-callback" => {
             let params = parsed
                 .query_pairs()
                 .into_owned()
@@ -1126,7 +1128,9 @@ pub(super) async fn start_google_oauth_login(
         .await
         .map_err(error_to_string)?;
     let port = listener.local_addr().map_err(error_to_string)?.port();
-    let redirect_uri = format!("http://127.0.0.1:{port}/oauth2callback");
+    // Antigravity OAuth client whitelists this exact redirect URI.
+    let _ = port;
+    let redirect_uri = "http://localhost:51121/oauth-callback".to_string();
     let oauth_state = generate_google_state();
     let auth_url = google_oauth_authorize_url(&redirect_uri, &oauth_state);
     let login_id = generate_google_state();

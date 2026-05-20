@@ -22,7 +22,7 @@ pub mod workspace;
 pub use agent::{
     clean_context_descriptor, run_turn, system_prompt_for_mode,
     system_prompt_for_mode_with_plan_prompt, AgentEvent, AgentEventScope, AgentMode,
-    ConversationEvent, EngineCommand, TurnCancel, TurnContext,
+    ConversationEvent, EngineCommand, QuestionReply, TurnCancel, TurnContext,
 };
 pub use bash::{active_shell_display_name, shell_system_prompt, BashTool};
 pub use compact::{compact_conversation_history, CompactConversationOutput};

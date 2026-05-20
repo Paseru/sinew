@@ -12,7 +12,7 @@ mod tool_dispatch;
 mod tool_summary;
 mod turn;
 
-pub use cancel::{EngineCommand, TurnCancel};
+pub use cancel::{EngineCommand, QuestionReply, TurnCancel};
 pub use clean_context::clean_context_descriptor;
 pub use context::{AgentMode, TurnContext, TurnOutput};
 pub use events::{AgentEvent, AgentEventScope, ConversationEvent};

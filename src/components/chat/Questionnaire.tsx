@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import type { QuestionAnswer } from "../../types";
 
 type QuestionMode = "single_choice" | "multiple_choice";
 
@@ -19,7 +20,7 @@ type QuestionStep = {
   id: string;
   item: QuestionItem;
   payload: QuestionPayload;
-  answer?: string;
+  answer?: QuestionAnswer;
 };
 
 export type QuestionItem = {
@@ -35,7 +36,8 @@ export type QuestionItem = {
 type Props = {
   questions: QuestionItem[];
   onAnswerQuestion: (
-    answer: string,
+    toolCallId: string,
+    answers: QuestionAnswer[],
     options?: { stopQuestions?: boolean },
   ) => void | Promise<void>;
   disabled: boolean;
@@ -147,37 +149,20 @@ function parseQuestionArgs(argsPretty?: string): QuestionPayload[] {
   }
 }
 
-function formatAnswer(question: string, text: string): string {
-  return `Answer to "${question}": ${text}`;
-}
-
-function parseAnsweredPairs(raw: string | undefined): { question: string; answer: string }[] {
-  if (!raw) return [];
-  return raw
-    .split(/\r?\n/)
-    .map((line) => {
-      const start = line.indexOf('Answer to "');
-      if (start < 0) return null;
-      const end = line.lastIndexOf('":');
-      if (end < start + 'Answer to "'.length) return null;
-      const question = line.slice(start + 'Answer to "'.length, end).trim();
-      const answer = line.slice(end + 2).trim();
-      return question && answer ? { question, answer } : null;
-    })
-    .filter((pair): pair is { question: string; answer: string } => pair !== null);
-}
-
 function answerForStep(
   raw: string | undefined,
   payload: QuestionPayload,
   index: number,
-): string | undefined {
+): QuestionAnswer | undefined {
   const trimmed = raw?.trim();
   if (!trimmed) return undefined;
-  const pairs = parseAnsweredPairs(trimmed);
-  if (pairs.length === 0) return trimmed;
-  const exact = pairs.find((pair) => pair.question === payload.question);
-  return exact?.answer ?? pairs[index]?.answer;
+  const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const line = lines.length > 1 ? lines[index] : trimmed;
+  if (!line) return undefined;
+  const parts = payload.mode === "multiple_choice"
+    ? line.split(",").map((part) => part.trim()).filter(Boolean)
+    : [line];
+  return parts.length > 0 ? parts : undefined;
 }
 
 function questionStepsFromItems(questions: QuestionItem[]): QuestionStep[] {
@@ -218,8 +203,8 @@ function restoreAnswerState(
 ): AnswerState {
   const state = emptyAnswerState();
   for (const step of steps) {
-    const answer = step.answer?.trim();
-    if (!answer) continue;
+    const answer = step.answer;
+    if (!answer || answer.length === 0) continue;
     const restored = restoreAnswer(answer, step.payload);
     if (restored.selected.size > 0) {
       state.selected[step.id] = restored.selected;
@@ -232,41 +217,32 @@ function restoreAnswerState(
 }
 
 function restoreAnswer(
-  answer: string,
+  answer: QuestionAnswer,
   payload: QuestionPayload,
 ): { selected: Set<string>; custom: string } {
   if (payload.mode === "single_choice") {
-    const match = payload.options.find((option) => option.label === answer);
+    const value = answer[0] ?? "";
+    const match = payload.options.find((option) => option.label === value);
     return {
       selected: new Set(match ? [match.id] : []),
-      custom: match ? "" : answer,
+      custom: match ? "" : value,
     };
   }
 
   const selected = new Set<string>();
-  let remaining = answer;
-  const options = [...payload.options].sort(
-    (a, b) => b.label.length - a.label.length,
-  );
-
-  while (remaining) {
-    const match = options.find(
-      (option) =>
-        !selected.has(option.id) &&
-        (remaining === option.label || remaining.startsWith(`${option.label}, `)),
-    );
-    if (!match) break;
-    selected.add(match.id);
-    if (remaining === match.label) {
-      remaining = "";
-      break;
+  const custom: string[] = [];
+  for (const value of answer) {
+    const match = payload.options.find((option) => option.label === value);
+    if (!match) {
+      custom.push(value);
+      continue;
     }
-    remaining = remaining.slice(match.label.length + 2).trimStart();
+    selected.add(match.id);
   }
 
   return {
     selected,
-    custom: remaining.trim(),
+    custom: custom.join(", "),
   };
 }
 
@@ -289,7 +265,7 @@ export function Questionnaire({
             step.payload.mode,
             step.payload.options.map((option) => option.label).join("\u001d"),
             step.item.answered === true ? "1" : "0",
-            step.answer ?? "",
+            step.answer?.join("\u001c") ?? "",
           ].join("\u001e"),
         )
         .join("\u001f"),
@@ -351,7 +327,7 @@ export function Questionnaire({
   const payload = current.payload;
 
   const multiple = payload?.mode === "multiple_choice";
-  const stepDisabled = disabled || sent || anyRunning || anyError || !payload;
+  const stepDisabled = disabled || sent || anyError || !payload;
 
   const currentSelected = selected[current.id] ?? new Set<string>();
   const currentCustom = custom[current.id] ?? "";
@@ -379,7 +355,7 @@ export function Questionnaire({
     }
   };
 
-  const answerFor = (qIndex: number): string | null => {
+  const answerFor = (qIndex: number): QuestionAnswer | null => {
     const step = steps[qIndex];
     if (!step) return null;
     const p = step.payload;
@@ -391,28 +367,27 @@ export function Questionnaire({
       const parts = opts.map((o) => o.label);
       if (customText) parts.push(customText);
       if (parts.length === 0) return null;
-      return parts.join(", ");
+      return parts;
     }
-    if (customText) return customText;
+    if (customText) return [customText];
     if (opts.length === 0) return null;
-    return opts.map((o) => o.label).join(", ");
+    return [opts[0].label];
   };
 
   const allAnswered = steps.every((_, i) => answerFor(i) !== null);
   const isLastStep = clampedIndex === steps.length - 1;
-  const canSend = !disabled && !sent && !anyRunning && !anyError && allAnswered;
+  const canSend = !disabled && !sent && !anyError && allAnswered;
 
   const send = (stopQuestions = false) => {
     if (!canSend) return;
-    const parts: string[] = [];
+    const answers: QuestionAnswer[] = [];
     for (let i = 0; i < steps.length; i++) {
-      const p = steps[i].payload;
       const answer = answerFor(i);
       if (answer === null) return;
-      parts.push(formatAnswer(p.question, answer));
+      answers.push(answer);
     }
     if (!onAnswerQuestion) return;
-    void onAnswerQuestion(parts.join("\n\n"), { stopQuestions });
+    void onAnswerQuestion(current.item.id, answers, { stopQuestions });
     setSent(true);
     setOpen(false);
   };

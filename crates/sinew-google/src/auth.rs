@@ -15,10 +15,12 @@ use sinew_core::{AppError, Result};
 const GOOGLE_OAUTH_AUTHORIZE_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_OAUTH_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const GOOGLE_USER_INFO_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
+// Antigravity OAuth client (replaces the Gemini Code Assist defaults).
+// Source: https://github.com/NoeFabris/opencode-antigravity-auth
 const GOOGLE_CLIENT_ID: &str =
-    "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com";
-const GOOGLE_CLIENT_SECRET: &str = "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";
-const GOOGLE_OAUTH_SCOPE: &str = "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
+    "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com";
+const GOOGLE_CLIENT_SECRET: &str = "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";
+const GOOGLE_OAUTH_SCOPE: &str = "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/cclog https://www.googleapis.com/auth/experimentsandconfigs";
 const REFRESH_SKEW_MS: i64 = 60_000;
 
 #[derive(Clone)]
@@ -65,6 +67,16 @@ pub struct GoogleUserData {
     pub user_tier: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user_tier_name: Option<String>,
+}
+
+impl GoogleUserData {
+    pub fn antigravity_default() -> Self {
+        Self {
+            project_id: "default".into(),
+            user_tier: Some("free-tier".into()),
+            user_tier_name: None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

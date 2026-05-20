@@ -7,6 +7,8 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
+use eventsource_stream::Eventsource;
+use futures_util::StreamExt;
 use reqwest::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     StatusCode,
@@ -26,6 +28,7 @@ const GPT_IMAGE_MODEL: &str = "gpt-image-2";
 const NANO_BANANA_MODEL: &str = "gemini-3.1-flash-image-preview";
 const NANO_BANANA_URL: &str =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent";
+const OPENAI_SUBSCRIPTION_IMAGE_INSTRUCTIONS: &str = "You are Sinew, a concise coding assistant. When the user asks for an image, immediately call the image_generation tool with their prompt. Do not reply with text.";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const USER_AGENT: &str = "sinew/0.1";
 
@@ -476,10 +479,15 @@ impl CreateImageTool {
 
         let body = json!({
             "model": OPENAI_RESPONSES_IMAGE_MODEL,
-            "input": prompt,
+            "instructions": OPENAI_SUBSCRIPTION_IMAGE_INSTRUCTIONS,
+            "input": [{
+                "type": "message",
+                "role": "user",
+                "content": [{ "type": "input_text", "text": prompt }],
+            }],
             "tools": [Value::Object(image_tool)],
-            "tool_choice": { "type": "image_generation" },
-            "stream": false,
+            "tool_choice": "auto",
+            "stream": true,
             "store": false,
         });
 
@@ -489,7 +497,7 @@ impl CreateImageTool {
             .header(AUTHORIZATION, format!("Bearer {access_token}"))
             .header("openai-beta", "responses=experimental")
             .header(CONTENT_TYPE, "application/json")
-            .header(ACCEPT, "application/json");
+            .header(ACCEPT, "text/event-stream");
         if let Some(account_id) = account_id {
             request = request.header("chatgpt-account-id", account_id);
         }
@@ -506,18 +514,19 @@ impl CreateImageTool {
             .get("x-request-id")
             .and_then(|value| value.to_str().ok())
             .map(str::to_string);
-        let text = response
-            .text()
-            .await
-            .context("unable to read OpenAI subscription image response")?;
         if !status.is_success() {
+            let text = response
+                .text()
+                .await
+                .context("unable to read OpenAI subscription image response")?;
             bail!(
                 "{}",
                 format_openai_error(status, request_id.as_deref(), &text)
             );
         }
 
-        subscription_images_from_response(&text, request_id)
+        let calls = collect_subscription_image_calls(response).await?;
+        subscription_images_from_calls(calls, request_id)
     }
 
     async fn create_nano_banana(&self, input: Value) -> Result<ToolRunResult> {
@@ -724,12 +733,6 @@ struct SubscriptionImageItem {
 }
 
 #[derive(Debug, Deserialize)]
-struct ResponsesImageResponse {
-    #[serde(default)]
-    output: Vec<Value>,
-}
-
-#[derive(Debug, Deserialize)]
 struct GeminiGenerateResponse {
     #[serde(default)]
     candidates: Vec<GeminiCandidate>,
@@ -930,38 +933,126 @@ fn decode_image(data: &str, idx: usize) -> Result<Vec<u8>> {
         .with_context(|| format!("image {idx} returned invalid base64"))
 }
 
-fn subscription_images_from_response(
-    text: &str,
+fn subscription_images_from_calls(
+    calls: Vec<Value>,
     request_id: Option<String>,
 ) -> Result<Vec<SubscriptionImageItem>> {
-    let payload: ResponsesImageResponse =
-        serde_json::from_str(text).context("invalid OpenAI subscription image response")?;
-    let images = payload
-        .output
-        .iter()
-        .filter(|item| item.get("type").and_then(Value::as_str) == Some("image_generation_call"))
-        .filter(|item| {
-            item.get("status")
-                .and_then(Value::as_str)
-                .map(|status| status == "completed")
-                .unwrap_or(true)
-        })
+    let raw_calls = calls.clone();
+    let images = calls
+        .into_iter()
         .filter_map(|item| {
-            let b64_json = item.get("result").and_then(Value::as_str)?;
+            let b64_json = item
+                .get("result")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())?
+                .to_string();
+            let revised_prompt = item
+                .get("revised_prompt")
+                .and_then(Value::as_str)
+                .map(str::to_string);
             Some(SubscriptionImageItem {
-                b64_json: b64_json.to_string(),
-                revised_prompt: item
-                    .get("revised_prompt")
-                    .and_then(Value::as_str)
-                    .map(str::to_string),
+                b64_json,
+                revised_prompt,
                 request_id: request_id.clone(),
             })
         })
         .collect::<Vec<_>>();
     if images.is_empty() {
-        bail!("OpenAI subscription returned no image_generation_call result");
+        if raw_calls.is_empty() {
+            bail!(
+                "OpenAI subscription returned no image_generation_call (the backend may not support the image_generation tool for this account/model)"
+            );
+        }
+        let summary = raw_calls
+            .iter()
+            .map(|item| {
+                let status = item
+                    .get("status")
+                    .and_then(Value::as_str)
+                    .unwrap_or("<missing>");
+                let result_kind = match item.get("result") {
+                    None => "no-result",
+                    Some(Value::String(_)) => "result:string",
+                    Some(Value::Null) => "result:null",
+                    Some(Value::Object(_)) => "result:object",
+                    Some(Value::Array(_)) => "result:array",
+                    Some(_) => "result:other",
+                };
+                format!("status={status},{result_kind}")
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        bail!(
+            "OpenAI subscription returned {} image_generation_call(s) but no usable result ({summary})",
+            raw_calls.len(),
+        );
     }
     Ok(images)
+}
+
+async fn collect_subscription_image_calls(response: reqwest::Response) -> Result<Vec<Value>> {
+    let mut stream = response.bytes_stream().eventsource();
+    let mut calls = Vec::new();
+    let mut last_error: Option<String> = None;
+    let mut completed = false;
+    while let Some(event) = stream.next().await {
+        let event =
+            event.map_err(|err| anyhow::anyhow!("OpenAI subscription image SSE error: {err}"))?;
+        let data = event.data.trim();
+        if data.is_empty() || data == "[DONE]" {
+            continue;
+        }
+        let value: Value = match serde_json::from_str(data) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        match value.get("type").and_then(Value::as_str) {
+            Some("response.output_item.done") => {
+                if let Some(item) = value.get("item") {
+                    if item.get("type").and_then(Value::as_str) == Some("image_generation_call") {
+                        calls.push(item.clone());
+                    }
+                }
+            }
+            Some("response.completed") => {
+                if calls.is_empty() {
+                    if let Some(output) = value
+                        .get("response")
+                        .and_then(|response| response.get("output"))
+                        .and_then(Value::as_array)
+                    {
+                        for item in output {
+                            if item.get("type").and_then(Value::as_str)
+                                == Some("image_generation_call")
+                            {
+                                calls.push(item.clone());
+                            }
+                        }
+                    }
+                }
+                completed = true;
+                break;
+            }
+            Some("response.failed" | "response.incomplete") => {
+                last_error = value
+                    .get("response")
+                    .and_then(|response| response.get("error"))
+                    .and_then(|error| error.get("message"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
+                break;
+            }
+            _ => {}
+        }
+    }
+    if !completed && last_error.is_none() && calls.is_empty() {
+        bail!("OpenAI subscription image stream ended before completion");
+    }
+    if let Some(message) = last_error {
+        bail!(message);
+    }
+    Ok(calls)
 }
 
 fn extension_for(output_format: &str) -> &'static str {

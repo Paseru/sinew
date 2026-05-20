@@ -166,6 +166,26 @@ pub(super) struct ConversationInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(super) struct AnswerQuestionInput {
+    pub(super) workspace_path: String,
+    pub(super) conversation_id: String,
+    pub(super) tool_call_id: String,
+    #[serde(default)]
+    pub(super) answers: Vec<Vec<String>>,
+    #[serde(default)]
+    pub(super) stop_questions: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct RejectQuestionInput {
+    pub(super) workspace_path: String,
+    pub(super) conversation_id: String,
+    pub(super) tool_call_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct ActiveTurnReplayInput {
     pub(super) workspace_path: String,
     pub(super) conversation_id: String,

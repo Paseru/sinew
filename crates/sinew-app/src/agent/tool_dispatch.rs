@@ -9,7 +9,7 @@ use crate::{
     ToolSettings, WebFetchTool, WebSearchTool,
 };
 
-use super::{context::AgentMode, events::AgentEvent};
+use super::{cancel::TurnCancel, context::AgentMode, events::AgentEvent};
 
 pub(super) fn should_wait_for_cooperative_cancel(
     name: &str,
@@ -45,6 +45,7 @@ pub(super) async fn run_tool(
     todo_list: &mut TodoListState,
     mode: AgentMode,
     event_tx: &mpsc::UnboundedSender<AgentEvent>,
+    cancel: &TurnCancel,
     tool_call_id: &str,
     name: &str,
     input: Value,
@@ -81,7 +82,7 @@ pub(super) async fn run_tool(
         let Some(question) = question else {
             return ToolRunResult::err("Question is unavailable in this context", Vec::new());
         };
-        question.run(input).await
+        question.run(tool_call_id, input, cancel).await
     } else if name == "WebSearch" {
         web_search.run(input).await
     } else if name == "WebFetch" {
