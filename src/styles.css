@@ -1160,6 +1160,15 @@ textarea {
   background: var(--bg-4);
   color: var(--text-0);
 }
+.tree-menu__item:disabled {
+  cursor: default;
+  color: var(--text-faint);
+  opacity: 0.62;
+}
+.tree-menu__item:disabled:hover {
+  background: transparent;
+  color: var(--text-faint);
+}
 .tree-menu__item[data-danger="true"] {
   color: var(--danger);
 }
@@ -1175,6 +1184,10 @@ textarea {
 .tree-menu__item:hover svg {
   color: var(--text-1);
 }
+.tree-menu__item:disabled svg,
+.tree-menu__item:disabled:hover svg {
+  color: var(--text-faint);
+}
 .tree-menu__item[data-danger="true"] svg,
 .tree-menu__item[data-danger="true"]:hover svg {
   color: var(--danger);
@@ -1183,6 +1196,23 @@ textarea {
   height: 1px;
   margin: 4px 0;
   background: var(--line-soft);
+}
+
+.tab-menu {
+  min-width: 236px;
+}
+.tab-menu__item {
+  gap: 9px;
+}
+.tab-menu__item span {
+  flex: 1 1 auto;
+}
+.tab-menu__shortcut {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 500;
 }
 
 /* Search */
