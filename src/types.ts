@@ -368,6 +368,76 @@ export type GoalWorkflowState =
       completedAtMs: number;
     };
 
+export type GitStatusKind =
+  | "modified"
+  | "added"
+  | "deleted"
+  | "untracked"
+  | "renamed"
+  | "conflicted";
+
+export type GitStatusFile = {
+  path: string;
+  oldPath?: string | null;
+  indexStatus: string;
+  worktreeStatus: string;
+  kind: GitStatusKind | string;
+  staged: boolean;
+};
+
+export type GitWorktree = {
+  name: string;
+  path: string;
+  branch?: string | null;
+  head?: string | null;
+  isCurrent: boolean;
+  dirty: boolean;
+  dirtyCount: number;
+};
+
+export type GitBranchKind = "local" | "remote";
+
+export type GitBranch = {
+  name: string;
+  kind: GitBranchKind | string;
+  current: boolean;
+  upstream?: string | null;
+};
+
+export type GitRepositorySnapshot = {
+  gitAvailable: boolean;
+  ghAvailable: boolean;
+  isRepository: boolean;
+  workspacePath: string;
+  repoRoot?: string | null;
+  currentBranch?: string | null;
+  mainBranch?: string | null;
+  dirtyCount: number;
+  status: GitStatusFile[];
+  worktrees: GitWorktree[];
+  branches: GitBranch[];
+  error?: string | null;
+};
+
+export type GitOperationResult = {
+  message: string;
+  stdout?: string | null;
+  stderr?: string | null;
+};
+
+export type GitCreateWorktreeOutput = {
+  worktreePath: string;
+  branch: string;
+  pushed: boolean;
+  message: string;
+  warning?: string | null;
+};
+
+export type GitPullRequestOutput = {
+  url: string;
+  message: string;
+};
+
 export type WorkspaceBootstrap = {
   workspace: WorkspaceInfo;
   conversations: ConversationSummary[];

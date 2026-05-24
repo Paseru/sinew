@@ -96,6 +96,7 @@ use tokio::{
 
 mod context;
 mod conversations;
+mod git;
 mod models;
 mod platform;
 mod providers;
@@ -341,6 +342,15 @@ pub fn run() {
             terminal::write_terminal,
             terminal::resize_terminal,
             terminal::kill_terminal,
+            git::git_repository_snapshot_command,
+            git::git_init_command,
+            git::git_create_worktree_command,
+            git::git_remove_worktree_command,
+            git::git_create_branch_command,
+            git::git_commit_command,
+            git::git_push_command,
+            git::git_pull_command,
+            git::git_create_pull_request_command,
             updater::updater_check,
             updater::updater_download_and_install,
             updater::updater_restart,

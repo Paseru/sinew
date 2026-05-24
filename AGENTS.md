@@ -220,6 +220,7 @@ Code map:
 │   └── src
 │       ├── context.rs
 │       ├── conversations.rs
+│       ├── git.rs
 │       ├── lib.rs
 │       ├── main.rs
 │       ├── models.rs
@@ -243,6 +244,7 @@ Code map:
     │   ├── ConversationList.tsx
     │   ├── EditorPane.tsx
     │   ├── FileTree.tsx
+    │   ├── GitPanel.tsx
     │   ├── SearchPane.tsx
     │   ├── SettingsPane.tsx
     │   ├── SinewMark.tsx
