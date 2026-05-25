@@ -170,6 +170,7 @@ pub(super) async fn set_conversation_model_preference(
         conversation.mode_model_settings.get(mode),
         input.model,
         input.thinking,
+        input.use_1m_context,
     );
     let provider = provider_from_registry(&state, &selected.provider)?;
     provider
@@ -243,6 +244,87 @@ pub(super) async fn save_tool_settings(
 }
 
 #[tauri::command]
+pub(super) async fn list_database_settings(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<DatabaseSettings, String> {
+    state
+        .store
+        .load_database_settings()
+        .map_err(error_to_string)
+}
+
+#[tauri::command]
+pub(super) async fn save_database_settings(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    input: SaveDatabaseSettingsInput,
+) -> std::result::Result<DatabaseSettings, String> {
+    let saved = state
+        .store
+        .save_database_settings(&input.settings)
+        .map_err(error_to_string)?;
+    emit_database_sources_changed(&app, &saved);
+    Ok(saved)
+}
+
+#[tauri::command]
+pub(super) async fn test_database_connection(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    input: TestDatabaseConnectionInput,
+) -> std::result::Result<DatabaseConnectionTestResult, String> {
+    let source = input.source.normalized();
+    let result = test_database_source_connection(source).await;
+
+    let mut settings = state
+        .store
+        .load_database_settings()
+        .map_err(error_to_string)?;
+    let mut changed = false;
+    for configured in &mut settings.sources {
+        if configured.id == result.source_id {
+            configured.last_connection_status = DatabaseConnectionStatus::from_test(&result);
+            changed = true;
+            break;
+        }
+    }
+    if changed {
+        if let Ok(saved) = state.store.save_database_settings(&settings) {
+            emit_database_sources_changed(&app, &saved);
+        }
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub(super) async fn list_database_source_activity(
+    state: State<'_, DesktopState>,
+    input: ListDatabaseSourceActivityInput,
+) -> std::result::Result<Vec<DatabaseActivityEntry>, String> {
+    state
+        .store
+        .list_database_source_activity(&input.source_id, input.limit)
+        .map_err(error_to_string)
+}
+
+#[tauri::command]
+pub(super) async fn clear_database_source_activity(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    input: ClearDatabaseSourceActivityInput,
+) -> std::result::Result<Vec<DatabaseActivityEntry>, String> {
+    let entries = state
+        .store
+        .clear_database_source_activity(&input.source_id)
+        .map_err(error_to_string)?;
+    if let Ok(settings) = state.store.load_database_settings() {
+        emit_database_sources_changed(&app, &settings);
+    }
+    Ok(entries)
+}
+
+#[tauri::command]
 pub(super) async fn list_sub_agent_settings(
     state: State<'_, DesktopState>,
 ) -> std::result::Result<SubAgentSettings, String> {
@@ -272,7 +354,7 @@ pub(super) async fn save_sub_agent_settings(
 #[tauri::command]
 pub(super) async fn probe_mcp_tools(
     state: State<'_, DesktopState>,
-) -> std::result::Result<Vec<sinew_app::McpServerProbe>, String> {
+) -> std::result::Result<Vec<claakecode_app::McpServerProbe>, String> {
     let settings = state.store.load_mcp_settings().map_err(error_to_string)?;
     Ok(probe_mcp_servers(&settings).await)
 }

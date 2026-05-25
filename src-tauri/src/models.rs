@@ -268,6 +268,8 @@ pub(super) struct SendMessageInput {
     pub(super) attachments: Vec<AttachmentInput>,
     pub(super) model: Option<ModelInput>,
     pub(super) thinking: Option<ThinkingLevelInput>,
+    #[serde(default)]
+    pub(super) use_1m_context: Option<bool>,
     pub(super) mode: Option<AgentModeInput>,
     pub(super) service_tier: Option<ServiceTierInput>,
     pub(super) plan_control: Option<PlanControlInput>,
@@ -287,6 +289,8 @@ pub(super) struct CompactConversationInput {
     pub(super) thinking: Option<ThinkingLevelInput>,
     pub(super) service_tier: Option<ServiceTierInput>,
     #[serde(default)]
+    pub(super) use_1m_context: Option<bool>,
+    #[serde(default)]
     pub(super) instruction: Option<String>,
 }
 
@@ -301,6 +305,8 @@ pub(super) struct ContextEstimateInput {
     pub(super) attachments: Vec<AttachmentInput>,
     pub(super) model: Option<ModelInput>,
     pub(super) thinking: Option<ThinkingLevelInput>,
+    #[serde(default)]
+    pub(super) use_1m_context: Option<bool>,
     pub(super) mode: Option<AgentModeInput>,
     #[serde(default)]
     pub(super) rewrite_from_history_index: Option<usize>,
@@ -334,6 +340,8 @@ pub(super) struct ConversationModelPreferenceInput {
     pub(super) mode: AgentModeInput,
     pub(super) model: Option<ModelInput>,
     pub(super) thinking: Option<ThinkingLevelInput>,
+    #[serde(default)]
+    pub(super) use_1m_context: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -393,6 +401,39 @@ pub(super) struct SaveToolSettingsInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(super) struct SaveDatabaseSettingsInput {
+    pub(super) settings: DatabaseSettings,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct TestDatabaseConnectionInput {
+    pub(super) source: DatabaseSourceConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ListDatabaseSourceActivityInput {
+    pub(super) source_id: String,
+    #[serde(default)]
+    pub(super) limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ClearDatabaseSourceActivityInput {
+    pub(super) source_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct DatabaseSourcesChangedPayload {
+    pub(super) active_count: usize,
+    pub(super) source_count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct SaveSkillSettingsInput {
     pub(super) workspace_path: String,
     pub(super) settings: SkillSettings,
@@ -444,9 +485,12 @@ pub(super) struct OpenRouterModelCandidateInput {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct ModelInput {
     pub(super) provider: String,
     pub(super) name: String,
+    #[serde(default)]
+    pub(super) use_1m_context: Option<bool>,
 }
 
 fn default_true() -> bool {

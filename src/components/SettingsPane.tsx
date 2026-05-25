@@ -1,10 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { api } from "../lib/ipc";
+import {
+  createDatabaseSource,
+  createDatabaseSourceFromTemplate,
+  type EnvDatabaseDetection,
+  databaseSettingsEventDetail,
+  databaseSettingsFingerprint,
+  errorMessage,
+  normalizeDatabaseActivityEntry,
+  normalizeDatabaseSettings,
+  normalizeDatabaseSource,
+  sanitizeDatabaseMessage,
+  validateDatabaseSettings,
+} from "../lib/databaseSettings";
+import { attachMonacoTheme, monacoThemeForDocument } from "../lib/monacoThemes";
 import { Markdown } from "./chat/Markdown";
-import { SinewMark } from "./SinewMark";
+import { ClaakeCodeMark } from "./ClaakeCodeMark";
+import { DatabaseSection } from "./DatabaseSettingsSection";
 import {
   MODELS,
   PROVIDERS,
@@ -20,6 +36,11 @@ import {
 } from "../lib/models";
 import type {
   AnthropicProviderStatus,
+  DatabaseActivityEntry,
+  DatabaseConnectionStatusState,
+  DatabaseEngine,
+  DatabaseSettings,
+  DatabaseSourceConfig,
   GoogleProviderStatus,
   ImageProvider,
   InstalledSkill,
@@ -42,6 +63,7 @@ import type {
 } from "../types";
 
 const EMPTY_SETTINGS: McpSettings = { servers: [] };
+const EMPTY_DATABASE_SETTINGS: DatabaseSettings = { sources: [] };
 const FALLBACK_TOOL_SETTINGS: ToolSettings = {
   tools: [],
   planModePrompt: "",
@@ -53,14 +75,23 @@ const FALLBACK_TOOL_SETTINGS: ToolSettings = {
   webSearchProvider: "classic",
   linkupApiKey: "",
 };
-const PROVIDERS_CHANGED_EVENT = "sinew:providers-changed";
-const TOOL_SETTINGS_CHANGED_EVENT = "sinew:tool-settings-changed";
+const PROVIDERS_CHANGED_EVENT = "claakecode:providers-changed";
+const TOOL_SETTINGS_CHANGED_EVENT = "claakecode:tool-settings-changed";
+const DATABASE_SOURCES_CHANGED_EVENT = "claakecode:database-sources-changed";
+const BACKEND_DATABASE_SOURCES_CHANGED_EVENT = "database-sources-changed";
 
 type Props = {
   workspacePath: string;
 };
 
-type Section = "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
+type Section =
+  | "about"
+  | "providers"
+  | "tools"
+  | "database"
+  | "mcp"
+  | "skills"
+  | "subagents";
 
 export function SettingsPane({ workspacePath }: Props) {
   const [section, setSection] = useState<Section>("about");
@@ -101,6 +132,18 @@ export function SettingsPane({ workspacePath }: Props) {
   const [toolsSaving, setToolsSaving] = useState(false);
   const [toolsStatus, setToolsStatus] = useState<string | null>(null);
 
+  const [databaseSettings, setDatabaseSettings] = useState<DatabaseSettings>(
+    EMPTY_DATABASE_SETTINGS,
+  );
+  const [savedDatabaseJson, setSavedDatabaseJson] = useState("");
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [databaseSaving, setDatabaseSaving] = useState(false);
+  const [databaseTestingId, setDatabaseTestingId] = useState<string | null>(null);
+  const [databaseStatus, setDatabaseStatus] = useState<string | null>(null);
+  const [selectedDatabaseSourceId, setSelectedDatabaseSourceId] = useState<string | null>(null);
+  const [databaseActivity, setDatabaseActivity] = useState<DatabaseActivityEntry[]>([]);
+  const [databaseActivityLoading, setDatabaseActivityLoading] = useState(false);
+
   const [openAiStatus, setOpenAiStatus] = useState<OpenAiProviderStatus | null>(null);
   const [anthropicStatus, setAnthropicStatus] = useState<AnthropicProviderStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleProviderStatus | null>(null);
@@ -123,6 +166,30 @@ export function SettingsPane({ workspacePath }: Props) {
     setSelectedSkillName(null);
   }, [workspacePath]);
 
+  const loadDatabaseSettings = useCallback(async () => {
+    setDatabaseLoading(true);
+    setDatabaseStatus(null);
+    try {
+      const loaded = normalizeDatabaseSettings(await api.listDatabaseSettings());
+      setDatabaseSettings(loaded);
+      setSavedDatabaseJson(databaseSettingsFingerprint(loaded));
+      setSelectedDatabaseSourceId((current) => {
+        if (current && loaded.sources.some((source) => source.id === current)) {
+          return current;
+        }
+        return loaded.sources[0]?.id ?? null;
+      });
+    } catch (err) {
+      const fallback = normalizeDatabaseSettings(EMPTY_DATABASE_SETTINGS);
+      setDatabaseSettings(fallback);
+      setSavedDatabaseJson(databaseSettingsFingerprint(fallback));
+      setSelectedDatabaseSourceId(null);
+      setDatabaseStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDatabaseLoading(false);
+    }
+  }, []);
+
   // Outside callers (e.g. the composer's "Connect a provider" CTA) can jump
   // straight to a specific section by dispatching this window event. We
   // listen unconditionally so it works whether or not the pane has been
@@ -132,9 +199,9 @@ export function SettingsPane({ workspacePath }: Props) {
       const detail = (event as CustomEvent<{ section?: Section }>).detail;
       if (detail?.section) setSection(detail.section);
     };
-    window.addEventListener("sinew:open-settings-section", handler);
+    window.addEventListener("claakecode:open-settings-section", handler);
     return () =>
-      window.removeEventListener("sinew:open-settings-section", handler);
+      window.removeEventListener("claakecode:open-settings-section", handler);
   }, []);
 
   // ---- MCP load ---------------------------------------------------------
@@ -225,9 +292,50 @@ export function SettingsPane({ workspacePath }: Props) {
     void loadToolSettings();
   }, [toolSettings, loadToolSettings]);
 
+  useEffect(() => {
+    if (savedDatabaseJson) return;
+    void loadDatabaseSettings();
+  }, [savedDatabaseJson, loadDatabaseSettings]);
+
+  useEffect(() => {
+    let disposed = false;
+    let backendUnlisten: UnlistenFn | null = null;
+
+    const refresh = () => {
+      if (!disposed) void loadDatabaseSettings();
+    };
+
+    window.addEventListener(DATABASE_SOURCES_CHANGED_EVENT, refresh);
+    void listen(BACKEND_DATABASE_SOURCES_CHANGED_EVENT, refresh)
+      .then((unlisten) => {
+        if (disposed) {
+          unlisten();
+        } else {
+          backendUnlisten = unlisten;
+        }
+      })
+      .catch(() => {
+        // Non-fatal: local renderer events and explicit saves still refresh the UI.
+      });
+
+    return () => {
+      disposed = true;
+      window.removeEventListener(DATABASE_SOURCES_CHANGED_EVENT, refresh);
+      if (backendUnlisten) backendUnlisten();
+    };
+  }, [loadDatabaseSettings]);
+
   const toolsDirty =
     toolSettings !== null &&
     toolSettingsFingerprint(toolSettings) !== savedToolSettingsJson;
+
+  const databaseDirty =
+    databaseSettingsFingerprint(databaseSettings) !== savedDatabaseJson;
+  const selectedDatabaseSource =
+    databaseSettings.sources.find((source) => source.id === selectedDatabaseSourceId) ?? null;
+  const activeDatabaseSourceCount = databaseSettings.sources.filter(
+    (source) => source.enabled,
+  ).length;
 
   const saveToolSettings = useCallback(async () => {
     if (!toolSettings) return;
@@ -247,6 +355,156 @@ export function SettingsPane({ workspacePath }: Props) {
       setToolsSaving(false);
     }
   }, [toolSettings, workspacePath]);
+
+  const loadDatabaseActivity = useCallback(async (sourceId: string) => {
+    setDatabaseActivityLoading(true);
+    try {
+      const entries = await api.listDatabaseSourceActivity(sourceId, 25);
+      setDatabaseActivity(entries.map(normalizeDatabaseActivityEntry));
+    } catch {
+      setDatabaseActivity([]);
+    } finally {
+      setDatabaseActivityLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDatabaseSourceId) {
+      setDatabaseActivity([]);
+      return;
+    }
+    void loadDatabaseActivity(selectedDatabaseSourceId);
+  }, [selectedDatabaseSourceId, loadDatabaseActivity]);
+
+  const updateDatabaseSource = useCallback(
+    (id: string, patch: Partial<DatabaseSourceConfig>) => {
+      setDatabaseSettings((current) => ({
+        sources: current.sources.map((source) =>
+          source.id === id ? { ...source, ...patch } : source,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const saveDatabaseSettings = useCallback(async () => {
+    setDatabaseSaving(true);
+    setDatabaseStatus(null);
+    try {
+      const normalized = normalizeDatabaseSettings(databaseSettings);
+      validateDatabaseSettings(normalized);
+      const saved = normalizeDatabaseSettings(
+        await api.saveDatabaseSettings(normalized),
+      );
+      setDatabaseSettings(saved);
+      setSavedDatabaseJson(databaseSettingsFingerprint(saved));
+      setSelectedDatabaseSourceId((current) => {
+        if (current && saved.sources.some((source) => source.id === current)) {
+          return current;
+        }
+        return saved.sources[0]?.id ?? null;
+      });
+      setDatabaseStatus("Saved");
+      window.dispatchEvent(
+        new CustomEvent(DATABASE_SOURCES_CHANGED_EVENT, {
+          detail: databaseSettingsEventDetail(saved),
+        }),
+      );
+    } catch (err) {
+      setDatabaseStatus(sanitizeDatabaseMessage(errorMessage(err), databaseSettings));
+    } finally {
+      setDatabaseSaving(false);
+    }
+  }, [databaseSettings]);
+
+  const addDatabaseSource = useCallback((engine: DatabaseEngine) => {
+    setDatabaseSettings((current) => {
+      const next = createDatabaseSource(engine, current.sources);
+      setSelectedDatabaseSourceId(next.id);
+      setDatabaseStatus(null);
+      return { sources: [...current.sources, next] };
+    });
+  }, []);
+
+  const addDatabaseSourceFromTemplate = useCallback(
+    (detection: EnvDatabaseDetection) => {
+      setDatabaseSettings((current) => {
+        const next = createDatabaseSourceFromTemplate(
+          detection.prefill,
+          detection.suggestedName,
+          current.sources,
+        );
+        setSelectedDatabaseSourceId(next.id);
+        setDatabaseStatus(null);
+        return { sources: [...current.sources, next] };
+      });
+    },
+    [],
+  );
+
+  const deleteDatabaseSource = useCallback((id: string) => {
+    setDatabaseSettings((current) => {
+      const sources = current.sources.filter((source) => source.id !== id);
+      setSelectedDatabaseSourceId((selected) => {
+        if (selected !== id) return selected;
+        return sources[0]?.id ?? null;
+      });
+      setDatabaseActivity([]);
+      setDatabaseStatus(null);
+      return { sources };
+    });
+  }, []);
+
+  const testDatabaseSource = useCallback(async (source: DatabaseSourceConfig) => {
+    const normalized = normalizeDatabaseSource(source, 0);
+    setDatabaseTestingId(normalized.id);
+    setDatabaseStatus(null);
+    try {
+      const result = await api.testDatabaseConnection(normalized);
+      const status: DatabaseConnectionStatusState = result.ok ? "ok" : "error";
+      const message = sanitizeDatabaseMessage(
+        result.message || (result.ok ? "Connection OK" : "Connection failed"),
+        normalized,
+      );
+      const timestampMs = result.timestampMs ?? Date.now();
+      updateDatabaseSource(normalized.id, {
+        lastConnectionStatus: { status, message, timestampMs },
+      });
+      setDatabaseStatus(result.ok ? "Connection OK" : message);
+      void loadDatabaseActivity(normalized.id);
+    } catch (err) {
+      const message = sanitizeDatabaseMessage(errorMessage(err), normalized);
+      updateDatabaseSource(normalized.id, {
+        lastConnectionStatus: {
+          status: "error",
+          message,
+          timestampMs: Date.now(),
+        },
+      });
+      setDatabaseStatus(message);
+    } finally {
+      setDatabaseTestingId(null);
+    }
+  }, [loadDatabaseActivity, updateDatabaseSource]);
+
+  const clearDatabaseActivity = useCallback(async (sourceId: string) => {
+    setDatabaseActivityLoading(true);
+    setDatabaseStatus(null);
+    try {
+      const entries = await api.clearDatabaseSourceActivity(sourceId);
+      setDatabaseActivity(entries.map(normalizeDatabaseActivityEntry));
+      setDatabaseStatus("Activity cleared");
+      window.dispatchEvent(
+        new CustomEvent(DATABASE_SOURCES_CHANGED_EVENT, {
+          detail: databaseSettingsEventDetail(databaseSettings),
+        }),
+      );
+    } catch (err) {
+      setDatabaseStatus(sanitizeDatabaseMessage(errorMessage(err), databaseSettings));
+    } finally {
+      setDatabaseActivityLoading(false);
+    }
+  }, [databaseSettings]);
 
   const updateTool = useCallback((name: string, patch: Partial<ToolConfig>) => {
     setToolSettings((current) => {
@@ -714,7 +972,61 @@ export function SettingsPane({ workspacePath }: Props) {
           server.id === id ? { ...server, enabled: !server.enabled } : server,
         ),
       };
+      setSettings(next);
       setJsonText(settingsToJson(next));
+    },
+    [parseError, settings],
+  );
+
+  const addNewServer = useCallback(() => {
+    if (parseError) return;
+    const taken = new Set(settings.servers.map((server) => server.id));
+    let counter = settings.servers.length + 1;
+    let candidate = `mcp_new_server_${counter}`;
+    while (taken.has(candidate)) {
+      counter += 1;
+      candidate = `mcp_new_server_${counter}`;
+    }
+    const newServer: McpServerConfig = {
+      id: candidate,
+      name: `New server ${counter}`,
+      command: "",
+      args: [],
+      env: [],
+      cwd: null,
+      enabled: false,
+    };
+    const next: McpSettings = {
+      servers: [...settings.servers, newServer],
+    };
+    setSettings(next);
+    setJsonText(settingsToJson(next));
+    setSelectedServerId(newServer.id);
+  }, [parseError, settings]);
+
+  const updateServer = useCallback(
+    (id: string, patch: Partial<McpServerConfig>) => {
+      if (parseError) return;
+      const next: McpSettings = {
+        servers: settings.servers.map((server) =>
+          server.id === id ? { ...server, ...patch } : server,
+        ),
+      };
+      setSettings(next);
+      setJsonText(settingsToJson(next));
+    },
+    [parseError, settings],
+  );
+
+  const deleteServer = useCallback(
+    (id: string) => {
+      if (parseError) return;
+      const next: McpSettings = {
+        servers: settings.servers.filter((server) => server.id !== id),
+      };
+      setSettings(next);
+      setJsonText(settingsToJson(next));
+      setSelectedServerId((current) => (current === id ? null : current));
     },
     [parseError, settings],
   );
@@ -870,15 +1182,24 @@ export function SettingsPane({ workspacePath }: Props) {
   );
 
   const createSkill = useCallback(async () => {
+    if (!skills) return;
+    const namesTaken = new Set(skills.map((skill) => skill.name));
+    let counter = skills.length + 1;
+    let baseName = `New skill ${counter}`;
+    while (namesTaken.has(baseName)) {
+      counter += 1;
+      baseName = `New skill ${counter}`;
+    }
+    const template = `---\nname: ${baseName}\ndescription: One-line trigger description.\n---\n\nDescribe the skill body in markdown.\n`;
     setSkillsSaving(true);
     setSkillsError(null);
     setSkillsStatus(null);
     try {
-      const { name, skills: refreshed } = await api.createSkill(workspacePath);
+      await api.createSkill(workspacePath, baseName, template, "global");
+      const refreshed = await api.listInstalledSkills(workspacePath);
       setSkills(refreshed);
       setSavedSkillsJson(skillsFingerprint(refreshed));
-      setSelectedSkillName(name);
-      setSkillFilter("");
+      setSelectedSkillName(baseName);
       setSkillsStatus("Created");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -887,48 +1208,28 @@ export function SettingsPane({ workspacePath }: Props) {
     } finally {
       setSkillsSaving(false);
     }
-  }, [workspacePath]);
+  }, [skills, workspacePath]);
 
-  const saveSkillContent = useCallback(
+  const updateSkillContent = useCallback(
     async (skill: InstalledSkill, content: string) => {
       setSkillsSaving(true);
       setSkillsError(null);
       setSkillsStatus(null);
       try {
-        const { name, skills: refreshed } = await api.updateSkillContent(
-          workspacePath,
-          skill.absolutePath,
-          content,
-        );
-        const enabledByPath = new Map(
-          (skills ?? []).map((item) => [item.absolutePath, item.enabled]),
-        );
-        const merged = refreshed.map((item) => {
-          const enabled = enabledByPath.get(item.absolutePath);
-          return enabled === undefined ? item : { ...item, enabled };
-        });
-        const saved = await api.saveSkillSettings(
-          workspacePath,
-          settingsFromSkills(merged),
-        );
-        setSkills(saved);
-        setSavedSkillsJson(skillsFingerprint(saved));
-        setSelectedSkillName(
-          name || saved.find((item) => item.absolutePath === skill.absolutePath)?.name || skill.name,
-        );
-        setSkillFilter("");
+        await api.updateSkill(workspacePath, skill.absolutePath, content);
+        const refreshed = await api.listInstalledSkills(workspacePath);
+        setSkills(refreshed);
+        setSavedSkillsJson(skillsFingerprint(refreshed));
         setSkillsStatus("Saved");
-        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setSkillsError(message);
         setSkillsStatus(message);
-        return false;
       } finally {
         setSkillsSaving(false);
       }
     },
-    [skills, workspacePath],
+    [workspacePath],
   );
 
   const selectedSubAgent =
@@ -992,7 +1293,7 @@ export function SettingsPane({ workspacePath }: Props) {
   }, []);
 
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
-    defineSinewCoolTheme(monaco);
+    attachMonacoTheme(monaco);
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       void saveAndDetectRef.current();
     });
@@ -1049,6 +1350,23 @@ export function SettingsPane({ workspacePath }: Props) {
           <span className="settings-pane__nav-label">Tools</span>
           <span className="settings-pane__nav-count">
             {toolSettings?.tools.length ?? "·"}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
+          data-active={section === "database" ? "true" : "false"}
+          onClick={() => setSection("database")}
+        >
+          <Icon
+            icon="solar:database-linear"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">Database</span>
+          <span className="settings-pane__nav-count">
+            {databaseLoading && savedDatabaseJson === "" ? "·" : activeDatabaseSourceCount}
           </span>
         </button>
         <button
@@ -1156,6 +1474,29 @@ export function SettingsPane({ workspacePath }: Props) {
             onLinkupApiKeyChange={updateLinkupApiKey}
             openAiStatus={openAiStatus}
           />
+        ) : section === "database" ? (
+          <DatabaseSection
+            settings={databaseSettings}
+            selectedSource={selectedDatabaseSource}
+            activity={databaseActivity}
+            loading={databaseLoading}
+            saving={databaseSaving}
+            testingSourceId={databaseTestingId}
+            activityLoading={databaseActivityLoading}
+            dirty={databaseDirty}
+            status={databaseStatus}
+            activeCount={activeDatabaseSourceCount}
+            onSelectSource={setSelectedDatabaseSourceId}
+            onAddSource={addDatabaseSource}
+            onAddSourceFromTemplate={addDatabaseSourceFromTemplate}
+            onUpdateSource={updateDatabaseSource}
+            onDeleteSource={deleteDatabaseSource}
+            onSave={() => void saveDatabaseSettings()}
+            onRefresh={() => void loadDatabaseSettings()}
+            onTestSource={(source) => void testDatabaseSource(source)}
+            onRefreshActivity={(sourceId) => void loadDatabaseActivity(sourceId)}
+            onClearActivity={(sourceId) => void clearDatabaseActivity(sourceId)}
+          />
         ) : section === "mcp" ? (
           <McpSection
             loading={loading}
@@ -1174,6 +1515,9 @@ export function SettingsPane({ workspacePath }: Props) {
             selectedServer={selectedServer}
             selectedProbe={selectedProbe}
             onToggleEnabled={toggleEnabled}
+            onAddServer={addNewServer}
+            onUpdateServer={updateServer}
+            onDeleteServer={deleteServer}
             onMount={handleEditorMount}
           />
         ) : section === "skills" ? (
@@ -1192,11 +1536,13 @@ export function SettingsPane({ workspacePath }: Props) {
             onSelectSkill={(name) => setSelectedSkillName(name)}
             onRefresh={() => void loadSkills()}
             onSave={() => void saveSkills()}
-            onCreate={() => void createSkill()}
             onToggleSkill={toggleSkillEnabled}
             onRevealSkill={(skill) => void revealSkill(skill)}
             onDeleteSkill={(skill) => void deleteSkill(skill)}
-            onSaveSkillContent={saveSkillContent}
+            onCreateSkill={() => void createSkill()}
+            onUpdateSkillContent={(skill, content) =>
+              void updateSkillContent(skill, content)
+            }
           />
         ) : (
           <SubAgentsSection
@@ -1226,15 +1572,15 @@ function AboutSection() {
     <div className="settings-pane__body settings-pane__body--about">
       <div className="settings-pane__about-hero">
         <span className="settings-pane__about-mark" aria-hidden>
-          <SinewMark size={26} />
+          <ClaakeCodeMark size={26} />
         </span>
         <div className="settings-pane__about-title">
-          <h1>Sinew</h1>
+          <h1>Claake Code</h1>
         </div>
       </div>
 
       <p className="settings-pane__about-line">
-        Sinew is a flexible AI coding harness. You shape it: tweak the description of
+        Claake Code is a flexible AI coding harness. You shape it: tweak the description of
         every tool, turn the ones you don&apos;t need off, and the assistant only sees
         what you keep.
       </p>
@@ -1255,7 +1601,7 @@ function AboutSection() {
         </a>
         <a
           className="settings-pane__about-link"
-          href="https://github.com/Paseru/sinew"
+          href="https://github.com/WilliamPeynichou/ClaakeCode"
           target="_blank"
           rel="noreferrer"
         >
@@ -1332,7 +1678,7 @@ function ProvidersSection({
         <div className="settings-pane__header-text">
           <h1 className="settings-pane__title">Providers</h1>
           <p className="settings-pane__subtitle">
-            Connect model providers for Sinew.
+            Connect model providers for Claake Code.
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -2271,6 +2617,9 @@ type McpSectionProps = {
   selectedServer: McpServerConfig | null;
   selectedProbe: McpServerProbe | null;
   onToggleEnabled: (id: string) => void;
+  onAddServer: () => void;
+  onUpdateServer: (id: string, patch: Partial<McpServerConfig>) => void;
+  onDeleteServer: (id: string) => void;
   onMount: OnMount;
 };
 
@@ -2291,6 +2640,9 @@ function McpSection({
   selectedServer,
   selectedProbe,
   onToggleEnabled,
+  onAddServer,
+  onUpdateServer,
+  onDeleteServer,
   onMount,
 }: McpSectionProps) {
   const detailOpen = Boolean(selectedServer);
@@ -2338,6 +2690,25 @@ function McpSection({
             )}
           </div>
           <div className="settings-pane__nav-list-items">
+            <button
+              type="button"
+              className="settings-pane__nav-list-item"
+              data-active="false"
+              onClick={onAddServer}
+              disabled={loading || saving || Boolean(parseError)}
+              title="Add a new MCP server"
+            >
+              <Icon
+                icon="solar:add-circle-linear"
+                width={12}
+                height={12}
+                className="settings-pane__nav-list-item-glyph"
+              />
+              <span className="settings-pane__nav-list-item-name">
+                Add server
+              </span>
+            </button>
+            <div className="settings-pane__nav-list-divider" />
             <button
               type="button"
               className="settings-pane__nav-list-item"
@@ -2405,10 +2776,14 @@ function McpSection({
 
         <main className="settings-pane__detail-pane">
           {detailOpen && selectedServer ? (
-            <ServerDetail
+            <ServerEditor
               server={selectedServer}
               probe={selectedProbe}
               probing={probing}
+              disabled={Boolean(parseError) || loading || saving}
+              onChange={(patch) => onUpdateServer(selectedServer.id, patch)}
+              onDelete={() => onDeleteServer(selectedServer.id)}
+              onToggleEnabled={() => onToggleEnabled(selectedServer.id)}
             />
           ) : (
             <div className="settings-pane__editor-card">
@@ -2434,7 +2809,6 @@ function McpSection({
                 <Editor
                   value={jsonText}
                   language="json"
-                  theme="sinew-cool"
                   onChange={(value) => onJsonChange(value ?? "")}
                   onMount={onMount}
                   options={{
@@ -2551,16 +2925,29 @@ function ServerCard({
   );
 }
 
-type ServerDetailProps = {
+type ServerEditorProps = {
   server: McpServerConfig;
   probe: McpServerProbe | null;
   probing: boolean;
+  disabled: boolean;
+  onChange: (patch: Partial<McpServerConfig>) => void;
+  onDelete: () => void;
+  onToggleEnabled: () => void;
 };
 
-function ServerDetail({ server, probe, probing }: ServerDetailProps) {
+function ServerEditor({
+  server,
+  probe,
+  probing,
+  disabled,
+  onChange,
+  onDelete,
+  onToggleEnabled,
+}: ServerEditorProps) {
   const [expandedTools, setExpandedTools] = useState<Set<string>>(
     () => new Set<string>(),
   );
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const toggleTool = useCallback((toolName: string) => {
     setExpandedTools((prev) => {
       const next = new Set(prev);
@@ -2572,6 +2959,12 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
       return next;
     });
   }, []);
+
+  // Reset confirm state when switching servers
+  useEffect(() => {
+    setConfirmingDelete(false);
+  }, [server.id]);
+
   const tone = !server.enabled
     ? "off"
     : !probe
@@ -2588,36 +2981,192 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
       : !probe.ok
         ? "failed"
         : `${probe.tools.length} tool${probe.tools.length === 1 ? "" : "s"}`;
-  const command = [server.command, ...server.args].join(" ").trim();
+  const argsText = server.args.join(" ");
 
   return (
     <div className="settings-pane__detail">
       <div className="settings-pane__detail-head">
-        <span className="settings-pane__detail-title">{server.name}</span>
+        <input
+          type="text"
+          className="settings-pane__detail-title-input"
+          value={server.name}
+          placeholder="Server name"
+          onChange={(event) => onChange({ name: event.target.value })}
+          disabled={disabled}
+          aria-label="Server name"
+        />
         <span className="settings-pane__chip" data-tone={tone}>
           <span className="settings-pane__chip-dot" />
           {statusLabel}
         </span>
+        <button
+          type="button"
+          className="settings-pane__switch"
+          role="switch"
+          aria-checked={server.enabled}
+          aria-label={server.enabled ? "Disable server" : "Enable server"}
+          data-on={server.enabled ? "true" : "false"}
+          disabled={disabled}
+          onClick={onToggleEnabled}
+        >
+          <span className="settings-pane__switch-thumb" />
+        </button>
       </div>
 
       <div className="settings-pane__detail-body">
-        {command && (
-          <code className="settings-pane__detail-cmd" title={command}>
-            {command}
-          </code>
-        )}
-        {server.cwd && (
-          <div className="settings-pane__detail-meta">
-            <span className="settings-pane__detail-key">cwd</span>
-            <code>{server.cwd}</code>
+        <div className="settings-pane__field">
+          <label className="settings-pane__field-label" htmlFor={`mcp-${server.id}-command`}>
+            Command
+          </label>
+          <input
+            id={`mcp-${server.id}-command`}
+            type="text"
+            className="settings-pane__field-input"
+            value={server.command}
+            placeholder="npx, uvx, /path/to/binary…"
+            onChange={(event) => onChange({ command: event.target.value })}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="settings-pane__field">
+          <label className="settings-pane__field-label" htmlFor={`mcp-${server.id}-args`}>
+            Arguments (space-separated)
+          </label>
+          <input
+            id={`mcp-${server.id}-args`}
+            type="text"
+            className="settings-pane__field-input"
+            value={argsText}
+            placeholder="--flag value"
+            onChange={(event) => {
+              const next = event.target.value
+                .split(/\s+/)
+                .filter((piece) => piece.length > 0);
+              onChange({ args: next });
+            }}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="settings-pane__field">
+          <label className="settings-pane__field-label" htmlFor={`mcp-${server.id}-cwd`}>
+            Working directory (optional)
+          </label>
+          <input
+            id={`mcp-${server.id}-cwd`}
+            type="text"
+            className="settings-pane__field-input"
+            value={server.cwd ?? ""}
+            placeholder="/absolute/path"
+            onChange={(event) => {
+              const value = event.target.value.trim();
+              onChange({ cwd: value.length > 0 ? value : null });
+            }}
+            disabled={disabled}
+          />
+        </div>
+
+        <div className="settings-pane__field">
+          <div className="settings-pane__field-label-row">
+            <span className="settings-pane__field-label">Environment variables</span>
+            <button
+              type="button"
+              className="settings-pane__field-add"
+              onClick={() => onChange({ env: [...server.env, { key: "", value: "" }] })}
+              disabled={disabled}
+            >
+              <Icon icon="solar:add-circle-linear" width={11} height={11} />
+              <span>Add var</span>
+            </button>
           </div>
-        )}
-        {server.env.length > 0 && (
-          <div className="settings-pane__detail-meta">
-            <span className="settings-pane__detail-key">env</span>
-            <code>{server.env.map((item) => item.key).join(", ")}</code>
-          </div>
-        )}
+          {server.env.length === 0 ? (
+            <div className="settings-pane__muted">No environment variables.</div>
+          ) : (
+            <div className="settings-pane__env-list">
+              {server.env.map((entry, index) => (
+                <div className="settings-pane__env-row" key={index}>
+                  <input
+                    type="text"
+                    className="settings-pane__field-input"
+                    value={entry.key}
+                    placeholder="KEY"
+                    onChange={(event) => {
+                      const next = [...server.env];
+                      next[index] = { ...entry, key: event.target.value };
+                      onChange({ env: next });
+                    }}
+                    disabled={disabled}
+                  />
+                  <input
+                    type="text"
+                    className="settings-pane__field-input"
+                    value={entry.value}
+                    placeholder="value"
+                    onChange={(event) => {
+                      const next = [...server.env];
+                      next[index] = { ...entry, value: event.target.value };
+                      onChange({ env: next });
+                    }}
+                    disabled={disabled}
+                  />
+                  <button
+                    type="button"
+                    className="settings-pane__icon-btn"
+                    onClick={() => {
+                      const next = server.env.filter((_, i) => i !== index);
+                      onChange({ env: next });
+                    }}
+                    disabled={disabled}
+                    aria-label="Remove environment variable"
+                    title="Remove"
+                  >
+                    <Icon icon="solar:trash-bin-trash-linear" width={12} height={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="settings-pane__field-actions">
+          {confirmingDelete ? (
+            <>
+              <span className="settings-pane__muted">Delete this server?</span>
+              <button
+                type="button"
+                className="settings-pane__btn"
+                data-tone="danger"
+                onClick={() => {
+                  setConfirmingDelete(false);
+                  onDelete();
+                }}
+                disabled={disabled}
+              >
+                <Icon icon="solar:trash-bin-trash-bold" width={12} height={12} />
+                <span>Confirm delete</span>
+              </button>
+              <button
+                type="button"
+                className="settings-pane__btn"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="settings-pane__btn"
+              data-tone="danger-ghost"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={disabled}
+            >
+              <Icon icon="solar:trash-bin-trash-linear" width={12} height={12} />
+              <span>Delete server</span>
+            </button>
+          )}
+        </div>
 
         {probe?.error && (
           <div className="settings-pane__tools-error">{probe.error}</div>
@@ -2674,7 +3223,7 @@ function ServerDetail({ server, probe, probing }: ServerDetailProps) {
           )}
           {!probe && (
             <div className="settings-pane__muted">
-              {probing ? "Probing server…" : "No probe data yet."}
+              {probing ? "Probing server…" : "No probe data yet — save to apply and probe."}
             </div>
           )}
         </div>
@@ -2731,11 +3280,7 @@ function SubAgentsSection({
           {status && (
             <span
               className="settings-pane__status"
-              data-tone={
-                status === "Saved" || status === "Created" || status === "Deleted"
-                  ? "ok"
-                  : "error"
-              }
+              data-tone={status === "Saved" ? "ok" : "error"}
             >
               {status}
             </span>
@@ -3076,11 +3621,11 @@ type SkillsSectionProps = {
   onSelectSkill: (name: string) => void;
   onRefresh: () => void;
   onSave: () => void;
-  onCreate: () => void;
   onToggleSkill: (name: string) => void;
   onRevealSkill: (skill: InstalledSkill) => void;
   onDeleteSkill: (skill: InstalledSkill) => void;
-  onSaveSkillContent: (skill: InstalledSkill, content: string) => Promise<boolean>;
+  onCreateSkill: () => void;
+  onUpdateSkillContent: (skill: InstalledSkill, content: string) => void;
 };
 
 function SkillsSection({
@@ -3098,11 +3643,11 @@ function SkillsSection({
   onSelectSkill,
   onRefresh,
   onSave,
-  onCreate,
   onToggleSkill,
   onRevealSkill,
   onDeleteSkill,
-  onSaveSkillContent,
+  onCreateSkill,
+  onUpdateSkillContent,
 }: SkillsSectionProps) {
   const total = allSkills?.length ?? 0;
   const visible = skills.length;
@@ -3137,11 +3682,11 @@ function SkillsSection({
           <button
             type="button"
             className="settings-pane__btn"
-            onClick={onCreate}
+            onClick={onCreateSkill}
             disabled={loading || saving || deleting}
           >
             <Icon icon="solar:add-circle-linear" width={13} height={13} />
-            <span>Add</span>
+            <span>New skill</span>
           </button>
           <button
             type="button"
@@ -3264,13 +3809,15 @@ function SkillsSection({
 
         <div className="settings-pane__skill-preview">
           {selectedSkill ? (
-            <SkillPreview
+            <SkillEditor
               skill={selectedSkill}
-              saving={saving}
               deleting={deleting}
+              saving={saving}
               onReveal={() => onRevealSkill(selectedSkill)}
               onDelete={() => onDeleteSkill(selectedSkill)}
-              onSaveContent={(content) => onSaveSkillContent(selectedSkill, content)}
+              onSaveContent={(content) =>
+                onUpdateSkillContent(selectedSkill, content)
+              }
             />
           ) : (
             <div className="settings-pane__empty settings-pane__empty--main">
@@ -3286,34 +3833,24 @@ function SkillsSection({
   );
 }
 
-function SkillPreview({
+function SkillEditor({
   skill,
-  saving,
   deleting,
+  saving,
   onReveal,
   onDelete,
   onSaveContent,
 }: {
   skill: InstalledSkill;
-  saving: boolean;
   deleting: boolean;
+  saving: boolean;
   onReveal: () => void;
   onDelete: () => void;
-  onSaveContent: (content: string) => Promise<boolean>;
+  onSaveContent: (content: string) => void;
 }) {
-  const body = stripFrontmatter(skill.content);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState(skill.name);
-  const [draftDescription, setDraftDescription] = useState(skill.description ?? "");
-  const [draftBody, setDraftBody] = useState(body);
-  const nameValid = draftName.trim().length > 0;
-
-  const resetDraft = useCallback(() => {
-    setDraftName(skill.name);
-    setDraftDescription(skill.description ?? "");
-    setDraftBody(stripFrontmatter(skill.content));
-  }, [skill.content, skill.description, skill.name]);
+  const [draft, setDraft] = useState(skill.content);
+  const dirty = draft !== skill.content;
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -3323,194 +3860,124 @@ function SkillPreview({
 
   useEffect(() => {
     setConfirmDelete(false);
-    setEditing(false);
-    resetDraft();
-  }, [resetDraft, skill.absolutePath]);
-
-  const saveDraft = useCallback(async () => {
-    if (!nameValid || saving || deleting) return;
-    const ok = await onSaveContent(
-      buildSkillContent(draftName, draftDescription, draftBody),
-    );
-    if (ok) setEditing(false);
-  }, [deleting, draftBody, draftDescription, draftName, nameValid, onSaveContent, saving]);
+    setDraft(skill.content);
+  }, [skill.absolutePath, skill.content]);
 
   return (
     <article className="settings-pane__skill-doc">
       <header className="settings-pane__skill-doc-head">
         <div className="settings-pane__skill-doc-top">
           <div className="settings-pane__skill-doc-title">
-            {editing ? (
-              <input
-                className="settings-pane__skill-doc-title-input"
-                value={draftName}
-                onChange={(event) => setDraftName(event.target.value)}
-                placeholder="skill-name"
-                aria-invalid={!nameValid}
-                spellCheck={false}
-                autoFocus
-              />
-            ) : (
-              <h2>{skill.name}</h2>
-            )}
+            <h2>{skill.name}</h2>
             <span
               className="settings-pane__skill-source"
               data-source={skill.source}
             >
               {skill.source === "workspace" ? "workspace" : "global"}
             </span>
+            {dirty && (
+              <span className="settings-pane__pill" data-tone="dirty">
+                <span className="settings-pane__pill-dot" />
+                Unsaved
+              </span>
+            )}
           </div>
           <div className="settings-pane__skill-doc-actions">
-            {editing ? (
-              <>
-                <button
-                  type="button"
-                  className="settings-pane__skill-doc-action"
-                  onClick={() => {
-                    resetDraft();
-                    setEditing(false);
-                  }}
-                  disabled={saving || deleting}
-                >
-                  <Icon icon="solar:close-circle-linear" width={13} height={13} />
-                  <span>Cancel</span>
-                </button>
-                <button
-                  type="button"
-                  className="settings-pane__skill-doc-action"
-                  data-primary="true"
-                  onClick={() => void saveDraft()}
-                  disabled={saving || deleting || !nameValid}
-                >
-                  <Icon
-                    icon={saving ? "solar:refresh-linear" : "solar:diskette-linear"}
-                    width={13}
-                    height={13}
-                  />
-                  <span>{saving ? "Saving…" : "Save"}</span>
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="settings-pane__skill-doc-action"
-                onClick={() => setEditing(true)}
-                disabled={saving || deleting}
-                title="Edit skill content"
-              >
-                <Icon icon="solar:code-square-linear" width={13} height={13} />
-                <span>Raw</span>
-              </button>
-            )}
-            {!editing && (
-              <>
-                <button
-                  type="button"
-                  className="settings-pane__skill-doc-action"
-                  onClick={onReveal}
-                  disabled={saving || deleting}
-                  title="Reveal in Finder"
-                  aria-label={`Reveal ${skill.name} in Finder`}
-                >
-                  <Icon icon="solar:folder-open-linear" width={13} height={13} />
-                  <span>Reveal in Finder</span>
-                </button>
-                <button
-                  type="button"
-                  className="settings-pane__skill-doc-action"
-                  data-danger="true"
-                  data-confirm={confirmDelete ? "true" : "false"}
-                  disabled={saving || deleting}
-                  title={confirmDelete ? "Click again to confirm" : "Delete skill"}
-                  aria-label={confirmDelete ? "Confirm skill delete" : `Delete ${skill.name}`}
-                  onClick={() => {
-                    if (confirmDelete) {
-                      onDelete();
-                    } else {
-                      setConfirmDelete(true);
-                    }
-                  }}
-                >
-                  <Icon
-                    icon={
-                      deleting
-                        ? "solar:refresh-linear"
-                        : "solar:trash-bin-trash-linear"
-                    }
-                    width={13}
-                    height={13}
-                  />
-                  <span>
-                    {deleting
-                      ? "Deleting..."
-                      : confirmDelete
-                        ? "Confirm delete"
-                        : "Delete"}
-                  </span>
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              className="settings-pane__skill-doc-action"
+              onClick={() => onSaveContent(draft)}
+              disabled={!dirty || saving || deleting}
+              title="Save SKILL.md"
+              aria-label="Save SKILL.md"
+            >
+              <Icon
+                icon={saving ? "solar:refresh-linear" : "solar:diskette-linear"}
+                width={13}
+                height={13}
+              />
+              <span>{saving ? "Saving…" : "Save"}</span>
+            </button>
+            <button
+              type="button"
+              className="settings-pane__skill-doc-action"
+              onClick={onReveal}
+              disabled={deleting}
+              title="Reveal in Finder"
+              aria-label={`Reveal ${skill.name} in Finder`}
+            >
+              <Icon icon="solar:folder-open-linear" width={13} height={13} />
+              <span>Reveal</span>
+            </button>
+            <button
+              type="button"
+              className="settings-pane__skill-doc-action"
+              data-danger="true"
+              data-confirm={confirmDelete ? "true" : "false"}
+              disabled={deleting}
+              title={confirmDelete ? "Click again to confirm" : "Delete skill"}
+              aria-label={confirmDelete ? "Confirm skill delete" : `Delete ${skill.name}`}
+              onClick={() => {
+                if (confirmDelete) {
+                  onDelete();
+                } else {
+                  setConfirmDelete(true);
+                }
+              }}
+            >
+              <Icon
+                icon={
+                  deleting
+                    ? "solar:refresh-linear"
+                    : "solar:trash-bin-trash-linear"
+                }
+                width={13}
+                height={13}
+              />
+              <span>
+                {deleting
+                  ? "Deleting..."
+                  : confirmDelete
+                    ? "Confirm delete"
+                    : "Delete"}
+              </span>
+            </button>
           </div>
         </div>
         <code className="settings-pane__skill-path">{skill.absolutePath}</code>
-        {editing ? (
-          <input
-            className="settings-pane__skill-doc-desc-input"
-            value={draftDescription}
-            onChange={(event) => setDraftDescription(event.target.value)}
-            placeholder="When should the agent reach for this skill?"
-            spellCheck={false}
-          />
-        ) : (
-          skill.description && (
-            <p className="settings-pane__skill-doc-desc">{skill.description}</p>
-          )
+        {skill.description && (
+          <p className="settings-pane__skill-doc-desc">{skill.description}</p>
         )}
       </header>
-      {editing ? (
-        <div className="settings-pane__skill-doc-editor">
-          {!nameValid && (
-            <div className="settings-pane__editor-error">
-              <Icon icon="solar:danger-triangle-linear" width={13} height={13} />
-              <span>Name is required.</span>
-            </div>
-          )}
-          <div className="settings-pane__skill-doc-editor-host">
-            <Editor
-              value={draftBody}
-              language="markdown"
-              theme="sinew-cool"
-              onChange={(value) => setDraftBody(value ?? "")}
-              onMount={(_editor, monaco) => defineSinewCoolTheme(monaco)}
-              options={{
-                fontFamily:
-                  '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace',
-                fontSize: 12,
-                lineHeight: 18,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                smoothScrolling: true,
-                renderLineHighlight: "line",
-                padding: { top: 12, bottom: 12 },
-                tabSize: 2,
-                wordWrap: "on",
-                automaticLayout: true,
-                lineNumbers: "on",
-                lineNumbersMinChars: 3,
-                folding: true,
-                scrollbar: {
-                  verticalScrollbarSize: 9,
-                  horizontalScrollbarSize: 9,
-                },
-              }}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="settings-pane__skill-doc-body">
-          <Markdown text={body || "_(empty SKILL.md)_"} onOpenFile={noop} />
-        </div>
-      )}
+      <div className="settings-pane__skill-doc-body settings-pane__skill-doc-body--editor">
+        <Editor
+          value={draft}
+          language="markdown"
+          theme={monacoThemeForDocument()}
+          onChange={(value) => setDraft(value ?? "")}
+          onMount={(_editor, monaco) => attachMonacoTheme(monaco)}
+          options={{
+            fontFamily:
+              '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace',
+            fontSize: 12,
+            lineHeight: 18,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            renderLineHighlight: "line",
+            padding: { top: 12, bottom: 12 },
+            tabSize: 2,
+            wordWrap: "on",
+            automaticLayout: true,
+            lineNumbers: "off",
+            folding: false,
+            scrollbar: {
+              verticalScrollbarSize: 9,
+              horizontalScrollbarSize: 9,
+            },
+          }}
+        />
+      </div>
     </article>
   );
 }
@@ -3539,70 +4006,6 @@ function stripFrontmatter(content: string): string {
   const end = content.indexOf("\n---", 3);
   if (end === -1) return content.trim();
   return content.slice(end + 4).trim();
-}
-
-type MonacoNs = Parameters<OnMount>[1];
-
-function defineSinewCoolTheme(monaco: MonacoNs): void {
-  monaco.editor.defineTheme("sinew-cool", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "52555c" },
-      { token: "keyword", foreground: "c4b5fd" },
-      { token: "string", foreground: "86efac" },
-      { token: "number", foreground: "f5a683" },
-      { token: "type", foreground: "e8bb6a" },
-      { token: "function", foreground: "9fc2ff" },
-      { token: "variable", foreground: "e8e9ec" },
-      { token: "constant", foreground: "f5a683" },
-      { token: "regexp", foreground: "86efac" },
-      { token: "tag", foreground: "f5a1ab" },
-      { token: "attribute.name", foreground: "c4b5fd" },
-    ],
-    colors: {
-      "editor.background": "#0b0b0d",
-      "editor.foreground": "#e8e9ec",
-      "editor.lineHighlightBackground": "#0f1013",
-      "editorLineNumber.foreground": "#3a3d44",
-      "editorLineNumber.activeForeground": "#9aa0a8",
-      "editorCursor.foreground": "#3b82f6",
-      "editor.selectionBackground": "#1e2b4a",
-      "editor.inactiveSelectionBackground": "#141518",
-      "editorIndentGuide.background1": "#141518",
-      "editorIndentGuide.activeBackground1": "#23252b",
-      "editorGutter.background": "#0b0b0d",
-      "editorWidget.background": "#0f1013",
-      "editorWidget.border": "#23252b",
-      "editorHoverWidget.background": "#0f1013",
-      "editorHoverWidget.border": "#23252b",
-      "editorSuggestWidget.background": "#0f1013",
-      "editorSuggestWidget.border": "#23252b",
-      "editorSuggestWidget.selectedBackground": "#1e2b4a",
-      "editorBracketMatch.background": "#1e2b4a",
-      "editorBracketMatch.border": "#3b82f6",
-      "scrollbarSlider.background": "#23252bcc",
-      "scrollbarSlider.hoverBackground": "#2b2e35cc",
-      "scrollbarSlider.activeBackground": "#3a3d44cc",
-    },
-  });
-  monaco.editor.setTheme("sinew-cool");
-}
-
-function buildSkillContent(name: string, description: string, body: string): string {
-  const normalizedBody = body.replace(/\r\n/g, "\n").trimEnd();
-  return [
-    "---",
-    `name: ${cleanFrontmatterValue(name)}`,
-    `description: ${cleanFrontmatterValue(description)}`,
-    "---",
-    "",
-    normalizedBody,
-  ].join("\n");
-}
-
-function cleanFrontmatterValue(value: string): string {
-  return value.replace(/\r?\n/g, " ").trim();
 }
 
 function createSubAgent(
@@ -3746,8 +4149,11 @@ function serverFromUnknown(value: unknown, fallbackName: string): McpServerConfi
   }
 
   const name = stringValue(value.name) || fallbackName;
+  // Accept an empty command while the form is being edited; the actual save
+  // (api.saveMcpSettings → probe) will surface a missing-command error so
+  // the user can't ship a half-filled config, but the live re-parse must
+  // not throw or every field locks behind `disabled={parseError}`.
   const command = stringValue(value.command);
-  if (!command) throw new Error(`Missing command for ${name}`);
 
   return {
     id: stringValue(value.id) || deterministicId(name),
@@ -3788,6 +4194,10 @@ function settingsToJson(settings: McpSettings): string {
     const entry: Record<string, unknown> = {
       command: server.command,
     };
+    // Persist the id explicitly so the parse → serialize → parse round-trip
+    // is stable. Without it, parseMcpJson would re-derive the id from the
+    // name slug on every keystroke, which dropped focus from form inputs.
+    if (server.id) entry.id = server.id;
     if (server.args.length) entry.args = server.args;
     if (server.cwd) entry.cwd = server.cwd;
     if (server.env.length) entry.env = envToObject(server.env);
@@ -4079,16 +4489,26 @@ function ToolGlyph({ name }: { name: string }) {
   if (name === "clean_context") {
     return <BroomGlyph />;
   }
+  if (
+    name === "database_list_sources" ||
+    name === "database_describe_schema" ||
+    name === "database_execute_query"
+  ) {
+    return <DatabaseGlyph />;
+  }
   const icon = TOOL_ICON[name] ?? "solar:tuning-2-linear";
   return <Icon icon={icon} width={13} height={13} />;
+}
+
+function DatabaseGlyph() {
+  return <Icon icon="solar:database-linear" width={13} height={13} />;
 }
 
 const TOOL_LABEL: Record<string, string> = {
   bash: "Shell",
   bash_input: "Shell input",
   read: "Read",
-  edit_file: "Edit file",
-  write_file: "Write file",
+  apply_patch: "Patch",
   Glob: "Glob",
   Grep: "Grep",
   WebSearch: "Web search",
@@ -4105,12 +4525,14 @@ const TOOL_LABEL: Record<string, string> = {
   clean_context: "Clean context",
   update_goal: "Update goal",
   context_compaction: "Compact context",
+  database_list_sources: "List database sources",
+  database_describe_schema: "Describe database schema",
+  database_execute_query: "Execute database query",
 };
 
 const TOOL_ICON: Record<string, string> = {
   read: "solar:document-text-linear",
-  edit_file: "solar:pen-2-linear",
-  write_file: "solar:file-text-linear",
+  apply_patch: "solar:pen-new-square-linear",
   WebSearch: "solar:magnifer-linear",
   WebFetch: "solar:link-round-linear",
   CreateImage: "solar:gallery-wide-linear",
@@ -4119,6 +4541,9 @@ const TOOL_ICON: Record<string, string> = {
   SendMessage: "solar:chat-round-dots-linear",
   update_goal: "solar:flag-2-linear",
   context_compaction: "solar:archive-linear",
+  database_list_sources: "solar:database-linear",
+  database_describe_schema: "solar:structure-linear",
+  database_execute_query: "solar:database-bold-duotone",
 };
 
 function labelForTool(tool: ToolConfig | string): string {

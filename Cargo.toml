@@ -1,13 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/sinew-core",
-    "crates/sinew-anthropic",
-    "crates/sinew-google",
-    "crates/sinew-kimi",
-    "crates/sinew-openai",
-    "crates/sinew-openrouter",
-    "crates/sinew-app",
+    "crates/claakecode-core",
+    "crates/claakecode-anthropic",
+    "crates/claakecode-google",
+    "crates/claakecode-kimi",
+    "crates/claakecode-openai",
+    "crates/claakecode-openrouter",
+    "crates/claakecode-app",
     "src-tauri",
 ]
 
@@ -21,13 +21,13 @@ license = "MIT"
 too_many_arguments = "allow"
 
 [workspace.dependencies]
-sinew-core = { path = "crates/sinew-core" }
-sinew-anthropic = { path = "crates/sinew-anthropic" }
-sinew-google = { path = "crates/sinew-google" }
-sinew-kimi = { path = "crates/sinew-kimi" }
-sinew-openai = { path = "crates/sinew-openai" }
-sinew-openrouter = { path = "crates/sinew-openrouter" }
-sinew-app = { path = "crates/sinew-app" }
+claakecode-core = { path = "crates/claakecode-core" }
+claakecode-anthropic = { path = "crates/claakecode-anthropic" }
+claakecode-google = { path = "crates/claakecode-google" }
+claakecode-kimi = { path = "crates/claakecode-kimi" }
+claakecode-openai = { path = "crates/claakecode-openai" }
+claakecode-openrouter = { path = "crates/claakecode-openrouter" }
+claakecode-app = { path = "crates/claakecode-app" }
 
 tokio = { version = "1.40", features = ["full"] }
 futures = "0.3"
@@ -41,7 +41,7 @@ serde_json = "1"
 regex = "1"
 
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "hooks"] }
 directories = "5"
 uuid = { version = "1", features = ["v4", "fast-rng"] }
 notify = "6.1"

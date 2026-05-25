@@ -4,13 +4,21 @@ pub(super) fn model_with_optional_selection(
     current: &ModelRef,
     model: Option<ModelInput>,
     thinking: Option<ThinkingLevelInput>,
+    use_1m_context: Option<bool>,
 ) -> ModelRef {
     let mut selected = match model {
-        Some(model) => ModelRef::new(model.provider, model.name),
+        Some(model) => {
+            let mut m = ModelRef::new(model.provider, model.name);
+            m.use_1m_context = model.use_1m_context;
+            m
+        }
         None => current.clone(),
     };
     if let Some(thinking) = thinking {
         selected.effort = Some(thinking.into_effort());
+    }
+    if let Some(flag) = use_1m_context {
+        selected.use_1m_context = Some(flag);
     }
     selected
 }
@@ -117,7 +125,7 @@ pub(super) fn openrouter_capabilities(models: &[OpenRouterModelRecord]) -> Vec<M
     models
         .iter()
         .map(|model| {
-            sinew_openrouter::capabilities_from_parts(
+            claakecode_openrouter::capabilities_from_parts(
                 &model.id,
                 model.context_window,
                 model.max_output_tokens,
@@ -301,7 +309,7 @@ pub(super) async fn run_openai_oauth_server(
     cancel: Arc<Notify>,
 ) -> Result<()> {
     let http = reqwest::Client::builder()
-        .user_agent("sinew/0.1")
+        .user_agent("ClaakeCode/0.1")
         .build()
         .context("unable to build OAuth client")?;
 
@@ -423,7 +431,7 @@ pub(super) async fn run_anthropic_oauth_server(
     cancel: Arc<Notify>,
 ) -> Result<()> {
     let http = reqwest::Client::builder()
-        .user_agent("sinew/0.1")
+        .user_agent("ClaakeCode/0.1")
         .build()
         .context("unable to build OAuth client")?;
 
@@ -548,7 +556,7 @@ pub(super) async fn run_google_oauth_server(
     cancel: Arc<Notify>,
 ) -> Result<()> {
     let http = reqwest::Client::builder()
-        .user_agent("sinew/0.1")
+        .user_agent("ClaakeCode/0.1")
         .build()
         .context("unable to build OAuth client")?;
 
@@ -703,7 +711,7 @@ pub(super) fn openai_login_success_html() -> String {
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sinew connected</title>
+    <title>Claake Code connected</title>
     <style>
       body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0b0d;color:#f4f4f5;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       main{max-width:420px;padding:32px;text-align:center}
@@ -711,7 +719,7 @@ pub(super) fn openai_login_success_html() -> String {
       p{margin:0;color:#a1a1aa;line-height:1.5}
     </style>
   </head>
-  <body><main><h1>OpenAI is connected</h1><p>You can close this tab and return to Sinew.</p></main></body>
+  <body><main><h1>OpenAI is connected</h1><p>You can close this tab and return to Claake Code.</p></main></body>
 </html>"#
         .to_string()
 }
@@ -721,7 +729,7 @@ pub(super) fn anthropic_login_success_html() -> String {
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sinew connected</title>
+    <title>Claake Code connected</title>
     <style>
       body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0b0d;color:#f4f4f5;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       main{max-width:420px;padding:32px;text-align:center}
@@ -729,7 +737,7 @@ pub(super) fn anthropic_login_success_html() -> String {
       p{margin:0;color:#a1a1aa;line-height:1.5}
     </style>
   </head>
-  <body><main><h1>Anthropic is connected</h1><p>You can close this tab and return to Sinew.</p></main></body>
+  <body><main><h1>Anthropic is connected</h1><p>You can close this tab and return to Claake Code.</p></main></body>
 </html>"#
         .to_string()
 }
@@ -739,7 +747,7 @@ pub(super) fn google_login_success_html() -> String {
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sinew connected</title>
+    <title>Claake Code connected</title>
     <style>
       body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0b0d;color:#f4f4f5;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
       main{max-width:420px;padding:32px;text-align:center}
@@ -747,7 +755,7 @@ pub(super) fn google_login_success_html() -> String {
       p{margin:0;color:#a1a1aa;line-height:1.5}
     </style>
   </head>
-  <body><main><h1>Google is connected</h1><p>You can close this tab and return to Sinew.</p></main></body>
+  <body><main><h1>Google is connected</h1><p>You can close this tab and return to Claake Code.</p></main></body>
 </html>"#
         .to_string()
 }
@@ -759,7 +767,7 @@ pub(super) fn openai_login_error_html(message: &str) -> String {
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sinew connection failed</title>
+    <title>Claake Code connection failed</title>
     <style>
       body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0b0d;color:#f4f4f5;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}}
       main{{max-width:480px;padding:32px;text-align:center}}
@@ -1270,7 +1278,7 @@ pub(super) async fn start_kimi_oauth_login(
     }
 
     let http = reqwest::Client::builder()
-        .user_agent("sinew/0.1")
+        .user_agent("ClaakeCode/0.1")
         .build()
         .map_err(error_to_string)?;
     let auth = request_kimi_device_authorization(&http)
@@ -1498,7 +1506,7 @@ pub(super) async fn search_openrouter_models(
     let catalog = match fetch_openrouter_model_catalog(&api_key).await {
         Ok(catalog) => catalog,
         Err(err) => {
-            if matches!(err, sinew_core::AppError::Auth(_)) {
+            if matches!(err, claakecode_core::AppError::Auth(_)) {
                 remove_openrouter_provider(&state.providers)?;
             }
             return Err(error_to_string(err));

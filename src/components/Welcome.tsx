@@ -9,7 +9,6 @@ import type {
   ActiveTurnsChangedPayload,
   RecentWorkspace,
 } from "../types";
-import { SinewMark } from "./SinewMark";
 import { WindowControls, isWindowsPlatform } from "./WindowControls";
 
 type Props = {
@@ -23,7 +22,7 @@ const IS_WINDOWS = isWindowsPlatform();
 
 /// Collapse a list of `ActiveTurnSummary` items down to the set of workspace
 /// paths that currently have an in-flight agent turn. The backend reports
-/// these globally (across every Sinew window), so a recent workspace can be
+/// these globally (across every Claake Code window), so a recent workspace can be
 /// "live" even when it's owned by a sibling window.
 function activeWorkspaceSet(turns: ActiveTurnSummary[]): Set<string> {
   return new Set(turns.map((turn) => turn.workspaceId));
@@ -108,13 +107,8 @@ export function Welcome({ onPick, error, deriveName }: Props) {
       )}
       <main className="welcome__stage">
         <header className="welcome__head">
-          <span className="welcome__mark-dot" aria-hidden="true">
-            <span className="welcome__mark-inner">
-              <SinewMark size={22} className="welcome__mark-glyph" />
-            </span>
-          </span>
           <h1 className="welcome__title">
-            Sinew<span className="welcome__title-dot">.</span>
+            Claake Code<span className="welcome__title-dot">.</span>
           </h1>
           <p className="welcome__tag">Your personal Agentic IDE</p>
         </header>

@@ -4,6 +4,9 @@ import App from "./App";
 import "./styles.css";
 import "./lib/customIcons";
 import { api } from "./lib/ipc";
+import { bootstrapTheme } from "./lib/theme";
+
+bootstrapTheme();
 
 // Suppress the native WebKit context menu everywhere except inside text
 // inputs (where the OS-level copy/paste menu is still useful). Components

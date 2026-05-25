@@ -8,7 +8,7 @@ pub(super) fn create_new_window(app: &AppHandle) -> Result<()> {
     let label = next_window_label(app);
     let mut builder =
         WebviewWindowBuilder::new(app, label, WebviewUrl::App(PathBuf::from(NEW_WINDOW_URL)))
-            .title("Sinew")
+            .title("Claake Code")
             .inner_size(1500.0, 940.0)
             .min_inner_size(1100.0, 720.0)
             .resizable(true)
@@ -63,7 +63,7 @@ pub(super) fn focus_existing_window(app: &AppHandle) -> bool {
 /// never shows a blank entry.
 pub(super) fn apply_window_title(window: &tauri::WebviewWindow, folder_name: &str) {
     let trimmed = folder_name.trim();
-    let title = if trimmed.is_empty() { "Sinew" } else { trimmed };
+    let title = if trimmed.is_empty() { "Claake Code" } else { trimmed };
     if let Err(err) = window.set_title(title) {
         tracing::warn!(%err, label = %window.label(), "unable to update window title");
     }
@@ -120,7 +120,7 @@ pub(super) fn install_macos_dock_menu(app: &AppHandle) {
         );
         let _ = class_addMethod(
             delegate_class,
-            objc2::sel!(sinewNewWindowFromDock:),
+            objc2::sel!(claakecodeNewWindowFromDock:),
             new_window_imp,
             c"v@:@".as_ptr().cast(),
         );
@@ -137,7 +137,7 @@ unsafe extern "C-unwind" fn macos_application_dock_menu(
         return std::ptr::null_mut();
     };
 
-    let menu_title = NSString::from_str("Sinew");
+    let menu_title = NSString::from_str("Claake Code");
     let item_title = NSString::from_str("Nouvelle fenêtre");
     let empty_key = NSString::new();
     let menu = NSMenu::initWithTitle(mtm.alloc(), &menu_title);
@@ -145,7 +145,7 @@ unsafe extern "C-unwind" fn macos_application_dock_menu(
         NSMenuItem::initWithTitle_action_keyEquivalent(
             mtm.alloc(),
             &item_title,
-            Some(objc2::sel!(sinewNewWindowFromDock:)),
+            Some(objc2::sel!(claakecodeNewWindowFromDock:)),
             &empty_key,
         )
     };
@@ -260,17 +260,62 @@ pub(super) fn delete_installed_skill(workspace_root: &Path, skill_md: &Path) -> 
     Ok(folder)
 }
 
-pub(super) fn write_installed_skill(
+/// Create a new SKILL.md under one of the configured skill roots.
+///
+/// `scope` selects which root family to use:
+/// - "workspace" → `<workspace>/.claakecode/skills/<slug>/SKILL.md`
+/// - "global" or anything else → `~/.claakecode/skills/<slug>/SKILL.md`
+///
+/// Errors if the target folder already exists.
+pub(super) fn create_installed_skill(
+    workspace_root: &Path,
+    name: &str,
+    content: &str,
+    scope: &str,
+) -> Result<PathBuf> {
+    let slug = slug_for_skill(name);
+    if slug.is_empty() {
+        anyhow::bail!("skill name must contain at least one letter or digit");
+    }
+    let root = match scope {
+        "workspace" => workspace_root.join(".claakecode/skills"),
+        _ => home_dir()
+            .ok_or_else(|| anyhow::anyhow!("could not resolve the user home directory"))?
+            .join(".claakecode/skills"),
+    };
+    fs::create_dir_all(&root)
+        .with_context(|| format!("unable to create skill root {}", root.display()))?;
+    let folder = root.join(&slug);
+    if folder.exists() {
+        anyhow::bail!(
+            "a skill folder named `{}` already exists at {}",
+            slug,
+            folder.display()
+        );
+    }
+    fs::create_dir(&folder)
+        .with_context(|| format!("unable to create skill folder {}", folder.display()))?;
+    let skill_md = folder.join("SKILL.md");
+    fs::write(&skill_md, content)
+        .with_context(|| format!("unable to write {}", skill_md.display()))?;
+    Ok(skill_md)
+}
+
+/// Rewrite the contents of an existing SKILL.md.
+///
+/// Validates that the file lives under one of the configured skill roots
+/// before writing, to prevent the command from being abused to write
+/// arbitrary files on disk.
+pub(super) fn write_installed_skill_content(
     workspace_root: &Path,
     skill_md: &Path,
     content: &str,
-) -> Result<PathBuf> {
-    let skill_md = fs::canonicalize(skill_md).context("skill file does not exist")?;
-    if skill_md.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
-        anyhow::bail!("can only edit a SKILL.md file");
+) -> Result<()> {
+    let canonical = fs::canonicalize(skill_md).context("skill file does not exist")?;
+    if canonical.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
+        anyhow::bail!("can only update a SKILL.md file");
     }
-
-    let folder = skill_md
+    let folder = canonical
         .parent()
         .ok_or_else(|| anyhow::anyhow!("skill has no parent folder"))?
         .to_path_buf();
@@ -284,20 +329,37 @@ pub(super) fn write_installed_skill(
     if !allowed {
         anyhow::bail!("skill is outside the configured skill folders");
     }
+    fs::write(&canonical, content)
+        .with_context(|| format!("unable to write {}", canonical.display()))?;
+    Ok(())
+}
 
-    fs::write(&skill_md, content)
-        .with_context(|| format!("unable to write {}", skill_md.display()))?;
-    Ok(skill_md)
+fn slug_for_skill(name: &str) -> String {
+    let mut slug = String::with_capacity(name.len());
+    let mut last_dash = true;
+    for ch in name.trim().chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_dash = false;
+        } else if !last_dash {
+            slug.push('-');
+            last_dash = true;
+        }
+    }
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+    slug
 }
 
 pub(super) fn skill_roots(workspace_root: &Path) -> Vec<PathBuf> {
     let mut roots = vec![
         workspace_root.join(".agents/skills"),
-        workspace_root.join(".sinew/skills"),
+        workspace_root.join(".claakecode/skills"),
     ];
     if let Some(home) = home_dir() {
         roots.push(home.join(".agents/skills"));
-        roots.push(home.join(".sinew/skills"));
+        roots.push(home.join(".claakecode/skills"));
     }
     roots
 }

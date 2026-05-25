@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(super) const DEFAULT_SYSTEM_PROMPT: &str = "You are Sinew, a coding assistant. You build context by examining the codebase first without making assumptions or jumping to conclusions. When exploring, you provide user updates frequently, every 30s. ALWAYS check for a dedicated tool that fits the task before falling back to the shell/bash tool. You keep your responses concise without repeating yourself.";
+pub(super) const DEFAULT_SYSTEM_PROMPT: &str = "You are Claake Code, a coding assistant. You build context by examining the codebase first without making assumptions or jumping to conclusions. When exploring, you provide user updates frequently, every 30s. ALWAYS check for a dedicated tool that fits the task before falling back to the shell/bash tool. You keep your responses concise without repeating yourself.";
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";
@@ -9,9 +9,10 @@ pub(super) const TERMINAL_DATA_EVENT_NAME: &str = "terminal-data";
 pub(super) const TERMINAL_EXIT_EVENT_NAME: &str = "terminal-exit";
 pub(super) const TERMINAL_OPEN_EVENT_NAME: &str = "terminal-open-requested";
 pub(super) const ACTIVE_TURNS_EVENT_NAME: &str = "active-turns-changed";
+pub(super) const DATABASE_SOURCES_EVENT_NAME: &str = "database-sources-changed";
 pub(super) const TERMINAL_OPEN_MENU_ID: &str = "terminal-open";
 pub(super) const NEW_WINDOW_MENU_ID: &str = "new-window";
-pub(super) const NEW_WINDOW_LABEL_PREFIX: &str = "sinew-window";
+pub(super) const NEW_WINDOW_LABEL_PREFIX: &str = "claakecode-window";
 pub(super) const NEW_WINDOW_URL: &str = "index.html?newWindow=1";
 pub(super) const MAX_ATTACHMENT_BYTES: usize = 128 * 1024;
 pub(super) const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;

@@ -4,7 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { api } from "../lib/ipc";
 import type { UpdateInfo, UpdateProgress } from "../types";
-import { SinewMark } from "./SinewMark";
+import { ClaakeCodeMark } from "./ClaakeCodeMark";
 import { WindowControls, isWindowsPlatform } from "./WindowControls";
 
 /// Tauri events emitted by `src-tauri/src/updater.rs::updater_download_and_install`.
@@ -42,7 +42,7 @@ type Props = {
 /// Full-screen, unbypassable update gate. Mounted by `App.tsx` when the boot
 /// updater check reports an available release. The user can only:
 ///   * **Install** the update (download → install → auto-restart).
-///   * **Quit Sinew** (the OS-level close button on Windows; on macOS/Linux,
+///   * **Quit Claake Code** (the OS-level close button on Windows; on macOS/Linux,
 ///     the system traffic lights, plus an explicit button on the error
 ///     path).
 ///
@@ -206,7 +206,7 @@ export function UpdaterLockScreen({ info, autoInstall = false }: Props) {
                   height={22}
                 />
               ) : (
-                <SinewMark size={22} className="updater-lock__mark-glyph" />
+                <ClaakeCodeMark size={22} className="updater-lock__mark-glyph" />
               )}
             </span>
           </span>
@@ -302,7 +302,7 @@ export function UpdaterLockScreen({ info, autoInstall = false }: Props) {
                 className="updater-lock__btn updater-lock__btn--ghost"
                 onClick={onQuit}
               >
-                Quit Sinew
+                Quit Claake Code
               </button>
               <button
                 type="button"
@@ -358,17 +358,17 @@ function titleFor(phase: Phase): string {
 function subFor(phase: Phase, info: UpdateInfo, countdown: number): string {
   switch (phase.kind) {
     case "prompt":
-      return `Sinew ${info.version ?? ""} · you're on ${info.currentVersion}`;
+      return `Claake Code ${info.version ?? ""} · you're on ${info.currentVersion}`;
     case "downloading":
       return `${info.currentVersion} → ${info.version ?? ""}`;
     case "installing":
-      return "Keep Sinew open — almost there";
+      return "Keep Claake Code open — almost there";
     case "ready":
       return countdown > 0
         ? `Restarting in ${countdown}s…`
         : "Restarting…";
     case "error":
-      return "We couldn't install the update. Sinew can't start until it's done.";
+      return "We couldn't install the update. Claake Code can't start until it's done.";
   }
 }
 

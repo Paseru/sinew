@@ -1,27 +1,27 @@
 [package]
-name = "Sinew"
+name = "claakecode"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Desktop app for Sinew"
-default-run = "Sinew"
+description = "Desktop app for Claake Code"
+default-run = "claakecode"
 
 [lib]
-name = "sinew_desktop_lib"
+name = "claakecode_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { workspace = true }
 
 [dependencies]
-sinew-anthropic = { workspace = true }
-sinew-app = { workspace = true }
-sinew-core = { workspace = true }
-sinew-google = { workspace = true }
-sinew-kimi = { workspace = true }
-sinew-openai = { workspace = true }
-sinew-openrouter = { workspace = true }
+claakecode-anthropic = { workspace = true }
+claakecode-app = { workspace = true }
+claakecode-core = { workspace = true }
+claakecode-google = { workspace = true }
+claakecode-kimi = { workspace = true }
+claakecode-openai = { workspace = true }
+claakecode-openrouter = { workspace = true }
 
 anyhow = { workspace = true }
 base64 = { workspace = true }

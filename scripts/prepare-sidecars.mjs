@@ -100,7 +100,7 @@ async function ensureRipgrepTarget(target) {
     return outputPath;
   }
 
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sinew-rg-"));
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "claakecode-rg-"));
   const archiveName = `ripgrep-${RG_VERSION}-${target.archiveTriple}.${target.archiveExt}`;
   const archivePath = path.join(tempRoot, archiveName);
   const extractDir = path.join(tempRoot, "extract");

@@ -1,17 +1,17 @@
 name: Release
 
-# Builds Sinew for macOS (universal), Windows and Linux, signs the artifacts
+# Builds Claake Code for macOS (universal), Windows and Linux, signs the artifacts
 # with the Tauri updater key, and publishes them — together with the
 # auto-generated `latest.json` manifest — to a GitHub Release.
 #
 # Trigger: push a semver tag like `v0.2.0`. The workflow creates a *draft*
 # release first; once all platforms upload their bundles, you can review and
 # publish it from the GitHub UI. The in-app updater fetches
-# `https://github.com/Paseru/sinew/releases/latest/download/latest.json`,
+# `https://github.com/WilliamPeynichou/ClaakeCode/releases/latest/download/latest.json`,
 # so the release must be marked "latest" (which is the default once published).
 #
 # Required repository secrets:
-#   * TAURI_SIGNING_PRIVATE_KEY          — content of .tauri-keys/sinew.key
+#   * TAURI_SIGNING_PRIVATE_KEY          — content of .tauri-keys/claakecode.key
 #   * TAURI_SIGNING_PRIVATE_KEY_PASSWORD — empty string if you generated the key without a password
 #
 # Optional (macOS notarization — recommended for distribution outside the App Store):
@@ -65,8 +65,8 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
-              name: `Sinew ${version}`,
-              body: `Sinew ${version}\n\nDownloads below. The desktop app will auto-update existing installs.`,
+              name: `Claake Code ${version}`,
+              body: `Claake Code ${version}\n\nDownloads below. The desktop app will auto-update existing installs.`,
               draft: true,
               prerelease: false,
             });
@@ -150,13 +150,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Apple-specific (only used on macOS, ignored on other runners).
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.platform.tauri_args }}
@@ -166,28 +159,28 @@ jobs:
           updaterJsonPreferNsis: false
 
       # Publish a *stable-named* copy of the macOS DMG so the landing page
-      # can hard-link to `releases/latest/download/Sinew_universal.dmg`
+      # can hard-link to `releases/latest/download/Claake_Code_universal.dmg`
       # without needing to know the version. Tauri names the DMG with the
-      # version embedded (e.g. `Sinew_0.1.2_universal.dmg`), so we make an
+      # version embedded (e.g. `Claake_Code_0.1.2_universal.dmg`), so we make an
       # additional version-less upload.
       - name: Upload version-less DMG alias
         if: runner.os == 'macOS'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DMG_PATH=$(ls target/universal-apple-darwin/release/bundle/dmg/Sinew_*_universal.dmg | head -1)
+          DMG_PATH=$(ls target/universal-apple-darwin/release/bundle/dmg/Claake*_*_universal.dmg | head -1)
           if [ -z "$DMG_PATH" ]; then
             echo "No DMG produced — skipping alias upload."
             exit 0
           fi
-          cp "$DMG_PATH" "$(dirname "$DMG_PATH")/Sinew_universal.dmg"
+          cp "$DMG_PATH" "$(dirname "$DMG_PATH")/Claake_Code_universal.dmg"
           gh release upload "${{ needs.create-release.outputs.tag_name }}" \
-            "$(dirname "$DMG_PATH")/Sinew_universal.dmg" \
+            "$(dirname "$DMG_PATH")/Claake_Code_universal.dmg" \
             --clobber
 
       # Same trick on Windows: expose version-less NSIS + MSI installers so
       # the landing page can hard-link to
-      # `releases/latest/download/Sinew_x64-setup.exe` (and `.msi`).
+      # `releases/latest/download/Claake_Code_x64-setup.exe` (and `.msi`).
       - name: Upload version-less Windows aliases
         if: runner.os == 'Windows'
         shell: bash
@@ -195,17 +188,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          NSIS_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/nsis/Sinew_*_x64-setup.exe 2>/dev/null | head -1 || true)
-          MSI_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/msi/Sinew_*_x64_*.msi 2>/dev/null | head -1 || true)
+          NSIS_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/nsis/Claake*_*_x64-setup.exe 2>/dev/null | head -1 || true)
+          MSI_SRC=$(ls target/x86_64-pc-windows-msvc/release/bundle/msi/Claake*_*_x64_*.msi 2>/dev/null | head -1 || true)
           if [ -n "$NSIS_SRC" ]; then
-            ALIAS="$(dirname "$NSIS_SRC")/Sinew_x64-setup.exe"
+            ALIAS="$(dirname "$NSIS_SRC")/Claake_Code_x64-setup.exe"
             cp "$NSIS_SRC" "$ALIAS"
             gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
           else
             echo "No NSIS installer produced - skipping NSIS alias."
           fi
           if [ -n "$MSI_SRC" ]; then
-            ALIAS="$(dirname "$MSI_SRC")/Sinew_x64.msi"
+            ALIAS="$(dirname "$MSI_SRC")/Claake_Code_x64.msi"
             cp "$MSI_SRC" "$ALIAS"
             gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
           else
@@ -214,7 +207,7 @@ jobs:
 
       # Same trick on Linux: expose version-less AppImage + .deb so the
       # landing page can hard-link to
-      # `releases/latest/download/Sinew_amd64.AppImage` (and `.deb`).
+      # `releases/latest/download/Claake_Code_amd64.AppImage` (and `.deb`).
       - name: Upload version-less Linux aliases
         if: runner.os == 'Linux'
         env:
@@ -224,14 +217,14 @@ jobs:
           APPIMG_SRC=$(ls target/x86_64-unknown-linux-gnu/release/bundle/appimage/*_*_amd64.AppImage 2>/dev/null | head -1 || true)
           DEB_SRC=$(ls target/x86_64-unknown-linux-gnu/release/bundle/deb/*_*_amd64.deb 2>/dev/null | head -1 || true)
           if [ -n "$APPIMG_SRC" ]; then
-            ALIAS="$(dirname "$APPIMG_SRC")/Sinew_amd64.AppImage"
+            ALIAS="$(dirname "$APPIMG_SRC")/Claake_Code_amd64.AppImage"
             cp "$APPIMG_SRC" "$ALIAS"
             gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
           else
             echo "No AppImage produced - skipping AppImage alias."
           fi
           if [ -n "$DEB_SRC" ]; then
-            ALIAS="$(dirname "$DEB_SRC")/Sinew_amd64.deb"
+            ALIAS="$(dirname "$DEB_SRC")/Claake_Code_amd64.deb"
             cp "$DEB_SRC" "$ALIAS"
             gh release upload "${{ needs.create-release.outputs.tag_name }}" "$ALIAS" --clobber
           else

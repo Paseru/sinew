@@ -54,7 +54,7 @@ pub(super) async fn spawn_terminal(
     command.cwd(workspace_root.as_os_str());
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
-    command.env("SINEW_WORKSPACE", workspace_root.as_os_str());
+    command.env("CLAAKECODE_WORKSPACE", workspace_root.as_os_str());
 
     let child = pair.slave.spawn_command(command).map_err(error_to_string)?;
     drop(pair.slave);

@@ -8,8 +8,33 @@ import type {
 
 export type ModelId = string;
 export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter";
-export type ModeModelSelection = { model: ModelId; thinking: ThinkingLevel };
+export type ModeModelSelection = {
+  model: ModelId;
+  thinking: ThinkingLevel;
+  use1mContext: boolean;
+};
 export type ModeModelSelections = Record<AgentMode, ModeModelSelection>;
+
+export function modelSupports1mContextBeta(model: ModelId): boolean {
+  return model === "anthropic:claude-sonnet-4-6";
+}
+
+export function use1mContextFromRef(
+  model: ModelRef | null | undefined,
+): boolean {
+  return model?.use1mContext === true;
+}
+
+export function modelRefWithUse1mContext(
+  model: ModelRef,
+  enabled: boolean,
+): ModelRef {
+  if (!enabled) {
+    const { use1mContext: _drop, ...rest } = model;
+    return rest;
+  }
+  return { ...model, use1mContext: true };
+}
 
 export type ModelEntry = {
   value: ModelId;
@@ -176,7 +201,7 @@ export function sanitizeOpenRouterName(name: string | null | undefined): string 
   const raw = (name ?? "").trim();
   if (!raw) return "";
   // OpenRouter prefixes most names with the underlying provider, e.g. "OpenAI: GPT-4o".
-  // The provider icon already conveys that information in Sinew, so drop the prefix.
+  // The provider icon already conveys that information in Claake Code, so drop the prefix.
   const colon = raw.indexOf(":");
   if (colon <= 0) return raw;
   const tail = raw.slice(colon + 1).trim();
@@ -320,6 +345,7 @@ export function selectionFromRef(
   return {
     model: modelIdFromRef(model),
     thinking: thinkingFromRef(model),
+    use1mContext: use1mContextFromRef(model),
   };
 }
 

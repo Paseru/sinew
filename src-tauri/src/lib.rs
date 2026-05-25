@@ -25,7 +25,7 @@ use objc2_foundation::NSString;
 use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sinew_anthropic::{
+use claakecode_anthropic::{
     delete_default_auth as delete_default_anthropic_auth,
     exchange_oauth_code as exchange_anthropic_oauth_code, generate_pkce as generate_anthropic_pkce,
     generate_state as generate_anthropic_state,
@@ -33,9 +33,9 @@ use sinew_anthropic::{
     oauth_authorize_url as anthropic_oauth_authorize_url, AnthropicAuthStatus, AnthropicProvider,
     PkceCodes as AnthropicPkceCodes, MODEL_ID as ANTHROPIC_MODEL_ID,
 };
-use sinew_app::{
+use claakecode_app::{
     checkpoint_from_snapshots, clean_context_descriptor, compact_conversation_history,
-    copy_workspace_entries, create_installed_skill, create_workspace_directory,
+    copy_workspace_entries, create_workspace_directory,
     create_workspace_file, delete_workspace_entry, import_workspace_paths, list_installed_skills,
     list_workspace_entries, list_workspace_files, normalize_workspace_root, probe_mcp_servers,
     read_external_file, read_workspace_file, rename_workspace_entry, resolve_terminal_path,
@@ -43,20 +43,23 @@ use sinew_app::{
     shell_system_prompt, snapshot_workspace_for_checkpoint, subagent_system_prompt,
     system_prompt_for_mode_with_plan_prompt, system_prompt_with_todo, todo_list_from_history,
     tool_settings_view, trash_workspace_entry, write_workspace_file, AgentEvent, AgentMode,
-    AppStore, BashTool, ConversationEvent, ConversationSummary, CreateImageTool, EditFileTool,
-    GlobTool, GoalWorkflowState, GrepTool, ImportedEntry, InstalledSkill, McpSettings,
+    AppStore, BashTool, ConversationEvent, ConversationSummary, CreateImageTool,
+    DatabaseActivityEntry, DatabaseConnectionStatus, DatabaseConnectionTestResult,
+    DatabaseSettings, DatabaseSourceConfig, DatabaseTool, EditFileTool, GlobTool,
+    GoalWorkflowState, GrepTool, ImportedEntry, InstalledSkill, McpSettings,
     McpToolRegistry, ModeModelSettings, OpenRouterModelRecord, PlanArtifactState,
     PlanWorkflowState, QuestionTool, ReadTool, SavedConversation, SkillSettings, SkillTool,
     SubAgentConfig, SubAgentSettings, SubAgentTool, TeamRuntime, TeamTool, TerminalPathResolution,
     ToDoListTool, TodoListState, ToolSettings, ToolSettingsView, TurnCancel, TurnContext,
     WebFetchTool, WebSearchTool, WorkspaceBootstrap, WorkspaceCopyOperation, WorkspaceDeletedEntry,
     WorkspaceFileChangeEvent, WorkspaceSearchResult, WriteFileTool,
+    test_database_source_connection,
 };
-use sinew_core::{
+use claakecode_core::{
     ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest, Role,
     ServiceTier, ToolDescriptor,
 };
-use sinew_google::{
+use claakecode_google::{
     delete_default_auth as delete_default_google_auth,
     exchange_oauth_code as exchange_google_oauth_code, generate_pkce as generate_google_pkce,
     generate_state as generate_google_state,
@@ -65,7 +68,7 @@ use sinew_google::{
     purge_legacy_oauth_if_needed as purge_legacy_google_oauth, GoogleAuthStatus, GoogleProvider,
     PkceCodes as GooglePkceCodes, MODEL_ID as GOOGLE_MODEL_ID,
 };
-use sinew_kimi::{
+use claakecode_kimi::{
     delete_default_auth as delete_default_kimi_auth, generate_state as generate_kimi_state,
     load_default_auth_status as load_default_kimi_auth_status,
     request_device_authorization as request_kimi_device_authorization,
@@ -73,12 +76,12 @@ use sinew_kimi::{
     DeviceAuthorization as KimiDeviceAuthorization, KimiAuthStatus, KimiProvider,
     MODEL_ID as KIMI_MODEL_ID,
 };
-use sinew_openai::{
+use claakecode_openai::{
     delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
     load_default_auth_status, oauth_authorize_url, OpenAiAuthStatus, OpenAiProvider, PkceCodes,
     MODEL_ID as OPENAI_MODEL_ID,
 };
-use sinew_openrouter::{
+use claakecode_openrouter::{
     delete_default_auth as delete_default_openrouter_auth,
     fetch_model_catalog as fetch_openrouter_model_catalog,
     load_default_api_key as load_default_openrouter_api_key,
@@ -279,7 +282,7 @@ pub fn run() {
             workspace::read_external_file_command,
             workspace::delete_skill_command,
             workspace::create_skill_command,
-            workspace::update_skill_content_command,
+            workspace::update_skill_command,
             workspace::open_external_url_command,
             workspace::open_path_with_default_app_command,
             workspace::copy_file_to_path_command,
@@ -300,6 +303,11 @@ pub fn run() {
             conversations::save_tool_settings,
             conversations::list_sub_agent_settings,
             conversations::save_sub_agent_settings,
+            conversations::list_database_settings,
+            conversations::save_database_settings,
+            conversations::test_database_connection,
+            conversations::list_database_source_activity,
+            conversations::clear_database_source_activity,
             providers::list_configured_model_providers,
             providers::get_openai_provider_status,
             providers::start_openai_oauth_login,
@@ -357,7 +365,7 @@ pub fn run() {
             updater::updater_current_version,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building sinew desktop")
+        .expect("error while building claakecode desktop")
         .run(|app, event| {
             #[cfg(not(target_os = "macos"))]
             let _ = (&app, &event);

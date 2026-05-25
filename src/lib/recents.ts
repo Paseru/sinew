@@ -1,7 +1,7 @@
 import type { RecentWorkspace } from "../types";
 
-const RECENTS_KEY = "sinew.recentWorkspaces";
-const LAST_KEY = "sinew.lastWorkspace";
+const RECENTS_KEY = "claakecode.recentWorkspaces";
+const LAST_KEY = "claakecode.lastWorkspace";
 const MAX_RECENTS = 12;
 
 export function loadRecents(): RecentWorkspace[] {

@@ -74,6 +74,7 @@ pub(super) async fn send_message(
         mode_model_settings.get(policy.mode),
         input.model,
         input.thinking,
+        input.use_1m_context,
     );
     mode_model_settings.set(policy.mode, selected_model.clone());
     conversation.mode_model_settings = mode_model_settings.clone();
@@ -143,6 +144,7 @@ pub(super) async fn send_message(
         })?;
 
     let providers = provider_registry_snapshot(&state)?;
+    let database_tool = Arc::new(DatabaseTool::new(state.store.clone()));
     let context = TurnContext {
         provider,
         model: conversation.model.clone(),
@@ -180,6 +182,7 @@ pub(super) async fn send_message(
             workspace_root.clone(),
             skill_settings.clone(),
         )),
+        database: database_tool.clone(),
         mcp: Arc::new(McpToolRegistry::new(mcp_settings.clone())),
         subagents: Some(Arc::new(SubAgentTool::new(
             workspace_root.clone(),
@@ -189,6 +192,7 @@ pub(super) async fn send_message(
             mcp_settings.clone(),
             tool_settings.clone(),
             skill_settings.clone(),
+            DatabaseTool::new(state.store.clone()),
             state.max_tool_rounds,
             service_tier,
             cancel.clone(),
@@ -202,6 +206,7 @@ pub(super) async fn send_message(
             mcp_settings,
             tool_settings.clone(),
             skill_settings,
+            DatabaseTool::new(state.store.clone()),
             conversation.model.clone(),
             state.max_tool_rounds,
             service_tier,
@@ -446,8 +451,12 @@ pub(super) async fn compact_conversation(
         return Err("conversation has no history to compact".into());
     }
 
-    let selected_model =
-        model_with_optional_selection(&conversation.model, input.model, input.thinking);
+    let selected_model = model_with_optional_selection(
+        &conversation.model,
+        input.model,
+        input.thinking,
+        input.use_1m_context,
+    );
     let service_tier = input.service_tier.map(ServiceTier::from);
     let compaction_instruction = input
         .instruction
@@ -885,6 +894,14 @@ pub(super) async fn emit_active_turns_changed(
     );
 }
 
+pub(super) fn emit_database_sources_changed(app: &AppHandle, settings: &DatabaseSettings) {
+    let payload = DatabaseSourcesChangedPayload {
+        active_count: settings.active_count(),
+        source_count: settings.sources.len(),
+    };
+    let _ = app.emit(DATABASE_SOURCES_EVENT_NAME, payload);
+}
+
 pub(super) fn active_turn_summaries_from_map(
     active: &HashMap<String, ActiveTurnRecord>,
 ) -> Vec<ActiveTurnSummary> {
@@ -1130,7 +1147,7 @@ pub(super) fn attachment_looks_like_plan(attachment: &AttachmentInput) -> bool {
         .unwrap_or_default()
         .to_ascii_lowercase();
     path.ends_with(".md")
-        || path.contains(".sinew/plans/")
+        || path.contains(".claakecode/plans/")
         || name.ends_with(".md")
         || name.contains("plan")
 }
@@ -1295,7 +1312,7 @@ pub(super) fn latest_plan_artifact_path(history: &[ChatMessage]) -> Option<Strin
 }
 
 pub(super) fn is_safe_plan_path(path: &str) -> bool {
-    if !path.starts_with(".sinew/plans/") || !path.ends_with(".md") {
+    if !path.starts_with(".claakecode/plans/") || !path.ends_with(".md") {
         return false;
     }
     Path::new(path)
@@ -1307,7 +1324,7 @@ pub(super) fn new_plan_relative_path(conversation_id: &str, plan_text: &str) -> 
     let title = plan_title(plan_text).unwrap_or_else(|| "plan".to_string());
     let slug = slugify(&title);
     let short_id = conversation_id.chars().take(8).collect::<String>();
-    format!(".sinew/plans/{}-{}-{}.md", now_ms(), short_id, slug)
+    format!(".claakecode/plans/{}-{}-{}.md", now_ms(), short_id, slug)
 }
 
 pub(super) fn plan_title(plan_text: &str) -> Option<String> {

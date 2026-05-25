@@ -9,6 +9,10 @@ import type {
   ClipboardImageAttachment,
   ContextEstimate,
   ConversationSummary,
+  DatabaseActivityEntry,
+  DatabaseConnectionTestResult,
+  DatabaseSettings,
+  DatabaseSourceConfig,
   FileDocument,
   GitCreateWorktreeOutput,
   GitOperationResult,
@@ -216,17 +220,20 @@ export const api = {
       input: { workspacePath, path },
     });
   },
-  createSkill(workspacePath: string) {
-    return invoke<{ name: string; skills: InstalledSkill[] }>(
-      "create_skill_command",
-      { input: { workspacePath } },
-    );
+  createSkill(
+    workspacePath: string,
+    name: string,
+    content: string,
+    scope: "global" | "workspace" = "global",
+  ) {
+    return invoke<{ absolutePath: string }>("create_skill_command", {
+      input: { workspacePath, name, content, scope },
+    });
   },
-  updateSkillContent(workspacePath: string, path: string, content: string) {
-    return invoke<{ name: string; skills: InstalledSkill[] }>(
-      "update_skill_content_command",
-      { input: { workspacePath, path, content } },
-    );
+  updateSkill(workspacePath: string, path: string, content: string) {
+    return invoke<void>("update_skill_command", {
+      input: { workspacePath, path, content },
+    });
   },
   openExternalUrl(url: string) {
     return invoke<void>("open_external_url_command", {
@@ -323,9 +330,17 @@ export const api = {
     mode: AgentMode,
     model: ModelRef,
     thinking: ThinkingLevel,
+    use1mContext?: boolean,
   ) {
     return invoke<ModeModelSettings>("set_conversation_model_preference", {
-      input: { workspacePath, conversationId, mode, model, thinking },
+      input: {
+        workspacePath,
+        conversationId,
+        mode,
+        model,
+        thinking,
+        use1mContext,
+      },
     });
   },
   listMcpSettings() {
@@ -344,6 +359,29 @@ export const api = {
   saveToolSettings(workspacePath: string, settings: ToolSettings) {
     return invoke<ToolSettings>("save_tool_settings", {
       input: { workspacePath, settings },
+    });
+  },
+  listDatabaseSettings() {
+    return invoke<DatabaseSettings>("list_database_settings");
+  },
+  saveDatabaseSettings(settings: DatabaseSettings) {
+    return invoke<DatabaseSettings>("save_database_settings", {
+      input: { settings },
+    });
+  },
+  testDatabaseConnection(source: DatabaseSourceConfig) {
+    return invoke<DatabaseConnectionTestResult>("test_database_connection", {
+      input: { source },
+    });
+  },
+  listDatabaseSourceActivity(sourceId: string, limit?: number) {
+    return invoke<DatabaseActivityEntry[]>("list_database_source_activity", {
+      input: { sourceId, limit },
+    });
+  },
+  clearDatabaseSourceActivity(sourceId: string) {
+    return invoke<DatabaseActivityEntry[]>("clear_database_source_activity", {
+      input: { sourceId },
     });
   },
   listSubAgentSettings() {
@@ -460,6 +498,7 @@ export const api = {
     planControl?: PlanControl,
     messageVisibility?: MessageVisibility,
     revertWorkspaceChanges?: boolean,
+    use1mContext?: boolean,
   ) {
     return invoke<void>("send_message", {
       input: {
@@ -469,6 +508,7 @@ export const api = {
         attachments,
         model,
         thinking,
+        use1mContext,
         mode,
         serviceTier,
         rewriteFromHistoryIndex,
@@ -485,9 +525,18 @@ export const api = {
     thinking: ThinkingLevel,
     serviceTier?: ServiceTier | null,
     instruction?: string,
+    use1mContext?: boolean,
   ) {
     return invoke<void>("compact_conversation", {
-      input: { workspacePath, conversationId, model, thinking, serviceTier, instruction },
+      input: {
+        workspacePath,
+        conversationId,
+        model,
+        thinking,
+        serviceTier,
+        use1mContext,
+        instruction,
+      },
     });
   },
   listActiveTurns() {
@@ -511,6 +560,7 @@ export const api = {
     thinking: ThinkingLevel,
     mode: AgentMode,
     rewriteFromHistoryIndex?: number,
+    use1mContext?: boolean,
   ) {
     return invoke<ContextEstimate>("estimate_context", {
       input: {
@@ -520,6 +570,7 @@ export const api = {
         attachments,
         model,
         thinking,
+        use1mContext,
         mode,
         rewriteFromHistoryIndex,
       },

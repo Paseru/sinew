@@ -249,7 +249,7 @@ export function GitPanel({
   }, [active, refresh]);
 
   // Refresh when the window regains focus (covers external edits via a
-  // terminal, sibling Sinew window, etc.).
+  // terminal, sibling Claake Code window, etc.).
   useEffect(() => {
     if (!active) return;
     const onFocus = () => void refresh(false);
@@ -567,8 +567,8 @@ export function GitPanel({
         <Icon icon="solar:danger-triangle-linear" width={18} height={18} />
         <span className="git-panel__state-title">Git isn't available</span>
         <span className="git-panel__state-text">
-          Sinew couldn't find a working <code>git</code> binary on your{" "}
-          <code>PATH</code>. Install Git, restart Sinew, and this panel will
+          Claake Code couldn't find a working <code>git</code> binary on your{" "}
+          <code>PATH</code>. Install Git, restart Claake Code, and this panel will
           come back online.
         </span>
         {snapshot.error && (
@@ -946,7 +946,7 @@ export function GitPanel({
 
           {!snapshot.ghAvailable ? (
             <div className="git-panel__empty">
-              Sinew uses the official{" "}
+              Claake Code uses the official{" "}
               <button
                 type="button"
                 className="git-panel__link"
@@ -997,7 +997,7 @@ export function GitPanel({
         open={createWtOpen}
         onClose={() => setCreateWtOpen(false)}
         title="New worktree"
-        description="Sinew creates a sibling worktree and offers to switch this window over."
+        description="Claake Code creates a sibling worktree and offers to switch this window over."
         primaryLabel="Create & switch"
         primaryDisabled={!wtBranchName.trim()}
         primaryBusy={busyKey === "create-worktree"}

@@ -1,17 +1,16 @@
 <p align="center">
-  <img src=".github/assets/hero.png" alt="Sinew — the coding harness you shape" width="100%" />
+  <img src=".github/assets/hero.png" alt="Claake Code — the coding harness you shape" width="100%" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/Paseru/sinew/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/Paseru/sinew?style=flat-square&labelColor=0b0b0d&color=3b82f6"></a>
-  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/github/license/Paseru/sinew?style=flat-square&labelColor=0b0b0d&color=c4b5fd"></a>
-  <a href="https://github.com/Paseru/sinew/actions"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/Paseru/sinew/release.yml?style=flat-square&labelColor=0b0b0d&color=3b82f6&label=build"></a>
-  <a href="https://github.com/Paseru/sinew/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Paseru/sinew/total?style=flat-square&labelColor=0b0b0d&color=c4b5fd"></a>
-  <a href="https://discord.gg/MADQNHtZW"><img alt="Discord" src="https://img.shields.io/badge/discord-join-3b82f6?style=flat-square&labelColor=0b0b0d&logo=discord&logoColor=white"></a>
+  <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/WilliamPeynichou/ClaakeCode?style=flat-square&labelColor=1a1916&color=6b7c5c"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/github/license/WilliamPeynichou/ClaakeCode?style=flat-square&labelColor=1a1916&color=d0dac4"></a>
+  <a href="https://github.com/WilliamPeynichou/ClaakeCode/actions"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/WilliamPeynichou/ClaakeCode/release.yml?style=flat-square&labelColor=1a1916&color=6b7c5c&label=build"></a>
+  <a href="https://github.com/WilliamPeynichou/ClaakeCode/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/WilliamPeynichou/ClaakeCode/total?style=flat-square&labelColor=1a1916&color=d0dac4"></a>
 </p>
 
 <p align="center">
-  <b>Sinew</b> is a desktop AI coding harness you can actually reshape.<br/>
+  <b>Claake Code</b> is a desktop AI coding harness you can actually reshape.<br/>
   Every tool is toggleable, every description is editable, every provider is pluggable,<br/>
   and the agent only sees the surface area you keep.
 </p>
@@ -19,6 +18,21 @@
 <p align="center">
   <code>tauri 2</code> · <code>react</code> · <code>rust</code> · <code>monaco</code> · <code>xterm</code> · <code>mcp</code>
 </p>
+
+---
+
+## Why Claake Code
+
+Most AI coding tools ship a fixed harness: a hard-coded prompt, a hard-coded set
+of tools, a hard-coded loop. You get whatever the vendor decided is "right".
+
+Claake Code flips that. The harness is the surface area you control.
+
+- **Every tool description is editable.** Rephrase it, scope it down, change the contract.
+- **Every tool is toggleable.** Run minimal like Pi, or unlock the full set.
+- **Every provider is pluggable.** Same agent loop across Anthropic, OpenAI, Google, Kimi, OpenRouter.
+- **Agents can run in swarms.** Multiple sub-agents, one shared task board, message passing.
+- **It's a real IDE.** Monaco editor and xterm terminal, not a chat box with a file picker.
 
 ---
 
@@ -490,11 +504,14 @@ The shared board supports explicit dependencies (`blockedBy`). A blocked task ca
 
 ## Compaction
 
-Sinew handles two modes of conversation compaction.
+Claake Code handles two modes of conversation compaction.
 
 **Automatic** — triggered on its own when the context window fills up. The history is summarised to free room and let the agent keep going.
 
 **Manual** — triggered from a button in the UI. The twist: you can attach an **optional directive** to steer compaction towards a specific topic ("keep mostly what concerns X", etc.). The cleanup is then more aggressive on everything outside the requested topic.
+
+For Anthropic, a per-session toggle enables Sonnet 4.6's **1M context (beta)**
+window — without burning the beta header on accounts that don't have access.
 
 ---
 
@@ -507,7 +524,7 @@ Before confirming, a **toggle** lets you choose:
 - **Revert** the workspace changes (files are restored to their previous state)
 - **Keep** the changes as-is (you only undo the chat history)
 
-Sinew then deletes all subsequent user / assistant messages, and optionally restores the files. The conversation can resume cleanly from that point.
+Claake Code then deletes all subsequent user / assistant messages, and optionally restores the files. The conversation can resume cleanly from that point.
 
 Under the hood, each turn records a *checkpoint* that captures the before / after state of the files it touched — that's what makes revert possible at any past point.
 
@@ -516,29 +533,50 @@ Under the hood, each turn records a *checkpoint* that captures the before / afte
 ## Architecture
 
 <p align="center">
-  <img src=".github/assets/architecture.png" alt="Sinew architecture" width="100%" />
+  <img src=".github/assets/architecture.png" alt="Claake Code architecture" width="100%" />
 </p>
 
+- **`src/`** — React UI (Monaco, xterm, chat, settings, file tree).
+- **`src-tauri/`** — Tauri 2 shell, IPC commands, workspace I/O, conversation store.
+- **`crates/claakecode-core`** — Provider-agnostic types: messages, tools, streams.
+- **`crates/claakecode-app`** — Agent loop, tool implementations, swarm, MCP, compaction.
+- **`crates/claakecode-{anthropic,openai,google,kimi,openrouter}`** — Provider adapters (auth, wire, streaming).
 - **`src/`** — React UI (Monaco editor, xterm terminal, chat, settings, file tree).
 - **`src-tauri/`** — Tauri 2 shell, IPC commands, workspace I/O, conversation store, checkpoint store.
-- **`crates/sinew-core`** — Provider-agnostic types: messages, tools, streams, model definitions.
-- **`crates/sinew-app`** — Agent loop (Act / Goal / Plan), tool implementations, swarm, MCP, compaction, rollback.
-- **`crates/sinew-{anthropic,openai,google,kimi,openrouter}`** — Provider adapters (auth, wire, streaming).
+- **`crates/claakecode-core`** — Provider-agnostic types: messages, tools, streams, model definitions.
+- **`crates/claakecode-app`** — Agent loop (Act / Goal / Plan), tool implementations, swarm, MCP, compaction, rollback.
+- **`crates/claakecode-{anthropic,openai,google,kimi,openrouter}`** — Provider adapters (auth, wire, streaming).
 
 ---
 
 ## Screenshot
 
 <p align="center">
-  <img src=".github/assets/screenshot.png" alt="Sinew IDE" width="100%" />
+  <img src=".github/assets/screenshot.png" alt="Claake Code IDE" width="100%" />
 </p>
+
+### How it compares
+
+| | **Claake Code** | Cursor | Claude Code | Aider | Zed AI |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Native desktop app | ✓ | ✓ | — (CLI) | — (CLI) | ✓ |
+| Open source | ✓ | — | — | ✓ | ✓ |
+| Multi-provider | ✓ | ✓ | — | ✓ | ✓ |
+| Editable tool descriptions | ✓ | — | — | — | — |
+| Toggle individual tools | ✓ | partial | — | — | — |
+| MCP server CRUD UI | ✓ | partial | partial | — | — |
+| Skills CRUD UI | ✓ | — | — | — | — |
+| 1M context beta toggle (Sonnet) | ✓ | — | partial | — | — |
+| Agent swarm + task board | ✓ | — | — | — | — |
+| MCP servers | ✓ | ✓ | ✓ | — | partial |
+| Embedded terminal | ✓ | ✓ | n/a | n/a | ✓ |
 
 ---
 
 ## Install
 
 Grab the latest build for your OS from the
-[releases page](https://github.com/Paseru/sinew/releases/latest).
+[releases page](https://github.com/WilliamPeynichou/ClaakeCode/releases/latest).
 
 - **macOS** — `.dmg`
 - **Windows** — `.msi` / `.exe`
@@ -571,9 +609,8 @@ Provider OAuth client IDs (and Google's client secret) are embedded in the sourc
 
 ## Community
 
-- [Discord](https://discord.gg/MADQNHtZW) — chat, support, share your harness configs
-- [Issues](https://github.com/Paseru/sinew/issues) — bugs and feature requests
-- [Discussions](https://github.com/Paseru/sinew/discussions) — design, providers, MCP
+- [Issues](https://github.com/WilliamPeynichou/ClaakeCode/issues) — bugs and feature requests
+- [Discussions](https://github.com/WilliamPeynichou/ClaakeCode/discussions) — design, providers, MCP
 
 ---
 
@@ -582,5 +619,5 @@ Provider OAuth client IDs (and Google's client secret) are embedded in the sourc
 [MIT](./LICENSE)
 
 <p align="center">
-  <sub>Built with Tauri, Rust, and a stubborn refusal to ship a black-box harness.</sub>
+  <sub>Forked from <a href="https://github.com/Paseru/sinew">Paseru/sinew</a>. Built with Tauri, Rust, and a stubborn refusal to ship a black-box harness.</sub>
 </p>

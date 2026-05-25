@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Icon } from "@iconify/react";
 import { languageForPath } from "../lib/language";
 import { fileIcon } from "../lib/fileIcon";
+import { attachMonacoTheme, monacoThemeForDocument } from "../lib/monacoThemes";
 import { Markdown } from "./chat/Markdown";
 import type { EditorRevealTarget, EditorTab } from "../types";
 import { ImageContextMenu } from "./ImageContextMenu";
@@ -134,50 +135,7 @@ export function EditorPane({
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     setEditorReadySeq((value) => value + 1);
-    monaco.editor.defineTheme("sinew-cool", {
-      base: "vs-dark",
-      inherit: true,
-      rules: [
-        { token: "comment", foreground: "52555c" },
-        { token: "keyword", foreground: "c4b5fd" },
-        { token: "string", foreground: "86efac" },
-        { token: "number", foreground: "f5a683" },
-        { token: "type", foreground: "e8bb6a" },
-        { token: "function", foreground: "9fc2ff" },
-        { token: "variable", foreground: "e8e9ec" },
-        { token: "constant", foreground: "f5a683" },
-        { token: "regexp", foreground: "86efac" },
-        { token: "tag", foreground: "f5a1ab" },
-        { token: "attribute.name", foreground: "c4b5fd" },
-      ],
-      colors: {
-        "editor.background": "#0b0b0d",
-        "editor.foreground": "#e8e9ec",
-        "editor.lineHighlightBackground": "#0f1013",
-        "editorLineNumber.foreground": "#3a3d44",
-        "editorLineNumber.activeForeground": "#9aa0a8",
-        "editorCursor.foreground": "#3b82f6",
-        "editor.selectionBackground": "#1e2b4a",
-        "editor.inactiveSelectionBackground": "#141518",
-        "editorIndentGuide.background1": "#141518",
-        "editorIndentGuide.activeBackground1": "#23252b",
-        "editorGutter.background": "#0b0b0d",
-        "editorWidget.background": "#0f1013",
-        "editorWidget.border": "#23252b",
-        "editorHoverWidget.background": "#0f1013",
-        "editorHoverWidget.border": "#23252b",
-        "editorSuggestWidget.background": "#0f1013",
-        "editorSuggestWidget.border": "#23252b",
-        "editorSuggestWidget.selectedBackground": "#1e2b4a",
-        "editorSuggestWidget.highlightForeground": "#5b8cff",
-        "editorBracketMatch.background": "#1e2b4a",
-        "editorBracketMatch.border": "#3b82f6",
-        "scrollbarSlider.background": "#23252bcc",
-        "scrollbarSlider.hoverBackground": "#2b2e35cc",
-        "scrollbarSlider.activeBackground": "#3a3d44cc",
-      },
-    });
-    monaco.editor.setTheme("sinew-cool");
+    attachMonacoTheme(monaco);
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const path = currentPathRef.current;
@@ -445,7 +403,6 @@ export function EditorPane({
                 <Editor
                   key={activeTab.relativePath}
                   height="100%"
-                  theme="sinew-cool"
                   path={activeTab.relativePath}
                   value={activeTab.buffer}
                   language={languageForPath(activeTab.relativePath)}
@@ -627,5 +584,5 @@ function isMarkdownPath(relativePath: string): boolean {
 }
 
 function isPlanMarkdownPath(relativePath: string): boolean {
-  return /^\.sinew\/plans\/.+\.md$/i.test(relativePath);
+  return /^\.claakecode\/plans\/.+\.md$/i.test(relativePath);
 }

@@ -5,5 +5,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    sinew_desktop_lib::run()
+    claakecode_desktop_lib::run()
 }

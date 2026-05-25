@@ -34,8 +34,12 @@ pub(super) async fn estimate_context(
 
     let mode = plan_estimate_mode(&conversation.plan_workflow, requested_mode);
     let mode_model_settings = conversation.mode_model_settings.clone();
-    let selected_model =
-        model_with_optional_selection(mode_model_settings.get(mode), input.model, input.thinking);
+    let selected_model = model_with_optional_selection(
+        mode_model_settings.get(mode),
+        input.model,
+        input.thinking,
+        input.use_1m_context,
+    );
     conversation.mode_model_settings = mode_model_settings;
     conversation.model = selected_model;
     let provider = provider_from_registry(&state, &conversation.model.provider)?;
@@ -73,16 +77,19 @@ pub(super) async fn estimate_context(
         mcp_settings,
         tool_settings.clone(),
         skill_settings,
+        DatabaseTool::new(state.store.clone()),
         state.max_tool_rounds,
         None,
         TurnCancel::empty(),
     )
     .descriptors();
     let team_tools = TeamTool::descriptors_static();
+    let database_tools = DatabaseTool::descriptors_static();
     let mut sub_agent_tool_names = tool_name_set(&sub_agent_tools);
     sub_agent_tool_names.extend(tool_name_set(&team_tools));
     tools.extend(sub_agent_tools);
     tools.extend(team_tools);
+    tools.extend(database_tools);
     let tools = tool_settings.apply_to_descriptors(tools);
     let system = system_prompt_with_todo(&effective_system_prompt, &conversation.todo_list);
     let system_prompt =

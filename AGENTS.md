@@ -32,7 +32,7 @@ Code map:
 │   └── workflows
 │       └── release.yml
 ├── crates
-│   ├── sinew-anthropic
+│   ├── claakecode-anthropic
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── auth.rs
@@ -41,7 +41,7 @@ Code map:
 │   │       ├── model_info.rs
 │   │       ├── stream.rs
 │   │       └── wire.rs
-│   ├── sinew-app
+│   ├── claakecode-app
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── agent.rs
@@ -60,6 +60,8 @@ Code map:
 │   │       │   └── turn.rs
 │   │       ├── bash.rs
 │   │       ├── compact.rs
+│   │       ├── database.rs
+│   │       ├── database_tool.rs
 │   │       ├── edit.rs
 │   │       ├── glob.rs
 │   │       ├── grep.rs
@@ -91,7 +93,7 @@ Code map:
 │   │       ├── web.rs
 │   │       ├── write.rs
 │   │       └── workspace.rs
-│   ├── sinew-core
+│   ├── claakecode-core
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── error.rs
@@ -101,7 +103,7 @@ Code map:
 │   │       ├── provider.rs
 │   │       ├── stream.rs
 │   │       └── tool.rs
-│   ├── sinew-google
+│   ├── claakecode-google
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── auth.rs
@@ -110,7 +112,7 @@ Code map:
 │   │       ├── model_info.rs
 │   │       ├── stream.rs
 │   │       └── wire.rs
-│   ├── sinew-kimi
+│   ├── claakecode-kimi
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── auth.rs
@@ -119,7 +121,7 @@ Code map:
 │   │       ├── model_info.rs
 │   │       ├── stream.rs
 │   │       └── wire.rs
-│   ├── sinew-openai
+│   ├── claakecode-openai
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── auth.rs
@@ -128,7 +130,7 @@ Code map:
 │   │       ├── model_info.rs
 │   │       ├── stream.rs
 │   │       └── wire.rs
-│   └── sinew-openrouter
+│   └── claakecode-openrouter
 │       ├── Cargo.toml
 │       └── src
 │           ├── auth.rs
@@ -246,8 +248,9 @@ Code map:
     │   ├── FileTree.tsx
     │   ├── GitPanel.tsx
     │   ├── SearchPane.tsx
+    │   ├── ClaakeCodeMark.tsx
+    │   ├── DatabaseSettingsSection.tsx
     │   ├── SettingsPane.tsx
-    │   ├── SinewMark.tsx
     │   ├── Splitter.tsx
     │   ├── TerminalPanel.tsx
     │   ├── UpdateBadge.tsx
@@ -271,6 +274,7 @@ Code map:
     │       ├── dotmatrix-hooks.ts
     │       └── stream.ts
     ├── lib
+    │   ├── databaseSettings.ts
     │   ├── fileIcon.ts
     │   ├── ipc.ts
     │   ├── language.ts

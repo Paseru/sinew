@@ -7,7 +7,7 @@
 /GREP_HARNESS_COMPARISON.md
 /src-tauri/binaries/rg-*
 /.history
-/.sinew/
+/.claakecode/
 .DS_Store
 *.log
 .env

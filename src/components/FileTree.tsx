@@ -71,7 +71,7 @@ type DragPreviewState = {
   entries: WorkspaceEntry[];
 };
 
-const INTERNAL_DRAG_MIME = "application/x-sinew-files";
+const INTERNAL_DRAG_MIME = "application/x-claakecode-files";
 const POINTER_DRAG_THRESHOLD_PX = 4;
 
 type Props = {
@@ -1851,7 +1851,7 @@ function hasInternalDragPayload(dataTransfer: DataTransfer): boolean {
   const types = Array.from(dataTransfer.types);
   return (
     types.includes(INTERNAL_DRAG_MIME) ||
-    types.includes("application/x-sinew-file")
+    types.includes("application/x-claakecode-file")
   );
 }
 
@@ -1868,7 +1868,7 @@ function parseInternalDragEntries(dataTransfer: DataTransfer): WorkspaceEntry[] 
     }
   }
 
-  const legacy = dataTransfer.getData("application/x-sinew-file");
+  const legacy = dataTransfer.getData("application/x-claakecode-file");
   if (!legacy) return [];
   try {
     const parsed = JSON.parse(legacy) as Partial<WorkspaceEntry>;
