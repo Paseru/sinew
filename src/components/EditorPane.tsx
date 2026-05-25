@@ -46,8 +46,12 @@ type Props = {
   activeIndex: number;
   onActivate: (index: number) => void;
   onClose: (index: number) => void;
+  onCloseOthers: (index: number) => void;
+  onCloseToRight: (index: number) => void;
+  onCloseAll: () => void;
   onChange: (index: number, value: string) => void;
   onSave: (index: number) => void;
+  onRevealTab: (index: number) => void;
   onOpenFile?: (path: string) => void;
   settingsOpen?: boolean;
   settingsActive?: boolean;
@@ -62,8 +66,12 @@ export function EditorPane({
   activeIndex,
   onActivate,
   onClose,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll,
   onChange,
   onSave,
+  onRevealTab,
   onOpenFile,
   settingsOpen = false,
   settingsActive = false,
@@ -89,6 +97,11 @@ export function EditorPane({
   const [imageMenu, setImageMenu] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const [tabMenu, setTabMenu] = useState<{
+    x: number;
+    y: number;
+    index: number;
+  } | null>(null);
   const activeTab: EditorTab | undefined = settingsActive ? undefined : tabs[activeIndex];
   // Close the image context menu whenever the user switches tabs or
   // toggles into the settings view, so it never lingers on the wrong file.
@@ -312,13 +325,34 @@ export function EditorPane({
 
   return (
     <div className="editor-col">
-      <div className="tabs">
+      <div className="tabs" role="tablist" aria-label="Open editors">
         {tabs.map((tab, index) => (
           <div
             key={tab.relativePath}
             className="tab"
             data-active={!settingsActive && index === activeIndex ? "true" : "false"}
+            role="tab"
+            aria-selected={!settingsActive && index === activeIndex}
+            tabIndex={!settingsActive && index === activeIndex ? 0 : -1}
             onClick={() => onActivate(index)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onActivate(index);
+                return;
+              }
+              if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+                event.preventDefault();
+                const rect = event.currentTarget.getBoundingClientRect();
+                onActivate(index);
+                setTabMenu({ x: rect.left + 16, y: rect.bottom - 2, index });
+              }
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              onActivate(index);
+              setTabMenu({ x: event.clientX, y: event.clientY, index });
+            }}
             title={tab.relativePath}
           >
             <span className="tab__icon">
@@ -342,7 +376,16 @@ export function EditorPane({
           <div
             className="tab"
             data-active={settingsActive ? "true" : "false"}
+            role="tab"
+            aria-selected={settingsActive}
+            tabIndex={settingsActive ? 0 : -1}
             onClick={onSettingsActivate}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSettingsActivate?.();
+              }
+            }}
             title="Settings"
           >
             <span className="tab__icon">
@@ -387,6 +430,21 @@ export function EditorPane({
           </button>
         )}
       </div>
+      {tabMenu && tabs[tabMenu.index] && (
+        <EditorTabContextMenu
+          x={tabMenu.x}
+          y={tabMenu.y}
+          tab={tabs[tabMenu.index]}
+          tabCount={tabs.length}
+          index={tabMenu.index}
+          onClose={() => setTabMenu(null)}
+          onCloseTab={() => onClose(tabMenu.index)}
+          onCloseOthers={() => onCloseOthers(tabMenu.index)}
+          onCloseToRight={() => onCloseToRight(tabMenu.index)}
+          onCloseAll={onCloseAll}
+          onReveal={() => onRevealTab(tabMenu.index)}
+        />
+      )}
 
       <div className="editor-host">
         {settingsOpen && (
@@ -497,6 +555,164 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const TAB_MENU_WIDTH = 236;
+const TAB_MENU_HEIGHT = 250;
+
+function EditorTabContextMenu({
+  x,
+  y,
+  tab,
+  tabCount,
+  index,
+  onClose,
+  onCloseTab,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll,
+  onReveal,
+}: {
+  x: number;
+  y: number;
+  tab: EditorTab;
+  tabCount: number;
+  index: number;
+  onClose: () => void;
+  onCloseTab: () => void;
+  onCloseOthers: () => void;
+  onCloseToRight: () => void;
+  onCloseAll: () => void;
+  onReveal: () => void;
+}) {
+  useEffect(() => {
+    const close = () => onClose();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("scroll", close, true);
+    };
+  }, [onClose]);
+
+  const clampedX =
+    typeof window === "undefined"
+      ? x
+      : Math.max(8, Math.min(x, window.innerWidth - TAB_MENU_WIDTH - 8));
+  const clampedY =
+    typeof window === "undefined"
+      ? y
+      : Math.max(8, Math.min(y, window.innerHeight - TAB_MENU_HEIGHT - 8));
+
+  const runAction = (action: () => void | Promise<void>) => () => {
+    onClose();
+    void Promise.resolve(action()).catch((err) =>
+      console.error("[tab-menu] action failed", err),
+    );
+  };
+
+  const copyFullPath = runAction(() => copyText(tab.doc.absolutePath));
+  const copyRelativePath = runAction(() => copyText(tab.relativePath));
+
+  return (
+    <div
+      className="tree-menu tab-menu"
+      role="menu"
+      style={{ left: clampedX, top: clampedY }}
+      onPointerDown={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.preventDefault()}
+    >
+      <TabMenuItem
+        icon="solar:close-circle-linear"
+        label="Close"
+        shortcut="Ctrl+F4"
+        onClick={runAction(onCloseTab)}
+      />
+      <TabMenuItem
+        icon="solar:close-square-linear"
+        label="Close Others"
+        disabled={tabCount <= 1}
+        onClick={runAction(onCloseOthers)}
+      />
+      <TabMenuItem
+        icon="solar:alt-arrow-right-linear"
+        label="Close to the Right"
+        disabled={index >= tabCount - 1}
+        onClick={runAction(onCloseToRight)}
+      />
+      <TabMenuItem
+        icon="solar:layers-minimalistic-linear"
+        label="Close All"
+        onClick={runAction(onCloseAll)}
+      />
+      <div className="tree-menu__separator" role="separator" />
+      <TabMenuItem
+        icon="solar:copy-linear"
+        label="Copy Path"
+        onClick={copyFullPath}
+      />
+      <TabMenuItem
+        icon="solar:copy-linear"
+        label="Copy Relative Path"
+        disabled={Boolean(tab.external)}
+        onClick={copyRelativePath}
+      />
+      <div className="tree-menu__separator" role="separator" />
+      <TabMenuItem
+        icon="solar:folder-open-linear"
+        label={revealLabel()}
+        onClick={runAction(onReveal)}
+      />
+    </div>
+  );
+}
+
+function TabMenuItem({
+  icon,
+  label,
+  shortcut,
+  disabled = false,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  shortcut?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="tree-menu__item tab-menu__item"
+      data-danger="false"
+      role="menuitem"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <Icon icon={icon} width={14} height={14} />
+      <span>{label}</span>
+      {shortcut && <kbd className="tab-menu__shortcut">{shortcut}</kbd>}
+    </button>
+  );
+}
+
+async function copyText(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
+}
+
+function revealLabel(): string {
+  const platform =
+    typeof navigator !== "undefined" ? navigator.platform.toLowerCase() : "";
+  if (platform.includes("mac")) return "Reveal in Finder";
+  if (platform.includes("win")) return "Reveal in File Explorer";
+  return "Reveal in File Manager";
 }
 
 function isPreviewableImagePath(relativePath: string): boolean {
