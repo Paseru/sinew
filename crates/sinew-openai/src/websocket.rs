@@ -1,7 +1,4 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 
 use futures::{stream, SinkExt, StreamExt};
 use serde::Deserialize;
@@ -35,7 +32,7 @@ const WEBSOCKET_CONNECTION_LIMIT_REACHED_CODE: &str = "websocket_connection_limi
 const WEBSOCKET_CONNECTION_LIMIT_REACHED_MESSAGE: &str =
     "Responses websocket connection limit reached. Create a new websocket connection to continue.";
 
-pub(crate) type SharedWebsocketConnection = Arc<Mutex<Option<ResponsesWebsocketConnection>>>;
+pub(crate) type WebsocketErrorCallback = Arc<dyn Fn() + Send + Sync + 'static>;
 
 struct WsStream {
     tx_command: mpsc::Sender<WsCommand>,
@@ -189,15 +186,11 @@ impl ResponsesWebsocketConnection {
         })
     }
 
-    pub(crate) async fn is_closed(&self) -> bool {
-        self.stream.lock().await.is_none()
-    }
-
-    pub(crate) fn stream_request(
+    fn stream_request(
         &self,
         request_body: Value,
         default_model: String,
-        fallback_flag: Arc<AtomicBool>,
+        on_stream_error: Option<WebsocketErrorCallback>,
     ) -> ProviderStream {
         let (tx_event, rx_event) = mpsc::channel::<Result<Value>>(RESPONSE_STREAM_CHANNEL_CAPACITY);
         let stream = Arc::clone(&self.stream);
@@ -205,7 +198,9 @@ impl ResponsesWebsocketConnection {
             let result =
                 run_websocket_response_stream(stream, tx_event.clone(), request_body).await;
             if let Err(err) = result {
-                fallback_flag.store(true, Ordering::Relaxed);
+                if let Some(on_stream_error) = on_stream_error.as_ref() {
+                    on_stream_error();
+                }
                 let _ = tx_event.send(Err(err)).await;
             }
         });
@@ -221,29 +216,10 @@ pub(crate) async fn stream_websocket_request(
     bearer: &BearerToken,
     request_body: Value,
     default_model: String,
-    fallback_flag: Arc<AtomicBool>,
-    connection_cache: SharedWebsocketConnection,
+    on_stream_error: Option<WebsocketErrorCallback>,
 ) -> Result<ProviderStream> {
-    let connection = {
-        let mut cached = connection_cache.lock().await;
-        let needs_new = match cached.as_ref() {
-            Some(connection) => connection.is_closed().await,
-            None => true,
-        };
-        if needs_new {
-            *cached = Some(ResponsesWebsocketConnection::connect(config, bearer).await?);
-        }
-        cached
-            .as_ref()
-            .expect("websocket connection should be initialized")
-            .clone()
-    };
-
-    Ok(connection.stream_request(request_body, default_model, fallback_flag))
-}
-
-pub(crate) fn empty_connection_cache() -> SharedWebsocketConnection {
-    Arc::new(Mutex::new(None))
+    let connection = ResponsesWebsocketConnection::connect(config, bearer).await?;
+    Ok(connection.stream_request(request_body, default_model, on_stream_error))
 }
 
 pub(crate) fn responses_websocket_url(base_url: &str) -> Result<Url> {

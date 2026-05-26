@@ -1,5 +1,7 @@
 use crate::*;
 use std::ffi::OsStr;
+#[cfg(target_os = "windows")]
+use std::ffi::OsString;
 use std::path::Component;
 use std::process::Stdio;
 #[cfg(test)]
@@ -565,7 +567,10 @@ fn repository_snapshot(workspace_root: &Path) -> GitRepositorySnapshot {
             status: Vec::new(),
             worktrees: Vec::new(),
             branches: Vec::new(),
-            error: Some("Git is not installed or is not available on PATH.".into()),
+            error: Some(
+                "Git is not installed or could not be found in PATH or standard install locations."
+                    .into(),
+            ),
         };
     }
 
@@ -665,22 +670,22 @@ fn command_available(program: &str) -> bool {
 
 fn resolve_executable(program: &str) -> Option<PathBuf> {
     let direct = PathBuf::from(program);
-    if direct.components().count() > 1 && executable_works(&direct) {
-        return Some(direct);
+    if direct.components().count() > 1 {
+        if let Some(candidate) = find_working_executable(&direct) {
+            return Some(candidate);
+        }
     }
 
     if let Some(path_var) = std::env::var_os("PATH") {
         for dir in std::env::split_paths(&path_var) {
-            let candidate = dir.join(program);
-            if executable_works(&candidate) {
+            if let Some(candidate) = find_working_executable(&dir.join(program)) {
                 return Some(candidate);
             }
         }
     }
 
-    for dir in fallback_executable_dirs() {
-        let candidate = dir.join(program);
-        if executable_works(&candidate) {
+    for dir in fallback_executable_dirs(program) {
+        if let Some(candidate) = find_working_executable(&dir.join(program)) {
             return Some(candidate);
         }
     }
@@ -688,19 +693,117 @@ fn resolve_executable(program: &str) -> Option<PathBuf> {
     None
 }
 
-fn fallback_executable_dirs() -> Vec<PathBuf> {
-    let mut dirs = vec![
-        PathBuf::from("/opt/homebrew/bin"),
-        PathBuf::from("/usr/local/bin"),
-        PathBuf::from("/opt/local/bin"),
-        PathBuf::from("/usr/bin"),
-        PathBuf::from("/bin"),
-    ];
-    if let Some(home) = home_dir() {
-        dirs.push(home.join(".local/bin"));
-        dirs.push(home.join("bin"));
+fn find_working_executable(base: &Path) -> Option<PathBuf> {
+    executable_candidates(base)
+        .into_iter()
+        .find(|candidate| executable_works(candidate))
+}
+
+#[cfg(target_os = "windows")]
+fn executable_candidates(base: &Path) -> Vec<PathBuf> {
+    let mut candidates = vec![base.to_path_buf()];
+    if base.extension().is_some() {
+        return candidates;
     }
+
+    let Some(file_name) = base.file_name() else {
+        return candidates;
+    };
+
+    for extension in windows_executable_extensions() {
+        let mut name = OsString::from(file_name);
+        name.push(OsStr::new(&extension));
+        candidates.push(base.with_file_name(name));
+    }
+    candidates
+}
+
+#[cfg(not(target_os = "windows"))]
+fn executable_candidates(base: &Path) -> Vec<PathBuf> {
+    vec![base.to_path_buf()]
+}
+
+#[cfg(target_os = "windows")]
+fn windows_executable_extensions() -> Vec<String> {
+    let mut extensions = Vec::new();
+    for extension in [".exe", ".cmd", ".bat", ".com"] {
+        push_unique_extension(&mut extensions, extension);
+    }
+    if let Some(path_ext) = std::env::var_os("PATHEXT") {
+        for extension in path_ext.to_string_lossy().split(';') {
+            push_unique_extension(&mut extensions, extension);
+        }
+    }
+    extensions
+}
+
+#[cfg(target_os = "windows")]
+fn push_unique_extension(extensions: &mut Vec<String>, raw: &str) {
+    let extension = raw.trim().trim_matches('"');
+    if extension.is_empty() {
+        return;
+    }
+    let extension = if extension.starts_with('.') {
+        extension.to_string()
+    } else {
+        format!(".{extension}")
+    };
+    if !extensions
+        .iter()
+        .any(|existing| existing.eq_ignore_ascii_case(&extension))
+    {
+        extensions.push(extension);
+    }
+}
+
+fn fallback_executable_dirs(_program: &str) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        if _program.eq_ignore_ascii_case("git") {
+            append_windows_git_dirs(&mut dirs);
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        dirs.extend([
+            PathBuf::from("/opt/homebrew/bin"),
+            PathBuf::from("/usr/local/bin"),
+            PathBuf::from("/opt/local/bin"),
+            PathBuf::from("/usr/bin"),
+            PathBuf::from("/bin"),
+        ]);
+        if let Some(home) = home_dir() {
+            dirs.push(home.join(".local/bin"));
+            dirs.push(home.join("bin"));
+        }
+    }
+
     dirs
+}
+
+#[cfg(target_os = "windows")]
+fn append_windows_git_dirs(dirs: &mut Vec<PathBuf>) {
+    let mut roots = vec![
+        PathBuf::from(r"C:\Program Files\Git"),
+        PathBuf::from(r"C:\Program Files (x86)\Git"),
+    ];
+    if let Some(program_files) = std::env::var_os("ProgramFiles") {
+        roots.push(PathBuf::from(program_files).join("Git"));
+    }
+    if let Some(program_files_x86) = std::env::var_os("ProgramFiles(x86)") {
+        roots.push(PathBuf::from(program_files_x86).join("Git"));
+    }
+    if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+        roots.push(PathBuf::from(local_app_data).join("Programs").join("Git"));
+    }
+
+    for root in roots {
+        dirs.push(root.join("cmd"));
+        dirs.push(root.join("bin"));
+    }
 }
 
 fn executable_works(path: &Path) -> bool {
@@ -1339,6 +1442,33 @@ fn same_path(left: &Path, right: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn executable_candidates_keep_unix_name_unchanged() {
+        assert_eq!(
+            executable_candidates(Path::new("git")),
+            vec![PathBuf::from("git")]
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn executable_candidates_add_windows_extensions() {
+        let candidates = executable_candidates(Path::new("git"));
+
+        assert!(candidates.contains(&PathBuf::from("git.exe")));
+        assert!(candidates.contains(&PathBuf::from("git.cmd")));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn fallback_dirs_include_git_for_windows_locations() {
+        let dirs = fallback_executable_dirs("git");
+
+        assert!(dirs.contains(&PathBuf::from(r"C:\Program Files\Git\cmd")));
+        assert!(dirs.contains(&PathBuf::from(r"C:\Program Files\Git\bin")));
+    }
 
     #[test]
     fn branch_upstream_reads_remote_and_merge_config() {

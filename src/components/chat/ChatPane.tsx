@@ -1541,6 +1541,59 @@ export function ChatPane({
     serviceTier,
   ]);
 
+  const sendQueuedPrompt = useCallback(
+    (nextPrompt: QueuedPrompt, restoreIndex = 0) => {
+      if (dequeueInFlightRef.current !== null) return;
+      blockedQueueItemIdsRef.current.delete(nextPrompt.id);
+      dequeueInFlightRef.current = nextPrompt.id;
+      setPromptQueuesByConversation((current) =>
+        updatePromptQueue(current, conversationId, (queue) =>
+          queue.filter((prompt) => prompt.id !== nextPrompt.id),
+        ),
+      );
+      setView((prev) =>
+        beginTurn(
+          appendUserMessage(
+            prev,
+            nextPrompt.text,
+            optimisticNextUserHistoryIndex(history, prev),
+            userAttachmentsFromQueue(nextPrompt.attachments),
+          ),
+        ),
+      );
+      setSendTick((t) => t + 1);
+      void onSend(
+        nextPrompt.text,
+        nextPrompt.attachments,
+        nextPrompt.model,
+        nextPrompt.thinking,
+        nextPrompt.mode,
+        nextPrompt.serviceTier,
+      )
+        .catch((err) => {
+          blockedQueueItemIdsRef.current.add(nextPrompt.id);
+          setPromptQueuesByConversation((current) =>
+            updatePromptQueue(current, conversationId, (queue) =>
+              insertQueuedPrompt(queue, nextPrompt, restoreIndex),
+            ),
+          );
+          setView((prev) => ({
+            ...prev,
+            status: "stopped",
+            streamPhase: "idle",
+            lastError: String(err),
+            turnStartedAtMs: null,
+          }));
+        })
+        .finally(() => {
+          if (dequeueInFlightRef.current === nextPrompt.id) {
+            dequeueInFlightRef.current = null;
+          }
+        });
+    },
+    [conversationId, history, onSend],
+  );
+
   useEffect(() => {
     if (view.status === "streaming" || isStreaming) return;
     if (activeSubAgentId !== null) return;
@@ -1549,63 +1602,16 @@ export function ChatPane({
     const nextPrompt = queuedPrompts[0];
     if (!nextPrompt) return;
     if (blockedQueueItemIdsRef.current.has(nextPrompt.id)) return;
-    if (dequeueInFlightRef.current === nextPrompt.id) return;
+    if (dequeueInFlightRef.current !== null) return;
 
-    dequeueInFlightRef.current = nextPrompt.id;
-    setPromptQueuesByConversation((current) =>
-      updatePromptQueue(current, conversationId, (queue) =>
-        queue.filter((prompt) => prompt.id !== nextPrompt.id),
-      ),
-    );
-    setView((prev) =>
-      beginTurn(
-        appendUserMessage(
-          prev,
-          nextPrompt.text,
-          optimisticNextUserHistoryIndex(history, prev),
-          userAttachmentsFromQueue(nextPrompt.attachments),
-        ),
-      ),
-    );
-    setSendTick((t) => t + 1);
-    void onSend(
-      nextPrompt.text,
-      nextPrompt.attachments,
-      nextPrompt.model,
-      nextPrompt.thinking,
-      nextPrompt.mode,
-      nextPrompt.serviceTier,
-    )
-      .catch((err) => {
-        blockedQueueItemIdsRef.current.add(nextPrompt.id);
-        setPromptQueuesByConversation((current) =>
-          updatePromptQueue(current, conversationId, (queue) =>
-            queue.some((prompt) => prompt.id === nextPrompt.id)
-              ? queue
-              : [nextPrompt, ...queue],
-          ),
-        );
-        setView((prev) => ({
-          ...prev,
-          status: "stopped",
-          streamPhase: "idle",
-          lastError: String(err),
-          turnStartedAtMs: null,
-        }));
-      })
-      .finally(() => {
-        if (dequeueInFlightRef.current === nextPrompt.id) {
-          dequeueInFlightRef.current = null;
-        }
-      });
+    sendQueuedPrompt(nextPrompt, 0);
   }, [
     activeSubAgentId,
     conversationId,
     editingQueuedPrompt,
-    history.length,
     isStreaming,
-    onSend,
     queuedPrompts,
+    sendQueuedPrompt,
     view.status,
   ]);
 
@@ -2492,6 +2498,49 @@ export function ChatPane({
     [conversationId, setSubAgentViewsForConversation, workspacePath],
   );
 
+  const handleQueuedPromptSend = useCallback(
+    (id: string) => {
+      const itemIndex = queuedPrompts.findIndex((prompt) => prompt.id === id);
+      if (itemIndex < 0) return;
+      const item = queuedPrompts[itemIndex];
+      blockedQueueItemIdsRef.current.delete(id);
+      const streaming =
+        view.status === "streaming" ||
+        isStreaming ||
+        activeSubAgentId !== null ||
+        dequeueInFlightRef.current !== null;
+      if (streaming) {
+        // Bring this prompt to the front of the queue so the auto-dequeue
+        // effect picks it up right after the current turn stops, then ask
+        // the active turn to stop.
+        setPromptQueuesByConversation((current) =>
+          updatePromptQueue(current, conversationId, (queue) => {
+            const first = queue[0];
+            if (!first || first.id === id) return queue;
+            return moveQueuedPrompt(queue, id, first.id);
+          }),
+        );
+        void onStop().catch((err) => {
+          setView((prev) => ({
+            ...prev,
+            lastError: String(err),
+          }));
+        });
+        return;
+      }
+      sendQueuedPrompt(item, itemIndex);
+    },
+    [
+      activeSubAgentId,
+      conversationId,
+      isStreaming,
+      onStop,
+      queuedPrompts,
+      sendQueuedPrompt,
+      view.status,
+    ],
+  );
+
   const handleQueuedPromptEdit = useCallback(
     (id: string) => {
       const item = queuedPrompts.find((prompt) => prompt.id === id);
@@ -2866,6 +2915,7 @@ export function ChatPane({
         teamAgentColors={teamAgentColors}
         teamMessageRecipient={viewingSubAgent ? activeSubAgent?.name : undefined}
         onOpenFile={onOpenFile}
+        onQueuedPromptSend={viewingSubAgent ? undefined : handleQueuedPromptSend}
         onQueuedPromptEdit={viewingSubAgent ? undefined : handleQueuedPromptEdit}
         onQueuedPromptDelete={viewingSubAgent ? undefined : handleQueuedPromptDelete}
         onQueuedPromptMove={viewingSubAgent ? undefined : handleQueuedPromptMove}

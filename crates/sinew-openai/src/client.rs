@@ -1,6 +1,6 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    collections::HashSet,
+    sync::{Arc, Mutex},
 };
 
 use async_trait::async_trait;
@@ -16,8 +16,6 @@ use crate::{
     responses_stream::{event_provider_stream, sse_event_stream},
     websocket, wire,
 };
-
-use websocket::empty_connection_cache;
 
 const API_BASE_URL: &str = "https://api.openai.com/v1";
 const CODEX_BASE_URL: &str = "https://chatgpt.com/backend-api/codex";
@@ -56,8 +54,7 @@ impl OpenAiConfig {
 pub struct OpenAiProvider {
     config: OpenAiConfig,
     http: reqwest::Client,
-    websocket_fallback_active: Arc<AtomicBool>,
-    websocket_connection: websocket::SharedWebsocketConnection,
+    websocket_fallback_sessions: Arc<Mutex<HashSet<String>>>,
 }
 
 impl OpenAiProvider {
@@ -69,8 +66,7 @@ impl OpenAiProvider {
         Ok(Self {
             config,
             http,
-            websocket_fallback_active: Arc::new(AtomicBool::new(false)),
-            websocket_connection: empty_connection_cache(),
+            websocket_fallback_sessions: Arc::new(Mutex::new(HashSet::new())),
         })
     }
 
@@ -178,8 +174,7 @@ impl Provider for OpenAiProvider {
             &self.config,
             &self.http,
             request,
-            Arc::clone(&self.websocket_fallback_active),
-            Arc::clone(&self.websocket_connection),
+            Arc::clone(&self.websocket_fallback_sessions),
         )
         .await
     }
@@ -189,8 +184,7 @@ async fn stream_responses_request(
     config: &OpenAiConfig,
     http: &reqwest::Client,
     request: ProviderRequest,
-    websocket_fallback_active: Arc<AtomicBool>,
-    websocket_connection: websocket::SharedWebsocketConnection,
+    websocket_fallback_sessions: Arc<Mutex<HashSet<String>>>,
 ) -> Result<ProviderStream> {
     let bearer = config.credential.bearer(http).await?;
     let is_oauth = bearer.is_oauth;
@@ -203,23 +197,33 @@ async fn stream_responses_request(
     )?;
 
     let default_model = request.model.name.clone();
+    let websocket_fallback_key = websocket_fallback_key(&request);
 
-    if config.websocket_enabled && !websocket_fallback_active.load(Ordering::Relaxed) {
+    if config.websocket_enabled
+        && !websocket_fallback_is_active(&websocket_fallback_sessions, &websocket_fallback_key)
+    {
         let ws_body = serde_json::to_value(&body)?;
+        let fallback_sessions_for_stream = Arc::clone(&websocket_fallback_sessions);
+        let fallback_key_for_stream = websocket_fallback_key.clone();
+        let mark_websocket_fallback = Arc::new(move || {
+            mark_websocket_fallback_active(&fallback_sessions_for_stream, &fallback_key_for_stream);
+        });
         match websocket::stream_websocket_request(
             config,
             &bearer,
             ws_body,
             default_model.clone(),
-            Arc::clone(&websocket_fallback_active),
-            Arc::clone(&websocket_connection),
+            Some(mark_websocket_fallback),
         )
         .await
         {
             Ok(stream) => return Ok(stream),
             Err(err) if should_fallback_to_sse_after_websocket_setup_error(&err) => {
                 tracing::warn!(error = %err, "OpenAI websocket unavailable; falling back to SSE");
-                websocket_fallback_active.store(true, Ordering::Relaxed);
+                mark_websocket_fallback_active(
+                    &websocket_fallback_sessions,
+                    &websocket_fallback_key,
+                );
             }
             Err(err) => return Err(err),
         }
@@ -268,6 +272,29 @@ async fn stream_sse_request_with_bearer(
         default_model,
         "SSE",
     ))
+}
+
+fn websocket_fallback_key(request: &ProviderRequest) -> String {
+    request
+        .cache_key
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| format!("cache:{value}"))
+        .unwrap_or_else(|| format!("model:{}", request.model.name))
+}
+
+fn websocket_fallback_is_active(sessions: &Arc<Mutex<HashSet<String>>>, key: &str) -> bool {
+    sessions
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .contains(key)
+}
+
+fn mark_websocket_fallback_active(sessions: &Arc<Mutex<HashSet<String>>>, key: &str) {
+    sessions
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(key.to_string());
 }
 
 fn should_fallback_to_sse_after_websocket_setup_error(err: &AppError) -> bool {

@@ -786,11 +786,8 @@ impl AppStore {
         let tx = conn
             .transaction()
             .context("unable to open sqlite transaction")?;
-        let current_title_state = load_conversation_title_state(
-            &tx,
-            &conversation.workspace_id,
-            &conversation.id,
-        )?;
+        let current_title_state =
+            load_conversation_title_state(&tx, &conversation.workspace_id, &conversation.id)?;
         let title_state = resolve_title_for_save(
             current_title_state.as_ref(),
             &conversation.title,
@@ -857,11 +854,8 @@ impl AppStore {
         let tx = conn
             .transaction()
             .context("unable to open sqlite transaction")?;
-        let current_title_state = load_conversation_title_state(
-            &tx,
-            &conversation.workspace_id,
-            &conversation.id,
-        )?;
+        let current_title_state =
+            load_conversation_title_state(&tx, &conversation.workspace_id, &conversation.id)?;
         let title_state = resolve_title_for_save(
             current_title_state.as_ref(),
             &conversation.title,
@@ -1773,11 +1767,10 @@ mod tests {
     }
 
     #[test]
-    fn save_conversation_initializes_title_from_first_user_message_and_preserves_it() -> Result<()> {
-        let path = std::env::temp_dir().join(format!(
-            "sinew-store-title-test-{}.sqlite3",
-            Uuid::new_v4()
-        ));
+    fn save_conversation_initializes_title_from_first_user_message_and_preserves_it() -> Result<()>
+    {
+        let path =
+            std::env::temp_dir().join(format!("sinew-store-title-test-{}.sqlite3", Uuid::new_v4()));
         let store = AppStore { path: path.clone() };
         let result = (|| -> Result<()> {
             store.migrate()?;
@@ -1792,7 +1785,10 @@ mod tests {
                 .load_conversation("workspace", &conversation.id)?
                 .expect("conversation should exist");
             assert_eq!(loaded.title, "First request");
-            assert_eq!(store.list_conversations("workspace")?[0].title, "First request");
+            assert_eq!(
+                store.list_conversations("workspace")?[0].title,
+                "First request"
+            );
 
             let mut compacted = loaded;
             compacted.history = vec![

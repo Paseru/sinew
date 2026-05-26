@@ -56,6 +56,7 @@ pub(super) struct ActiveTurnRecord {
     pub(super) conversation_id: String,
     pub(super) started_at_ms: i64,
     pub(super) events: Vec<SequencedAgentEvent>,
+    pub(super) replay_events: Vec<SequencedAgentEvent>,
     pub(super) next_sequence: u64,
 }
 

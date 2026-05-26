@@ -685,8 +685,8 @@ export function GitPanel({
         <span className="git-panel__state-title">Git isn't available</span>
         <span className="git-panel__state-text">
           Sinew couldn't find a working <code>git</code> binary on your{" "}
-          <code>PATH</code>. Install Git, restart Sinew, and this panel will
-          come back online.
+          <code>PATH</code> or in standard install locations. Install Git,
+          restart Sinew if needed, and this panel will come back online.
         </span>
         {snapshot.error && (
           <span className="git-panel__state-error">{snapshot.error}</span>
