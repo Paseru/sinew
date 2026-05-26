@@ -400,8 +400,8 @@ fn unlocked_task_wake_message_names_task_and_start_command() {
 
     assert!(message.contains("#2"));
     assert!(message.contains("task 2"));
-    assert!(message.contains("TaskList action=update taskId=2 status=in_progress"));
-    assert!(message.contains("do not call TaskList action=list"));
+    assert!(message.contains("task_list action=update taskId=2 status=in_progress"));
+    assert!(message.contains("do not call task_list action=list"));
 }
 
 #[test]

@@ -819,9 +819,15 @@ mod tests {
         let root = temp_workspace("interactive_session_accepts_input");
         let tool = BashTool::new(&root);
 
+        let command = if cfg!(windows) {
+            "Write-Host -NoNewline 'Name: '; $name = [Console]::ReadLine(); Write-Host \"Hello $name\""
+        } else {
+            "printf 'Name: '; read name; printf 'Hello %s\\n' \"$name\""
+        };
+
         let started = tool
             .run(json!({
-                "command": "printf 'Name: '; read name; printf 'Hello %s\\n' \"$name\"",
+                "command": command,
                 "yield_time_ms": 500
             }))
             .await;
