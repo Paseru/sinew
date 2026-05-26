@@ -1,2 +1,2 @@
 ﻿@echo off
-node "%~dp0server.js" --native
+"C:\Program Files\nodejs\node.exe" "%~dp0server.js" --native

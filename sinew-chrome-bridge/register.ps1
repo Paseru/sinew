@@ -28,9 +28,10 @@ Write-Host "Cle de registre configuree."
 
 Write-Host "3/3 Configuration de native_host.bat..."
 $BatPath = Join-Path $ScriptDir "native_host.bat"
-$BatContent = "@echo off`r`nnode `"%~dp0server.js`" --native"
+$NodePath = (Get-Command node).Source
+$BatContent = "@echo off`r`n`"$NodePath`" `"%~dp0server.js`" --native"
 [System.IO.File]::WriteAllText($BatPath, $BatContent, [System.Text.Encoding]::UTF8)
-Write-Host "Script d'appel configure."
+Write-Host "Script d'appel configure avec Node.exe a : $NodePath"
 
 Write-Host "4/4 Configuration du serveur MCP dans la base de donnees de Sinew..."
 $PyScriptPath = Join-Path $ScriptDir "add_to_sinew.py"
