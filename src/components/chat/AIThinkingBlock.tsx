@@ -19,8 +19,14 @@ export function AIThinkingBlock({
   onOpenFile,
 }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(() => {
+    try {
+      return localStorage.getItem("sinew.compact-reasoning") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [isOpen, setIsOpen] = useState(() => {
-    const compact = localStorage.getItem("sinew.compact-reasoning") === "true";
     if (compact) return false;
     return isStreaming && content.trim().length > 0;
   });
@@ -41,17 +47,17 @@ export function AIThinkingBlock({
   }, [isStreaming]);
 
   useEffect(() => {
-    const compact = localStorage.getItem("sinew.compact-reasoning") === "true";
     if (compact) return;
     if (isStreaming && hasContent && !prevHasContentRef.current) {
       setIsOpen(true);
     }
     prevHasContentRef.current = hasContent;
-  }, [hasContent, isStreaming]);
+  }, [hasContent, isStreaming, compact]);
 
   useEffect(() => {
     const handler = (event: Event) => {
       const enabled = (event as CustomEvent<boolean>).detail;
+      setCompact(enabled);
       if (enabled) {
         setIsOpen(false);
       }
@@ -71,6 +77,10 @@ export function AIThinkingBlock({
   }, [content, contentOpen, isStreaming]);
 
   if (!hasContent) return null;
+
+  if (compact && !isStreaming) {
+    return null;
+  }
 
   return (
     <div className="thinking-block">
