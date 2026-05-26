@@ -3122,6 +3122,7 @@ textarea {
   background: var(--bg-0);
   color: var(--text-1);
   border-left: 1px solid var(--line);
+  container-type: inline-size;
 }
 
 .settings-pane__nav {
@@ -3429,10 +3430,35 @@ textarea {
   width: 100%;
 }
 
-@media (max-width: 640px) {
+/* Container Queries for Settings Pane Responsiveness */
+
+@container (max-width: 580px) {
+  .settings-pane {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    border-left: 0;
+  }
+  
+  .settings-pane__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-1);
+    padding: 10px;
+    gap: 6px;
+  }
+  
+  .settings-pane__nav-item {
+    padding: 6px 10px;
+    font-size: var(--fs-xs);
+  }
+}
+
+@container (max-width: 500px) {
   .settings-pane__about-card {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
   
   .settings-pane__locale-switch {
@@ -3446,6 +3472,38 @@ textarea {
     flex-direction: column;
     align-items: stretch !important;
     gap: 12px;
+  }
+}
+
+@container (max-width: 540px) {
+  .settings-pane__provider-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  
+  .settings-pane__provider-actions {
+    align-self: flex-end;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@container (max-width: 480px) {
+  .settings-pane__tool-credential {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px;
+  }
+}
+
+@container (max-width: 680px) {
+  .settings-pane__body--mcp,
+  .settings-pane__body--skills,
+  .settings-pane__body--subagents {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 }
 
