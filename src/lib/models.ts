@@ -201,11 +201,10 @@ export function availableModelsForProviders(
   for (const provider of configuredProviders) {
     if (provider.startsWith("openai:")) {
       const suffix = provider.slice("openai:".length);
-      const displayName = suffix.charAt(0).toUpperCase() + suffix.slice(1);
       entries.push({
         value: modelId(provider, "gpt-5.5"),
         provider: provider as any,
-        label: `GPT-5.5 (${displayName})`,
+        label: `OpenAI ${suffix}`,
         thinking: ["off", "low", "medium", "high", "xhigh"],
         defaultThinking: "xhigh",
         supportsFast: true,

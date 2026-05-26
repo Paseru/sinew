@@ -3288,8 +3288,9 @@ export function ChatPane({
                   >
                     {availableModels.map((m) => {
                       const selected = m.value === model;
-                      const providerIcon =
-                        PROVIDERS.find((p) => p.value === m.provider)?.icon;
+                      const providerIcon = m.provider.startsWith("openai:")
+                        ? "simple-icons:openai"
+                        : PROVIDERS.find((p) => p.value === m.provider)?.icon;
                       return (
                         <button
                           key={m.value}

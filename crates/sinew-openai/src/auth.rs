@@ -456,8 +456,27 @@ pub async fn exchange_oauth_code(
         .json()
         .await
         .map_err(|err| AppError::Decode(format!("invalid openai oauth body: {err}")))?;
+    
+    let default_path = default_auth_path()?;
+    let target_path = if default_path.exists() && load_auth_status(&default_path).map(|s| s.connected).unwrap_or(false) {
+        let dir = default_path.parent().unwrap();
+        let mut index = 2;
+        loop {
+            let p = dir.join(format!("openai-auth-{}.json", index));
+            if !p.exists() {
+                break p;
+            }
+            index += 1;
+            if index > 100 {
+                break dir.join(format!("openai-auth-{}.json", index));
+            }
+        }
+    } else {
+        default_path
+    };
+
     save_oauth_tokens(
-        &default_auth_path()?,
+        &target_path,
         &body.id_token,
         &body.access_token,
         &body.refresh_token,

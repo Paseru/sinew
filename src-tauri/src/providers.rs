@@ -57,23 +57,13 @@ pub(super) fn install_openai_provider(
     providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
 ) -> std::result::Result<(), String> {
     if let Ok(default_path) = default_auth_path() {
-        if default_path.exists() {
-            let dir = default_path.parent().unwrap();
-            let mut index = 1;
-            loop {
-                let target_path = dir.join(format!("openai-auth-{}.json", index));
-                if !target_path.exists() {
-                    if let Err(err) = std::fs::rename(&default_path, &target_path) {
-                        tracing::warn!("failed to auto-rename openai-auth.json: {:?}", err);
-                    } else {
-                        tracing::info!("automatically renamed openai-auth.json to {:?}", target_path);
-                    }
-                    break;
-                }
-                index += 1;
-                if index > 100 {
-                    break;
-                }
+        let dir = default_path.parent().unwrap();
+        let old_first_path = dir.join("openai-auth-1.json");
+        if old_first_path.exists() && !default_path.exists() {
+            if let Err(err) = std::fs::rename(&old_first_path, &default_path) {
+                tracing::warn!("failed to auto-rename openai-auth-1.json back to openai-auth.json: {:?}", err);
+            } else {
+                tracing::info!("successfully restored openai-auth-1.json as openai-auth.json (principal)");
             }
         }
     }

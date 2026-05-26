@@ -1545,78 +1545,50 @@ function ProvidersSection({
           icon="simple-icons:openai"
           description="Use OAuth to connect your ChatGPT account for OpenAI models."
           status={openAiStatus}
-          connectedMeta={[]}
+          connectedMeta={[
+            openAiStatus?.email || "Signed in",
+            openAiStatus?.planType ?? null,
+          ]}
           loading={loading}
           busy={busy}
           onConnect={onConnect}
           onCancel={onCancel}
           onDisconnect={onDisconnect}
-        >
-          {openAiAccounts.length > 0 && (
-            <div style={{ display: "grid", gap: "6px", marginTop: "12px" }}>
-              <div style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Comptes connectés ({openAiAccounts.length})
-              </div>
-              {openAiAccounts.map((account) => (
-                <div
-                  key={account.key}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "6px 10px",
-                    borderRadius: "6px",
-                    background: "var(--bg-2)",
-                    border: "1px solid var(--line-1)",
-                    fontSize: "13px"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ color: "var(--text-1)", fontWeight: 500 }}>{account.email}</span>
-                    {account.planType && (
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          padding: "2px 6px",
-                          borderRadius: "4px",
-                          background: "var(--bg-3)",
-                          color: "var(--text-2)",
-                          fontWeight: 500
-                        }}
-                      >
-                        {account.planType}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void onDisconnectOpenAiAccount(account.key)}
-                    disabled={busy}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      border: "none",
-                      background: "none",
-                      color: "var(--text-3)",
-                      cursor: "pointer",
-                      fontSize: "11px",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      transition: "all 140ms ease"
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-0)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-3)"; }}
-                    title="Déconnecter ce compte"
-                  >
-                    <Icon icon="solar:logout-2-linear" width={12} height={12} />
-                    <span>Déconnecter</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </ProviderCard>
+          showPlus={true}
+          onPlus={onConnect}
+        />
+        {openAiAccounts
+          .filter((account) => account.key.startsWith("openai:"))
+          .map((account) => {
+            const suffix = account.key.slice("openai:".length);
+            const displayName = `OpenAI ${suffix}`;
+            const accountStatus: ProviderCardStatus = {
+              connected: true,
+              connectionState: "connected",
+              email: account.email,
+              planType: account.planType,
+            };
+            return (
+              <ProviderCard
+                key={account.key}
+                name={displayName}
+                icon="simple-icons:openai"
+                description={`Connected OpenAI account ${suffix}.`}
+                status={accountStatus}
+                connectedMeta={[
+                  account.email || "Signed in",
+                  account.planType ?? null,
+                ]}
+                loading={loading}
+                busy={busy}
+                onConnect={() => {}}
+                onCancel={() => {}}
+                onDisconnect={() => void onDisconnectOpenAiAccount(account.key)}
+                showMinus={true}
+                onMinus={() => void onDisconnectOpenAiAccount(account.key)}
+              />
+            );
+          })}
         <ProviderCard
           name="Google"
           icon="simple-icons:google"
@@ -1681,6 +1653,10 @@ type ProviderCardProps = {
   onCancel: () => void;
   onDisconnect: () => void;
   children?: React.ReactNode;
+  showPlus?: boolean;
+  onPlus?: () => void;
+  showMinus?: boolean;
+  onMinus?: () => void;
 };
 
 function ProviderCard({
@@ -1695,6 +1671,10 @@ function ProviderCard({
   onCancel,
   onDisconnect,
   children,
+  showPlus,
+  onPlus,
+  showMinus,
+  onMinus,
 }: ProviderCardProps) {
   const state = status?.connectionState ?? "disconnected";
   const connected = Boolean(status?.connected);
@@ -1754,15 +1734,54 @@ function ProviderCard({
             <span>Cancel</span>
           </button>
         ) : connected ? (
-          <button
-            type="button"
-            className="settings-pane__btn"
-            onClick={onDisconnect}
-            disabled={busy}
-          >
-            <Icon icon="solar:logout-2-linear" width={13} height={13} />
-            <span>{busy ? "Disconnecting..." : "Disconnect"}</span>
-          </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {showPlus && (
+              <button
+                type="button"
+                className="settings-pane__btn"
+                onClick={onPlus}
+                disabled={loading || busy}
+                title="Add account"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "6px 8px",
+                  minWidth: "auto",
+                }}
+              >
+                <Icon icon="solar:add-circle-linear" width={16} height={16} />
+              </button>
+            )}
+            {showMinus && (
+              <button
+                type="button"
+                className="settings-pane__btn"
+                onClick={onMinus}
+                disabled={loading || busy}
+                title="Remove account"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "6px 8px",
+                  minWidth: "auto",
+                  color: "var(--text-error, #f87171)"
+                }}
+              >
+                <Icon icon="solar:minus-circle-linear" width={16} height={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="settings-pane__btn"
+              onClick={onDisconnect}
+              disabled={busy}
+            >
+              <Icon icon="solar:logout-2-linear" width={13} height={13} />
+              <span>{busy ? "Disconnecting..." : "Disconnect"}</span>
+            </button>
+          </div>
         ) : (
           <button
             type="button"
@@ -3226,7 +3245,9 @@ function SubAgentEditor({
               options={availableModels.map((model) => ({
                 value: model.value,
                 label: model.label,
-                icon: PROVIDERS.find((p) => p.value === model.provider)?.icon,
+                icon: model.provider.startsWith("openai:")
+                  ? "simple-icons:openai"
+                  : PROVIDERS.find((p) => p.value === model.provider)?.icon,
               }))}
               onSelect={(value) => updateModel(value as ModelId)}
             />
