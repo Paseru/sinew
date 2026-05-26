@@ -34,4 +34,19 @@ if ([string]::IsNullOrWhiteSpace($status)) {
 # Push vers ton fork.
 Run @("push", "-u", "origin", $Branch)
 
-Write-Host "OK: changements poussés sur GitHub." -ForegroundColor Green
+# Copie de la base de données vers OneDrive/Documents
+$dbName = "desktop-state.sqlite3"
+$localDbPath = "$env:USERPROFILE\AppData\Local\hyrak\sinew\data\$dbName"
+$onedriveDbDir = Join-Path ([System.Environment]::GetFolderPath('MyDocuments')) "Sinew"
+$onedriveDbPath = Join-Path $onedriveDbDir $dbName
+
+if (Test-Path $localDbPath) {
+  Write-Host "Sauvegarde de la base de données vers OneDrive/Documents/Sinew..." -ForegroundColor Cyan
+  if (!(Test-Path $onedriveDbDir)) {
+    New-Item -ItemType Directory -Path $onedriveDbDir -Force | Out-Null
+  }
+  Copy-Item -Path $localDbPath -Destination $onedriveDbPath -Force
+  Write-Host "Base de données sauvegardée dans OneDrive." -ForegroundColor Green
+}
+
+Write-Host "OK: changements et base de données poussés." -ForegroundColor Green

@@ -60,4 +60,35 @@ if ($hasChanges) {
   }
 }
 
-Write-Host "OK: dépôt à jour." -ForegroundColor Green
+# 3. Synchroniser la base de données (conversations) depuis OneDrive/Documents si disponible
+$dbName = "desktop-state.sqlite3"
+$localDbDir = "$env:USERPROFILE\AppData\Local\hyrak\sinew\data"
+$localDbPath = Join-Path $localDbDir $dbName
+$onedriveDbDir = Join-Path ([System.Environment]::GetFolderPath('MyDocuments')) "Sinew"
+$onedriveDbPath = Join-Path $onedriveDbDir $dbName
+
+if (Test-Path $onedriveDbPath) {
+  Write-Host "Base de données OneDrive détectée. Synchronisation locale..." -ForegroundColor Cyan
+  if (!(Test-Path $localDbDir)) {
+    New-Item -ItemType Directory -Path $localDbDir -Force | Out-Null
+  }
+  # Faire un backup de sécurité de la base locale si elle existe
+  if (Test-Path $localDbPath) {
+    $localTime = (Get-Item $localDbPath).LastWriteTime
+    $onedriveTime = (Get-Item $onedriveDbPath).LastWriteTime
+    if ($onedriveTime -gt $localTime) {
+      Write-Host "Le fichier sur OneDrive est plus récent ($onedriveTime) que le fichier local ($localTime). Copie..." -ForegroundColor Green
+      Copy-Item -Path $localDbPath -Destination "$localDbPath.bak" -Force
+      Copy-Item -Path $onedriveDbPath -Destination $localDbPath -Force
+    } else {
+      Write-Host "La base de données locale est déjà à jour ou plus récente." -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "Aucune base locale. Installation de la base depuis OneDrive..." -ForegroundColor Green
+    Copy-Item -Path $onedriveDbPath -Destination $localDbPath -Force
+  }
+} else {
+  Write-Host "Aucune base de données sur OneDrive pour le moment (elle sera créée automatiquement lors de la première sauvegarde)." -ForegroundColor Yellow
+}
+
+Write-Host "OK: dépôt et base de données à jour." -ForegroundColor Green
