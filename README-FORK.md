@@ -56,6 +56,8 @@ Ce panneau gère les serveurs de protocole de contexte de modèle :
   * *Bénéfice* : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
 * **📋 Sélection et Copie de Texte dans le Chat** :
   * *Bénéfice* : Permet de sélectionner et copier librement le texte des messages (réponses de l'assistant, extraits de code, questions et messages système) directement depuis la fenêtre de discussion, une action qui était auparavant bloquée par l'interface.
-* **🚀 Option "Execute / Run" au clic droit dans l'Explorateur de Fichiers** :
-  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel fichier de l'explorateur (barre latérale gauche) et de cliquer sur **"Execute / Run"** pour l'ouvrir ou le lancer directement sur le système d'exploitation Windows (contournant les restrictions de clic sur les liens locaux du chat). Idéal pour lancer des installateurs (`.exe`, `.msi`), des scripts ou tout document avec son application par défaut.
+* **🚀 Lancement et Exécution des Fichiers directement depuis les liens du Chat** :
+  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier généré par l'IA dans la zone de discussion (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour faire apparaître un menu contextuel permettant de l'exécuter/le lancer directement (**"Execute / Run"**), de l'afficher dans le dossier parent (**"Reveal in Explorer"**) ou de l'ouvrir dans l'éditeur. C'est la solution ultime pour contourner les limitations de clic des liens locaux !
+* **📁 Option "Execute / Run" au clic droit dans l'Explorateur de Fichiers (barre latérale)** :
+  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel fichier de l'explorateur (barre latérale gauche) et de cliquer sur **"Execute / Run"** pour l'ouvrir ou le lancer directement sur le système d'exploitation Windows. Idéal pour lancer des installateurs, des scripts ou tout document avec son application par défaut.
 
