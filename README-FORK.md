@@ -54,3 +54,5 @@ Ce panneau gère les serveurs de protocole de contexte de modèle :
 
 * **📌 Question Collante (Sticky Question)** :
   * *Bénéfice* : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
+* **📋 Sélection et Copie de Texte dans le Chat** :
+  * *Bénéfice* : Permet de sélectionner et copier librement le texte des messages (réponses de l'assistant, extraits de code, questions et messages système) directement depuis la fenêtre de discussion, une action qui était auparavant bloquée par l'interface.
