@@ -159,6 +159,59 @@ impl<'a> tracing_subscriber::fmt::writer::MakeWriter<'a> for MakeLogWriter {
     }
 }
 
+fn merge_databases(local_path: &std::path::Path, onedrive_path: &std::path::Path) -> Result<(), rusqlite::Error> {
+    #[cfg(target_os = "windows")]
+    {
+        let conn = rusqlite::Connection::open(local_path)?;
+        let onedrive_str = onedrive_path.to_string_lossy();
+        
+        // Attach OneDrive database
+        conn.execute(&format!("ATTACH DATABASE '{}' AS onedrive", onedrive_str), [])?;
+        
+        // Merge conversations
+        let _ = conn.execute("INSERT OR IGNORE INTO main.conversations SELECT * FROM onedrive.conversations", []);
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO main.conversations \
+             SELECT * FROM onedrive.conversations AS o \
+             WHERE EXISTS ( \
+                 SELECT 1 FROM main.conversations AS m \
+                 WHERE m.id = o.id AND o.updated_at_ms > m.updated_at_ms \
+             )",
+            [],
+        );
+        
+        // Merge messages
+        let _ = conn.execute("INSERT OR IGNORE INTO main.messages SELECT * FROM onedrive.messages", []);
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO main.messages \
+             SELECT * FROM onedrive.messages AS o \
+             WHERE EXISTS ( \
+                 SELECT 1 FROM main.conversations AS mc \
+                 JOIN onedrive.conversations AS oc ON mc.id = oc.id \
+                 WHERE mc.id = o.conversation_id AND oc.updated_at_ms > mc.updated_at_ms \
+             )",
+            [],
+        );
+        
+        // Merge app_settings
+        let _ = conn.execute("INSERT OR IGNORE INTO main.app_settings SELECT * FROM onedrive.app_settings", []);
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO main.app_settings \
+             SELECT * FROM onedrive.app_settings AS o \
+             WHERE EXISTS ( \
+                 SELECT 1 FROM main.app_settings AS m \
+                 WHERE m.key = o.key AND o.updated_at_ms > m.updated_at_ms \
+             )",
+            [],
+        );
+        
+        // Detach OneDrive database
+        let _ = conn.execute("DETACH DATABASE onedrive", []);
+    }
+    let _ = (local_path, onedrive_path);
+    Ok(())
+}
+
 fn sync_onedrive_db_on_startup() {
     #[cfg(target_os = "windows")]
     {
@@ -207,27 +260,18 @@ fn sync_onedrive_db_on_startup() {
             }
 
             if local_db.exists() {
-                let local_meta = match fs::metadata(&local_db) {
-                    Ok(m) => m,
-                    Err(_) => return,
-                };
-                let onedrive_meta = match fs::metadata(&onedrive_db) {
-                    Ok(m) => m,
-                    Err(_) => return,
-                };
-                let local_time = match local_meta.modified() {
-                    Ok(t) => t,
-                    Err(_) => return,
-                };
-                let onedrive_time = match onedrive_meta.modified() {
-                    Ok(t) => t,
-                    Err(_) => return,
-                };
-
-                if onedrive_time > local_time {
-                    let backup_path = local_db.with_extension("sqlite3.bak");
-                    let _ = fs::copy(&local_db, &backup_path);
-                    let _ = fs::copy(&onedrive_db, &local_db);
+                let backup_path = local_db.with_extension("sqlite3.bak");
+                let _ = fs::copy(&local_db, &backup_path);
+                
+                // Perform differential merge
+                if let Err(e) = merge_databases(&local_db, &onedrive_db) {
+                    tracing::error!("Differential merge on startup failed: {:?}", e);
+                    // Fallback to direct overwrite if local database is empty or corrupt
+                    if let Ok(meta) = fs::metadata(&local_db) {
+                        if meta.len() == 0 {
+                            let _ = fs::copy(&onedrive_db, &local_db);
+                        }
+                    }
                 }
             } else {
                 let _ = fs::copy(&onedrive_db, &local_db);
@@ -280,7 +324,15 @@ fn backup_onedrive_db_on_exit() {
 
         if local_db.exists() {
             let _ = fs::create_dir_all(&onedrive_db_dir);
-            let _ = fs::copy(&local_db, &onedrive_db);
+            if onedrive_db.exists() {
+                // Perform differential merge into OneDrive so no data is lost
+                if let Err(e) = merge_databases(&onedrive_db, &local_db) {
+                    tracing::error!("Differential merge on exit failed: {:?}", e);
+                    let _ = fs::copy(&local_db, &onedrive_db);
+                }
+            } else {
+                let _ = fs::copy(&local_db, &onedrive_db);
+            }
         }
     }
 }
@@ -531,6 +583,7 @@ pub fn run() {
             providers::disconnect_openai_provider,
             providers::get_all_openai_accounts,
             providers::disconnect_openai_account,
+            providers::save_openai_access_token,
             providers::get_anthropic_provider_status,
             providers::start_anthropic_oauth_login,
             providers::cancel_anthropic_oauth_login,

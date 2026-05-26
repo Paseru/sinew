@@ -87,6 +87,18 @@ if (Test-Path $onedriveDbPath) {
     Write-Host "Aucune base locale. Installation de la base depuis OneDrive..." -ForegroundColor Green
     Copy-Item -Path $onedriveDbPath -Destination $localDbPath -Force
   }
+  
+  # Presse-papiers Partagé (Universal Clipboard)
+  $onedriveClipPath = Join-Path $onedriveDbDir "clipboard.txt"
+  if (Test-Path $onedriveClipPath) {
+    try {
+      $clip = [System.IO.File]::ReadAllText($onedriveClipPath, [System.Text.Encoding]::UTF8)
+      if ($clip) {
+        Set-Clipboard -Value $clip -ErrorAction SilentlyContinue
+        Write-Host "Presse-papiers synchronisé depuis OneDrive !" -ForegroundColor Green
+      }
+    } catch {}
+  }
 } else {
   Write-Host "Aucune base de données sur OneDrive pour le moment (elle sera créée automatiquement lors de la première sauvegarde)." -ForegroundColor Yellow
 }

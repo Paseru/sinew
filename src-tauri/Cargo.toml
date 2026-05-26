@@ -23,6 +23,7 @@ sinew-kimi = { workspace = true }
 sinew-openai = { workspace = true }
 sinew-openrouter = { workspace = true }
 directories = { workspace = true }
+rusqlite = { workspace = true }
 
 anyhow = { workspace = true }
 base64 = { workspace = true }

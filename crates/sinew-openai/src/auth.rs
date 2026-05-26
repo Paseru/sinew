@@ -533,6 +533,34 @@ fn save_oauth_tokens(
     Ok(status_from_auth(&auth))
 }
 
+pub fn save_raw_access_token(
+    path: &Path,
+    access_token: &str,
+) -> Result<OpenAiAuthStatus> {
+    let expires_at_ms = token_expiry_ms(access_token)
+        .unwrap_or_else(|| now_ms() + (3600 as i64 * 1000) - REFRESH_SKEW_MS);
+    let account_id = token_account_id(access_token);
+    let email = token_email(access_token);
+    let plan_type = token_plan_type(access_token);
+    
+    let auth = StoredAuth {
+        provider: "openai".into(),
+        auth_mode: "oauth".into(),
+        tokens: StoredTokens {
+            access_token: access_token.into(),
+            refresh_token: "".into(),
+            id_token: Some(access_token.into()),
+            account_id,
+            email,
+            plan_type,
+            expires_at_ms: Some(expires_at_ms),
+        },
+        last_refresh_ms: Some(now_ms()),
+    };
+    write_auth_file(path, &auth)?;
+    Ok(status_from_auth(&auth))
+}
+
 fn write_auth_file(path: &Path, auth: &StoredAuth) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)

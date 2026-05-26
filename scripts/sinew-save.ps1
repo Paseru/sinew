@@ -47,6 +47,16 @@ if (Test-Path $localDbPath) {
   }
   Copy-Item -Path $localDbPath -Destination $onedriveDbPath -Force
   Write-Host "Base de données sauvegardée dans OneDrive." -ForegroundColor Green
+  
+  # Presse-papiers Partagé (Universal Clipboard)
+  try {
+    $clip = Get-Clipboard -ErrorAction SilentlyContinue
+    if ($clip) {
+      $onedriveClipPath = Join-Path $onedriveDbDir "clipboard.txt"
+      [System.IO.File]::WriteAllText($onedriveClipPath, $clip, [System.Text.Encoding]::UTF8)
+      Write-Host "Presse-papiers sauvegardé sur OneDrive." -ForegroundColor Green
+    }
+  } catch {}
 }
 
 Write-Host "OK: changements et base de données poussés." -ForegroundColor Green

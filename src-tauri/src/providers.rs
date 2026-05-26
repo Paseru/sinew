@@ -1007,6 +1007,35 @@ pub(super) async fn disconnect_openai_account(
 }
 
 #[tauri::command]
+pub(super) async fn save_openai_access_token(
+    state: State<'_, DesktopState>,
+    token: String,
+    key: Option<String>,
+) -> std::result::Result<(), String> {
+    let token = token.trim().to_string();
+    if token.is_empty() {
+        return Err("access token is empty".to_string());
+    }
+
+    let default_path = default_auth_path().map_err(error_to_string)?;
+    let target_path = if let Some(ref k) = key {
+        if k == "openai" {
+            default_path
+        } else {
+            let suffix = k.strip_prefix("openai:").unwrap_or(k);
+            default_path.parent().unwrap().join(format!("openai-auth-{}.json", suffix))
+        }
+    } else {
+        default_path
+    };
+
+    sinew_openai::save_raw_access_token(&target_path, &token).map_err(error_to_string)?;
+
+    install_openai_provider(&state.providers)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub(super) async fn get_anthropic_provider_status(
     state: State<'_, DesktopState>,
 ) -> std::result::Result<AnthropicProviderStatus, String> {
