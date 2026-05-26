@@ -1302,6 +1302,13 @@ impl AppStore {
 
     pub fn delete_conversation(&self, workspace_id: &str, id: &str) -> Result<()> {
         let conn = self.connection()?;
+        let now = now_ms();
+        conn.execute(
+            "insert or replace into tombstones (id, deleted_at_ms) values (?1, ?2)",
+            params![id, now],
+        )
+        .context("unable to insert tombstone")?;
+
         conn.execute(
             "delete from conversations where workspace_id = ?1 and id = ?2",
             params![workspace_id, id],
@@ -1385,6 +1392,7 @@ impl AppStore {
         ensure_conversations_title_initialized_column(&conn)?;
         ensure_app_settings_table(&conn)?;
         ensure_turn_checkpoints_table(&conn)?;
+        ensure_tombstones_table(&conn)?;
         if version < 8 {
             conn.execute("delete from turn_checkpoints", [])
                 .context("unable to clear legacy turn checkpoints")?;
@@ -1507,6 +1515,19 @@ fn ensure_turn_checkpoints_table(conn: &Connection) -> Result<()> {
         "#,
     )
     .context("unable to create turn checkpoint table")?;
+    Ok(())
+}
+
+fn ensure_tombstones_table(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        r#"
+        create table if not exists tombstones (
+            id text primary key,
+            deleted_at_ms integer not null
+        );
+        "#,
+    )
+    .context("unable to create tombstones table")?;
     Ok(())
 }
 

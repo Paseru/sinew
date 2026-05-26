@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     collections::{HashMap, HashSet},
     fs,
     io::{Read, Write},
@@ -43,9 +43,9 @@ use sinew_app::{
     shell_system_prompt, snapshot_workspace_for_checkpoint, subagent_system_prompt,
     system_prompt_for_mode_with_plan_prompt, system_prompt_with_todo, todo_list_from_history,
     tool_settings_view, trash_workspace_entry, write_workspace_file, AgentEvent, AgentMode,
-    AppStore, BashTool, ConversationEvent, ConversationSummary, CreateImageTool, EditFileTool,
-    GlobTool, GoalWorkflowState, GrepTool, CheckSotaTool, ImportedEntry, InstalledSkill, McpSettings,
-    McpToolRegistry, ModeModelSettings, OpenRouterModelRecord, PlanArtifactState,
+    AppStore, BashTool, CheckSotaTool, ConversationEvent, ConversationSummary, CreateImageTool,
+    EditFileTool, GlobTool, GoalWorkflowState, GrepTool, ImportedEntry, InstalledSkill,
+    McpSettings, McpToolRegistry, ModeModelSettings, OpenRouterModelRecord, PlanArtifactState,
     PlanWorkflowState, QuestionTool, ReadTool, SavedConversation, SkillSettings, SkillTool,
     SubAgentConfig, SubAgentSettings, SubAgentTool, TeamRuntime, TeamTool, TerminalPathResolution,
     ToDoListTool, TodoListState, ToolSettings, ToolSettingsView, TurnCancel, TurnContext,
@@ -74,9 +74,9 @@ use sinew_kimi::{
     MODEL_ID as KIMI_MODEL_ID,
 };
 use sinew_openai::{
-    all_auth_files, default_auth_path, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
-    load_auth_status, load_default_auth_status, oauth_authorize_url, OpenAiAuthStatus, OpenAiProvider, PkceCodes,
-    MODEL_ID as OPENAI_MODEL_ID,
+    all_auth_files, default_auth_path, delete_default_auth, exchange_oauth_code, generate_pkce,
+    generate_state, load_auth_status, load_default_auth_status, oauth_authorize_url,
+    OpenAiAuthStatus, OpenAiProvider, PkceCodes, MODEL_ID as OPENAI_MODEL_ID,
 };
 use sinew_openrouter::{
     delete_default_auth as delete_default_openrouter_auth,
@@ -159,29 +159,84 @@ impl<'a> tracing_subscriber::fmt::writer::MakeWriter<'a> for MakeLogWriter {
     }
 }
 
-fn merge_databases(local_path: &std::path::Path, onedrive_path: &std::path::Path) -> Result<(), rusqlite::Error> {
+fn merge_databases(
+    local_path: &std::path::Path,
+    onedrive_path: &std::path::Path,
+) -> Result<(), rusqlite::Error> {
     #[cfg(target_os = "windows")]
     {
         let conn = rusqlite::Connection::open(local_path)?;
         let onedrive_str = onedrive_path.to_string_lossy();
-        
+
         // Attach OneDrive database
-        conn.execute(&format!("ATTACH DATABASE '{}' AS onedrive", onedrive_str), [])?;
-        
-        // Merge conversations
-        let _ = conn.execute("INSERT OR IGNORE INTO main.conversations SELECT * FROM onedrive.conversations", []);
+        conn.execute(
+            &format!("ATTACH DATABASE '{}' AS onedrive", onedrive_str),
+            [],
+        )?;
+
+        // Ensure tombstones table exists in both main and onedrive to prevent errors
+        let _ = conn.execute(
+            "create table if not exists main.tombstones (
+                id text primary key,
+                deleted_at_ms integer not null
+            )",
+            [],
+        );
+        let _ = conn.execute(
+            "create table if not exists onedrive.tombstones (
+                id text primary key,
+                deleted_at_ms integer not null
+            )",
+            [],
+        );
+
+        // Enable foreign keys
+        let _ = conn.execute("PRAGMA foreign_keys = ON", []);
+
+        // 1. Merge tombstones
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO main.tombstones SELECT * FROM onedrive.tombstones",
+            [],
+        );
+
+        // 2. Delete conversations/messages that are in tombstones
+        let _ = conn.execute(
+            "DELETE FROM main.conversations WHERE id IN (SELECT id FROM main.tombstones)",
+            [],
+        );
+        let _ = conn.execute(
+            "DELETE FROM main.messages WHERE conversation_id IN (SELECT id FROM main.tombstones)",
+            [],
+        );
+        let _ = conn.execute(
+            "DELETE FROM main.turn_checkpoints WHERE conversation_id IN (SELECT id FROM main.tombstones)",
+            [],
+        );
+
+        // 3. Merge conversations (excluding those with tombstones)
+        let _ = conn.execute(
+            "INSERT OR IGNORE INTO main.conversations \
+             SELECT * FROM onedrive.conversations \
+             WHERE id NOT IN (SELECT id FROM main.tombstones)",
+            [],
+        );
         let _ = conn.execute(
             "INSERT OR REPLACE INTO main.conversations \
              SELECT * FROM onedrive.conversations AS o \
              WHERE EXISTS ( \
                  SELECT 1 FROM main.conversations AS m \
                  WHERE m.id = o.id AND o.updated_at_ms > m.updated_at_ms \
-             )",
+             ) AND o.id NOT IN (SELECT id FROM main.tombstones)",
             [],
         );
-        
-        // Merge messages
-        let _ = conn.execute("INSERT OR IGNORE INTO main.messages SELECT * FROM onedrive.messages", []);
+
+        // 4. Merge messages (excluding those with tombstones)
+        let _ = conn.execute(
+            "INSERT OR IGNORE INTO main.messages \
+             SELECT * FROM onedrive.messages \
+             WHERE conversation_id NOT IN (SELECT id FROM main.tombstones)",
+            [],
+        );
         let _ = conn.execute(
             "INSERT OR REPLACE INTO main.messages \
              SELECT * FROM onedrive.messages AS o \
@@ -189,12 +244,15 @@ fn merge_databases(local_path: &std::path::Path, onedrive_path: &std::path::Path
                  SELECT 1 FROM main.conversations AS mc \
                  JOIN onedrive.conversations AS oc ON mc.id = oc.id \
                  WHERE mc.id = o.conversation_id AND oc.updated_at_ms > mc.updated_at_ms \
-             )",
+             ) AND o.conversation_id NOT IN (SELECT id FROM main.tombstones)",
             [],
         );
-        
-        // Merge app_settings
-        let _ = conn.execute("INSERT OR IGNORE INTO main.app_settings SELECT * FROM onedrive.app_settings", []);
+
+        // 5. Merge app_settings
+        let _ = conn.execute(
+            "INSERT OR IGNORE INTO main.app_settings SELECT * FROM onedrive.app_settings",
+            [],
+        );
         let _ = conn.execute(
             "INSERT OR REPLACE INTO main.app_settings \
              SELECT * FROM onedrive.app_settings AS o \
@@ -204,7 +262,7 @@ fn merge_databases(local_path: &std::path::Path, onedrive_path: &std::path::Path
              )",
             [],
         );
-        
+
         // Detach OneDrive database
         let _ = conn.execute("DETACH DATABASE onedrive", []);
     }
@@ -262,7 +320,7 @@ fn sync_onedrive_db_on_startup() {
             if local_db.exists() {
                 let backup_path = local_db.with_extension("sqlite3.bak");
                 let _ = fs::copy(&local_db, &backup_path);
-                
+
                 // Perform differential merge
                 if let Err(e) = merge_databases(&local_db, &onedrive_db) {
                     tracing::error!("Differential merge on startup failed: {:?}", e);
@@ -280,7 +338,7 @@ fn sync_onedrive_db_on_startup() {
     }
 }
 
-fn backup_onedrive_db_on_exit() {
+pub(crate) fn backup_onedrive_db_on_exit() {
     #[cfg(target_os = "windows")]
     {
         use std::fs;
@@ -317,9 +375,7 @@ fn backup_onedrive_db_on_exit() {
         if onedrive.is_empty() {
             return;
         }
-        let onedrive_db_dir = PathBuf::from(onedrive)
-            .join("Documents")
-            .join("Sinew");
+        let onedrive_db_dir = PathBuf::from(onedrive).join("Documents").join("Sinew");
         let onedrive_db = onedrive_db_dir.join("desktop-state.sqlite3");
 
         if local_db.exists() {
@@ -659,5 +715,3 @@ pub fn run() {
             }
         })
 }
-
-
