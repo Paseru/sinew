@@ -549,7 +549,7 @@ export function ChatPane({
       estimate: null,
     });
 
-  const [lastQuestionScrolledOut, setLastQuestionScrolledOut] = useState(false);
+  const [activeStickyQuestionId, setActiveStickyQuestionId] = useState<string | null>(null);
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -1325,14 +1325,18 @@ export function ChatPane({
       stickToBottomRef.current =
         el.scrollHeight - el.scrollTop - el.clientHeight < 120;
 
-      const lastQuestionEl = el.querySelector("#last-user-question");
-      if (lastQuestionEl) {
-        const rect = lastQuestionEl.getBoundingClientRect();
-        const bodyRect = el.getBoundingClientRect();
-        setLastQuestionScrolledOut(rect.bottom < bodyRect.top);
-      } else {
-        setLastQuestionScrolledOut(false);
+      const questionEls = el.querySelectorAll('[data-user-question="true"]');
+      const bodyRect = el.getBoundingClientRect();
+      let activeId: string | null = null;
+
+      for (const qEl of questionEls) {
+        const rect = qEl.getBoundingClientRect();
+        if (rect.bottom < bodyRect.top) {
+          activeId = qEl.id.replace("user-question-", "");
+        }
       }
+
+      setActiveStickyQuestionId(activeId);
     };
     const cancelOnUpwardWheel = (event: WheelEvent) => {
       if (event.deltaY >= 0) return;
@@ -2653,19 +2657,22 @@ export function ChatPane({
   const viewingSubAgent = activeSubAgent !== null;
   const displayView = activeSubAgent?.view ?? view;
 
-  const lastUserTextBlock = useMemo(() => {
-    const userBlocks = displayView.blocks.filter((b) => b.kind === "user-text");
-    return userBlocks.length > 0 ? userBlocks[userBlocks.length - 1] : null;
-  }, [displayView.blocks]);
+  const activeStickyQuestionBlock = useMemo(() => {
+    if (!activeStickyQuestionId) return null;
+    const found = displayView.blocks.find(
+      (b) => b.kind === "user-text" && b.id === activeStickyQuestionId
+    );
+    return found && found.kind === "user-text" ? found : null;
+  }, [displayView.blocks, activeStickyQuestionId]);
 
-  const scrollToLastQuestion = useCallback(() => {
+  const scrollToActiveQuestion = useCallback(() => {
     const el = bodyRef.current;
-    if (!el) return;
-    const lastQuestionEl = el.querySelector("#last-user-question");
-    if (lastQuestionEl) {
-      lastQuestionEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!el || !activeStickyQuestionId) return;
+    const questionEl = el.querySelector(`#user-question-${activeStickyQuestionId}`);
+    if (questionEl) {
+      questionEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, []);
+  }, [activeStickyQuestionId]);
 
   const showPlanningNextMove = shouldShowPlanningNextMove(displayView);
   const teamAgentRoster = useMemo(
@@ -2860,10 +2867,10 @@ export function ChatPane({
         </span>
         <span className="chat-head__dot" data-status={displayView.status} />
       </div>
-      {lastQuestionScrolledOut && lastUserTextBlock && (
+      {activeStickyQuestionBlock && (
         <div 
           className="chat-sticky-question" 
-          onClick={scrollToLastQuestion}
+          onClick={scrollToActiveQuestion}
           title="Cliquez pour faire défiler jusqu'à la question"
         >
           <div className="chat-sticky-question__main">
@@ -2881,7 +2888,7 @@ export function ChatPane({
               </button>
             </div>
             <div className="chat-sticky-question__body">
-              {lastUserTextBlock.text}
+              {activeStickyQuestionBlock.text}
             </div>
           </div>
         </div>
@@ -2915,7 +2922,7 @@ export function ChatPane({
               {displayView.blocks.length > 0 && (
                 <ChatBlocks
                   blocks={displayView.blocks}
-                  lastUserTextBlockId={lastUserTextBlock?.id}
+                  lastUserTextBlockId={null}
                   onPreviewImage={setPreviewImage}
                   onRewindMessage={viewingSubAgent ? () => {} : handleRewindToMessage}
                   rewindDisabled={viewingSubAgent || view.status === "streaming"}
@@ -5621,7 +5628,8 @@ function BlockView({
         <div 
           className="msg" 
           data-role="user"
-          id={isLastUserText ? "last-user-question" : undefined}
+          id={`user-question-${block.id}`}
+          data-user-question="true"
         >
           <div
             className="msg__body user-text"
