@@ -40,6 +40,7 @@
 - [Compaction](#compaction) — auto and manual
 - [Rollback](#rollback) — checkpointed conversation
 - [Display modes & Responsive Options](#display-modes--responsive-options) — technical reasoning density & UI responsiveness
+- [SOTA System Diagnostics](#sota-system-diagnostics) — real-time local dependency audit
 - [Architecture](#architecture) · [Install](#install) · [Build from source](#build-from-source)
 
 ---
@@ -533,6 +534,17 @@ To address this, Sinew uses **CSS Container Queries** (`@container`) on the opti
 - **Responsive Cards** — Provider settings (OAuth connections, API key fields, model search tools) wrap seamlessly from side-by-side rows to stacked vertical layouts without cramping descriptions.
 - **Stacked Credential Rows** — Text input fields for keys and endpoints wrap underneath their labels in small panels rather than getting squished.
 - **Two-Column grids** — Lists of system diagnostics tools (Cargo, Node, Python, Git) and MCP components automatically stack into a single column.
+
+### SOTA System Diagnostics
+
+Sinew features a built-in real-time **SOTA System Diagnostics** utility in the Options panel to ensure your environment is fully configured for state-of-the-art agent operations.
+
+- **How it works** — Clicking the **Refresh (*Actualiser*)** button queries the local operating system, verifies execution health, resolves absolute system paths, and extracts version details of all crucial development tools (Git, Node.js, Npm, Cargo, Rustc, Python, Pip, and Ripgrep).
+- **Why it matters** — These dependencies are directly used by Sinew:
+  - **Git** powers the conversation rollback and automatic background Git commits.
+  - **Ripgrep (`rg`)** provides blisteringly fast codebase indexing and regex searches.
+  - **Python & Pip** run advanced Model Context Protocol (MCP) servers and AI-assisted scripts.
+  - **Node.js, Npm, Rustc & Cargo** handle application runtime, sidecar compilation, and build pipelines.
 
 ---
 
