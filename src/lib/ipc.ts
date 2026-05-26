@@ -675,4 +675,10 @@ export const api = {
   currentAppVersion() {
     return invoke<string>("updater_current_version");
   },
+  isMultiPcSyncEnabled() {
+    return invoke<boolean>("is_multi_pc_sync_enabled");
+  },
+  setMultiPcSyncEnabled(enabled: boolean) {
+    return invoke<void>("set_multi_pc_sync_enabled", { enabled });
+  },
 };

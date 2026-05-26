@@ -170,6 +170,17 @@ fn sync_onedrive_db_on_startup() {
             Ok(val) => val,
             Err(_) => return,
         };
+
+        // Check if Multi-PC sync is enabled
+        let sync_enabled_file = PathBuf::from(&localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("multi_pc_enabled.txt");
+        if !sync_enabled_file.exists() {
+            return;
+        }
+
         let local_db = PathBuf::from(localappdata)
             .join("hyrak")
             .join("sinew")
@@ -236,6 +247,17 @@ fn backup_onedrive_db_on_exit() {
             Ok(val) => val,
             Err(_) => return,
         };
+
+        // Check if Multi-PC sync is enabled
+        let sync_enabled_file = PathBuf::from(&localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("multi_pc_enabled.txt");
+        if !sync_enabled_file.exists() {
+            return;
+        }
+
         let local_db = PathBuf::from(localappdata)
             .join("hyrak")
             .join("sinew")
@@ -261,6 +283,46 @@ fn backup_onedrive_db_on_exit() {
             let _ = fs::copy(&local_db, &onedrive_db);
         }
     }
+}
+
+#[tauri::command]
+fn is_multi_pc_sync_enabled() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let file = std::path::PathBuf::from(localappdata)
+                .join("hyrak")
+                .join("sinew")
+                .join("data")
+                .join("multi_pc_enabled.txt");
+            return file.exists();
+        }
+    }
+    false
+}
+
+#[tauri::command]
+fn set_multi_pc_sync_enabled(enabled: bool) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let dir = std::path::PathBuf::from(localappdata)
+                .join("hyrak")
+                .join("sinew")
+                .join("data");
+            let _ = std::fs::create_dir_all(&dir);
+            let file = dir.join("multi_pc_enabled.txt");
+            if enabled {
+                if let Err(e) = std::fs::write(&file, b"1") {
+                    return Err(e.to_string());
+                }
+            } else {
+                let _ = std::fs::remove_file(&file);
+            }
+            return Ok(());
+        }
+    }
+    Err("Not supported on this platform".to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -521,6 +583,8 @@ pub fn run() {
             updater::updater_download_and_install,
             updater::updater_restart,
             updater::updater_current_version,
+            is_multi_pc_sync_enabled,
+            set_multi_pc_sync_enabled,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")

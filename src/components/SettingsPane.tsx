@@ -1327,12 +1327,26 @@ function AboutSection({
     }
   });
 
+  const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
+
+  useEffect(() => {
+    api.isMultiPcSyncEnabled().then((enabled) => {
+      setMultiPcSync(enabled);
+    }).catch(() => {});
+  }, []);
+
   const togglePowerUser = (enabled: boolean) => {
     try {
       localStorage.setItem("sinew.power-user", enabled ? "true" : "false");
     } catch {}
     setPowerUser(enabled);
     window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: enabled }));
+  };
+
+  const toggleMultiPcSync = (enabled: boolean) => {
+    api.setMultiPcSyncEnabled(enabled).then(() => {
+      setMultiPcSync(enabled);
+    }).catch(() => {});
   };
 
   return (
@@ -1404,6 +1418,33 @@ function AboutSection({
             aria-checked={!powerUser}
             data-active={!powerUser ? "true" : "false"}
             onClick={() => togglePowerUser(false)}
+          >
+            Disabled
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>Multi-PC Sync</h2>
+          <p>Automatically synchronize your conversations and configurations between your computers via OneDrive.</p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={multiPcSync}
+            data-active={multiPcSync ? "true" : "false"}
+            onClick={() => toggleMultiPcSync(true)}
+          >
+            Enabled
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!multiPcSync}
+            data-active={!multiPcSync ? "true" : "false"}
+            onClick={() => toggleMultiPcSync(false)}
           >
             Disabled
           </button>

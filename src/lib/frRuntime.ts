@@ -265,6 +265,8 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Delete this conversation?": "Supprimer cette conversation ?",
   "Power User Mode": "Mode Power User",
   "Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers.": "Gère et automatise tout en arrière-plan (Git & autres) et active les réponses ultra-concises et simplifiées.",
+  "Multi-PC Sync": "Synchronisation Multi-PC",
+  "Automatically synchronize your conversations and configurations between your computers via OneDrive.": "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive.",
   "Enabled": "Activé",
   "Disabled": "Désactivé",
 };

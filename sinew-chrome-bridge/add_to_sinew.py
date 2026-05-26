@@ -22,8 +22,7 @@ new_server = {
     "command": bridge_bat,
     "args": [],
     "env": [
-        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"},
-        {"key": "MCP_SKILLS_ENABLED", "value": "true"}
+        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"}
     ],
     "cwd": script_dir,
     "enabled": True
