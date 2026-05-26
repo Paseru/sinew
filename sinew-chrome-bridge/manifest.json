@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sinew Chrome Bridge",
   "version": "1.0.0",
-  "description": "Bridges Sinew and browser-use to your active, running Chrome session.",
+  "description": "Local Chrome control bridge for Sinew, powered by Native Messaging and CDP.",
   "permissions": [
     "alarms",
     "bookmarks",

@@ -21,6 +21,33 @@
   // Stylings for our cyber neon cursor, click shockwaves and target HUD
   const style = document.createElement("style");
   style.textContent = `
+    .sinew-controlled-tab-indicator {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 4px;
+      z-index: 2147483646;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 180ms ease, transform 180ms ease;
+      background: linear-gradient(90deg, #ff6b00, #ff0080, #66f7ff, #ff6b00);
+      background-size: 260% 100%;
+      box-shadow: 0 0 12px rgba(255, 0, 128, 0.55), 0 0 24px rgba(102, 247, 255, 0.35);
+      animation: sinew-controlled-tab-flow 2.2s linear infinite;
+    }
+
+    .sinew-controlled-tab-indicator.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes sinew-controlled-tab-flow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 260% 50%; }
+    }
+
     .cursor-overlay {
       position: absolute;
       top: 0;
@@ -370,6 +397,10 @@
   targetHud.className = "cyber-hud-target";
   shadow.appendChild(targetHud);
 
+  const tabIndicator = document.createElement("div");
+  tabIndicator.className = "sinew-controlled-tab-indicator";
+  shadow.appendChild(tabIndicator);
+
   // Holographic Cyber cursor element
   const overlay = document.createElement("div");
   overlay.className = "cursor-overlay";
@@ -546,109 +577,28 @@
   }
 
   // ==========================================================
-  // Dynamic Favicon Badge Manager
+  // Controlled tab visual indicator (Codex-style underline)
   // ==========================================================
-  let originalFaviconLinks = [];
-  let isBadged = false;
-  let faviconBadgeTimer = null;
+  let controlledIndicatorTimer = null;
 
-  function restoreOriginalFavicon() {
-    if (!isBadged) return;
-    
-    // Remove injected badge elements
-    const injected = document.querySelectorAll('link[data-Sinew-badge="true"]');
-    injected.forEach(el => el.remove());
-    
-    // Restore original favicon nodes
-    originalFaviconLinks.forEach(item => {
-      if (item.link && item.originalHref) {
-        item.link.setAttribute("href", item.originalHref);
-      }
-    });
-    
-    originalFaviconLinks = [];
-    isBadged = false;
-  }
-
-  function getAbsoluteUrl(url) {
-    if (!url) return "";
-    try {
-      return new URL(url, window.location.href).href;
-    } catch (e) {
-      return url;
-    }
-  }
-
-  function updateFaviconBadge(status) {
-    if (status === "detached") {
-      restoreOriginalFavicon();
+  function updateControlledTabIndicator(status) {
+    if (status === "detached" || status === "idle" || status === false) {
+      tabIndicator.classList.remove("active");
       return;
     }
+    tabIndicator.classList.add("active");
+  }
 
-    try {
-      const faviconLinks = Array.from(document.querySelectorAll('link[rel~="icon"], link[rel="shortcut icon"]'));
-      
-      if (!isBadged) {
-        originalFaviconLinks = faviconLinks.map(link => ({
-          link: link,
-          originalHref: link.getAttribute("href")
-        }));
-        isBadged = true;
-      }
-
-      if (faviconLinks.length === 0) {
-        const newLink = document.createElement("link");
-        newLink.setAttribute("rel", "icon");
-        document.head.appendChild(newLink);
-        faviconLinks.push(newLink);
-        originalFaviconLinks.push({
-          link: newLink,
-          originalHref: null
-        });
-      }
-
-      const originalHref = originalFaviconLinks[0]?.originalHref 
-        ? getAbsoluteUrl(originalFaviconLinks[0].originalHref) 
-        : "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><circle cx='16' cy='16' r='14' fill='%231a1a2e'/></svg>";
-
-      const badgeColor = status === "active" ? "%23ff0080" : "%23ff6b00";
-      
-      const badgeSvg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-          <image href="${originalHref.replace(/&/g, '&amp;')}" width="32" height="32" />
-          <defs>
-            <filter id="badge-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="1.2" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
-          <g filter="url(%23badge-glow)" transform="translate(18, 0)">
-            <circle cx="7" cy="7" r="6" fill="%230b0b0f" stroke="${badgeColor}" stroke-width="1.5" />
-            <path d="M5 5L10 7L7 9L5 5Z" fill="${badgeColor}" />
-          </g>
-        </svg>
-      `;
-
-      const dataUrl = `data:image/svg+xml,${encodeURIComponent(badgeSvg.trim())}`;
-
-      faviconLinks.forEach(link => {
-        link.setAttribute("href", dataUrl);
-        link.setAttribute("data-Sinew-badge", "true");
-      });
-
-    } catch (e) {
-      console.error("ðŸ§¬ [Sinew Favicon Error]:", e);
-    }
+  function markControlledActivity() {
+    updateControlledTabIndicator("active");
+    if (controlledIndicatorTimer) clearTimeout(controlledIndicatorTimer);
+    controlledIndicatorTimer = setTimeout(() => {
+      updateControlledTabIndicator("idle");
+    }, 3500);
   }
 
   function handleActivity() {
-    updateFaviconBadge("active");
-    if (faviconBadgeTimer) {
-      clearTimeout(faviconBadgeTimer);
-    }
-    faviconBadgeTimer = setTimeout(() => {
-      updateFaviconBadge("idle");
-    }, 2000);
+    markControlledActivity();
   }
 
   // Listening to messages from background worker
@@ -673,7 +623,7 @@
       sendResponse({ ok: true });
     }
     else if (message.type === "AGENT_STATUS_CHANGE") {
-      updateFaviconBadge(message.status);
+      updateControlledTabIndicator(message.status);
       sendResponse({ ok: true });
     }
     else if (message.type === "CONTENT_PING") {
@@ -793,9 +743,9 @@
     }
   });
 
-  // Clean up badge when unloading
+  // Clean up controlled indicator when unloading
   window.addEventListener("unload", () => {
-    restoreOriginalFavicon();
+    updateControlledTabIndicator("detached");
   });
 
   // ==========================================================
