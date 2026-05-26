@@ -1,10 +1,10 @@
-# 🤝 Sinew — Boîte à Suggestions & Améliorations de Fork
+# 🛠️ Sinew — Fonctionnalités Personnalisées & Suggestions (Fork)
 
-Ce document présente l'ensemble des fonctionnalités expérimentées et développées au sein de ce fork. Notre démarche se veut **constructive, modulaire et collaborative** : chaque ajout est pensé comme une proposition d'amélioration que l'auteur original de **Sinew** peut librement étudier, adapter ou réintégrer (pull request) dans le dépôt officiel.
+Ce document détaille l'ensemble des fonctionnalités développées pour ce fork personnel de **Sinew**. L'objectif est de conserver ces ajustements pour mon propre usage quotidien (à moins que le dépôt officiel ne propose une meilleure alternative à l'avenir), tout en les présentant de manière claire et modulaire afin que l'auteur original de **Sinew** puisse librement s'en inspirer ou réintégrer certaines d'entre elles dans le projet principal.
 
 ---
 
-## 📌 Propositions d'améliorations par parcours utilisateur
+## 📌 Fonctionnalités du fork & Propositions amont
 
 Afin de faciliter la lecture et l'éventuelle récupération du code, ces contributions sont classées selon les différentes étapes d'utilisation de l'application :
 
