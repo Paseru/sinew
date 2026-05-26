@@ -687,28 +687,30 @@ fn resolve_executable(program: &str) -> Option<PathBuf> {
 
     if let Some(path_var) = std::env::var_os("PATH") {
         for dir in std::env::split_paths(&path_var) {
-            if let Some(candidate) = find_working_executable(&dir.join(program)) {
+            let base = dir.join(program);
+            if let Some(candidate) = find_working_executable(&base) {
                 return Some(candidate);
             }
             #[cfg(windows)]
             {
-                let candidate_exe = candidate.with_extension("exe");
-                if executable_works(&candidate_exe) {
-                    return Some(candidate_exe);
+                let base_exe = base.with_extension("exe");
+                if let Some(candidate) = find_working_executable(&base_exe) {
+                    return Some(candidate);
                 }
             }
         }
     }
 
     for dir in fallback_executable_dirs(program) {
-        if let Some(candidate) = find_working_executable(&dir.join(program)) {
+        let base = dir.join(program);
+        if let Some(candidate) = find_working_executable(&base) {
             return Some(candidate);
         }
         #[cfg(windows)]
         {
-            let candidate_exe = candidate.with_extension("exe");
-            if executable_works(&candidate_exe) {
-                return Some(candidate_exe);
+            let base_exe = base.with_extension("exe");
+            if let Some(candidate) = find_working_executable(&base_exe) {
+                return Some(candidate);
             }
         }
     }
