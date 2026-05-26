@@ -1,35 +1,38 @@
 # 🛠️ Sinew — Notes de Version & Ajustements Apportés
 
-<p align="center">
-  <b>Adaptation, traduction et ajustements spécifiques pour l'environnement de développement IA Sinew.</b>
-  <br/>
-  <i>Ce document détaille les ajouts, les corrections de bugs et les options pratiques intégrés à cette version pour faciliter la prise en main, notamment sous Windows.</i>
-</p>
+Ce document détaille les ajouts, fonctionnalités et scripts d'automatisation intégrés à ton fork de **Sinew**.
 
 ---
 
-## 📌 Détail des ajouts et corrections apportés
+## 📌 Détail des ajouts de ton Fork
 
-Cette version intègre quelques modifications pratiques destinées à faciliter la compatibilité et le confort d'utilisation au quotidien.
+Cette version intègre des modifications pratiques destinées à faciliter la compatibilité et le confort d'utilisation au quotidien :
 
 ### 1. 🌐 Traduction Intégrale en Français
-* **Fonctionnement** : Un sélecteur de langue dynamique est disponible dans le panneau `Settings > About`.
-* **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) pour un confort d'utilisation optimal sans barrière de la langue.
+* **Fonctionnement** : Un sélecteur de langue dynamique est disponible dans le nouveau panneau `Settings > Options`.
+* **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) en français.
 
 ### 2. 📌 Question Collante (Sticky Question)
-* **Fonctionnement** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de la vue de discussion.
-* **Bénéfice** : Un simple clic sur cette bannière ramène instantanément l'utilisateur en haut du chat de manière fluide, éliminant les défilements manuels interminables.
+* **Fonctionnement** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut.
+* **Bénéfice** : Un simple clic sur cette bannière ramène instantanément en haut du chat de manière fluide.
 
 ### 3. ⚡ Panneau de Diagnostic SOTA (State of the Art)
-* **Fonctionnement** : Accessible depuis `Settings > About`, ce module graphique interroge l'outil de diagnostic en un clic.
-* **Bénéfice** : Permet de tester instantanément l'état des outils système requis (Git, Node, Rust/Cargo, Python, Ripgrep). Tout dysfonctionnement est clairement signalé avec son chemin et sa version pour un dépannage immédiat.
+* **Fonctionnement** : Accessible depuis `Settings > Options`, ce module graphique interroge l'outil de diagnostic en temps réel.
+* **Bénéfice** : Permet de tester instantanément l'état et la version des outils système requis (Git, Node, Rust/Cargo, Python, Ripgrep).
 
-### 4. 🤖 Mode "Power User" (Activation en un clic)
-* **Fonctionnement** : Activé depuis `Settings > About > Power User Mode`.
-* **Bénéfice** : 
+### 🤖 4. Mode "Power User" (Activation en un clic)
+* **Fonctionnement** : Activé depuis `Settings > Options > Power User Mode`.
+* **Bénéfice** :
   * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
-  * **Gestion Git simplifiée** : L'IA prend en charge la maintenance de votre dépôt en arrière-plan (vérification, pull, push) à votre demande sans que vous ayez à manipuler de commandes Git.
+  * **Gestion Git simplifiée** : L'IA prend en charge toute la maintenance de ton dépôt en arrière-plan (vérification, pull, commit, push) sans que tu n'aies à manipuler de commandes Git.
 
-### 5. 🪟 Optimisations Windows et Fiabilité
-* **Détection Git** : Amélioration substantielle de la localisation de l'exécutable `git.exe` sur l'environnement Windows.
-* **Build Propre** : Nettoyage des avertissements (warnings) de compilation spécifiques à macOS ou Linux qui encombraient inutilement les logs sous Windows.
+---
+
+## 🛠️ Scripts d'automatisation (PowerShell)
+
+Pour ne plus te soucier de Git manuellement, lance ces scripts depuis ta console PowerShell :
+
+* **`.\scripts\sinew-sync.ps1`** : Synchronise ton fork avec la version officielle de Sinew. À faire au début de ta session de travail.
+* **`.\scripts\sinew-save.ps1`** : Sauvegarde simplement ton travail et l'envoie sur ton dépôt GitHub.
+* **`.\scripts\sinew-build-save.ps1`** : Compile l'interface et l'envoie sur GitHub (recommandé après modification).
+* **`.\scripts\sinew-build-save.ps1 -FullApp`** : Compile l'application installable complète (.msi / .exe) pour Windows et l'enregistre sur GitHub.
