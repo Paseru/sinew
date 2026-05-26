@@ -1386,7 +1386,7 @@ function AboutSection({
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
           <h2>Power User Mode</h2>
-          <p>Enable automated background updates, code/Git automation, and ultra-concise plain language answers.</p>
+          <p>Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers.</p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Power User Mode">
           <button

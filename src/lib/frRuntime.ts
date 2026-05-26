@@ -264,7 +264,7 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Edit file": "Modifier un fichier",
   "Delete this conversation?": "Supprimer cette conversation ?",
   "Power User Mode": "Mode Power User",
-  "Enable automated background updates, code/Git automation, and ultra-concise plain language answers.": "Active les mises à jour en arrière-plan, l'automatisation de Git, et les réponses ultra-concises.",
+  "Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers.": "Gère et automatise tout en arrière-plan (Git & autres) et active les réponses ultra-concises et simplifiées.",
   "Enabled": "Activé",
   "Disabled": "Désactivé",
 };
