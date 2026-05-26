@@ -511,7 +511,7 @@ export function Workspace({
     setSettingsActive(false);
   }, []);
 
-  const openSettings = useCallback((section?: "providers" | "quotas") => {
+  const openSettings = useCallback((section?: "providers") => {
     setSettingsOpen(true);
     setSettingsActive(true);
     // Pickup hook for SettingsPane: when the caller wants to land on a

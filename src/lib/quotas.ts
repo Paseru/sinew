@@ -12,24 +12,30 @@ export interface QuotaInfo {
   label?: string;
 }
 
-const DEFAULT_5H = 300; // 5 hours in minutes
-const DEFAULT_WEEK = 3000; // 50 hours in minutes
+export function getProviderLimits(providerId: string) {
+  if (providerId === "anthropic") return { limit5h: 300, limitWeek: 1200 }; // 5h, 20h
+  if (providerId === "google") return { limit5h: 300, limitWeek: 600 }; // 5h, 10h
+  if (providerId === "kimi") return { limit5h: 300, limitWeek: 900 }; // 5h, 15h
+  if (providerId.startsWith("openai")) return { limit5h: 300, limitWeek: 1800 }; // 5h, 30h
+  return { limit5h: 300, limitWeek: 3000 }; // default 5h, 50h
+}
 
 export function getLocalQuota(providerId: string): QuotaInfo {
+  const { limit5h, limitWeek } = getProviderLimits(providerId);
   try {
     const r5h = localStorage.getItem(`sinew.quota.${providerId}.5h`);
     const rW = localStorage.getItem(`sinew.quota.${providerId}.week`);
 
-    const remaining5h = r5h !== null ? parseFloat(r5h) : DEFAULT_5H;
-    const remainingWeek = rW !== null ? parseFloat(rW) : DEFAULT_WEEK;
+    const remaining5h = r5h !== null ? parseFloat(r5h) : limit5h;
+    const remainingWeek = rW !== null ? parseFloat(rW) : limitWeek;
 
-    const p5h = Math.max(0, Math.min(100, (remaining5h / DEFAULT_5H) * 100));
-    const pWeek = Math.max(0, Math.min(100, (remainingWeek / DEFAULT_WEEK) * 100));
+    const p5h = Math.max(0, Math.min(100, (remaining5h / limit5h) * 100));
+    const pWeek = Math.max(0, Math.min(100, (remainingWeek / limitWeek) * 100));
 
     return {
-      limit5h: DEFAULT_5H,
+      limit5h,
       remaining5h,
-      limitWeek: DEFAULT_WEEK,
+      limitWeek,
       remainingWeek,
       percentage5h: p5h,
       percentageWeek: pWeek,
@@ -38,10 +44,10 @@ export function getLocalQuota(providerId: string): QuotaInfo {
     };
   } catch {
     return {
-      limit5h: DEFAULT_5H,
-      remaining5h: DEFAULT_5H,
-      limitWeek: DEFAULT_WEEK,
-      remainingWeek: DEFAULT_WEEK,
+      limit5h,
+      remaining5h: limit5h,
+      limitWeek,
+      remainingWeek: limitWeek,
       percentage5h: 100,
       percentageWeek: 100,
       overallPercentage: 100,
@@ -68,7 +74,8 @@ export function deductLocalQuota(providerId: string, minutes5h = 4, minutesWeek 
 }
 
 export function resetLocalQuota(providerId: string) {
-  saveLocalQuota(providerId, DEFAULT_5H, DEFAULT_WEEK);
+  const { limit5h, limitWeek } = getProviderLimits(providerId);
+  saveLocalQuota(providerId, limit5h, limitWeek);
 }
 
 export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo> {
@@ -115,13 +122,32 @@ export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo>
       if (status && status.connected) {
         const plan = status.planType?.toLowerCase();
         if (plan === "pro" || plan === "plus" || plan === "team") {
-          // High quota, scale it nicely
           return {
             ...local,
             percentage5h: Math.max(local.percentage5h, 95),
             percentageWeek: Math.max(local.percentageWeek, 95),
             overallPercentage: Math.max(local.overallPercentage, 95),
             label: `Codex ${status.planType || "Premium"}`,
+          };
+        }
+      }
+    } catch {}
+  }
+
+  // 2b. Secondary OpenAI Accounts
+  if (providerId.startsWith("openai:")) {
+    try {
+      const accounts = await api.getAllOpenAiAccounts();
+      const match = accounts.find((a) => a.key === providerId);
+      if (match) {
+        const plan = match.planType?.toLowerCase();
+        if (plan === "pro" || plan === "plus" || plan === "team") {
+          return {
+            ...local,
+            percentage5h: Math.max(local.percentage5h, 95),
+            percentageWeek: Math.max(local.percentageWeek, 95),
+            overallPercentage: Math.max(local.overallPercentage, 95),
+            label: `Codex ${match.planType || "Premium"}`,
           };
         }
       }
