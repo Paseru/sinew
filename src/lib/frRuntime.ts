@@ -399,6 +399,16 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "git pull": "Tirer (git pull)",
   "git push": "Pousser (git push)",
   "Planning next moves": "Planification des prochaines étapes",
+  "Save Image As…": "Enregistrer l’image sous…",
+  "Open with Default App": "Ouvrir avec l’application par défaut",
+  "Preparing questions": "Préparation des questions",
+  "Question unavailable": "Question indisponible",
+  "Questions Answered": "Questions répondues",
+  "Question Answered": "Question répondue",
+  "Send and stop questions": "Envoyer et arrêter les questions",
+  "Next": "Suivant",
+  "Later": "Plus tard",
+  "Install & restart": "Installer et redémarrer",
 };
 
 type RegexTranslation = [RegExp, (...matches: string[]) => string];
@@ -436,6 +446,11 @@ const REGEX_TRANSLATIONS: RegexTranslation[] = [
   [/^(\d+) uncommitted change$/u, (count) => `${count} modification non validée`],
   [/^(\d+) uncommitted changes$/u, (count) => `${count} modifications non validées`],
   [/^tracks (.+)$/u, (upstream) => `suit ${upstream}`],
+  [/^New version (.+)$/u, (version) => `Nouvelle version ${version}`],
+  [/^You are on (.+)$/u, (version) => `Version actuelle ${version}`],
+  [/^Downloading (\d+)%$/u, (percent) => `Téléchargement ${percent}%`],
+  [/^Update (.+) available — click to view and install$/u, (version) => `Mise à jour ${version} disponible — cliquez pour voir et installer`],
+  [/^Update failed: (.+)\. Click to retry\.$/u, (message) => `Échec de la mise à jour : ${message}. Cliquez pour réessayer.`],
 ];
 
 const TEXT_EXCLUDED_SELECTOR = [
