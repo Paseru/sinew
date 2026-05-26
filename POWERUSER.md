@@ -16,7 +16,9 @@ main
 
 - Option `English / Français` dans `Settings > About`.
 - Règle globale intégrée : te répondre simple, concis, power-user, options SOTA sans jargon.
+- Dernière question posée fixée (sticky) en haut du chat pendant le défilement (défilement fluide vers la question au clic).
 - Correction Windows pour mieux trouver `git.exe`.
+- Correction Windows pour désactiver les warnings de compilation liés aux menus macOS/Linux (imports inutilisés).
 - Scripts pour que tu gères le moins possible Git.
 
 ## Scripts utiles
