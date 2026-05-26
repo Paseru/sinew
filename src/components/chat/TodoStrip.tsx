@@ -881,16 +881,17 @@ function QueuedPromptRow({
         </button>
         <button
           type="button"
-          className="todo-strip__queue-action todo-strip__queue-action--send"
+          className="todo-strip__queue-action todo-strip__queue-action--influence"
           onClick={(event) => {
             event.stopPropagation();
             onSend?.(prompt.id);
           }}
           disabled={!onSend}
-          aria-label="Send queued prompt now"
-          title="Send now"
+          aria-label="Influence conversation now"
+          title="Influencer"
         >
-          <Icon icon="solar:send-bold" width={12} height={12} />
+          <Icon icon="solar:arrow-up-bold" width={11} height={11} />
+          <span>Influencer</span>
         </button>
         <button
           type="button"

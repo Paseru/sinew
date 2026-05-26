@@ -9097,17 +9097,28 @@ textarea {
   cursor: default;
 }
 
-.todo-strip__queue-action--send {
-  width: 22px;
+.todo-strip__queue-action--influence {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
   height: 22px;
-  border-radius: 50%;
+  padding: 0 8px;
+  border-radius: 11px;
   background: var(--accent-soft);
   color: var(--accent-hi);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
   margin-left: 3px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
-.todo-strip__queue-action--send:hover:not(:disabled) {
+.todo-strip__queue-action--influence:hover:not(:disabled) {
   background: var(--accent);
   color: var(--text-0);
   box-shadow: 0 0 8px var(--accent-glow), 0 1px 3px rgba(0, 0, 0, 0.2);
