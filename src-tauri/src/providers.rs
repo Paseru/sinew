@@ -217,7 +217,6 @@ pub(super) fn openai_provider_status_from_auth(
     connection_state: &str,
     login_id: Option<String>,
     error: Option<String>,
-    suffix: Option<String>,
 ) -> OpenAiProviderStatus {
     OpenAiProviderStatus {
         connected: auth.connected,
@@ -229,7 +228,6 @@ pub(super) fn openai_provider_status_from_auth(
         last_refresh_ms: auth.last_refresh_ms,
         login_id,
         error,
-        suffix,
     }
 }
 
@@ -831,7 +829,6 @@ pub(super) async fn get_openai_provider_status(
                     "connected",
                     None,
                     None,
-                    None,
                 ));
             }
             return Ok(openai_provider_status_from_auth(
@@ -839,7 +836,6 @@ pub(super) async fn get_openai_provider_status(
                 "error",
                 None,
                 outcome.error,
-                None,
             ));
         }
 
@@ -848,7 +844,6 @@ pub(super) async fn get_openai_provider_status(
             auth,
             "connecting",
             Some(attempt.id),
-            None,
             None,
         ));
     }
@@ -859,7 +854,7 @@ pub(super) async fn get_openai_provider_status(
     } else {
         "disconnected"
     };
-    Ok(openai_provider_status_from_auth(auth, state, None, None, None))
+    Ok(openai_provider_status_from_auth(auth, state, None, None))
 }
 
 #[tauri::command]
@@ -935,7 +930,7 @@ pub(super) async fn cancel_openai_oauth_login(
     } else {
         "disconnected"
     };
-    Ok(openai_provider_status_from_auth(auth, state, None, None, None))
+    Ok(openai_provider_status_from_auth(auth, state, None, None))
 }
 
 #[tauri::command]
@@ -958,7 +953,6 @@ pub(super) async fn disconnect_openai_provider(
     Ok(openai_provider_status_from_auth(
         OpenAiAuthStatus::disconnected(),
         "disconnected",
-        None,
         None,
         None,
     ))
