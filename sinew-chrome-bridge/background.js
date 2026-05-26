@@ -1,4 +1,4 @@
-﻿// 🧬 Sinew Chrome Bridge — Service Worker (Manifest V3)
+// 🧬 Sinew Chrome Bridge — Service Worker (Manifest V3)
 // Upgraded to SOTA Sinew-grade sequential execution queue and automatic biological cursor physics injection.
 // Pure Native Messaging connection (No fallback to match Codex standard).
 
@@ -81,142 +81,6 @@ function connect() {
   }
 }
 
-// Utility to check if a URL is a restricted system page
-function isSystemTab(tab) {
-  const u = tab.url || "";
-  return u.startsWith("chrome://") || 
-         u.startsWith("chrome-extension://") || 
-         u.startsWith("edge://") ||
-         u.startsWith("view-source:");
-}
-
-// Reusable central message sender
-function sendMsg(msg) {
-  if (nativePort) {
-    try {
-      nativePort.postMessage(msg);
-    } catch (e) {
-      console.error("ðŸ§¬ [Bridge background] Failed to send via Native Port:", e);
-    }
-  } else if (socket && socket.readyState === 1) { // WebSocket.OPEN
-    try {
-      socket.send(JSON.stringify(msg));
-    } catch (e) {
-      console.error("ðŸ§¬ [Bridge background] Failed to send via WebSocket:", e);
-    }
-  }
-}
-
-function isBridgeConnected() {
-  return !!(nativePort || (socket && socket.readyState === 1));
-}
-
-// Reusable response sender
-function sendResponse(id, data) {
-  sendMsg({ type: "response", id, data });
-}
-
-function connect() {
-  // First, try to connect to Chrome Native Messaging Host
-  try {
-    console.log("ðŸ§¬ [Bridge background] Connecting to Native Host com.sinew.chrome_bridge...");
-    const port = chrome.runtime.connectNative("com.sinew.chrome_bridge");
-    nativePort = port;
-
-    port.onMessage.addListener((msg) => {
-      handleMessage(msg);
-    });
-
-    port.onDisconnect.addListener(() => {
-      const err = chrome.runtime.lastError;
-      console.warn("ðŸ§¬ [Bridge background] Native Host disconnected:", err ? err.message : "No details");
-      nativePort = null;
-      updateStorageState();
-
-      // If it's a structural registration failure, fall back to WebSocket proxy
-      if (err && (
-        err.message.includes("specified") || 
-        err.message.includes("not found") || 
-        err.message.includes("Host not found") ||
-        err.message.includes("registry")
-      )) {
-        console.log("ðŸ§¬ [Bridge background] Native Host not registered. Invoking WebSocket fallback...");
-        connectWebSocket();
-      } else {
-        // Normal restart/disconnect: wait and try reconnecting natively
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(connect, 3000);
-      }
-    });
-
-    // Native connection succeeded: register and sync
-    sendMsg({ type: "register", role: "extension" });
-    reportOpenTabs();
-    updateStorageState();
-    return;
-  } catch (e) {
-    console.warn("ðŸ§¬ [Bridge background] Native Port crash on initialize, falling back to WS:", e);
-    connectWebSocket();
-  }
-}
-
-function connectWebSocket() {
-  if (socket && (socket.readyState === 0 || socket.readyState === 1)) { // CONNECTING or OPEN
-    console.log("ðŸ§¬ [Bridge background] WebSocket connection already active or in progress. Skipping.");
-    return;
-  }
-
-  if (nativePort) {
-    console.log("ðŸ§¬ [Bridge background] Native Port is active. Skipping WebSocket connection.");
-    return;
-  }
-
-  console.log("ðŸ§¬ [Bridge background] Connecting to proxy local server via WebSocket...");
-  const ws = new WebSocket(PROXY_URL);
-  socket = ws;
-
-  ws.onopen = () => {
-    console.log("ðŸ§¬ [Bridge background] Connected to proxy server via WebSocket!");
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-    
-    // Register role
-    ws.send(JSON.stringify({ type: "register", role: "extension" }));
-    
-    // Synergize active tab registry with proxy
-    reportOpenTabs();
-    
-    startHeartbeat();
-    updateStorageState();
-  };
-
-  ws.onmessage = async (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-      await handleMessage(msg);
-    } catch (e) {
-      console.error("âš ï¸ [Bridge WebSocket parse error]:", e);
-    }
-  };
-
-  ws.onclose = () => {
-    console.log("ðŸ§¬ [Bridge background] Connection closed. Retrying in 3 seconds...");
-    stopHeartbeat();
-    if (socket === ws) {
-      socket = null;
-    }
-    updateStorageState();
-    if (!nativePort) {
-      reconnectTimer = setTimeout(connect, 3000);
-    }
-  };
-
-  ws.onerror = (err) => {
-    console.error("âš ï¸ [Bridge WebSocket Error]:", err);
-  };
-}
 
 // Unified central command coordinator
 async function handleMessage(msg) {
@@ -590,6 +454,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   return true;
 });
+
+
 
 function updateStorageState() {
   chrome.storage.local.set({

@@ -47,7 +47,7 @@ if (isNativeMode) {
   const pythonExe = path.join(homeDir, ".gemini", "antigravity", "scratch", "browser-use-env", "Scripts", "python.exe");
   const mcpCwd = path.join(homeDir, ".gemini", "antigravity", "scratch", "mcp-browser-use");
   
-  mcpProcess = spawn(pythonExe, ["-m", "mcp_server_browser_use.cli", "server", "--foreground"], {
+  mcpProcess = spawn(pythonExe, ["-m", "mcp_server_browser_use"], {
     cwd: mcpCwd,
     stdio: 'inherit'
   });

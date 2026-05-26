@@ -35,7 +35,7 @@ if (!(Test-Path $PythonPath)) {
 }
 
 $BridgeBatPath = Join-Path $ScriptDir "run_sinew_bridge.bat"
-$BridgeBatContent = "@echo off`r`nstart /B `"`" `"$NodePath`" `"%~dp0server.js`"`r`n`"$PythonPath`" -m mcp_server_browser_use.cli server --foreground"
+$BridgeBatContent = "@echo off`r`nstart /B `"`" `"$NodePath`" `"%~dp0server.js`"`r`n`"$PythonPath`" -m mcp_server_browser_use"
 [System.IO.File]::WriteAllText($BridgeBatPath, $BridgeBatContent, [System.Text.Encoding]::UTF8)
 
 # Configure also the standard native_host.bat
