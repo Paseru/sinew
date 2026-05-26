@@ -1,5 +1,6 @@
 use crate::*;
 
+#[cfg(not(target_os = "windows"))]
 use tauri::{
     menu::{AboutMetadata, Menu, MenuItemBuilder, PredefinedMenuItem, Submenu, SubmenuBuilder},
     Runtime,
