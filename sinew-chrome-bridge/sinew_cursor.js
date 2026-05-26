@@ -447,70 +447,10 @@
 
   // DOM Attention Layer (HUD highlighted elements)
   function updateTargetHud(x, y, visible) {
-    if (!visible) {
-      targetHud.classList.remove("active");
-      lastTargetEl = null;
-      return;
-    }
-
-    try {
-      const el = document.elementFromPoint(x, y);
-      
-      if (!el || el === document.documentElement || el === document.body) {
-        targetHud.classList.remove("active");
-        lastTargetEl = null;
-        return;
-      }
-
-      const isInteractive = 
-        el.tagName === "BUTTON" || 
-        el.tagName === "A" || 
-        el.tagName === "INPUT" || 
-        el.tagName === "SELECT" || 
-        el.tagName === "TEXTAREA" ||
-        el.getAttribute("role") === "button" ||
-        el.onclick != null ||
-        window.getComputedStyle(el).cursor === "pointer";
-
-      if (isInteractive) {
-        if (lastTargetEl !== el) {
-          lastTargetEl = el;
-          const rect = el.getBoundingClientRect();
-          targetHud.style.left = `${rect.left}px`;
-          targetHud.style.top = `${rect.top}px`;
-          targetHud.style.width = `${rect.width}px`;
-          targetHud.style.height = `${rect.height}px`;
-          targetHud.classList.add("active");
-        }
-      } else {
-        const parent = el.parentElement;
-        const isParentInteractive = parent && (
-          parent.tagName === "BUTTON" || 
-          parent.tagName === "A" || 
-          parent.getAttribute("role") === "button" ||
-          parent.onclick != null ||
-          window.getComputedStyle(parent).cursor === "pointer"
-        );
-
-        if (isParentInteractive) {
-          if (lastTargetEl !== parent) {
-            lastTargetEl = parent;
-            const rect = parent.getBoundingClientRect();
-            targetHud.style.left = `${rect.left}px`;
-            targetHud.style.top = `${rect.top}px`;
-            targetHud.style.width = `${rect.width}px`;
-            targetHud.style.height = `${rect.height}px`;
-            targetHud.classList.add("active");
-          }
-        } else {
-          targetHud.classList.remove("active");
-          lastTargetEl = null;
-        }
-      }
-    } catch (e) {
-      targetHud.classList.remove("active");
-      lastTargetEl = null;
-    }
+    // Disabled to match clean Codex-like visual style (no flashing pink boxes)
+    targetHud.classList.remove("active");
+    lastTargetEl = null;
+    return;
   }
 
   function loop(now) {
@@ -751,7 +691,7 @@
   // ==========================================================
   const macroWidget = document.createElement("div");
   macroWidget.className = "cyber-macro-widget collapsed";
-  shadow.appendChild(macroWidget);
+  // shadow.appendChild(macroWidget); // Disabled to avoid floating red dot on the right, matching clean Codex style
 
   let isRecording = false;
   let recordedSteps = [];
