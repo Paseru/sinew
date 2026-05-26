@@ -1594,7 +1594,7 @@ function OptionsSection({
       </div>
 
       <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="settings-pane__about-card-header-flex">
           <div className="settings-pane__about-card-copy">
             <h2>{locale === "fr" ? "Diagnostic Système SOTA" : "SOTA System Diagnostics"}</h2>
             <p>

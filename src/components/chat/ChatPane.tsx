@@ -470,6 +470,25 @@ export function ChatPane({
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
   const [agentTeamsEnabled, setAgentTeamsEnabled] = useState(false);
+  const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
+    try {
+      const val = localStorage.getItem("sinew.compact-reasoning");
+      if (val === "very-compact") return "very-compact";
+      if (val === "compact" || val === "true") return "compact";
+      return "disabled";
+    } catch {
+      return "disabled";
+    }
+  });
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const mode = (event as CustomEvent<"disabled" | "compact" | "very-compact">).detail;
+      setCompactMode(mode);
+    };
+    window.addEventListener("sinew:compact-reasoning-changed", handler as any);
+    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler as any);
+  }, []);
   const modelRef = useRef<HTMLDivElement | null>(null);
   const thinkingRef = useRef<HTMLDivElement | null>(null);
   const modeRef = useRef<HTMLDivElement | null>(null);
@@ -2893,7 +2912,7 @@ export function ChatPane({
           </div>
         </div>
       )}
-      <div className="chat-body" ref={bodyRef}>
+      <div className="chat-body" ref={bodyRef} data-compact-mode={compactMode}>
         <div className="chat-body__content" ref={bodyContentRef}>
           {displayView.blocks.length === 0 && !showPlanningNextMove ? (
             <div className="chat-empty">
