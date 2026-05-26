@@ -26,6 +26,11 @@ window.addEventListener(
     if (target.closest("input, textarea, [contenteditable=\"true\"], [contenteditable=\"\"]")) {
       return;
     }
+    // Allow native context menu when text is selected so that the user can copy it
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) {
+      return;
+    }
     event.preventDefault();
   },
   { capture: false },
