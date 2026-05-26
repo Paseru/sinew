@@ -6,30 +6,34 @@ Ce document détaille l'ensemble des fonctionnalités et options personnalisées
 
 ## 📌 Détail des ajouts et options de ton Fork
 
-Toutes tes options de personnalisation sont centralisées dans le nouvel onglet **`Settings > Options`** :
+Tes options de personnalisation et de connexion sont centralisées pour optimiser ton confort au quotidien :
 
 ### 1. 🌐 Traduction Intégrale en Français
-* **Fonctionnement** : Option *Langue* (English / Français).
+* **Localisation** : `Settings > Options` (Option *Langue*).
 * **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) en français.
 
 ### 2. 🤖 Mode "Power User"
-* **Fonctionnement** : Option *Mode Power User* (Activé / Désactivé).
+* **Localisation** : `Settings > Options` (Option *Mode Power User*).
 * **Bénéfice** :
   * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
   * **Gestion Git automatique** : L'IA prend en charge la maintenance de ton dépôt en arrière-plan (vérification, pull, commit, push) sans que tu n'aies à manipuler de commandes Git.
 
 ### 3. 🧠 Réflexion Compacte (Compact Reasoning)
-* **Fonctionnement** : Option *Réflexion compacte* (Activé / Désactivé).
+* **Localisation** : `Settings > Options` (Option *Réflexion compacte*).
 * **Bénéfice** : Masque par défaut les longs blocs de réflexion détaillés (les pensées de l'IA) et affiche uniquement les réponses finales pour une lecture plus rapide.
 
 ### 4. 🔄 Synchronisation Multi-PC
-* **Fonctionnement** : Option *Synchronisation Multi-PC* (Activé / Désactivé).
+* **Localisation** : `Settings > Options` (Option *Synchronisation Multi-PC*).
 * **Bénéfice** : Synchronise automatiquement tes conversations et configurations de manière sécurisée entre tes différents ordinateurs via OneDrive.
 
-### 5. ⚡ Panneau de Diagnostic SOTA (State of the Art)
-* **Fonctionnement** : Option *Diagnostic Système SOTA* (avec bouton *Actualiser*).
+### 5. 👥 Multi-comptes OpenAI (OAuth & Business Token)
+* **Localisation** : `Settings > Providers` (Paramètres > Fournisseurs).
+* **Bénéfice** : Tu as la possibilité de connecter un deuxième compte OpenAI (« OpenAI 2 ») en collant directement un Business Access Token. C'est parfait pour basculer facilement entre des abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser la rapidité sans déconnexion permanente.
+
+### 6. ⚡ Panneau de Diagnostic SOTA (State of the Art)
+* **Localisation** : `Settings > Options` (Option *Diagnostic Système SOTA*).
 * **Bénéfice** : Permet de tester instantanément en temps réel l'état, le chemin et la version des outils système indispensables (Git, Node, Rust/Cargo, Python, Ripgrep).
 
-### 6. 📌 Question Collante (Sticky Question)
-* **Fonctionnement** : Intégration automatique dans le chat.
+### 7. 📌 Question Collante (Sticky Question)
+* **Localisation** : Intégration automatique dans l'interface de chat.
 * **Bénéfice** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut. Un simple clic dessus te ramène instantanément et de manière fluide à la question.
