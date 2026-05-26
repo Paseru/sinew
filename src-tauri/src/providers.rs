@@ -217,6 +217,7 @@ pub(super) fn openai_provider_status_from_auth(
     connection_state: &str,
     login_id: Option<String>,
     error: Option<String>,
+    suffix: Option<String>,
 ) -> OpenAiProviderStatus {
     OpenAiProviderStatus {
         connected: auth.connected,
@@ -228,6 +229,7 @@ pub(super) fn openai_provider_status_from_auth(
         last_refresh_ms: auth.last_refresh_ms,
         login_id,
         error,
+        suffix,
     }
 }
 
@@ -322,6 +324,7 @@ pub(super) async fn run_openai_oauth_server(
     expected_state: String,
     pkce: PkceCodes,
     cancel: Arc<Notify>,
+    target_key: Option<String>,
 ) -> Result<()> {
     let http = reqwest::Client::builder()
         .user_agent("sinew/0.1")
@@ -341,6 +344,7 @@ pub(super) async fn run_openai_oauth_server(
                     &redirect_uri,
                     &expected_state,
                     &pkce,
+                    target_key.clone(),
                 ).await? {
                     return result;
                 }
@@ -355,6 +359,7 @@ pub(super) async fn handle_openai_oauth_request(
     redirect_uri: &str,
     expected_state: &str,
     pkce: &PkceCodes,
+    target_key: Option<String>,
 ) -> Result<Option<Result<()>>> {
     let mut buffer = [0u8; 8192];
     let read = stream
@@ -408,7 +413,7 @@ pub(super) async fn handle_openai_oauth_request(
                 return Ok(Some(Err(anyhow::anyhow!("Missing authorization code"))));
             };
 
-            match exchange_oauth_code(http, code, redirect_uri, pkce).await {
+            match exchange_oauth_code(http, code, redirect_uri, pkce, target_key).await {
                 Ok(_) => {
                     write_html_response(stream, 200, openai_login_success_html()).await?;
                     Ok(Some(Ok(())))
@@ -826,6 +831,7 @@ pub(super) async fn get_openai_provider_status(
                     "connected",
                     None,
                     None,
+                    None,
                 ));
             }
             return Ok(openai_provider_status_from_auth(
@@ -833,6 +839,7 @@ pub(super) async fn get_openai_provider_status(
                 "error",
                 None,
                 outcome.error,
+                None,
             ));
         }
 
@@ -841,6 +848,7 @@ pub(super) async fn get_openai_provider_status(
             auth,
             "connecting",
             Some(attempt.id),
+            None,
             None,
         ));
     }
@@ -851,12 +859,13 @@ pub(super) async fn get_openai_provider_status(
     } else {
         "disconnected"
     };
-    Ok(openai_provider_status_from_auth(auth, state, None, None))
+    Ok(openai_provider_status_from_auth(auth, state, None, None, None))
 }
 
 #[tauri::command]
 pub(super) async fn start_openai_oauth_login(
     state: State<'_, DesktopState>,
+    key: Option<String>,
 ) -> std::result::Result<StartOpenAiLoginOutput, String> {
     if let Some(existing) = state.openai_login.lock().await.take() {
         existing.cancel.notify_one();
@@ -880,13 +889,15 @@ pub(super) async fn start_openai_oauth_login(
             id: login_id.clone(),
             cancel: cancel.clone(),
             outcome: outcome.clone(),
+            target_key: key.clone(),
         });
     }
 
     let providers = state.providers.clone();
+    let target_key = key.clone();
     tauri::async_runtime::spawn(async move {
         let result =
-            run_openai_oauth_server(listener, redirect_uri, oauth_state, pkce, cancel).await;
+            run_openai_oauth_server(listener, redirect_uri, oauth_state, pkce, cancel, target_key).await;
         let login_outcome = match result {
             Ok(()) => match install_openai_provider(&providers) {
                 Ok(()) => OpenAiLoginOutcome {
@@ -924,7 +935,7 @@ pub(super) async fn cancel_openai_oauth_login(
     } else {
         "disconnected"
     };
-    Ok(openai_provider_status_from_auth(auth, state, None, None))
+    Ok(openai_provider_status_from_auth(auth, state, None, None, None))
 }
 
 #[tauri::command]
@@ -947,6 +958,7 @@ pub(super) async fn disconnect_openai_provider(
     Ok(openai_provider_status_from_auth(
         OpenAiAuthStatus::disconnected(),
         "disconnected",
+        None,
         None,
         None,
     ))

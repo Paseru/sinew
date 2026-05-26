@@ -78,6 +78,8 @@ pub(super) struct OpenAiLoginAttempt {
     pub(super) id: String,
     pub(super) cancel: Arc<Notify>,
     pub(super) outcome: Arc<StdMutex<Option<OpenAiLoginOutcome>>>,
+    #[allow(dead_code)]
+    pub(super) target_key: Option<String>,
 }
 
 #[derive(Clone)]

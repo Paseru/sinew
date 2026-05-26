@@ -111,6 +111,7 @@ export function SettingsPane({ workspacePath }: Props) {
 
   const [openAiStatus, setOpenAiStatus] = useState<OpenAiProviderStatus | null>(null);
   const [openAiAccounts, setOpenAiAccounts] = useState<OpenAiAccountInfo[]>([]);
+  const [unconnectedAccounts, setUnconnectedAccounts] = useState<string[]>([]);
   const [anthropicStatus, setAnthropicStatus] = useState<AnthropicProviderStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleProviderStatus | null>(null);
   const [kimiStatus, setKimiStatus] = useState<KimiProviderStatus | null>(null);
@@ -371,6 +372,10 @@ export function SettingsPane({ workspacePath }: Props) {
       const accounts = await api.getAllOpenAiAccounts();
       setOpenAiAccounts(accounts);
 
+      setUnconnectedAccounts((prev) =>
+        prev.filter((key) => !accounts.some((acc) => acc.key === key))
+      );
+
       if (status.connectionState !== "connecting") {
         void loadConfiguredProviders();
         window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
@@ -506,11 +511,11 @@ export function SettingsPane({ workspacePath }: Props) {
     loadKimiStatus,
   ]);
 
-  const connectOpenAi = useCallback(async () => {
+  const connectOpenAi = useCallback(async (key?: string) => {
     setProvidersBusy(true);
     setProvidersMessage(null);
     try {
-      const login = await api.startOpenAiOAuthLogin();
+      const login = await api.startOpenAiOAuthLogin(key);
       const connecting: OpenAiProviderStatus = {
         connected: openAiStatus?.connected ?? false,
         connectionState: "connecting",
@@ -526,6 +531,25 @@ export function SettingsPane({ workspacePath }: Props) {
       setProvidersBusy(false);
     }
   }, [openAiStatus, loadOpenAiStatus]);
+
+  const handleAddOpenAiAccount = useCallback(() => {
+    let nextIndex = 2;
+    while (true) {
+      const key = `openai:${nextIndex}`;
+      const isConnected = openAiAccounts.some((acc) => acc.key === key);
+      const isUnconnected = unconnectedAccounts.includes(key);
+      if (!isConnected && !isUnconnected) {
+        setUnconnectedAccounts((prev) => [...prev, key]);
+        break;
+      }
+      nextIndex++;
+      if (nextIndex > 100) break;
+    }
+  }, [openAiAccounts, unconnectedAccounts]);
+
+  const handleRemoveUnconnectedAccount = useCallback((key: string) => {
+    setUnconnectedAccounts((prev) => prev.filter((k) => k !== key));
+  }, []);
 
   const cancelOpenAi = useCallback(async () => {
     setProvidersBusy(true);
@@ -1191,6 +1215,7 @@ export function SettingsPane({ workspacePath }: Props) {
           <ProvidersSection
             openAiStatus={openAiStatus}
             openAiAccounts={openAiAccounts}
+            unconnectedAccounts={unconnectedAccounts}
             onDisconnectOpenAiAccount={disconnectOpenAiAccount}
             anthropicStatus={anthropicStatus}
             googleStatus={googleStatus}
@@ -1208,6 +1233,9 @@ export function SettingsPane({ workspacePath }: Props) {
               void loadOpenRouterStatus();
             }}
             onConnect={() => void connectOpenAi()}
+            onConnectWithKey={(key) => void connectOpenAi(key)}
+            onAddOpenAiAccount={handleAddOpenAiAccount}
+            onRemoveUnconnectedAccount={handleRemoveUnconnectedAccount}
             onCancel={() => void cancelOpenAi()}
             onDisconnect={() => void disconnectOpenAi()}
             onConnectAnthropic={() => void connectAnthropic()}
@@ -1480,6 +1508,7 @@ function AboutSection({
 type ProvidersSectionProps = {
   openAiStatus: OpenAiProviderStatus | null;
   openAiAccounts: OpenAiAccountInfo[];
+  unconnectedAccounts: string[];
   onDisconnectOpenAiAccount: (key: string) => void;
   anthropicStatus: AnthropicProviderStatus | null;
   googleStatus: GoogleProviderStatus | null;
@@ -1491,6 +1520,9 @@ type ProvidersSectionProps = {
   message: string | null;
   onRefresh: () => void;
   onConnect: () => void;
+  onConnectWithKey: (key: string) => void;
+  onAddOpenAiAccount: () => void;
+  onRemoveUnconnectedAccount: (key: string) => void;
   onCancel: () => void;
   onDisconnect: () => void;
   onConnectAnthropic: () => void;
@@ -1511,6 +1543,7 @@ type ProvidersSectionProps = {
 function ProvidersSection({
   openAiStatus,
   openAiAccounts,
+  unconnectedAccounts,
   onDisconnectOpenAiAccount,
   anthropicStatus,
   googleStatus,
@@ -1522,6 +1555,9 @@ function ProvidersSection({
   message,
   onRefresh,
   onConnect,
+  onConnectWithKey,
+  onAddOpenAiAccount,
+  onRemoveUnconnectedAccount,
   onCancel,
   onDisconnect,
   onConnectAnthropic,
@@ -1596,7 +1632,7 @@ function ProvidersSection({
           onCancel={onCancel}
           onDisconnect={onDisconnect}
           showPlus={true}
-          onPlus={onConnect}
+          onPlus={onAddOpenAiAccount}
         />
         {openAiAccounts
           .filter((account) => account.key.startsWith("openai:"))
@@ -1630,6 +1666,31 @@ function ProvidersSection({
               />
             );
           })}
+        {unconnectedAccounts.map((key) => {
+          const suffix = key.slice("openai:".length);
+          const displayName = `OpenAI ${suffix}`;
+          const accountStatus: ProviderCardStatus = {
+            connected: false,
+            connectionState: "disconnected",
+          };
+          return (
+            <ProviderCard
+              key={key}
+              name={displayName}
+              icon="simple-icons:openai"
+              description={`Connect a secondary OpenAI ChatGPT account.`}
+              status={accountStatus}
+              connectedMeta={[]}
+              loading={loading}
+              busy={busy}
+              onConnect={() => onConnectWithKey(key)}
+              onCancel={() => {}}
+              onDisconnect={() => {}}
+              showMinus={true}
+              onMinus={() => onRemoveUnconnectedAccount(key)}
+            />
+          );
+        })}
         <ProviderCard
           name="Google"
           icon="simple-icons:google"

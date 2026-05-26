@@ -387,8 +387,8 @@ export const api = {
   disconnectOpenAiAccount(key: string) {
     return invoke<void>("disconnect_openai_account", { key });
   },
-  startOpenAiOAuthLogin() {
-    return invoke<StartOpenAiLoginOutput>("start_openai_oauth_login");
+  startOpenAiOAuthLogin(key?: string) {
+    return invoke<StartOpenAiLoginOutput>("start_openai_oauth_login", { key: key ?? null });
   },
   cancelOpenAiOAuthLogin() {
     return invoke<OpenAiProviderStatus>("cancel_openai_oauth_login");

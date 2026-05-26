@@ -423,11 +423,26 @@ struct AuthCodeTokenBody {
     expires_in: Option<u64>,
 }
 
+pub fn path_for_auth_key(key: &str) -> Result<PathBuf> {
+    let dirs = ProjectDirs::from("dev", "hyrak", "sinew")
+        .ok_or_else(|| AppError::Auth("unable to resolve local data directory".into()))?;
+    let dir = dirs.data_local_dir();
+    if key == "openai" {
+        Ok(dir.join("openai-auth.json"))
+    } else if key.starts_with("openai:") {
+        let suffix = key.strip_prefix("openai:").unwrap();
+        Ok(dir.join(format!("openai-auth-{}.json", suffix)))
+    } else {
+        Err(AppError::Auth(format!("invalid auth key: {key}")))
+    }
+}
+
 pub async fn exchange_oauth_code(
     http: &reqwest::Client,
     code: &str,
     redirect_uri: &str,
     pkce: &PkceCodes,
+    target_key: Option<String>,
 ) -> Result<OpenAiAuthStatus> {
     let response = http
         .post(OPENAI_OAUTH_TOKEN_URL)
@@ -457,22 +472,26 @@ pub async fn exchange_oauth_code(
         .await
         .map_err(|err| AppError::Decode(format!("invalid openai oauth body: {err}")))?;
     
-    let default_path = default_auth_path()?;
-    let target_path = if default_path.exists() && load_auth_status(&default_path).map(|s| s.connected).unwrap_or(false) {
-        let dir = default_path.parent().unwrap();
-        let mut index = 2;
-        loop {
-            let p = dir.join(format!("openai-auth-{}.json", index));
-            if !p.exists() {
-                break p;
-            }
-            index += 1;
-            if index > 100 {
-                break dir.join(format!("openai-auth-{}.json", index));
-            }
-        }
+    let target_path = if let Some(key) = target_key {
+        path_for_auth_key(&key)?
     } else {
-        default_path
+        let default_path = default_auth_path()?;
+        if default_path.exists() && load_auth_status(&default_path).map(|s| s.connected).unwrap_or(false) {
+            let dir = default_path.parent().unwrap();
+            let mut index = 2;
+            loop {
+                let p = dir.join(format!("openai-auth-{}.json", index));
+                if !p.exists() {
+                    break p;
+                }
+                index += 1;
+                if index > 100 {
+                    break dir.join(format!("openai-auth-{}.json", index));
+                }
+            }
+        } else {
+            default_path
+        }
     };
 
     save_oauth_tokens(
