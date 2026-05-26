@@ -881,7 +881,7 @@ function QueuedPromptRow({
         </button>
         <button
           type="button"
-          className="todo-strip__queue-action"
+          className="todo-strip__queue-action todo-strip__queue-action--send"
           onClick={(event) => {
             event.stopPropagation();
             onSend?.(prompt.id);
@@ -890,7 +890,7 @@ function QueuedPromptRow({
           aria-label="Send queued prompt now"
           title="Send now"
         >
-          <Icon icon="solar:arrow-right-linear" width={14} height={14} />
+          <Icon icon="solar:send-bold" width={12} height={12} />
         </button>
         <button
           type="button"
