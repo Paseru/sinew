@@ -2873,7 +2873,7 @@ export function ChatPane({
           onClick={scrollToActiveQuestion}
           title="Cliquez pour faire défiler jusqu'à la question"
         >
-          <div className="chat-sticky-question__main">
+          <div className="chat-sticky-question__main" key={activeStickyQuestionBlock.id}>
             <div className="chat-sticky-question__header">
               <span className="chat-sticky-question__icon">
                 <Icon icon="solar:pin-bold-duotone" width={13} height={13} />
