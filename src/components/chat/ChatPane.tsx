@@ -2950,6 +2950,7 @@ export function ChatPane({
                   teamCompletionByTeam={teamCompletionByTeam}
                   activeTeamNames={activeTeamNames}
                   activeAgentName={viewingSubAgent ? activeSubAgent?.name : undefined}
+                  workspacePath={workspacePath}
                 />
               )}
               {showPlanningNextMove && (
@@ -5056,9 +5057,11 @@ function normalizedAgentName(value?: string): string {
 function TeamMessageStack({
   messages,
   onOpenFile,
+  workspacePath,
 }: {
   messages: TeamMessageItem[];
   onOpenFile: (path: string) => void;
+  workspacePath: string;
 }) {
   return (
     <div className="team-message-stack">
@@ -5072,7 +5075,7 @@ function TeamMessageStack({
               {teamMessageMeta(message)}
             </span>
             <div className="team-message__text">
-              <Markdown text={message.message} onOpenFile={onOpenFile} />
+              <Markdown text={message.message} onOpenFile={onOpenFile} workspacePath={workspacePath} />
             </div>
           </div>
         </div>
@@ -5493,6 +5496,7 @@ function ChatBlocks({
   teamCompletionByTeam,
   activeTeamNames,
   activeAgentName,
+  workspacePath,
 }: {
   blocks: ChatBlock[];
   lastUserTextBlockId?: string | null;
@@ -5521,6 +5525,7 @@ function ChatBlocks({
   teamCompletionByTeam?: Record<string, boolean>;
   activeTeamNames?: ReadonlySet<string>;
   activeAgentName?: string;
+  workspacePath: string;
 }) {
   const deferred = useDeferredValue(blocks);
   const items = useMemo(() => renderItemsFromBlocks(deferred), [deferred]);
@@ -5566,6 +5571,7 @@ function ChatBlocks({
             teamCompletionByTeam={teamCompletionByTeam}
             activeTeamNames={activeTeamNames}
             activeAgentName={activeAgentName}
+            workspacePath={workspacePath}
           />
         );
       })}
@@ -5594,6 +5600,7 @@ function BlockView({
   teamCompletionByTeam,
   activeTeamNames,
   activeAgentName,
+  workspacePath,
 }: {
   block: ChatBlock;
   isLastUserText?: boolean;
@@ -5615,7 +5622,25 @@ function BlockView({
   teamCompletionByTeam?: Record<string, boolean>;
   activeTeamNames?: ReadonlySet<string>;
   activeAgentName?: string;
+  workspacePath: string;
 }) {
+  const [compact, setCompact] = useState(() => {
+    try {
+      return localStorage.getItem("sinew.compact-reasoning") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      setCompact(enabled);
+    };
+    window.addEventListener("sinew:compact-reasoning-changed", handler);
+    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler);
+  }, []);
+
   switch (block.kind) {
     case "user-text":
       const teamMessages = teamMessagesFromText(block.text);
@@ -5659,9 +5684,10 @@ function BlockView({
               <TeamMessageStack
                 messages={visibleTeamMessages}
                 onOpenFile={onOpenFile}
+                workspacePath={workspacePath}
               />
             ) : (
-              <FileLinkedText text={block.text} onOpenFile={onOpenFile} />
+              <FileLinkedText text={block.text} onOpenFile={onOpenFile} workspacePath={workspacePath} />
             )}
           </div>
           {block.attachments && block.attachments.length > 0 && (
@@ -5703,7 +5729,7 @@ function BlockView({
       return (
         <div className="msg" data-role="assistant">
           <div className="msg__body">
-            <Markdown text={block.text} onOpenFile={onOpenFile} />
+            <Markdown text={block.text} onOpenFile={onOpenFile} workspacePath={workspacePath} />
           </div>
         </div>
       );
@@ -5714,6 +5740,7 @@ function BlockView({
             text={block.text}
             streaming={block.streaming}
             onOpenFile={onOpenFile}
+            workspacePath={workspacePath}
           />
         </div>
       );
@@ -5757,7 +5784,7 @@ function BlockView({
             </div>
             {block.text.trim() ? (
               <div className="plan-writing-card__body">
-                <Markdown text={block.text} onOpenFile={onOpenFile} />
+                <Markdown text={block.text} onOpenFile={onOpenFile} workspacePath={workspacePath} />
               </div>
             ) : null}
           </div>
@@ -5783,6 +5810,15 @@ function BlockView({
       ) {
         return null;
       }
+      if (
+        compact &&
+        !block.isError &&
+        block.status !== "running" &&
+        !isToolName(block.name, "question") &&
+        !isToolName(block.name, "send_message")
+      ) {
+        return null;
+      }
       const preparingQuestion =
         isToolName(block.name, "question") && block.status === "running";
       const sentTeamMessage = teamMessageFromSendMessageTool(
@@ -5796,6 +5832,7 @@ function BlockView({
               <TeamMessageStack
                 messages={[sentTeamMessage]}
                 onOpenFile={onOpenFile}
+                workspacePath={workspacePath}
               />
             </div>
           </div>
@@ -6045,10 +6082,12 @@ function CompactionSummaryBlock({
   text,
   streaming,
   onOpenFile,
+  workspacePath,
 }: {
   text: string;
   streaming?: boolean;
   onOpenFile: (path: string) => void;
+  workspacePath: string;
 }) {
   const [open, setOpen] = useState(streaming ?? false);
   const wasStreamingRef = useRef(streaming ?? false);
@@ -6094,7 +6133,7 @@ function CompactionSummaryBlock({
         <div className="tool-card__body">
           <div className="compaction-summary__body">
             {text.trim() ? (
-              <Markdown text={text} onOpenFile={onOpenFile} />
+              <Markdown text={text} onOpenFile={onOpenFile} workspacePath={workspacePath} />
             ) : (
               <span>Compacting context…</span>
             )}

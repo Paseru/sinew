@@ -3,22 +3,27 @@ import {
   cloneElement,
   isValidElement,
   memo,
+  useState,
+  useEffect,
   type ReactElement,
   type ReactNode,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import { Icon } from "@iconify/react";
 import { api } from "../../lib/ipc";
 import { MermaidDiagram } from "./MermaidDiagram";
 
 type Props = {
   text: string;
   onOpenFile: (path: string) => void;
+  workspacePath?: string;
 };
 
 type LinkifyOptions = {
   onOpenFile: (path: string) => void;
+  workspacePath?: string;
 };
 
 const FILE_TOKEN =
@@ -42,29 +47,123 @@ function FileLink({
   children,
   variant,
   onOpenFile,
+  workspacePath,
 }: {
   path: string;
   children: ReactNode;
   variant?: "code";
   onOpenFile: (path: string) => void;
+  workspacePath?: string;
 }) {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const handleClose = () => setMenu(null);
+    window.addEventListener("pointerdown", handleClose);
+    return () => window.removeEventListener("pointerdown", handleClose);
+  }, [menu]);
+
+  const handleReveal = async () => {
+    if (!workspacePath) return;
+    try {
+      const resolved = await api.resolveTerminalPath(workspacePath, path);
+      await api.revealAbsolutePath(resolved.absolutePath);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleExecute = async () => {
+    if (!workspacePath) return;
+    try {
+      const resolved = await api.resolveTerminalPath(workspacePath, path);
+      await api.openPathWithDefaultApp(resolved.absolutePath);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
-    <button
-      type="button"
-      className="chat-file-link"
-      data-variant={variant}
-      title="Open file"
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpenFile(path);
-      }}
-    >
-      {children}
-    </button>
+    <>
+      <button
+        type="button"
+        className="chat-file-link"
+        data-variant={variant}
+        title="Left-click to open. Right-click for options."
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenFile(path);
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setMenu({ x: event.clientX, y: event.clientY });
+        }}
+      >
+        {children}
+      </button>
+      {menu && (
+        <div
+          className="tree-menu"
+          role="menu"
+          style={{
+            position: "fixed",
+            left: menu.x,
+            top: menu.y,
+            zIndex: 9999,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <button
+            type="button"
+            className="tree-menu__item"
+            role="menuitem"
+            onClick={() => {
+              setMenu(null);
+              onOpenFile(path);
+            }}
+          >
+            <Icon icon="solar:file-text-linear" width={14} height={14} />
+            <span>Open in Editor</span>
+          </button>
+
+          {workspacePath && (
+            <>
+              <button
+                type="button"
+                className="tree-menu__item"
+                role="menuitem"
+                onClick={() => {
+                  setMenu(null);
+                  void handleReveal();
+                }}
+              >
+                <Icon icon="solar:folder-open-linear" width={14} height={14} />
+                <span>Reveal in Explorer</span>
+              </button>
+              <button
+                type="button"
+                className="tree-menu__item"
+                role="menuitem"
+                onClick={() => {
+                  setMenu(null);
+                  void handleExecute();
+                }}
+              >
+                <Icon icon="solar:play-linear" width={14} height={14} />
+                <span>Execute / Run</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
-function linkifyText(text: string, { onOpenFile }: LinkifyOptions): ReactNode[] {
+function linkifyText(text: string, { onOpenFile, workspacePath }: LinkifyOptions): ReactNode[] {
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
 
@@ -76,7 +175,7 @@ function linkifyText(text: string, { onOpenFile }: LinkifyOptions): ReactNode[] 
       nodes.push(text.slice(lastIndex, index));
     }
     nodes.push(
-      <FileLink key={`${value}-${index}`} path={value} onOpenFile={onOpenFile}>
+      <FileLink key={`${value}-${index}`} path={value} onOpenFile={onOpenFile} workspacePath={workspacePath}>
         {value}
       </FileLink>,
     );
@@ -121,15 +220,15 @@ function linkifyChildren(children: ReactNode, options: LinkifyOptions): ReactNod
   });
 }
 
-export function FileLinkedText({ text, onOpenFile }: Props) {
-  return <>{linkifyText(text, { onOpenFile })}</>;
+export function FileLinkedText({ text, onOpenFile, workspacePath }: Props) {
+  return <>{linkifyText(text, { onOpenFile, workspacePath })}</>;
 }
 
 /**
  * Markdown renderer tuned for chat. GFM + highlight.js. Memoized so
  * streaming token-by-token re-renders don't trash the whole tree.
  */
-export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
+export const Markdown = memo(function Markdown({ text, onOpenFile, workspacePath }: Props) {
   return (
     <div className="md">
       <ReactMarkdown
@@ -158,22 +257,22 @@ export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
             return <pre>{children}</pre>;
           },
           p({ children }) {
-            return <p>{linkifyChildren(children, { onOpenFile })}</p>;
+            return <p>{linkifyChildren(children, { onOpenFile, workspacePath })}</p>;
           },
           li({ children }) {
-            return <li>{linkifyChildren(children, { onOpenFile })}</li>;
+            return <li>{linkifyChildren(children, { onOpenFile, workspacePath })}</li>;
           },
           h1({ children }) {
-            return <h1>{linkifyChildren(children, { onOpenFile })}</h1>;
+            return <h1>{linkifyChildren(children, { onOpenFile, workspacePath })}</h1>;
           },
           h2({ children }) {
-            return <h2>{linkifyChildren(children, { onOpenFile })}</h2>;
+            return <h2>{linkifyChildren(children, { onOpenFile, workspacePath })}</h2>;
           },
           h3({ children }) {
-            return <h3>{linkifyChildren(children, { onOpenFile })}</h3>;
+            return <h3>{linkifyChildren(children, { onOpenFile, workspacePath })}</h3>;
           },
           h4({ children }) {
-            return <h4>{linkifyChildren(children, { onOpenFile })}</h4>;
+            return <h4>{linkifyChildren(children, { onOpenFile, workspacePath })}</h4>;
           },
           code({ children, className }) {
             const value = childrenToString(children);
@@ -186,6 +285,7 @@ export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
                   path={value}
                   variant="code"
                   onOpenFile={onOpenFile}
+                  workspacePath={workspacePath}
                 >
                   {value}
                 </FileLink>
@@ -208,7 +308,7 @@ export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
             const value = href ?? childrenToString(children);
             if (isFileToken(value)) {
               return (
-                <FileLink path={value} onOpenFile={onOpenFile}>
+                <FileLink path={value} onOpenFile={onOpenFile} workspacePath={workspacePath}>
                   {children}
                 </FileLink>
               );
