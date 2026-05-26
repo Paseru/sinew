@@ -8,9 +8,9 @@ Ce document détaille l'ensemble des fonctionnalités et des options personnalis
 
 Les options de personnalisation, de connexion et de navigation sont centralisées pour optimiser le confort d'utilisation au quotidien :
 
-### 1. 🌐 Traduction Intégrale en Français
+### 1. 🌐 Interface en Français (Traduction progressive)
 * **Localisation** : `Settings > Options` (Option *Langue*).
-* **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) en français pour une navigation plus accessible.
+* **Bénéfice** : Traduit dynamiquement les éléments clés de l'interface utilisateur (boutons, menus principaux, paramètres, dialogues et infobulles) en français pour une navigation plus confortable. La traduction cible l'expérience utilisateur et préserve volontairement en anglais les éléments purement techniques (sorties de terminal, code ou diagnostics) pour maintenir la cohérence de développement.
 
 ### 2. 🤖 Mode "Power User"
 * **Localisation** : `Settings > Options` (Option *Mode Power User*).
