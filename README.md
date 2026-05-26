@@ -39,6 +39,7 @@
 - [Agent swarm](#agent-swarm) — peer-to-peer team of 2–8 agents
 - [Compaction](#compaction) — auto and manual
 - [Rollback](#rollback) — checkpointed conversation
+- [Display modes & Responsive Options](#display-modes--responsive-options) — technical reasoning density & UI responsiveness
 - [Architecture](#architecture) · [Install](#install) · [Build from source](#build-from-source)
 
 ---
@@ -510,6 +511,28 @@ Before confirming, a **toggle** lets you choose:
 Sinew then deletes all subsequent user / assistant messages, and optionally restores the files. The conversation can resume cleanly from that point.
 
 Under the hood, each turn records a *checkpoint* that captures the before / after state of the files it touched — that's what makes revert possible at any past point.
+
+---
+
+## Display modes & Responsive Options
+
+Sinew features a customizable display mode selector (*Mode d'affichage*) in the General Options, allowing you to configure the density of **AI thinking processes** (reasoning blocks) and **tool execution details** (bash output, file reads/writes, grep searches) displayed in the chat.
+
+The interface offers three density levels:
+
+- **Detailed (*Détaillé*)** — Full visibility. AI reasoning blocks remain open after streaming. Tool calls are rendered in full detail. File modifications (`edit_file`, `write_file`) bypass the standard card wrappers and render their complete, raw line-by-line diffs (`FileChangeBlock`s) directly in the chat stream for maximum technical auditability.
+- **Compact** — A clean, balanced view. AI reasoning blocks automatically collapse once streaming is finished, showing only a small summary header (e.g. *Thinking (5.2s)*). All successful tool executions, **including file modifications**, are collapsed into single-line clickable card headers. Diffs and code outputs are hidden by default, but can be expanded manually with a single click. Long outputs inside cards are capped to a max-height of 180px with a scrollbar to keep the chat tidy.
+- **Very Compact (*Très compact*)** — The cleanest layout. AI reasoning blocks are visible during generation, then **disappear completely** once finished. All successful, completed tool executions (including file edits and reads) are **filtered out of the chat entirely** (0 pixels used). Only errors, questions from the agent, and the final text responses from the AI remain visible, allowing you to focus purely on the results.
+
+### Responsive Options Panel via Container Queries
+
+Because Sinew is a multi-column desktop application (sidebar + options/editor column + chat column), standard viewport-based CSS media queries are insufficient, as a pane can be narrow even on a large 4K monitor. 
+
+To address this, Sinew uses **CSS Container Queries** (`@container`) on the options panel. The entire configuration layout transitions fluidly in real-time based on the actual width of its column:
+- **Flexible Navigation** — The vertical sidebar navigation converts into an elegant horizontal toolbar on top when space is constrained.
+- **Responsive Cards** — Provider settings (OAuth connections, API key fields, model search tools) wrap seamlessly from side-by-side rows to stacked vertical layouts without cramping descriptions.
+- **Stacked Credential Rows** — Text input fields for keys and endpoints wrap underneath their labels in small panels rather than getting squished.
+- **Two-Column grids** — Lists of system diagnostics tools (Cargo, Node, Python, Git) and MCP components automatically stack into a single column.
 
 ---
 
