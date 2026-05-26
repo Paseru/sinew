@@ -615,6 +615,7 @@ pub fn run() {
             context::estimate_context,
             context::estimate_sub_agent_context,
             turns::cancel_turn,
+            turns::check_sota_diagnostics,
             swarm::stop_agent_swarm_command,
             terminal::run_terminal_command,
             terminal::spawn_terminal,
@@ -657,4 +658,5 @@ pub fn run() {
             }
         })
 }
+
 

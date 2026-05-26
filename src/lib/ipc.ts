@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+﻿import { invoke } from "@tauri-apps/api/core";
 import type {
   AttachmentInput,
   ActiveTurnReplay,
@@ -133,6 +133,9 @@ export const api = {
     return invoke<GitPullRequestOutput>("git_create_pull_request_command", {
       input: { workspacePath, title, body, targetBranch },
     });
+  },
+  checkSotaDiagnostics() {
+    return invoke<string>("check_sota_diagnostics");
   },
   openNewWindow() {
     return invoke<void>("open_new_window");
@@ -662,7 +665,7 @@ export const api = {
       input: { sessionId, token },
     });
   },
-  // ── Auto-updater ──────────────────────────────────────────────────────
+  // â”€â”€ Auto-updater â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Round-trips to the `tauri-plugin-updater` integration. Progress events
   // (`updater://progress`, `updater://finished`) are consumed by the
   // <UpdateBadge /> component via `@tauri-apps/api/event::listen`.
@@ -685,3 +688,4 @@ export const api = {
     return invoke<void>("set_multi_pc_sync_enabled", { enabled });
   },
 };
+

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
@@ -543,7 +543,7 @@ export function SettingsPane({ workspacePath }: Props) {
       };
       setOpenAiStatus(connecting);
       await api.openExternalUrl(login.authUrl);
-      setProvidersMessage("Waiting for browser confirmation…");
+      setProvidersMessage("Waiting for browser confirmationâ€¦");
     } catch (err) {
       setProvidersMessage(err instanceof Error ? err.message : String(err));
       void loadOpenAiStatus();
@@ -1176,7 +1176,7 @@ export function SettingsPane({ workspacePath }: Props) {
           <WrenchIcon size={15} className="settings-pane__nav-icon" />
           <span className="settings-pane__nav-label">Tools</span>
           <span className="settings-pane__nav-count">
-            {toolSettings?.tools.length ?? "·"}
+            {toolSettings?.tools.length ?? "Â·"}
           </span>
         </button>
         <button
@@ -1207,7 +1207,7 @@ export function SettingsPane({ workspacePath }: Props) {
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">Skills</span>
-          <span className="settings-pane__nav-count">{skills?.length ?? "·"}</span>
+          <span className="settings-pane__nav-count">{skills?.length ?? "Â·"}</span>
         </button>
         <button
           type="button"
@@ -1443,7 +1443,7 @@ function AboutSection({
             data-active={locale === "fr" ? "true" : "false"}
             onClick={() => onLocaleChange("fr")}
           >
-            Français
+            FranÃ§ais
           </button>
         </div>
       </div>
@@ -1628,7 +1628,7 @@ function ProvidersSection({
             disabled={loading || busy}
           >
             <Icon icon="solar:refresh-linear" width={13} height={13} />
-            <span>{loading ? "Refreshing…" : "Refresh"}</span>
+            <span>{loading ? "Refreshingâ€¦" : "Refresh"}</span>
           </button>
         </div>
       </header>
@@ -2301,7 +2301,7 @@ function OpenRouterProviderCard({
               type="text"
               value={query}
               disabled={!searchEnabled}
-              placeholder={searchEnabled ? "Type a model name…" : "Save a valid key first"}
+              placeholder={searchEnabled ? "Type a model nameâ€¦" : "Save a valid key first"}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
@@ -2310,7 +2310,7 @@ function OpenRouterProviderCard({
         {searchEnabled && query.trim() !== "" && (
           <div className="settings-pane__openrouter-results" aria-live="polite">
             {searching ? (
-              <div className="settings-pane__openrouter-hint">Searching…</div>
+              <div className="settings-pane__openrouter-hint">Searchingâ€¦</div>
             ) : searchError ? (
               <div className="settings-pane__provider-error">{searchError}</div>
             ) : results.length === 0 ? (
@@ -2332,7 +2332,7 @@ function OpenRouterProviderCard({
                         disabled={mutatingModelId === model.id}
                       >
                         <Icon icon="solar:add-circle-linear" width={13} height={13} />
-                        <span>{mutatingModelId === model.id ? "Adding…" : "Add"}</span>
+                        <span>{mutatingModelId === model.id ? "Addingâ€¦" : "Add"}</span>
                       </button>
                     )}
                   </div>
@@ -2452,7 +2452,7 @@ function ToolsSection({
         <div className="settings-pane__header-text">
           <h1 className="settings-pane__title">Tools</h1>
           <p className="settings-pane__subtitle">
-            {loading ? "Loading…" : `${enabledCount}/${tools.length} enabled`}
+            {loading ? "Loadingâ€¦" : `${enabledCount}/${tools.length} enabled`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -2476,7 +2476,7 @@ function ToolsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving…" : "Save"}</span>
+            <span>{saving ? "Savingâ€¦" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -2533,7 +2533,7 @@ function ToolsSection({
                     <span className="settings-pane__tool-toggle-hint">
                       {openAiConnected
                         ? "Authenticate image requests with your connected OpenAI account instead of an API key."
-                        : "Connect OpenAI in Settings → Providers to use your subscription."}
+                        : "Connect OpenAI in Settings â†’ Providers to use your subscription."}
                     </span>
                   </div>
                   <button
@@ -2689,7 +2689,7 @@ function PlanModePromptSettingsItem({
         aria-label="Plan mode prompt"
         value={value}
         rows={rows}
-        placeholder="Plan mode instructions…"
+        placeholder="Plan mode instructionsâ€¦"
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
@@ -2813,10 +2813,10 @@ function McpSection({
           <h1 className="settings-pane__title">MCP servers</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Loading servers…"
+              ? "Loading serversâ€¦"
               : servers.length === 0
                 ? "Add servers in advanced config, then turn them on here."
-                : `${enabledCount}/${servers.length} enabled${failedCount ? ` · ${failedCount} need attention` : ""}`}
+                : `${enabledCount}/${servers.length} enabled${failedCount ? ` Â· ${failedCount} need attention` : ""}`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -2846,7 +2846,7 @@ function McpSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Checking…" : dirty ? "Save changes" : "Saved"}</span>
+            <span>{saving ? "Checkingâ€¦" : dirty ? "Save changes" : "Saved"}</span>
           </button>
         </div>
       </header>
@@ -2856,7 +2856,7 @@ function McpSection({
           <div className="settings-pane__nav-list-head">
             <span>Servers</span>
             {probing && (
-              <span className="settings-pane__servers-meta">probing…</span>
+              <span className="settings-pane__servers-meta">probingâ€¦</span>
             )}
           </div>
           <div className="settings-pane__nav-list-items">
@@ -2928,7 +2928,7 @@ function McpSection({
             })}
             {servers.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No servers yet — add one in the raw config.
+                No servers yet â€” add one in the raw config.
               </div>
             )}
           </div>
@@ -3050,7 +3050,7 @@ function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailPr
       : "disabled"
     : !probe
       ? probing
-        ? "probing…"
+        ? "probingâ€¦"
         : "pending"
       : !probe.ok
         ? "failed"
@@ -3141,7 +3141,7 @@ function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailPr
           )}
           {!probe && (
             <div className="settings-pane__muted">
-              {probing ? "Probing server…" : "No probe data yet."}
+              {probing ? "Probing serverâ€¦" : "No probe data yet."}
             </div>
           )}
         </div>
@@ -3219,7 +3219,7 @@ function SubAgentsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving…" : "Save"}</span>
+            <span>{saving ? "Savingâ€¦" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -3260,7 +3260,7 @@ function SubAgentsSection({
             ))}
             {!loading && settings.agents.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No sub-agents yet — click + to start.
+                No sub-agents yet â€” click + to start.
               </div>
             )}
           </div>
@@ -3333,7 +3333,7 @@ function SettingsPicker({
           {selected?.icon && (
             <Icon icon={selected.icon} width={12} height={12} />
           )}
-          <span>{selected?.label ?? "—"}</span>
+          <span>{selected?.label ?? "â€”"}</span>
         </span>
         <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
       </button>
@@ -3584,7 +3584,7 @@ function SkillsSection({
           <h1 className="settings-pane__title">Skills</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Scanning…"
+              ? "Scanningâ€¦"
               : total === 0
                 ? "Drop SKILL.md files in .agents/skills or ~/.agents/skills."
                 : `${enabled}/${total} available to the agent`}
@@ -3633,7 +3633,7 @@ function SkillsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving…" : "Save"}</span>
+            <span>{saving ? "Savingâ€¦" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -3856,7 +3856,7 @@ function SkillPreview({
                     width={13}
                     height={13}
                   />
-                  <span>{saving ? "Saving…" : "Save"}</span>
+                  <span>{saving ? "Savingâ€¦" : "Save"}</span>
                 </button>
               </>
             ) : (
@@ -4561,6 +4561,7 @@ const TOOL_LABEL: Record<string, string> = {
   write_file: "Write file",
   glob: "Glob",
   grep: "Grep",
+  check_sota: "Check SOTA status",
   web_search: "Web search",
   web_fetch: "Web fetch",
   create_image: "Create image",
@@ -4582,6 +4583,7 @@ const TOOL_ICON: Record<string, string> = {
   edit_file: "solar:pen-2-linear",
   write_file: "solar:file-text-linear",
   web_search: "solar:magnifer-linear",
+  check_sota: "solar:health-state-linear",
   web_fetch: "solar:link-round-linear",
   create_image: "solar:gallery-wide-linear",
   question: "solar:question-circle-linear",
@@ -4610,3 +4612,4 @@ function humanizeToolName(name: string): string {
   if (!spaced) return name;
   return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
 }
+

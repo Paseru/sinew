@@ -1707,3 +1707,14 @@ pub(super) fn restore_workspace_for_rewrite(
     Ok(())
 }
 
+
+#[tauri::command]
+pub(super) async fn check_sota_diagnostics() -> std::result::Result<String, String> {
+    let tool = CheckSotaTool::new();
+    let result = tool.run(serde_json::Value::Null).await;
+    if result.is_error {
+        Err(result.content)
+    } else {
+        Ok(result.content)
+    }
+}

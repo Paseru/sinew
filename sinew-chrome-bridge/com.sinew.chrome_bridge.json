@@ -1,7 +1,7 @@
 ﻿{
     "name":  "com.sinew.chrome_bridge",
     "description":  "Sinew Chrome Bridge Native Messaging Host",
-    "path":  "C:\\Dev\\sinew-fr-work\\source\\sinew-chrome-bridge\\native_host.bat",
+    "path":  "C:\\Dev\\sinew\\sinew-chrome-bridge\\native_host.bat",
     "type":  "stdio",
     "allowed_origins":  [
                             "chrome-extension://kooobgnecenccliamhjbcncjnjpjoeic/"
