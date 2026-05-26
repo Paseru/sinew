@@ -144,7 +144,11 @@ export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo>
         windows,
       };
     } catch (err) {
-      return unavailableQuota(`Impossible de lire Codex: ${String(err)}`);
+      const errStr = String(err);
+      if (errStr.includes("403 Forbidden") || errStr.includes("404 Not Found")) {
+        return unavailableQuota("Quota illimite ou invisible (Business/Enterprise)");
+      }
+      return unavailableQuota(`Impossible de lire Codex: ${errStr}`);
     }
   }
 

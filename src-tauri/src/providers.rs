@@ -1179,17 +1179,24 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
     })
 }
 
-fn antigravity_quota_group(model_name: &str) -> Option<(&'static str, &'static str)> {
+fn antigravity_quota_group(model_name: &str) -> Option<(String, String)> {
     if model_name.contains("claude") {
-        return Some(("claude", "Claude"));
+        return Some(("claude".to_string(), "Claude".to_string()));
     }
-    if !model_name.contains("gemini-3") {
+    if !model_name.contains("gemini-") {
         return None;
     }
-    if model_name.contains("flash") {
-        return Some(("gemini-flash", "Gemini 3 Flash"));
+    
+    if model_name.contains("gemini-3.5") && model_name.contains("flash") {
+        return Some(("gemini-3.5-flash".to_string(), "Gemini 3.5 Flash".to_string()));
     }
-    Some(("gemini-pro", "Gemini 3 Pro"))
+    if model_name.contains("gemini-3.1") && model_name.contains("pro") {
+        return Some(("gemini-3.1-pro".to_string(), "Gemini 3.1 Pro".to_string()));
+    }
+    if model_name.contains("flash") {
+        return Some(("gemini-flash".to_string(), "Gemini 3 Flash".to_string()));
+    }
+    Some(("gemini-pro".to_string(), "Gemini 3 Pro".to_string()))
 }
 
 #[tauri::command]

@@ -18,6 +18,7 @@ export type ModelEntry = {
   thinking: readonly ThinkingLevel[];
   defaultThinking: ThinkingLevel;
   supportsFast?: boolean;
+  defaultFast?: boolean;
 };
 
 export const PROVIDERS: {
@@ -209,8 +210,22 @@ export function availableModelsForProviders(
       const matchingModel = MODELS.find((m) => m.value === `openai:${modelName}`);
       const label = matchingModel ? matchingModel.label : "GPT-5.5";
       const thinking = (matchingModel ? matchingModel.thinking : ["off", "low", "medium", "high", "xhigh"]) as readonly ThinkingLevel[];
-      const defaultThinking = matchingModel ? matchingModel.defaultThinking : "xhigh";
-      const supportsFast = matchingModel ? Boolean(matchingModel.supportsFast) : true;
+      
+      let defaultThinking = matchingModel ? matchingModel.defaultThinking : "medium";
+      try {
+        const storedThinking = localStorage.getItem(`sinew.provider-thinking.${provider}`);
+        if (storedThinking) {
+          defaultThinking = storedThinking as any;
+        }
+      } catch {}
+
+      let defaultFast = matchingModel ? Boolean(matchingModel.supportsFast) : true;
+      try {
+        const storedFast = localStorage.getItem(`sinew.provider-fast.${provider}`);
+        if (storedFast !== null) {
+          defaultFast = storedFast === "true";
+        }
+      } catch {}
 
       entries.push({
         value: modelId(provider, modelName),
@@ -218,7 +233,8 @@ export function availableModelsForProviders(
         label: `OpenAI ${suffix} (${label})`,
         thinking,
         defaultThinking,
-        supportsFast,
+        supportsFast: true,
+        defaultFast,
       });
     }
   }

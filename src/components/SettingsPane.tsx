@@ -400,11 +400,49 @@ export function SettingsPane({ workspacePath }: Props) {
     return models;
   });
 
+  const [secondaryThinking, setSecondaryThinking] = useState<Record<string, string>>(() => {
+    const thinking: Record<string, string> = {};
+    try {
+      for (let i = 2; i <= 20; i++) {
+        const key = `openai:${i}`;
+        thinking[key] = localStorage.getItem(`sinew.provider-thinking.${key}`) || "medium";
+      }
+    } catch {}
+    return thinking;
+  });
+
+  const [secondaryFast, setSecondaryFast] = useState<Record<string, string>>(() => {
+    const fast: Record<string, string> = {};
+    try {
+      for (let i = 2; i <= 20; i++) {
+        const key = `openai:${i}`;
+        fast[key] = localStorage.getItem(`sinew.provider-fast.${key}`) || "true";
+      }
+    } catch {}
+    return fast;
+  });
+
   const handleUpdateSecondaryModel = useCallback((key: string, model: string) => {
     try {
       localStorage.setItem(`sinew.provider-model.${key}`, model);
     } catch {}
     setSecondaryModels((prev) => ({ ...prev, [key]: model }));
+    void loadOpenAiStatus();
+  }, [loadOpenAiStatus]);
+
+  const handleUpdateSecondaryThinking = useCallback((key: string, thinking: string) => {
+    try {
+      localStorage.setItem(`sinew.provider-thinking.${key}`, thinking);
+    } catch {}
+    setSecondaryThinking((prev) => ({ ...prev, [key]: thinking }));
+    void loadOpenAiStatus();
+  }, [loadOpenAiStatus]);
+
+  const handleUpdateSecondaryFast = useCallback((key: string, fast: string) => {
+    try {
+      localStorage.setItem(`sinew.provider-fast.${key}`, fast);
+    } catch {}
+    setSecondaryFast((prev) => ({ ...prev, [key]: fast }));
     void loadOpenAiStatus();
   }, [loadOpenAiStatus]);
 
@@ -1256,6 +1294,10 @@ export function SettingsPane({ workspacePath }: Props) {
             unconnectedAccounts={unconnectedAccounts}
             secondaryModels={secondaryModels}
             onUpdateSecondaryModel={handleUpdateSecondaryModel}
+            secondaryThinking={secondaryThinking}
+            onUpdateSecondaryThinking={handleUpdateSecondaryThinking}
+            secondaryFast={secondaryFast}
+            onUpdateSecondaryFast={handleUpdateSecondaryFast}
             onSaveOpenAiAccessToken={async (token, key) => { await api.saveOpenAiAccessToken(token, key); }}
             onDisconnectOpenAiAccount={disconnectOpenAiAccount}
             anthropicStatus={anthropicStatus}
@@ -1784,6 +1826,10 @@ type ProvidersSectionProps = {
   unconnectedAccounts: string[];
   secondaryModels: Record<string, string>;
   onUpdateSecondaryModel: (key: string, model: string) => void;
+  secondaryThinking: Record<string, string>;
+  onUpdateSecondaryThinking: (key: string, thinking: string) => void;
+  secondaryFast: Record<string, string>;
+  onUpdateSecondaryFast: (key: string, fast: string) => void;
   onSaveOpenAiAccessToken: (token: string, key?: string) => Promise<void>;
   onDisconnectOpenAiAccount: (key: string) => void;
   anthropicStatus: AnthropicProviderStatus | null;
@@ -1822,6 +1868,10 @@ function ProvidersSection({
   unconnectedAccounts,
   secondaryModels,
   onUpdateSecondaryModel,
+  secondaryThinking,
+  onUpdateSecondaryThinking,
+  secondaryFast,
+  onUpdateSecondaryFast,
   onSaveOpenAiAccessToken,
   onDisconnectOpenAiAccount,
   anthropicStatus,
@@ -1963,10 +2013,12 @@ function ProvidersSection({
             </div>
           )}
         </ProviderCard>
-        {openAiAccounts
-          .filter((account) => account.key.startsWith("openai:"))
-          .map((account) => {
-            const suffix = account.key.slice("openai:".length);
+        {(openAiAccounts.some((account) => account.key.startsWith("openai:")) || unconnectedAccounts.length > 0) && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "10px", marginLeft: "14px", borderLeft: "2px solid var(--line-2)", paddingLeft: "20px" }}>
+            {openAiAccounts
+              .filter((account) => account.key.startsWith("openai:"))
+              .map((account) => {
+                const suffix = account.key.slice("openai:".length);
             const displayName = `OpenAI ${suffix}`;
             const accountStatus: ProviderCardStatus = {
               connected: true,
@@ -1994,9 +2046,10 @@ function ProvidersSection({
                 showMinus={true}
                 onMinus={() => void onDisconnectOpenAiAccount(account.key)}
                 providerId={account.key}
+                compact={true}
               >
-                <div style={{ display: "flex", gap: "12px", alignItems: "center", marginTop: "12px", padding: "8px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-2)" }}>Intelligence (Model):</span>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "4px", minWidth: 0 }}>
+                  <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto" }}>Model:</span>
                   <select
                     value={currentModel}
                     onChange={(e) => onUpdateSecondaryModel(account.key, e.target.value)}
@@ -2005,10 +2058,15 @@ function ProvidersSection({
                       color: "var(--text-1)",
                       border: "1px solid var(--line-2)",
                       borderRadius: "4px",
-                      padding: "4px 8px",
-                      fontSize: "12px",
+                      padding: "2px 6px",
+                      fontSize: "11px",
                       cursor: "pointer",
-                      outline: "none"
+                      outline: "none",
+                      flex: "1 1 auto",
+                      minWidth: 0,
+                      textOverflow: "ellipsis",
+                      overflow: "hidden",
+                      whiteSpace: "nowrap"
                     }}
                   >
                     <option value="gpt-5.5">GPT-5.5 (Maximum / Ultra Fast)</option>
@@ -2044,8 +2102,9 @@ function ProvidersSection({
               onDisconnect={() => {}}
               showMinus={true}
               onMinus={() => onRemoveUnconnectedAccount(key)}
+              compact={true}
             >
-              <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
+              <div style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
                 <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Or paste a business access token:
                 </span>
@@ -2091,8 +2150,10 @@ function ProvidersSection({
                 </div>
               </div>
             </ProviderCard>
-          );
-        })}
+            );
+          })}
+        </div>
+        )}
         <ProviderCard
           name="Google"
           icon="simple-icons:google"
@@ -2164,6 +2225,7 @@ type ProviderCardProps = {
   showMinus?: boolean;
   onMinus?: () => void;
   providerId?: string;
+  compact?: boolean;
 };
 
 function ProviderCard({
@@ -2183,6 +2245,7 @@ function ProviderCard({
   showMinus,
   onMinus,
   providerId,
+  compact,
 }: ProviderCardProps) {
   const state = status?.connectionState ?? "disconnected";
   const connected = Boolean(status?.connected);
@@ -2228,10 +2291,10 @@ function ProviderCard({
   }, [connected, providerId]);
 
   return (
-    <section className="settings-pane__provider-card">
+    <section className={`settings-pane__provider-card ${compact ? 'settings-pane__provider-card--compact' : ''}`}>
       <div className="settings-pane__provider-main">
         <div className="settings-pane__provider-mark" aria-hidden>
-          <Icon icon={icon} width={24} height={24} />
+          <Icon icon={icon} width={compact ? 16 : 24} height={compact ? 16 : 24} />
         </div>
         <div className="settings-pane__provider-copy">
           <div className="settings-pane__provider-title-row">
@@ -2241,7 +2304,7 @@ function ProviderCard({
               {statusLabel}
             </span>
           </div>
-          <p>{description}</p>
+          {!compact && <p>{description}</p>}
           {connected && meta.length > 0 && (
             <div className="settings-pane__provider-meta">
               {meta.map((item) => (
@@ -2251,7 +2314,7 @@ function ProviderCard({
           )}
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {children}
-          {connected && quota && <QuotaInlinePanel quota={quota} />}
+          {connected && quota && <QuotaInlinePanel quota={quota} compact={compact} />}
         </div>
       </div>
       <div className="settings-pane__provider-actions">
@@ -2309,9 +2372,11 @@ function ProviderCard({
               className="settings-pane__btn"
               onClick={onDisconnect}
               disabled={busy}
+              style={compact ? { padding: "6px 8px", minWidth: "auto" } : undefined}
+              title="Disconnect"
             >
-              <Icon icon="solar:logout-2-linear" width={13} height={13} />
-              <span>{busy ? "Disconnecting..." : "Disconnect"}</span>
+              <Icon icon="solar:logout-2-linear" width={compact ? 16 : 13} height={compact ? 16 : 13} />
+              {!compact && <span>{busy ? "Disconnecting..." : "Disconnect"}</span>}
             </button>
           </div>
         ) : (
@@ -2380,10 +2445,10 @@ function QuotaBar({ item }: { item: { label: string; remainingPercent: number | 
   );
 }
 
-function QuotaInlinePanel({ quota }: { quota: QuotaInfo }) {
+function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: boolean }) {
   if (quota.kind === "unavailable") {
     return (
-      <div style={{ marginTop: "12px", color: "var(--text-3)", fontSize: "11px" }}>
+      <div style={{ marginTop: compact ? "4px" : "12px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: compact ? 0.7 : 1 }}>
         {quota.label ?? "Quota non disponible"}
       </div>
     );
@@ -2396,14 +2461,14 @@ function QuotaInlinePanel({ quota }: { quota: QuotaInfo }) {
   return (
     <div
       style={{
-        marginTop: "12px",
-        padding: "10px",
+        marginTop: compact ? "6px" : "12px",
+        padding: compact ? "6px" : "10px",
         background: "var(--bg-1)",
         border: "1px solid var(--border-3, var(--line-1))",
         borderRadius: "6px",
         display: "flex",
         flexDirection: "column",
-        gap: "9px",
+        gap: compact ? "6px" : "9px",
       }}
     >
       {quota.label && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}

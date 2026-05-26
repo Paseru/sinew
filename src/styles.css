@@ -3571,6 +3571,42 @@ textarea {
   background: var(--bg-1);
 }
 
+.settings-pane__provider-card--compact {
+  padding: 10px 12px;
+  gap: 8px;
+  border: 1px solid var(--line-1);
+  background: var(--bg-2);
+  border-radius: var(--r-med);
+}
+
+.settings-pane__provider-card--compact .settings-pane__provider-main {
+  gap: 8px;
+}
+
+.settings-pane__provider-card--compact .settings-pane__provider-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.settings-pane__provider-card--compact .settings-pane__provider-title-row h2 {
+  font-size: 13px;
+}
+
+.settings-pane__provider-card--compact .settings-pane__provider-copy {
+  gap: 4px;
+}
+
+.settings-pane__provider-card--compact .settings-pane__provider-meta span {
+  font-size: 10px;
+  padding: 2px 5px;
+}
+
+.settings-pane__provider-card--compact .settings-pane__provider-error {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
 .settings-pane__provider-main {
   min-width: 0;
   display: flex;
