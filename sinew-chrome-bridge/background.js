@@ -1,12 +1,9 @@
-﻿// ðŸ§¬ Sinew Chrome Bridge â€” Service Worker (Manifest V3)
+﻿// 🧬 Sinew Chrome Bridge — Service Worker (Manifest V3)
 // Upgraded to SOTA Sinew-grade sequential execution queue and automatic biological cursor physics injection.
-// Dual connection support: Native Messaging (Primary) + WebSocket Fallback.
+// Pure Native Messaging connection (No fallback to match Codex standard).
 
-const PROXY_URL = "ws://localhost:29002/extension";
-let socket = null;
 let nativePort = null;
 let reconnectTimer = null;
-let heartbeatInterval = null;
 
 // Registry of active attached debuggers
 const attachedTabs = new Set();
@@ -18,9 +15,70 @@ let lifecycleQueue = Promise.resolve();
 function runLocked(fn) {
   const next = lifecycleQueue.then(() => fn());
   lifecycleQueue = next.catch((err) => {
-    console.error("âš ï¸ [Bridge Queue Error]:", err);
+    console.error("⚠️ [Bridge Queue Error]:", err);
   });
   return next;
+}
+
+// Utility to check if a URL is a restricted system page
+function isSystemTab(tab) {
+  const u = tab.url || "";
+  return u.startsWith("chrome://") || 
+         u.startsWith("chrome-extension://") || 
+         u.startsWith("edge://") ||
+         u.startsWith("view-source:");
+}
+
+// Reusable central message sender
+function sendMsg(msg) {
+  if (nativePort) {
+    try {
+      nativePort.postMessage(msg);
+    } catch (e) {
+      console.error("🧬 [Bridge background] Failed to send via Native Port:", e);
+    }
+  }
+}
+
+function isBridgeConnected() {
+  return !!nativePort;
+}
+
+// Reusable response sender
+function sendResponse(id, data) {
+  sendMsg({ type: "response", id, data });
+}
+
+function connect() {
+  if (nativePort) return;
+  try {
+    console.log("🧬 [Bridge background] Connecting to Native Host com.sinew.chrome_bridge...");
+    const port = chrome.runtime.connectNative("com.sinew.chrome_bridge");
+    nativePort = port;
+
+    port.onMessage.addListener((msg) => {
+      handleMessage(msg);
+    });
+
+    port.onDisconnect.addListener(() => {
+      const err = chrome.runtime.lastError;
+      console.warn("🧬 [Bridge background] Native Host disconnected:", err ? err.message : "No details");
+      nativePort = null;
+      updateStorageState();
+
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 3000);
+    });
+
+    // Native connection succeeded: register and sync
+    sendMsg({ type: "register", role: "extension" });
+    reportOpenTabs();
+    updateStorageState();
+  } catch (e) {
+    console.warn("🧬 [Bridge background] Native Port crash on initialize:", e);
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 3000);
+  }
 }
 
 // Utility to check if a URL is a restricted system page
@@ -540,13 +598,6 @@ function updateStorageState() {
   });
 }
 
-function startHeartbeat() {
-  stopHeartbeat();
-  heartbeatInterval = setInterval(() => {
-    sendMsg({ type: "ping" });
-  }, 15000);
-}
-
 // Keep connection state fresh for popup UI
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "get_status") {
@@ -555,26 +606,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       attachedCount: attachedTabs.size
     });
   } else if (request.action === "reconnect") {
-    if (socket) socket.close();
-    else connect();
+    connect();
     sendResponse({ success: true });
   }
   return true;
 });
-
-function stopHeartbeat() {
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
-  }
-}
 
 // Setup periodic alarm to keep the background service worker alive and ensure connection
 chrome.alarms.create("keep_alive_alarm", { periodInMinutes: 0.2 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "keep_alive_alarm") {
     if (!isBridgeConnected()) {
-      console.log("ðŸ§¬ [Bridge background] Connection inactive. Reconnecting via alarm...");
+      console.log("🧬 [Bridge background] Connection inactive. Reconnecting via alarm...");
       connect();
     }
   }

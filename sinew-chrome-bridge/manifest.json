@@ -4,19 +4,30 @@
   "version": "1.0.0",
   "description": "Bridges Sinew and browser-use to your active, running Chrome session.",
   "permissions": [
-    "debugger",
-    "tabs",
-    "scripting",
-    "activeTab",
-    "storage",
-    "downloads",
-    "history",
-    "notifications",
-    "bookmarks",
-    "tabGroups",
     "alarms",
-    "nativeMessaging"
+    "bookmarks",
+    "debugger",
+    "downloads",
+    "downloads.ui",
+    "favicon",
+    "history",
+    "nativeMessaging",
+    "notifications",
+    "readingList",
+    "scripting",
+    "sessions",
+    "storage",
+    "tabGroups",
+    "tabs",
+    "topSites"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; font-src 'self' https://cdn.openai.com;"
+  },
+  "web_accessible_resources": [ {
+    "matches": [ "<all_urls>" ],
+    "resources": [ "icon-128.png", "icon-32.png", "icon-64.png" ]
+  } ],
   "host_permissions": [
     "<all_urls>"
   ],
