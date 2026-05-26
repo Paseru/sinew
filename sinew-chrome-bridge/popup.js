@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const text = document.getElementById('status-text');
   const count = document.getElementById('attached-count');
   const btn = document.getElementById('btn-refresh');
+  const diag = document.getElementById('diagnostic');
 
   function updateStatus() {
     chrome.runtime.sendMessage({ action: "get_status" }, (response) => {
@@ -13,12 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.get(['connected', 'attachedCount'], (data) => {
           setConnected(!!data.connected);
           count.textContent = data.attachedCount || 0;
+          diag.textContent = data.lastNativeError ? `Diagnostic: ${data.lastNativeError}` : 'Diagnostic: service worker sleeping / cached state';
         });
         return;
       }
 
       setConnected(!!response.connected);
       count.textContent = response.attachedCount || 0;
+      diag.textContent = response.connected ? 'Diagnostic: native host connected' : `Diagnostic: ${response.lastNativeError || 'native host not connected yet'}`;
     });
   }
 

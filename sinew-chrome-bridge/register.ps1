@@ -26,19 +26,14 @@ if (!(Test-Path $RegPath)) {
 Set-ItemProperty -Path $RegPath -Name "(default)" -Value $ManifestPath
 Write-Host "Cle de registre configuree."
 
-Write-Host "3/4 Configuration du lanceur unifie run_sinew_bridge.bat..."
+Write-Host "3/4 Configuration du lanceur MCP Node local run_sinew_bridge.bat..."
 $NodePath = (Get-Command node).Source
-$homeDir = [System.Environment]::GetFolderPath('UserProfile')
-$PythonPath = "$homeDir\.gemini\antigravity\scratch\browser-use-env\Scripts\python.exe"
-if (!(Test-Path $PythonPath)) {
-    $PythonPath = (Get-Command python -ErrorAction SilentlyContinue).Source
-}
 
 $BridgeBatPath = Join-Path $ScriptDir "run_sinew_bridge.bat"
 $BridgeBatContent = "@echo off`r`n`"$NodePath`" `"%~dp0mcp_server.js`""
 [System.IO.File]::WriteAllText($BridgeBatPath, $BridgeBatContent, [System.Text.Encoding]::UTF8)
 
-# Configure also the standard native_host.bat
+# Legacy convenience launcher only: Sinew should run mcp_server.js directly, Chrome should run native-host-wrapper.exe.
 $BatPath = Join-Path $ScriptDir "native_host.bat"
 $BatContent = "@echo off`r`n`"$NodePath`" `"%~dp0server.js`" --native"
 [System.IO.File]::WriteAllText($BatPath, $BatContent, [System.Text.Encoding]::UTF8)

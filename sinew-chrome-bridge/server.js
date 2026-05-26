@@ -30,6 +30,43 @@ if (isNativeMode) {
   console.info = console.error;
 }
 
+const { spawn } = require('child_process');
+
+function findChromeExecutable() {
+  const fs = require('fs');
+  const candidates = [
+    process.env.CHROME_PATH,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return 'chrome';
+}
+
+function normalizeUrl(raw) {
+  if (!raw) return 'about:blank';
+  const value = String(raw).trim();
+  if (/^https?:\/\//i.test(value) || value === 'about:blank') return value;
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(value)) return `https://${value}`;
+  return value;
+}
+
+function launchChromeDetached(targetUrl = 'about:blank') {
+  const chromeExe = findChromeExecutable();
+  const args = [
+    '--silent-debugger-extension-api',
+    '--no-first-run',
+    '--no-default-browser-check',
+    normalizeUrl(targetUrl),
+  ];
+  const child = spawn(chromeExe, args, { detached: true, stdio: 'ignore', windowsHide: true });
+  child.unref();
+  return { chromeExe, args };
+}
+
 // Connected clients registries
 let extensionSocket = null;
 const pageSockets = new Map(); // tabId (string) -> Set of page-scoped playwright sockets
@@ -37,6 +74,10 @@ const browserSockets = new Set(); // Set of browser-scoped playwright sockets
 
 let messageCounter = 0;
 const pendingRequests = new Map(); // bridgeMsgId -> { playwrightSocket, originalId, sessionId, timeout, resolve }
+
+function isExtensionConnected() {
+  return !!(extensionSocket && typeof extensionSocket.send === 'function' && (extensionSocket.readyState === WebSocket.OPEN || extensionSocket.isNative === true));
+}
 
 // Native Messaging host state
 let mcpProcess = null;
@@ -67,18 +108,30 @@ const server = http.createServer((req, res) => {
     res.writeHead(200);
     res.end(JSON.stringify(versionInfo));
   } 
+  else if (pathname === '/api/launch_chrome') {
+    try {
+      const launched = launchChromeDetached(parsedUrl.query.url || 'about:blank');
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: true, ...launched }));
+    } catch (e) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: e.message }));
+    }
+  }
   else if (pathname === '/api/status') {
     res.writeHead(200);
     res.end(JSON.stringify({
       isNativeMode,
-      hasExtensionSocket: !!extensionSocket,
+      extensionConnected: isExtensionConnected(),
+      hasExtensionSocket: isExtensionConnected(),
       extensionSocketState: extensionSocket ? extensionSocket.readyState : null,
-      extensionSocketIsVirtual: extensionSocket && extensionSocket.send && !extensionSocket.close ? true : false
+      extensionSocketIsVirtual: extensionSocket && extensionSocket.isNative === true,
+      chromeExecutable: findChromeExecutable(),
     }));
   } 
   else if (pathname === '/json' || pathname === '/json/list') {
     // Return the list of open tabs that can be debugged
-    if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+    if (!isExtensionConnected()) {
       console.log("âš ï¸ [Proxy] /json request received, but Chrome Extension is not connected.");
       res.writeHead(200);
       res.end(JSON.stringify([]));
@@ -301,6 +354,36 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ success: false, error: e.message }));
     }
   }
+  else if (pathname === '/api/create_tab') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+
+    const targetUrl = parsedUrl.query.url || "https://www.google.com";
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => {
+        res.writeHead(200);
+        res.end(JSON.stringify(data));
+      },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: "Timeout waiting for tab creation" }));
+      }, 5000)
+    });
+
+    extensionSocket.send(JSON.stringify({
+      id: requestId,
+      command: "create_tab",
+      params: { url: targetUrl }
+    }));
+  }
   else if (pathname === '/api/execute_silent_task') {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -314,7 +397,7 @@ const server = http.createServer((req, res) => {
       return;
     }
     
-    if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+    if (!isExtensionConnected()) {
       res.writeHead(200);
       res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
       return;
@@ -1534,7 +1617,8 @@ if (isNativeMode) {
   console.error("ðŸ§¬ [Proxy] Native Messaging session active. Initializing standard I/O streams...");
 
   const virtualSocket = {
-    readyState: 1, // OPEN
+    isNative: true,
+    readyState: WebSocket.OPEN, // OPEN
     send: (data) => {
       try {
         const payload = typeof data === 'string' ? JSON.parse(data) : data;
@@ -1640,7 +1724,7 @@ wss.on('connection', (ws, req) => {
     pageSockets.get(tabId).add(ws);
 
     // Auto-attach tab in extension immediately on socket open
-    if (extensionSocket && extensionSocket.readyState === WebSocket.OPEN) {
+    if (isExtensionConnected()) {
       extensionSocket.send(JSON.stringify({
         id: ++messageCounter,
         command: "attach",
@@ -1699,7 +1783,7 @@ wss.on('connection', (ws, req) => {
           return;
         }
 
-        if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+        if (!isExtensionConnected()) {
           ws.send(JSON.stringify({
             id: msg.id,
             error: { message: "Chrome Extension is not connected. Launch your browser with the bridge!" }
@@ -1736,7 +1820,7 @@ wss.on('connection', (ws, req) => {
         if (sockets.size === 0) {
           pageSockets.delete(tabId);
           // Detach debugger in extension to release resources
-          if (extensionSocket && extensionSocket.readyState === WebSocket.OPEN) {
+          if (isExtensionConnected()) {
             extensionSocket.send(JSON.stringify({
               id: ++messageCounter,
               command: "detach",
@@ -1764,7 +1848,7 @@ wss.on('connection', (ws, req) => {
         if (msg.sessionId) {
           const tabId = msg.sessionId.replace("session-", "");
           
-          if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+          if (!isExtensionConnected()) {
             const errRes = {
               id: msg.id,
               error: { message: "Chrome Extension is not connected." },
@@ -1810,7 +1894,7 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify(resVal));
         }
         else if (msg.method === "Target.getTargets") {
-          if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+          if (!isExtensionConnected()) {
             ws.send(JSON.stringify({ id: msg.id, result: { targetInfos: [] } }));
             return;
           }
@@ -1846,7 +1930,7 @@ wss.on('connection', (ws, req) => {
           const sessionId = `session-${tabId}`;
           
           // Request debugger attach in the extension
-          if (extensionSocket && extensionSocket.readyState === WebSocket.OPEN) {
+          if (isExtensionConnected()) {
             extensionSocket.send(JSON.stringify({
               id: ++messageCounter,
               command: "attach",
@@ -1882,7 +1966,7 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({ id: msg.id, result: {} }));
 
           // IMMEDIATELY query open tabs and broadcast Target.targetCreated + Target.attachedToTarget for the active tab!
-          if (extensionSocket && extensionSocket.readyState === WebSocket.OPEN) {
+          if (isExtensionConnected()) {
             const requestId = ++messageCounter;
             pendingRequests.set(requestId, {
               resolve: (data) => {
@@ -1966,7 +2050,7 @@ wss.on('connection', (ws, req) => {
           }
         }
         else if (msg.method === "Target.createTarget") {
-          if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+          if (!isExtensionConnected()) {
             ws.send(JSON.stringify({
               id: msg.id,
               error: { message: "Chrome Extension is not connected." }
@@ -2100,7 +2184,7 @@ wss.on('connection', (ws, req) => {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function sendCDP(tabId, method, params) {
-  if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+  if (!isExtensionConnected()) {
     console.error("âš ï¸ [Replayer] Extension not connected.");
     return Promise.reject(new Error("Extension not connected"));
   }
@@ -2215,8 +2299,11 @@ async function executeMacroReplay(tabId, macro) {
   console.log(`ðŸ§¬ [Replayer] Replay of macro "${macro.name}" completed successfully!`);
 }
 
-server.on('error', (err) => {
+let bridgeClientModeStarted = false;
+function handleListenError(err) {
   if (err.code === 'EADDRINUSE') {
+    if (bridgeClientModeStarted) return;
+    bridgeClientModeStarted = true;
     if (isNativeMode) {
       console.error("🧬 [Proxy] Port 29002 is already occupied. Starting in Bridge Client Mode...");
       startBridgeClientMode();
@@ -2227,7 +2314,10 @@ server.on('error', (err) => {
   } else {
     throw err;
   }
-});
+}
+
+server.on('error', handleListenError);
+wss.on('error', handleListenError);
 
 function startBridgeClientMode() {
   const ws = new WebSocket("ws://localhost:29002/extension?nativeBridge=true");

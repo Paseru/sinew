@@ -4,6 +4,7 @@
 
 let nativePort = null;
 let reconnectTimer = null;
+let lastNativeError = null;
 
 // Registry of active attached debuggers
 const attachedTabs = new Set();
@@ -62,7 +63,8 @@ function connect() {
 
     port.onDisconnect.addListener(() => {
       const err = chrome.runtime.lastError;
-      console.warn("🧬 [Bridge background] Native Host disconnected:", err ? err.message : "No details");
+      lastNativeError = err ? err.message : "Native host disconnected without details";
+      console.warn("🧬 [Bridge background] Native Host disconnected:", lastNativeError);
       nativePort = null;
       updateStorageState();
 
@@ -70,11 +72,13 @@ function connect() {
       reconnectTimer = setTimeout(connect, 3000);
     });
 
+    lastNativeError = null;
     // Native connection succeeded: register and sync
     sendMsg({ type: "register", role: "extension" });
     reportOpenTabs();
     updateStorageState();
   } catch (e) {
+    lastNativeError = e.message;
     console.warn("🧬 [Bridge background] Native Port crash on initialize:", e);
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(connect, 3000);
@@ -241,19 +245,31 @@ async function handleMessage(msg) {
               await new Promise(r => setTimeout(r, 4500));
             }
 
-            ensureCursorInjected(silentTabId).then(() => {
-              chrome.tabs.sendMessage(silentTabId, { type: "RUN_SILENT_TASK", task: silentTask }, (response) => {
-                if (chrome.runtime.lastError) {
-                  sendResponse(id, { success: false, error: chrome.runtime.lastError.message });
-                } else {
-                  sendResponse(id, response);
-                }
-                resolve();
+            const actionTasks = buildSilentActionTasks(silentTask);
+
+            const runAction = (taskText) => new Promise((actionResolve) => {
+              ensureCursorInjected(silentTabId).then(() => {
+                chrome.tabs.sendMessage(silentTabId, { type: "RUN_SILENT_TASK", task: taskText }, (response) => {
+                  if (chrome.runtime.lastError) {
+                    actionResolve({ success: false, error: chrome.runtime.lastError.message, task: taskText });
+                  } else {
+                    actionResolve({ ...(response || {}), task: taskText });
+                  }
+                });
+              }).catch((err) => {
+                actionResolve({ success: false, error: err.message, task: taskText });
               });
-            }).catch((err) => {
-              sendResponse(id, { success: false, error: err.message });
-              resolve();
             });
+
+            const results = [];
+            for (const taskText of actionTasks) {
+              results.push(await runAction(taskText));
+              await new Promise(r => setTimeout(r, 900));
+            }
+
+            const failed = results.find(r => r && r.success === false);
+            sendResponse(id, failed ? { success: false, results, error: failed.error } : { success: true, results });
+            resolve();
           });
         });
         break;
@@ -264,6 +280,25 @@ async function handleMessage(msg) {
   } catch (err) {
     console.error("âš ï¸ [Bridge message error]:", err);
   }
+}
+
+function buildSilentActionTasks(task) {
+  const text = String(task || '').toLowerCase();
+  const actions = [];
+
+  if (text.includes('hamburger') || text.includes('menu')) {
+    actions.push('clique le bouton menu hamburger');
+    if (text.includes('referme') || text.includes('ferme') || text.includes('close')) {
+      actions.push('clique le bouton menu hamburger');
+    }
+  }
+
+  const trinityMatch = text.includes('trinity');
+  if (trinityMatch) {
+    actions.push('clique la carte Trinity');
+  }
+
+  return actions.length > 0 ? actions : [task];
 }
 
 function sendCDPCommand(msgId, tabId, method, cdpParams) {
@@ -323,32 +358,39 @@ function sendCDPCommand(msgId, tabId, method, cdpParams) {
 
 // Injects the custom spring-physics cursor script if not already present
 async function ensureCursorInjected(tabId) {
-  try {
-    const tabInfo = await chrome.tabs.get(tabId);
-    if (!tabInfo || isSystemTab(tabInfo)) {
-      return; // Skipped for Chrome internal pages
-    }
-
-    const isAlive = await new Promise((resolve) => {
-      chrome.tabs.sendMessage(tabId, { type: "CONTENT_PING" }, (res) => {
-        if (chrome.runtime.lastError || !res || !res.ok) {
-          resolve(false);
-        } else {
-          resolve(true);
-        }
-      });
-    });
-
-    if (!isAlive) {
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ["sinew_cursor.js"]
-      });
-      console.log(`ðŸ§¬ [Bridge] Injected biological cursor overlay into tab ${tabId}`);
-    }
-  } catch (err) {
-    // Suppress injection logs for restricted local/browser files
+  const tabInfo = await chrome.tabs.get(tabId);
+  if (!tabInfo || isSystemTab(tabInfo)) {
+    throw new Error(`Cannot inject cursor into restricted tab: ${tabInfo?.url || tabId}`);
   }
+
+  const ping = async () => await new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { type: "CONTENT_PING" }, (res) => {
+      resolve(!(chrome.runtime.lastError || !res || !res.ok));
+    });
+  });
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const currentTab = await chrome.tabs.get(tabId);
+    if (currentTab.status !== 'loading') break;
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  if (await ping()) return;
+
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["sinew_cursor.js"]
+  });
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (await ping()) {
+      console.log(`ðŸ§¬ [Bridge] Injected biological cursor overlay into tab ${tabId}`);
+      return;
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  throw new Error(`Content script injection failed for tab ${tabId}`);
 }
 
 function reportOpenTabs(responseId = null) {
@@ -468,7 +510,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function updateStorageState() {
   chrome.storage.local.set({
     connected: isBridgeConnected(),
-    attachedCount: attachedTabs.size
+    attachedCount: attachedTabs.size,
+    lastNativeError
   });
 }
 
@@ -477,7 +520,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "get_status") {
     sendResponse({
       connected: isBridgeConnected(),
-      attachedCount: attachedTabs.size
+      attachedCount: attachedTabs.size,
+      lastNativeError
     });
   } else if (request.action === "reconnect") {
     connect();
@@ -497,5 +541,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Auto connect immediately
+chrome.runtime.onStartup?.addListener(() => {
+  console.log("🧬 [Bridge background] Chrome startup detected. Connecting native host...");
+  connect();
+});
+
+chrome.runtime.onInstalled?.addListener(() => {
+  console.log("🧬 [Bridge background] Extension installed/updated. Connecting native host...");
+  connect();
+});
+
+// Auto connect immediately whenever the service worker is loaded
 connect();
+
