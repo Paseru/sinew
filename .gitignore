@@ -1,6 +1,7 @@
 /target
 /dist
 /node_modules
+sinew-chrome-bridge/node_modules/
 /FEATURES.md
 /EDIT_FILE_HARNESS_COMPARISON.md
 /GLOB_HARNESS_COMPARISON.md
