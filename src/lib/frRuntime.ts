@@ -1,4 +1,4 @@
-import { getAppLocale } from "./locale";
+﻿import { getAppLocale } from "./locale";
 
 const FR_RUNTIME_MARK = "sinew-fr-runtime";
 
@@ -269,8 +269,8 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers.": "Gère et automatise tout en arrière-plan (Git & autres) et active les réponses ultra-concises et simplifiées.",
   "Multi-PC Sync": "Synchronisation Multi-PC",
   "Automatically synchronize your conversations and configurations between your computers via OneDrive.": "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive.",
-  "Enabled": "Activé",
-  "Disabled": "Désactivé",
+  ["Enabled"]: "Activé",
+  ["Disabled"]: "Désactivé",
   "Sinew is a flexible AI coding harness. You shape it: tweak the description of every tool, turn the ones you don't need off, and the assistant only sees what you keep.": "Sinew est un harnais de codage IA flexible. Vous le façonnez : ajustez la description de chaque outil, désactivez ceux dont vous n'avez pas besoin, et l'assistant ne verra que ce que vous conservez.",
   "Run it minimal with a couple of tools, or unlock the full set : shell, search, MCP, web, images, sub-agents. Multi-provider by default.": "Lancez-le en mode minimal avec quelques outils, ou débloquez l'ensemble complet : terminal, recherche, MCP, web, images, sous-agents. Multi-fournisseur par défaut.",
   "Language": "Langue",
