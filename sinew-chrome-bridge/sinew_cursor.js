@@ -400,7 +400,7 @@
   const label = document.createElement("div");
   label.className = "cursor-label";
   label.textContent = "Sinew ACTIVE";
-  overlay.appendChild(label);
+  // overlay.appendChild(label); // Disabled to match clean Codex style (no flashing text next to the cursor)
 
   shadow.appendChild(overlay);
   document.documentElement.appendChild(container);
