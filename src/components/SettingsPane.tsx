@@ -512,7 +512,7 @@ export function SettingsPane({ workspacePath }: Props) {
     try {
       const login = await api.startOpenAiOAuthLogin();
       const connecting: OpenAiProviderStatus = {
-        connected: false,
+        connected: openAiStatus?.connected ?? false,
         connectionState: "connecting",
         loginId: login.loginId,
       };
@@ -525,7 +525,7 @@ export function SettingsPane({ workspacePath }: Props) {
     } finally {
       setProvidersBusy(false);
     }
-  }, [loadOpenAiStatus]);
+  }, [openAiStatus, loadOpenAiStatus]);
 
   const cancelOpenAi = useCallback(async () => {
     setProvidersBusy(true);
