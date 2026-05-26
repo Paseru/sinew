@@ -13,18 +13,18 @@ if not os.path.exists(db_path):
     sys.exit(1)
 
 # Configure the browser-use server settings dynamically
-python_exe = os.path.join(home_dir, ".gemini", "antigravity", "scratch", "browser-use-env", "Scripts", "python.exe")
-mcp_cwd = os.path.join(home_dir, ".gemini", "antigravity", "scratch", "mcp-browser-use")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+bridge_bat = os.path.join(script_dir, "run_sinew_bridge.bat")
 
 new_server = {
     "id": "browser-use",
     "name": "Browser-Use",
-    "command": python_exe,
-    "args": ["-m", "mcp_server_browser_use.cli", "server", "--foreground"],
+    "command": bridge_bat,
+    "args": [],
     "env": [
         {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"}
     ],
-    "cwd": mcp_cwd,
+    "cwd": script_dir,
     "enabled": True
 }
 
