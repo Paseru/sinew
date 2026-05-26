@@ -32,6 +32,14 @@ $BatContent = "@echo off`r`nnode `"%~dp0server.js`" --native"
 [System.IO.File]::WriteAllText($BatPath, $BatContent, [System.Text.Encoding]::UTF8)
 Write-Host "Script d'appel configure."
 
-Write-Host "SUCCESS: Sinew Chrome Bridge est enregistre !"
+Write-Host "4/4 Configuration du serveur MCP dans la base de donnees de Sinew..."
+$PyScriptPath = Join-Path $ScriptDir "add_to_sinew.py"
+if (Get-Command python -ErrorAction SilentlyContinue) {
+    python $PyScriptPath
+} else {
+    Write-Host "Python introuvable. Veuillez executer 'python add_to_sinew.py' manuellement pour lier le serveur MCP a Sinew."
+}
+
+Write-Host "SUCCESS: Sinew Chrome Bridge et son serveur MCP sont enregistres !"
 Write-Host "Dossier de l'extension a charger dans Chrome :"
 Write-Host $ScriptDir

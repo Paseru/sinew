@@ -4,7 +4,6 @@
     "path":  "C:\\Users\\julie\\OneDrive\\Documents\\Home\\sinew-fr-work\\source\\sinew-chrome-bridge\\native_host.bat",
     "type":  "stdio",
     "allowed_origins":  [
-                            "chrome-extension://kooobgnecenccliamhjbcncjnjpjoeic/",
-                            "chrome-extension://mflpjhoibaieifmfmldfkaehcihdeeec/"
+                            "chrome-extension://kooobgnecenccliamhjbcncjnjpjoeic/"
                         ]
 }
