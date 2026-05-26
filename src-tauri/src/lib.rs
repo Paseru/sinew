@@ -119,12 +119,69 @@ use swarm::*;
 use turns::*;
 use workflow::*;
 
+struct LogWriter {
+    file: Arc<StdMutex<Option<fs::File>>>,
+}
+
+impl Write for LogWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let _ = std::io::stderr().write_all(buf);
+        if let Ok(mut guard) = self.file.lock() {
+            if let Some(ref mut f) = *guard {
+                let _ = f.write_all(buf);
+            }
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        let _ = std::io::stderr().flush();
+        if let Ok(mut guard) = self.file.lock() {
+            if let Some(ref mut f) = *guard {
+                let _ = f.flush();
+            }
+        }
+        Ok(())
+    }
+}
+
+struct MakeLogWriter {
+    file: Arc<StdMutex<Option<fs::File>>>,
+}
+
+impl<'a> tracing_subscriber::fmt::writer::MakeWriter<'a> for MakeLogWriter {
+    type Writer = LogWriter;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        LogWriter {
+            file: self.file.clone(),
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let file = directories::ProjectDirs::from("dev", "hyrak", "sinew").and_then(|dirs| {
+        let log_dir = dirs.data_local_dir();
+        let _ = fs::create_dir_all(log_dir);
+        let log_path = log_dir.join("desktop-app.log");
+        fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(log_path)
+            .ok()
+    });
+
+    let make_writer = MakeLogWriter {
+        file: Arc::new(StdMutex::new(file)),
+    };
+
     let _ = tracing_subscriber::fmt()
+        .with_writer(make_writer)
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .try_init();
 
