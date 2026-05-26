@@ -8,7 +8,10 @@ Ce fork garde Sinew proche de l’original, avec quelques ajouts pratiques pour 
 
 - Option `English / Français` dans `Settings > About`.
 - Règle globale : réponses courtes, simples, adaptées à un power user.
-- Détection Git Windows plus robuste.
+- Multi-comptes OpenAI automatisé & raccourcis dynamiques 5.5 XHigh Fast.
+- Extension Sinew Chrome Bridge & installeur dynamique.
+- Enregistrement automatique des serveurs MCP dans la base de données.
+- Sauvegarde permanente des logs dans `desktop-app.log`.
 - Scripts locaux pour sync/build/push sans gérer Git à la main.
 
 ## Installation
