@@ -1,0 +1,9 @@
+﻿{
+  "name": "Sinew-chrome-bridge-server",
+  "version": "1.0.0",
+  "description": "Proxy server bridging Playwright CDP commands to Chrome Extension",
+  "main": "server.js",
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

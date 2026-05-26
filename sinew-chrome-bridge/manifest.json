@@ -1,0 +1,35 @@
+﻿{
+  "manifest_version": 3,
+  "name": "Sinew Chrome Bridge",
+  "version": "1.0.0",
+  "description": "Bridges Sinew and browser-use to your active, running Chrome session.",
+  "permissions": [
+    "debugger",
+    "tabs",
+    "scripting",
+    "activeTab",
+    "storage",
+    "downloads",
+    "history",
+    "notifications",
+    "bookmarks",
+    "tabGroups",
+    "alarms",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.jpg"
+  },
+  "icons": {
+    "16": "icon.jpg",
+    "48": "icon.jpg",
+    "128": "icon.jpg"
+  }
+}

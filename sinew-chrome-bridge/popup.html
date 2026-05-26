@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --bg: #0b0c15;
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --purple: #bf5af2;
+      --cyan: #0a84ff;
+      --neon-green: #30d158;
+      --neon-red: #ff453a;
+      --text: #ffffff;
+      --text-muted: #8e8e93;
+    }
+
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-hidden: true;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      box-shadow: 0 0 15px rgba(191, 90, 242, 0.4);
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .status-label {
+      color: var(--text-muted);
+    }
+
+    .status-value {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neon-red);
+      box-shadow: 0 0 8px var(--neon-red);
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.connected {
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--glass-border);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--purple), var(--cyan));
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      padding: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .footer {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">A</div>
+      <div class="title">Sinew Chrome Bridge</div>
+    </div>
+    
+    <div class="card">
+      <div class="status-row">
+        <span class="status-label">Proxy local (Port 29002)</span>
+        <span class="status-value" id="proxy-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Hors ligne</span>
+        </span>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="status-row">
+        <span class="status-label">Onglets actifs suivis</span>
+        <span class="status-value" id="attached-count" style="color: var(--cyan);">0</span>
+      </div>
+    </div>
+
+    <button class="btn" id="btn-refresh">
+      <span>Actualiser la connexion</span>
+    </button>
+
+    <div class="footer">
+      ðŸ§¬ Symbiose active â€” PCPORTABLE\julie
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
