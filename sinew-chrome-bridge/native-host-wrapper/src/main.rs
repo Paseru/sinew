@@ -1,6 +1,6 @@
 use std::env;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::{exit, Command, Stdio};
 
 fn main() {
     let exe_dir = env::current_exe()
@@ -11,17 +11,27 @@ fn main() {
     let node_path = env::var("SINEW_NODE_PATH")
         .unwrap_or_else(|_| String::from("C:\\Program Files\\nodejs\\node.exe"));
 
-    let mut child = Command::new(node_path)
+    let mut child = match Command::new(node_path)
         .arg(server_path)
         .arg("--native")
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .expect("Failed to start Sinew Chrome native host");
+    {
+        Ok(child) => child,
+        Err(err) => {
+            eprintln!("Sinew Chrome native host failed to start server.js: {err}");
+            exit(1);
+        }
+    };
 
-    let status = child
-        .wait()
-        .expect("Failed to wait on Sinew Chrome native host");
-    std::process::exit(status.code().unwrap_or(0));
+    let status = match child.wait() {
+        Ok(status) => status,
+        Err(err) => {
+            eprintln!("Sinew Chrome native host failed while waiting for server.js: {err}");
+            exit(1);
+        }
+    };
+    exit(status.code().unwrap_or(0));
 }

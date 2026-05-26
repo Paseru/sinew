@@ -572,7 +572,7 @@ rl.on('line', async (line) => {
           tools: [
             {
               name: 'run_browser_agent',
-              description: "Exécute une tâche de navigation ou d'interaction avec Google Chrome localement, sans API cloud, sans browser-use Python et sans ouverture manuelle de Chrome.",
+              description: "Exécute une tâche de navigation ou d'interaction avec Google Chrome localement, sans API cloud, sans Python et sans ouverture manuelle de Chrome.",
               inputSchema: {
                 type: 'object',
                 properties: {

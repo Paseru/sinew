@@ -19,7 +19,7 @@ if not os.path.exists(node_path):
     node_path = "node"
 
 new_server = {
-    "id": "browser-use",
+    "id": "sinew-chrome",
     "name": "Sinew Chrome",
     "command": node_path,
     "args": [os.path.join(script_dir, "mcp_server.js")],
@@ -40,11 +40,11 @@ try:
     
     if row:
         settings = json.loads(row[0])
-        # Find if browser-use is already there
+        # Find if Sinew Chrome is already registered, including the previous legacy id.
         servers = settings.get("servers", [])
         updated = False
         for i, s in enumerate(servers):
-            if s.get("id") == "browser-use":
+            if s.get("id") in ("sinew-chrome", "browser-use"):
                 servers[i] = new_server
                 updated = True
                 break
