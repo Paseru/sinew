@@ -58,6 +58,8 @@ Ce panneau gère les serveurs de protocole de contexte de modèle :
   * *Bénéfice* : Permet de sélectionner et copier librement le texte des messages (réponses de l'assistant, extraits de code, questions et messages système) directement depuis la fenêtre de discussion, une action qui était auparavant bloquée par l'interface.
 * **🚀 Lancement et Exécution des Fichiers directement depuis les liens du Chat** :
   * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier ou chemin généré par l'IA dans vos bulles de discussion du chat (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour afficher un menu contextuel et l'exécuter directement (**"Execute / Run"**), l'ouvrir dans l'éditeur ou révéler son dossier d'origine dans l'Explorateur Windows. C'est la solution ultime pour contourner le blocage des liens locaux !
+* **⚡ Bouton « Influencer » dans la File d'Attente (Prompt Queue)** :
+  - *Bénéfice* : Permet d'injecter et de soumettre instantanément un prompt mis en attente pour orienter, influencer et guider le flux de la discussion en cours. Ce bouton est représenté par une pilule distinctive affichant le texte « **Influencer** » accompagné d'une flèche vers le haut (`solar:arrow-up-bold`), remplaçant l'ancienne flèche simple à droite peu visible pour une interaction beaucoup plus claire et intuitive.
 
 
 
