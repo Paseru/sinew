@@ -618,8 +618,8 @@ impl AppStore {
         let mode_model_settings_json = serde_json::to_string(&mode_model_settings)?;
         let conn = self.connection()?;
         conn.execute(
-            "insert into conversations (id, workspace_id, title, model_json, mode_model_settings_json, system_prompt, todo_list_json, plan_workflow_json, goal_workflow_json, created_at_ms, updated_at_ms)
-             values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "insert into conversations (id, workspace_id, title, title_initialized, model_json, mode_model_settings_json, system_prompt, todo_list_json, plan_workflow_json, goal_workflow_json, created_at_ms, updated_at_ms)
+             values (?1, ?2, ?3, 0, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 &id,
                 workspace_id,
@@ -1618,7 +1618,7 @@ fn resolve_title_for_save(
     history: &[ChatMessage],
 ) -> ConversationTitleState {
     if let Some(state) = current_state {
-        if state.initialized {
+        if state.initialized && state.title.trim() != DEFAULT_CONVERSATION_TITLE {
             return ConversationTitleState {
                 title: state.title.clone(),
                 initialized: true,
@@ -1692,6 +1692,7 @@ fn now_ms() -> i64 {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::fs;
 
     fn message(role: Role, text: &str, meta: Option<Value>) -> ChatMessage {
         ChatMessage {
@@ -1709,6 +1710,20 @@ mod tests {
         let current = ConversationTitleState {
             title: DEFAULT_CONVERSATION_TITLE.to_string(),
             initialized: false,
+        };
+
+        let resolved = resolve_title_for_save(Some(&current), DEFAULT_CONVERSATION_TITLE, &history);
+
+        assert_eq!(resolved.title, "First request");
+        assert!(resolved.initialized);
+    }
+
+    #[test]
+    fn resolve_title_for_save_recovers_new_conversation_marked_initialized_by_migration_bug() {
+        let history = vec![message(Role::User, "First request", None)];
+        let current = ConversationTitleState {
+            title: DEFAULT_CONVERSATION_TITLE.to_string(),
+            initialized: true,
         };
 
         let resolved = resolve_title_for_save(Some(&current), DEFAULT_CONVERSATION_TITLE, &history);
@@ -1755,6 +1770,53 @@ mod tests {
 
         assert_eq!(resolved.title, "Original request");
         assert!(resolved.initialized);
+    }
+
+    #[test]
+    fn save_conversation_initializes_title_from_first_user_message_and_preserves_it() -> Result<()> {
+        let path = std::env::temp_dir().join(format!(
+            "sinew-store-title-test-{}.sqlite3",
+            Uuid::new_v4()
+        ));
+        let store = AppStore { path: path.clone() };
+        let result = (|| -> Result<()> {
+            store.migrate()?;
+            let model = ModelRef::new("test", "model");
+            let mut conversation = store.create_conversation("workspace", &model, "system")?;
+            conversation
+                .history
+                .push(message(Role::User, "First request", None));
+
+            store.save_conversation(&conversation)?;
+            let loaded = store
+                .load_conversation("workspace", &conversation.id)?
+                .expect("conversation should exist");
+            assert_eq!(loaded.title, "First request");
+            assert_eq!(store.list_conversations("workspace")?[0].title, "First request");
+
+            let mut compacted = loaded;
+            compacted.history = vec![
+                message(
+                    Role::User,
+                    "Retained compacted request",
+                    Some(json!({ "compaction_retained_user": true })),
+                ),
+                message(
+                    Role::User,
+                    "Compaction summary",
+                    Some(json!({ "compaction_summary": true })),
+                ),
+                message(Role::User, "New post-compaction request", None),
+            ];
+            store.save_conversation(&compacted)?;
+            let reloaded = store
+                .load_conversation("workspace", &conversation.id)?
+                .expect("conversation should exist");
+            assert_eq!(reloaded.title, "First request");
+            Ok(())
+        })();
+        let _ = fs::remove_file(path);
+        result
     }
 
     #[test]

@@ -30,6 +30,7 @@ sinew-openrouter = { path = "crates/sinew-openrouter" }
 sinew-app = { path = "crates/sinew-app" }
 
 tokio = { version = "1.40", features = ["full"] }
+tokio-tungstenite = { version = "0.26", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
 futures = "0.3"
 futures-util = "0.3"
 async-trait = "0.1"

@@ -438,9 +438,27 @@ fn event_error(event: &Value) -> AppError {
     let message = event_error_message(event);
     if is_context_length_message(&message) {
         AppError::ContextLength(message)
+    } else if is_retryable_stream_error_message(&message) {
+        AppError::RetryableStream {
+            delay_ms: None,
+            message,
+        }
     } else {
         AppError::Provider(message)
     }
+}
+
+fn is_retryable_stream_error_message(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    lower.contains("overloaded")
+        || lower.contains("rate limit")
+        || lower.contains("temporarily unavailable")
+        || lower.contains("try again")
+        || lower.contains("timeout")
+        || lower.contains("timed out")
+        || lower.contains("connection")
+        || lower.contains("connection_limit")
+        || lower.contains("websocket_connection_limit_reached")
 }
 
 fn is_context_length_message(message: &str) -> bool {
@@ -529,5 +547,21 @@ mod tests {
             .expect_err("context failure should be an error");
 
         assert!(matches!(err, AppError::ContextLength(_)));
+    }
+
+    #[test]
+    fn overloaded_stream_error_is_retryable() {
+        let mut parser = EventParser::new("gpt-5.5".to_string());
+        let err = parser
+            .push(json!({
+                "type": "error",
+                "error": {
+                    "code": "overloaded_error",
+                    "message": "The server is overloaded. Please try again."
+                }
+            }))
+            .expect_err("overload should be an error");
+
+        assert!(matches!(err, AppError::RetryableStream { .. }));
     }
 }

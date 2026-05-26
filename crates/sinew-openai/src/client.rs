@@ -1,26 +1,35 @@
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
 use async_trait::async_trait;
-use eventsource_stream::Eventsource;
-use futures::stream::Stream;
-use futures::{stream, StreamExt};
 use serde_json::Value;
 use sinew_core::{
     AppError, ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
-    ProviderStream, Result, Role, ServiceTier, StreamEvent, TokenEstimate, ToolDescriptor,
+    ProviderStream, Result, Role, ServiceTier, TokenEstimate, ToolDescriptor,
 };
 
-use crate::{auth::Credential, model_info, stream::EventParser, wire};
+use crate::{
+    auth::Credential,
+    model_info,
+    responses_stream::{event_provider_stream, sse_event_stream},
+    websocket, wire,
+};
+
+use websocket::empty_connection_cache;
 
 const API_BASE_URL: &str = "https://api.openai.com/v1";
 const CODEX_BASE_URL: &str = "https://chatgpt.com/backend-api/codex";
-const USER_AGENT: &str = "sinew/0.1";
+pub(crate) const USER_AGENT: &str = "sinew/0.1";
 const FALLBACK_INSTRUCTIONS: &str = "You are Sinew, a concise coding assistant.";
-const SSE_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
 
 #[derive(Clone)]
 pub struct OpenAiConfig {
     pub credential: Credential,
     pub api_base_url: String,
     pub codex_base_url: String,
+    pub websocket_enabled: bool,
 }
 
 impl OpenAiConfig {
@@ -29,6 +38,7 @@ impl OpenAiConfig {
             credential,
             api_base_url: API_BASE_URL.into(),
             codex_base_url: CODEX_BASE_URL.into(),
+            websocket_enabled: true,
         }
     }
 
@@ -46,6 +56,8 @@ impl OpenAiConfig {
 pub struct OpenAiProvider {
     config: OpenAiConfig,
     http: reqwest::Client,
+    websocket_fallback_active: Arc<AtomicBool>,
+    websocket_connection: websocket::SharedWebsocketConnection,
 }
 
 impl OpenAiProvider {
@@ -54,7 +66,12 @@ impl OpenAiProvider {
             .user_agent(USER_AGENT)
             .build()
             .map_err(|err| AppError::Network(err.to_string()))?;
-        Ok(Self { config, http })
+        Ok(Self {
+            config,
+            http,
+            websocket_fallback_active: Arc::new(AtomicBool::new(false)),
+            websocket_connection: empty_connection_cache(),
+        })
     }
 
     pub fn from_default_sources() -> Result<Self> {
@@ -157,14 +174,23 @@ impl Provider for OpenAiProvider {
             )));
         }
 
-        stream_sse_request(&self.config, &self.http, request).await
+        stream_responses_request(
+            &self.config,
+            &self.http,
+            request,
+            Arc::clone(&self.websocket_fallback_active),
+            Arc::clone(&self.websocket_connection),
+        )
+        .await
     }
 }
 
-async fn stream_sse_request(
+async fn stream_responses_request(
     config: &OpenAiConfig,
     http: &reqwest::Client,
     request: ProviderRequest,
+    websocket_fallback_active: Arc<AtomicBool>,
+    websocket_connection: websocket::SharedWebsocketConnection,
 ) -> Result<ProviderStream> {
     let bearer = config.credential.bearer(http).await?;
     let is_oauth = bearer.is_oauth;
@@ -175,6 +201,40 @@ async fn stream_sse_request(
         Some(false),
         Some(true),
     )?;
+
+    let default_model = request.model.name.clone();
+
+    if config.websocket_enabled && !websocket_fallback_active.load(Ordering::Relaxed) {
+        let ws_body = serde_json::to_value(&body)?;
+        match websocket::stream_websocket_request(
+            config,
+            &bearer,
+            ws_body,
+            default_model.clone(),
+            Arc::clone(&websocket_fallback_active),
+            Arc::clone(&websocket_connection),
+        )
+        .await
+        {
+            Ok(stream) => return Ok(stream),
+            Err(err) if should_fallback_to_sse_after_websocket_setup_error(&err) => {
+                tracing::warn!(error = %err, "OpenAI websocket unavailable; falling back to SSE");
+                websocket_fallback_active.store(true, Ordering::Relaxed);
+            }
+            Err(err) => return Err(err),
+        }
+    }
+
+    stream_sse_request_with_bearer(config, http, bearer, body, default_model).await
+}
+
+async fn stream_sse_request_with_bearer(
+    config: &OpenAiConfig,
+    http: &reqwest::Client,
+    bearer: crate::auth::BearerToken,
+    body: wire::ResponsesRequest<'_>,
+    default_model: String,
+) -> Result<ProviderStream> {
     let base_url = if bearer.is_oauth {
         &config.codex_base_url
     } else {
@@ -203,106 +263,21 @@ async fn stream_sse_request(
         return Err(read_http_error(response).await);
     }
 
-    Ok(sse_provider_stream(
-        response.bytes_stream(),
-        request.model.name.clone(),
+    Ok(event_provider_stream(
+        sse_event_stream(response.bytes_stream()),
+        default_model,
+        "SSE",
     ))
 }
 
-fn sse_provider_stream<S, E>(body: S, default_model: String) -> ProviderStream
-where
-    S: Stream<Item = std::result::Result<bytes::Bytes, E>> + Send + 'static,
-    E: std::error::Error + Send + Sync + 'static,
-{
-    let source = Box::pin(body.eventsource());
-    let parser = EventParser::new(default_model);
-
-    stream::unfold(
-        (source, parser, Vec::<StreamEvent>::new(), false, false),
-        |(mut source, mut parser, mut pending, mut completed, mut saw_any_event)| async move {
-            loop {
-                if let Some(next) = pending.pop() {
-                    return Some((
-                        Ok(next),
-                        (source, parser, pending, completed, saw_any_event),
-                    ));
-                }
-                if completed {
-                    return None;
-                }
-
-                match tokio::time::timeout(SSE_IDLE_TIMEOUT, source.next()).await {
-                    Ok(Some(Ok(event))) => {
-                        saw_any_event = true;
-                        let data = event.data.trim();
-                        if data == "[DONE]" {
-                            completed = true;
-                            continue;
-                        }
-
-                        let event = match serde_json::from_str::<Value>(&event.data) {
-                            Ok(event) => event,
-                            Err(err) => {
-                                return Some((
-                                    Err(AppError::Decode(format!("bad openai SSE event: {err}"))),
-                                    (source, parser, pending, true, saw_any_event),
-                                ));
-                            }
-                        };
-                        let terminal = is_terminal_response_event(&event);
-                        match parser.push(event) {
-                            Ok(mut produced) => {
-                                if terminal {
-                                    completed = true;
-                                }
-                                produced.reverse();
-                                pending.extend(produced);
-                            }
-                            Err(err) => {
-                                return Some((
-                                    Err(err),
-                                    (source, parser, pending, true, saw_any_event),
-                                ));
-                            }
-                        }
-                    }
-                    Ok(Some(Err(err))) => {
-                        return Some((
-                            Err(AppError::Stream(format!("openai SSE error: {err}"))),
-                            (source, parser, pending, true, saw_any_event),
-                        ));
-                    }
-                    Ok(None) => {
-                        if !saw_any_event {
-                            return Some((
-                                Err(AppError::Stream(
-                                    "openai SSE closed before any event; \
-                                     the server likely dropped the connection"
-                                        .into(),
-                                )),
-                                (source, parser, pending, true, saw_any_event),
-                            ));
-                        }
-                        return Some((
-                            Err(AppError::Stream(
-                                "openai SSE stream closed before response.completed".into(),
-                            )),
-                            (source, parser, pending, true, saw_any_event),
-                        ));
-                    }
-                    Err(_) => {
-                        return Some((
-                            Err(AppError::Stream(
-                                "idle timeout waiting for OpenAI SSE".into(),
-                            )),
-                            (source, parser, pending, true, saw_any_event),
-                        ));
-                    }
-                }
-            }
-        },
+fn should_fallback_to_sse_after_websocket_setup_error(err: &AppError) -> bool {
+    matches!(
+        err,
+        AppError::Network(_)
+            | AppError::Stream(_)
+            | AppError::RetryableStream { .. }
+            | AppError::Provider(_)
     )
-    .boxed()
 }
 
 fn build_responses_request<'a>(
@@ -346,13 +321,6 @@ fn response_instructions(request: &ProviderRequest, is_oauth: bool) -> Option<&s
     } else {
         instructions
     }
-}
-
-fn is_terminal_response_event(event: &Value) -> bool {
-    matches!(
-        event.get("type").and_then(Value::as_str),
-        Some("response.completed" | "response.incomplete")
-    )
 }
 
 fn effort_to_reasoning(effort: Option<Effort>) -> Option<wire::ReasoningConfig> {
@@ -567,6 +535,7 @@ fn rough_token_estimate(request: &ProviderRequest) -> u32 {
 
 async fn read_http_error(response: reqwest::Response) -> AppError {
     let status = response.status();
+    let delay_ms = retry_after_ms(&response);
     let body = response.text().await.unwrap_or_default();
     let parsed: std::result::Result<wire::ApiErrorEnvelope, _> = serde_json::from_str(&body);
     let message = parsed
@@ -601,6 +570,11 @@ async fn read_http_error(response: reqwest::Response) -> AppError {
         AppError::Auth(message)
     } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
         AppError::RateLimit(message)
+    } else if is_transient_http_status(status) {
+        AppError::RetryableStream {
+            message: format!("HTTP {status}: {message}"),
+            delay_ms,
+        }
     } else if status.is_client_error() {
         let lower = message.to_ascii_lowercase();
         if lower.contains("context") || lower.contains("too long") {
@@ -611,6 +585,27 @@ async fn read_http_error(response: reqwest::Response) -> AppError {
     } else {
         AppError::Provider(format!("HTTP {status}: {message}"))
     }
+}
+
+fn retry_after_ms(response: &reqwest::Response) -> Option<u64> {
+    response
+        .headers()
+        .get(reqwest::header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(|seconds| seconds.saturating_mul(1000))
+}
+
+fn is_transient_http_status(status: reqwest::StatusCode) -> bool {
+    matches!(
+        status,
+        reqwest::StatusCode::REQUEST_TIMEOUT
+            | reqwest::StatusCode::CONFLICT
+            | reqwest::StatusCode::TOO_EARLY
+            | reqwest::StatusCode::BAD_GATEWAY
+            | reqwest::StatusCode::SERVICE_UNAVAILABLE
+            | reqwest::StatusCode::GATEWAY_TIMEOUT
+    ) || status.is_server_error()
 }
 
 #[cfg(test)]
