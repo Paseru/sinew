@@ -4,7 +4,7 @@ import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { getAppLocale, setAppLocale, type AppLocale } from "../lib/locale";
 import { api } from "../lib/ipc";
-import { getLocalQuota, saveLocalQuota, resetLocalQuota, fetchProviderQuota, type QuotaInfo } from "../lib/quotas";
+import { fetchProviderQuota, quotaColor, type QuotaInfo } from "../lib/quotas";
 import { canonicalToolName } from "../lib/tools";
 import { Markdown } from "./chat/Markdown";
 import { SinewMark } from "./SinewMark";
@@ -2227,35 +2227,6 @@ function ProviderCard({
     };
   }, [connected, providerId]);
 
-  const handleRefill = () => {
-    if (providerId) {
-      resetLocalQuota(providerId);
-    }
-  };
-
-  const handleManualAdjust = (value: number, type: "5h" | "week") => {
-    if (!providerId) return;
-    const q = getLocalQuota(providerId);
-    const limit = type === "5h" ? q.limit5h : q.limitWeek;
-    const newValue = (value / 100) * limit;
-
-    if (type === "5h") {
-      saveLocalQuota(providerId, newValue, q.remainingWeek);
-    } else {
-      saveLocalQuota(providerId, q.remaining5h, newValue);
-    }
-  };
-
-  const formatMinutes = (minutes: number) => {
-    const hrs = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    if (mins === 0) return `${hrs}h`;
-    return `${hrs}h ${mins.toString().padStart(2, '0')}m`;
-  };
-
-  const limit5hHours = quota ? quota.limit5h / 60 : 5;
-  const limitWeekHours = quota ? quota.limitWeek / 60 : 50;
-
   return (
     <section className="settings-pane__provider-card">
       <div className="settings-pane__provider-main">
@@ -2280,119 +2251,19 @@ function ProviderCard({
           )}
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {children}
-          {connected && quota && (
+          {connected && quota?.kind === "unavailable" && (
             <div
               style={{
                 marginTop: "12px",
-                padding: "10px",
+                padding: "9px 10px",
                 background: "var(--bg-1)",
                 border: "1px solid var(--border-3, var(--line-1))",
                 borderRadius: "6px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
+                color: "var(--text-3)",
+                fontSize: "11px",
               }}
             >
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                {/* 5h Quota */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Quota rapide ({limit5hHours}h)</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                      {formatMinutes(quota.remaining5h)} ({quota.percentage5h.toFixed(0)}%)
-                    </span>
-                  </div>
-                  <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: `${quota.percentage5h}%`,
-                        height: "100%",
-                        background:
-                          quota.percentage5h > 80
-                            ? "#10b981"
-                            : quota.percentage5h > 50
-                            ? "#3b82f6"
-                            : quota.percentage5h > 20
-                            ? "#ec4899"
-                            : "#ef4444",
-                        borderRadius: "2px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-                  {!quota.isReal && (
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={quota.percentage5h}
-                      onChange={(e) => handleManualAdjust(parseInt(e.target.value), "5h")}
-                      style={{ height: "4px", cursor: "pointer", marginTop: "2px" }}
-                    />
-                  )}
-                </div>
-
-                {/* Week Quota */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Quota hebdomadaire ({limitWeekHours}h)</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                      {formatMinutes(quota.remainingWeek)} ({quota.percentageWeek.toFixed(0)}%)
-                    </span>
-                  </div>
-                  <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: `${quota.percentageWeek}%`,
-                        height: "100%",
-                        background:
-                          quota.percentageWeek > 80
-                            ? "#10b981"
-                            : quota.percentageWeek > 50
-                            ? "#3b82f6"
-                            : quota.percentageWeek > 20
-                            ? "#ec4899"
-                            : "#ef4444",
-                        borderRadius: "2px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-                  {!quota.isReal && (
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={quota.percentageWeek}
-                      onChange={(e) => handleManualAdjust(parseInt(e.target.value), "week")}
-                      style={{ height: "4px", cursor: "pointer", marginTop: "2px" }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "10px", marginTop: "2px" }}>
-                <span style={{ color: "var(--text-3)" }}>
-                  {quota.isReal ? "✓ Récupéré via API" : "Simulé localement"}
-                </span>
-                {!quota.isReal && (
-                  <button
-                    type="button"
-                    onClick={handleRefill}
-                    style={{
-                      background: "var(--bg-3)",
-                      border: "1px solid var(--border-2, var(--line-2))",
-                      color: "var(--text-2)",
-                      padding: "2px 6px",
-                      borderRadius: "3px",
-                      fontSize: "10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Recharger
-                  </button>
-                )}
-              </div>
+              Quotas réels non exposés par ce fournisseur. Aucun compteur simulé n'est affiché.
             </div>
           )}
         </div>
@@ -2548,8 +2419,9 @@ function OpenRouterProviderCard({
     };
   }, [connected]);
 
-  const formatMinutes = (minutes: number) => {
-    return `$${minutes.toFixed(2)}`;
+  const formatCredits = (value: number | null | undefined) => {
+    if (value == null) return "—";
+    return `$${value.toFixed(2)}`;
   };
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
@@ -2700,7 +2572,7 @@ function OpenRouterProviderCard({
           </div>
           <p>Use any OpenRouter model with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
-          {connected && quota && (
+          {connected && quota?.kind === "credits" && (
             <div
               style={{
                 marginTop: "12px",
@@ -2719,7 +2591,7 @@ function OpenRouterProviderCard({
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                     <span style={{ color: "var(--text-3)" }}>Limite totale clé</span>
                     <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                      {formatMinutes(quota.limit5h)}
+                      {formatCredits(quota.creditLimit)}
                     </span>
                   </div>
                   <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
@@ -2738,23 +2610,18 @@ function OpenRouterProviderCard({
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
                     <span style={{ color: "var(--text-3)" }}>Solde clé restant</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                      {formatMinutes(quota.remaining5h)} ({quota.percentage5h.toFixed(0)}%)
-                    </span>
+                    {quota.percentage != null && (
+                      <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
+                        {formatCredits(quota.creditRemaining)} ({quota.percentage.toFixed(0)}%)
+                      </span>
+                    )}
                   </div>
                   <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
                     <div
                       style={{
-                        width: `${quota.percentage5h}%`,
+                        width: `${quota.percentage ?? 0}%`,
                         height: "100%",
-                        background:
-                          quota.percentage5h > 80
-                            ? "#10b981"
-                            : quota.percentage5h > 50
-                            ? "#3b82f6"
-                            : quota.percentage5h > 20
-                            ? "#ec4899"
-                            : "#ef4444",
+                        background: quotaColor(quota.percentage),
                         borderRadius: "2px",
                         transition: "width 0.3s ease",
                       }}

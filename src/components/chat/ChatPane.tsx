@@ -27,7 +27,7 @@ import {
 import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
 import { api } from "../../lib/ipc";
-import { fetchProviderQuota, deductLocalQuota, getLocalQuota, type QuotaInfo } from "../../lib/quotas";
+import { fetchProviderQuota, deductLocalQuota, quotaColor, type QuotaInfo } from "../../lib/quotas";
 import { canonicalToolName, isToolName } from "../../lib/tools";
 import {
   MODELS,
@@ -3415,35 +3415,26 @@ export function ChatPane({
                     setThinkingOpen(false);
                     setModeOpen(false);
                   }}
-                  title={selectorLocked ? "Model locked while streaming" : `Quota standard restants: ${quota ? quota.overallPercentage.toFixed(0) : 100}%. Cliquez sur le point pour ouvrir les réglages.`}
+                  title={
+                    selectorLocked
+                      ? "Model locked while streaming"
+                      : quota?.kind === "credits" && quota.percentage != null
+                        ? `Quota OpenRouter restant: ${quota.percentage.toFixed(0)}%. Cliquez sur la pastille pour ouvrir les fournisseurs.`
+                        : "Quota non exposé par ce fournisseur"
+                  }
                 >
                   <span className="composer__picker-label">
                     {displayModelEntry?.label ?? "No models"}
                   </span>
-                  {quota && (
+                  {quota?.kind === "credits" && quota.percentage != null && (
                     <span
                       style={{
                         display: "inline-block",
-                        width: "8px",
-                        height: "8px",
+                        width: "7px",
+                        height: "7px",
                         borderRadius: "50%",
-                        backgroundColor:
-                          quota.overallPercentage > 80
-                            ? "#10b981"
-                            : quota.overallPercentage > 50
-                            ? "#3b82f6"
-                            : quota.overallPercentage > 20
-                            ? "#ec4899"
-                            : "#ef4444",
-                        boxShadow: `0 0 6px ${
-                          quota.overallPercentage > 80
-                            ? "#10b981aa"
-                            : quota.overallPercentage > 50
-                            ? "#3b82f6aa"
-                            : quota.overallPercentage > 20
-                            ? "#ec4899aa"
-                            : "#ef4444aa"
-                        }`,
+                        backgroundColor: quotaColor(quota.percentage),
+                        opacity: 0.85,
                         marginLeft: "6px",
                         cursor: "pointer",
                       }}
@@ -3451,7 +3442,7 @@ export function ChatPane({
                         e.stopPropagation();
                         onOpenSettings("providers");
                       }}
-                      title={`Quota restant: ${quota.overallPercentage.toFixed(0)}%. Cliquez pour ouvrir les réglages.`}
+                      title={`Quota réel restant: ${quota.percentage.toFixed(0)}%. Cliquez pour ouvrir les fournisseurs.`}
                     />
                   )}
                   <Icon
@@ -3471,17 +3462,8 @@ export function ChatPane({
                       const providerIcon = m.provider.startsWith("openai:")
                         ? "simple-icons:openai"
                         : PROVIDERS.find((p) => p.value === m.provider)?.icon;
-                      
-                      const providerQuota = getLocalQuota(m.provider);
-                      const qPercent = providerQuota.overallPercentage;
-                      const dotColor =
-                        qPercent > 80
-                          ? "#10b981"
-                          : qPercent > 50
-                          ? "#3b82f6"
-                          : qPercent > 20
-                          ? "#ec4899"
-                          : "#ef4444";
+                      const providerHasRealQuota = m.provider === "openrouter";
+                      const qPercent = providerHasRealQuota && quota?.kind === "credits" ? quota.percentage : null;
 
                       return (
                         <button
@@ -3498,33 +3480,20 @@ export function ChatPane({
                               <Icon icon={providerIcon} width={13} height={13} />
                             )}
                             <span>{m.label}</span>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: "6px",
-                                height: "6px",
-                                borderRadius: "50%",
-                                backgroundColor:
-                                  qPercent > 80
-                                    ? "#10b981"
-                                    : qPercent > 50
-                                    ? "#3b82f6"
-                                    : qPercent > 20
-                                    ? "#ec4899"
-                                    : "#ef4444",
-                                boxShadow: `0 0 4px ${
-                                  qPercent > 80
-                                    ? "#10b98188"
-                                    : qPercent > 50
-                                    ? "#3b82f688"
-                                    : qPercent > 20
-                                    ? "#ec489988"
-                                    : "#ef444488"
-                                }`,
-                                marginLeft: "6px",
-                              }}
-                              title={`Quota restant: ${qPercent.toFixed(0)}%`}
-                            />
+                            {qPercent != null && (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  width: "6px",
+                                  height: "6px",
+                                  borderRadius: "50%",
+                                  backgroundColor: quotaColor(qPercent),
+                                  opacity: 0.8,
+                                  marginLeft: "6px",
+                                }}
+                                title={`Quota réel restant: ${qPercent.toFixed(0)}%`}
+                              />
+                            )}
                           </span>
                           {selected && (
                             <Icon
