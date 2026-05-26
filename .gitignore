@@ -19,3 +19,6 @@ sinew-chrome-bridge/node_modules/
 # Tauri updater signing keys — NEVER commit private keys
 /.tauri-keys/
 *.key
+
+/installers
+
