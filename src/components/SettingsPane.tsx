@@ -3063,8 +3063,7 @@ function PlanModePromptSettingsItem({
         </div>
       </div>
       <p className="settings-pane__tool-config-help">
-        This text is appended to the system prompt only when the conversation is in
-        Plan mode.
+        This text is appended to the system prompt only when the conversation is in Plan mode.
       </p>
       <textarea
         className="settings-pane__tool-config-desc settings-pane__tool-config-desc--prompt"
