@@ -6,7 +6,7 @@ Ce document détaille l'ensemble des fonctionnalités et options personnalisées
 
 ## 📌 Détail des ajouts et options de ton Fork
 
-Tes options de personnalisation et de connexion sont centralisées pour optimiser ton confort au quotidien :
+Tes options de personnalisation, de connexion et de navigation sont centralisées pour optimiser ton confort au quotidien :
 
 ### 1. 🌐 Traduction Intégrale en Français
 * **Localisation** : `Settings > Options` (Option *Langue*).
@@ -28,12 +28,16 @@ Tes options de personnalisation et de connexion sont centralisées pour optimise
 
 ### 5. 👥 Multi-comptes OpenAI (OAuth & Business Token)
 * **Localisation** : `Settings > Providers` (Paramètres > Fournisseurs).
-* **Bénéfice** : Tu as la possibilité de connecter un deuxième compte OpenAI (« OpenAI 2 ») en collant directement un Business Access Token. C'est parfait pour basculer facilement entre des abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser la rapidité sans déconnexion permanente.
+* **Bénéfice** : Possibilité de connecter un deuxième compte OpenAI (« OpenAI 2 ») en collant directement un Business Access Token. C'est parfait pour basculer facilement entre des abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser la rapidité sans déconnexion permanente.
 
-### 6. ⚡ Panneau de Diagnostic SOTA (State of the Art)
+### 6. 🌐 Sinew Chrome Bridge (Contrôle du Navigateur)
+* **Localisation** : `Settings > MCP` (Serveurs MCP) + extension Chrome dédiée.
+* **Bénéfice** : Connecte en direct ton navigateur Google Chrome à Sinew via un serveur MCP local pré-configuré (*Sinew Chrome*). Permet à l'assistant IA d'interagir en temps réel avec tes onglets ouverts, de lire des pages web ou de réaliser des actions automatisées directement sur ton navigateur de manière sécurisée (intégration *browser-use*).
+
+### 7. ⚡ Panneau de Diagnostic SOTA (State of the Art)
 * **Localisation** : `Settings > Options` (Option *Diagnostic Système SOTA*).
 * **Bénéfice** : Permet de tester instantanément en temps réel l'état, le chemin et la version des outils système indispensables (Git, Node, Rust/Cargo, Python, Ripgrep).
 
-### 7. 📌 Question Collante (Sticky Question)
+### 8. 📌 Question Collante (Sticky Question)
 * **Localisation** : Intégration automatique dans l'interface de chat.
 * **Bénéfice** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut. Un simple clic dessus te ramène instantanément et de manière fluide à la question.
