@@ -643,6 +643,21 @@ export const FileTree = forwardRef<FileTreeHandle, Props>(function FileTree(
     [closeMenu, workspacePath],
   );
 
+  const executeEntry = useCallback(
+    async (entry: WorkspaceEntry | null) => {
+      if (!entry) return;
+      closeMenu();
+      try {
+        setActionError(null);
+        const resolved = await api.resolveTerminalPath(workspacePath, entry.relativePath);
+        await api.openPathWithDefaultApp(resolved.absolutePath);
+      } catch (err) {
+        setActionError(String(err));
+      }
+    },
+    [closeMenu, workspacePath],
+  );
+
   const copyEntryPaths = useCallback(
     async (entry: WorkspaceEntry | null, mode: "absolute" | "relative") => {
       const entries = selectedScopeFor(entry);
@@ -1208,6 +1223,7 @@ export const FileTree = forwardRef<FileTreeHandle, Props>(function FileTree(
           }}
           onRename={() => startRename(menu.entry)}
           onReveal={() => void revealEntry(menu.entry)}
+          onExecute={() => void executeEntry(menu.entry)}
           onCopy={() => copySelection(menu.entry, false)}
           onCut={() => copySelection(menu.entry, true)}
           onCopyPath={() => void copyEntryPaths(menu.entry, "absolute")}
@@ -1666,6 +1682,7 @@ function TreeContextMenu({
   onNewFile,
   onNewFolder,
   onOpen,
+  onExecute,
   onRename,
   onReveal,
   onCopy,
@@ -1681,6 +1698,7 @@ function TreeContextMenu({
   onNewFile: () => void;
   onNewFolder: () => void;
   onOpen: () => void;
+  onExecute: () => void;
   onRename: () => void;
   onReveal: () => void;
   onCopy: () => void;
@@ -1706,6 +1724,13 @@ function TreeContextMenu({
           icon={entry.kind === "directory" ? "solar:folder-open-linear" : "solar:file-text-linear"}
           label={entry.kind === "directory" ? "Open folder" : "Open"}
           onClick={onOpen}
+        />
+      )}
+      {entry && entry.kind === "file" && (
+        <MenuItem
+          icon="solar:play-linear"
+          label="Execute / Run"
+          onClick={onExecute}
         />
       )}
       <MenuItem icon="solar:document-add-linear" label="New file" onClick={onNewFile} />
