@@ -1,176 +1,175 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
     :root {
-      --bg: #0b0c15;
-      --glass: rgba(255, 255, 255, 0.03);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --purple: #bf5af2;
-      --cyan: #0a84ff;
-      --neon-green: #30d158;
-      --neon-red: #ff453a;
+      --bg: #12131a;
+      --card-bg: #1a1b26;
       --text: #ffffff;
-      --text-muted: #8e8e93;
+      --text-muted: #787a91;
+      --green: #4ade80;
+      --green-bg: rgba(74, 222, 128, 0.15);
+      --red: #f87171;
+      --red-bg: rgba(248, 113, 113, 0.15);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #5e5ce6;
     }
 
     body {
-      width: 320px;
+      width: 280px;
       margin: 0;
-      padding: 20px;
+      padding: 24px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      overflow-hidden: true;
-    }
-
-    .container {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      align-items: center;
+      box-sizing: border-box;
     }
 
-    .header {
+    .logo-container {
+      margin-bottom: 12px;
       display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--purple), var(--cyan));
-      display: flex;
-      align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 18px;
-      box-shadow: 0 0 15px rgba(191, 90, 242, 0.4);
+      align-items: center;
+    }
+
+    .logo-img {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
 
     .title {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 700;
-      letter-spacing: -0.5px;
-      background: linear-gradient(to right, #fff, var(--text-muted));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.4px;
     }
 
-    .card {
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      backdrop-filter: blur(10px);
-    }
-
-    .status-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-    }
-
-    .status-label {
-      color: var(--text-muted);
-    }
-
-    .status-value {
-      display: flex;
+    .status-pill {
+      display: inline-flex;
       align-items: center;
       gap: 6px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
       font-weight: 600;
+      transition: all 0.3s ease;
+      margin-bottom: 16px;
+    }
+
+    .status-pill.connected {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .status-pill.disconnected {
+      background: var(--red-bg);
+      color: var(--red);
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: var(--neon-red);
-      box-shadow: 0 0 8px var(--neon-red);
-      transition: all 0.3s ease;
+      background: currentColor;
     }
 
-    .status-dot.connected {
-      background: var(--neon-green);
-      box-shadow: 0 0 8px var(--neon-green);
-    }
-
-    .divider {
-      height: 1px;
-      background: var(--glass-border);
-    }
-
-    .btn {
-      background: linear-gradient(135deg, var(--purple), var(--cyan));
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      padding: 10px;
-      font-weight: 600;
+    .description {
       font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.4;
+      margin: 0 0 20px 0;
+    }
+
+    .stats-container {
+      width: 100%;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stats-value {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .btn-refresh {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
+      width: 100%;
+      transition: background 0.2s ease, transform 0.1s ease;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 8px;
-      transition: opacity 0.2s ease, transform 0.1s ease;
+      gap: 6px;
     }
 
-    .btn:hover {
-      opacity: 0.9;
+    .btn-refresh:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
 
-    .btn:active {
+    .btn-refresh:active {
       transform: scale(0.98);
     }
 
     .footer {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-muted);
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      width: 100%;
+      padding-top: 12px;
       text-align: center;
-      margin-top: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">A</div>
-      <div class="title">Sinew Chrome Bridge</div>
-    </div>
-    
-    <div class="card">
-      <div class="status-row">
-        <span class="status-label">Proxy local (Port 29002)</span>
-        <span class="status-value" id="proxy-status">
-          <span class="status-dot" id="status-dot"></span>
-          <span id="status-text">Hors ligne</span>
-        </span>
-      </div>
-      
-      <div class="divider"></div>
-      
-      <div class="status-row">
-        <span class="status-label">Onglets actifs suivis</span>
-        <span class="status-value" id="attached-count" style="color: var(--cyan);">0</span>
-      </div>
-    </div>
-
-    <button class="btn" id="btn-refresh">
-      <span>Actualiser la connexion</span>
-    </button>
-
-    <div class="footer">
-      ðŸ§¬ Symbiose active â€” PCPORTABLE\julie
-    </div>
+  <div class="logo-container">
+    <img src="icon-128.png" class="logo-img" alt="Sinew Logo">
   </div>
+  
+  <h1 class="title">Sinew</h1>
+  
+  <div class="status-pill disconnected" id="status-pill">
+    <span class="status-dot"></span>
+    <span id="status-text">Disconnected</span>
+  </div>
+
+  <p class="description">Control Chrome with Sinew.</p>
+
+  <div class="stats-container">
+    <span>Active tabs tracked</span>
+    <span class="stats-value" id="attached-count">0</span>
+  </div>
+
+  <button class="btn-refresh" id="btn-refresh">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+    </svg>
+    <span>Reconnect</span>
+  </button>
+
+  <div class="footer">
+    Version v1.0.0
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>
