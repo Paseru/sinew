@@ -20,9 +20,12 @@ Ce nouvel onglet regroupe les préférences globales de l'utilisateur :
   * *Bénéfice* : 
     * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
     * **Gestion Git automatique** : L'IA prend en charge la maintenance du dépôt en arrière-plan (vérification, pull, commit, push) de manière automatisée, sans nécessiter de manipuler des commandes Git complexes.
-* **🧠 Réflexion Compacte (Compact Reasoning)** : 
-  * *Option* : **Réflexion compacte** (Activé / Désactivé).
-  * *Bénéfice* : Masque par défaut les longs blocs de réflexion détaillés (les étapes de réflexion de l'IA) et affiche uniquement les réponses finales pour une lecture plus rapide et directe.
+* **🧠 Réflexion Compacte (Compact Reasoning) / Mode d'affichage** : 
+  * *Option* : **Mode d'affichage** (Trois niveaux : Détaillé / Compact / Très compact).
+  * *Bénéfice* : Permet d'ajuster le niveau de visibilité et de détail des étapes de réflexion de l'IA (*thinking blocks*) ainsi que des exécutions d'outils (comme les commandes ou modifications de fichiers) dans l'interface de discussion :
+    * **Détaillé** : Visibilité maximale. Les longs blocs de réflexion de l'IA restent affichés en entier une fois terminés, et toutes les modifications de fichiers s'affichent sans filtre.
+    * **Compact** : Vue équilibrée. Les blocs de réflexion se replient automatiquement après la génération pour n'afficher qu'un bandeau résumé (ex: *Thinking (5.2s)*).
+    * **Très compact** : Focus total. Les étapes de réflexion sont visibles en temps réel lors de l'écriture puis **disparaissent complètement** une fois le message final généré, évitant toute surcharge visuelle.
 * **🔄 Synchronisation Multi-PC** : 
   * *Option* : **Synchronisation Multi-PC** (Activé / Désactivé).
   * *Bénéfice* : Synchronise automatiquement les conversations et configurations de manière sécurisée entre différents ordinateurs via un espace OneDrive.
@@ -60,6 +63,13 @@ Ce panneau gère les serveurs de protocole de contexte de modèle :
   * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier ou chemin généré par l'IA dans vos bulles de discussion du chat (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour afficher un menu contextuel et l'exécuter directement (**"Execute / Run"**), l'ouvrir dans l'éditeur ou révéler son dossier d'origine dans l'Explorateur Windows. C'est la solution ultime pour contourner le blocage des liens locaux !
 * **⚡ Bouton « Influencer » dans la File d'Attente (Prompt Queue)** :
   - *Bénéfice* : Permet d'injecter et de soumettre instantanément un prompt mis en attente pour orienter, influencer et guider le flux de la discussion en cours. Ce bouton est représenté par une pilule distinctive affichant le texte « **Influencer** » accompagné d'une flèche vers le haut (`solar:arrow-up-bold`), remplaçant l'ancienne flèche simple à droite peu visible pour une interaction beaucoup plus claire et intuitive.
+
+---
+
+### 5. Au démarrage & Gestion des Sessions (Écran d'accueil)
+
+* **📂 Utilisation sans dossier (Mode Bac à sable / Sandbox / Sans projet)** :
+  * *Bénéfice* : Permet de lancer Sinew d'un simple clic en mode **« Sans dossier »** (ou Sandbox) depuis l'écran d'accueil sans devoir sélectionner ou créer un dossier projet. C'est parfait pour interagir rapidement avec l'IA, lui confier des tâches générales, exécuter des commandes système ou exploiter le pont Google Chrome (MCP) de façon ultra-légère. L'espace de travail s'affiche alors sous le nom de **« Sans dossier »** (géré dans un répertoire sécurisé `.sinew-sandbox` dans votre répertoire utilisateur).
 
 
 
