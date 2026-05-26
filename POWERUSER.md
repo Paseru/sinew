@@ -20,6 +20,7 @@ main
 - Correction Windows pour mieux trouver `git.exe`.
 - Correction Windows pour désactiver les warnings de compilation liés aux menus macOS/Linux (imports inutilisés).
 - Scripts pour que tu gères le moins possible Git.
+- **Diagnostic SOTA** : Bouton et panneau d'affichage visuel en temps réel dans Settings > About (ainsi que l'outil IA check_sota) pour tester instantanément et sans jargon si tes dépendances système de pointe (ripgrep/rg, git, python, rust/cargo, node, npm) sont installées et configurées.
 
 ## Scripts utiles
 

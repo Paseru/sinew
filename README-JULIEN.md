@@ -9,6 +9,7 @@ Optimisations et ajouts personnalisés pour un usage simple, ultra-rapide et ent
 - **Mode Power User (Non-coder)** : Automatisation complète de la technique en arrière-plan (Git, commits, pushes, builds). L'assistant communique de manière ultra-concise et simplifiée.
 - **Multi-comptes OpenAI** : Gestion et connexion multi-comptes automatisées avec des raccourcis intelligents pour optimiser la rapidité et les coûts.
 - **Sinew Chrome Bridge** : Intégration d'une extension Chrome et d'un installeur automatique pour connecter le navigateur à Sinew.
+- **Diagnostic SOTA (check_sota)** : Intégration d'un bouton et d'un tableau de bord de diagnostic visuel en temps réel dans Settings > About (et outil d'agent IA) pour vérifier instantanément si toutes les dépendances de pointe indispensables (ripgrep/rg, git, python, cargo, node, npm) sont installées et prêtes à l'emploi.
 - **Auto-enregistrement MCP** : Détection et configuration automatiques des serveurs de connaissances (MCP) directement dans la base de données de l'application.
 - **Sauvegarde des logs** : Archivage automatique de l'activité dans `desktop-app.log`.
 
