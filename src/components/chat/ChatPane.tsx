@@ -1287,6 +1287,39 @@ export function ChatPane({
     autoScrollingRef.current = false;
   }, []);
 
+  const updateStickyQuestionState = useCallback(
+    (options: { updateStickToBottom?: boolean } = {}) => {
+      const el = bodyRef.current;
+      if (!el) return;
+
+      if (options.updateStickToBottom !== false && !autoScrollingRef.current) {
+        stickToBottomRef.current =
+          el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+      }
+
+      const questionEls = el.querySelectorAll<HTMLElement>(
+        '[data-user-question="true"]',
+      );
+      const bodyRect = el.getBoundingClientRect();
+      // Small tolerance avoids the banner waiting for a 1px manual scroll when
+      // the question lands exactly on the viewport edge after auto-scroll.
+      const hiddenTop = bodyRect.top + 1;
+      let activeId: string | null = null;
+
+      for (const qEl of questionEls) {
+        const rect = qEl.getBoundingClientRect();
+        if (rect.bottom <= hiddenTop) {
+          activeId = qEl.id.replace("user-question-", "");
+        }
+      }
+
+      setActiveStickyQuestionId((previous) =>
+        previous === activeId ? previous : activeId,
+      );
+    },
+    [],
+  );
+
   const scheduleStickToBottom = useCallback(
     (options: { force?: boolean; animated?: boolean } = {}) => {
       const el = bodyRef.current;
@@ -1306,6 +1339,7 @@ export function ChatPane({
         el.scrollTop = target();
         requestAnimationFrame(() => {
           autoScrollingRef.current = false;
+          updateStickyQuestionState();
         });
         return;
       }
@@ -1324,6 +1358,7 @@ export function ChatPane({
           el.scrollTop = nextTarget;
           scrollAnimationRef.current = null;
           autoScrollingRef.current = false;
+          updateStickyQuestionState();
           return;
         }
         const step = Math.sign(distance) * Math.max(1, Math.abs(distance) * 0.28);
@@ -1333,43 +1368,28 @@ export function ChatPane({
 
       scrollAnimationRef.current = requestAnimationFrame(tick);
     },
-    [stopAutoScroll],
+    [stopAutoScroll, updateStickyQuestionState],
   );
 
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
     const updateStickiness = () => {
-      if (autoScrollingRef.current) return;
-      stickToBottomRef.current =
-        el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-
-      const questionEls = el.querySelectorAll('[data-user-question="true"]');
-      const bodyRect = el.getBoundingClientRect();
-      let activeId: string | null = null;
-
-      for (const qEl of questionEls) {
-        const rect = qEl.getBoundingClientRect();
-        if (rect.bottom < bodyRect.top) {
-          activeId = qEl.id.replace("user-question-", "");
-        }
-      }
-
-      setActiveStickyQuestionId(activeId);
+      updateStickyQuestionState();
     };
     const cancelOnUpwardWheel = (event: WheelEvent) => {
       if (event.deltaY >= 0) return;
       stopAutoScroll();
       stickToBottomRef.current = false;
     };
-    updateStickiness();
+    updateStickyQuestionState();
     el.addEventListener("scroll", updateStickiness, { passive: true });
     el.addEventListener("wheel", cancelOnUpwardWheel, { passive: true });
     return () => {
       el.removeEventListener("scroll", updateStickiness);
       el.removeEventListener("wheel", cancelOnUpwardWheel);
     };
-  }, [stopAutoScroll, view, subAgentViews, activeSubAgentId]);
+  }, [stopAutoScroll, updateStickyQuestionState, view, subAgentViews, activeSubAgentId]);
 
   useLayoutEffect(() => {
     if (pendingForceScrollRef.current) {
@@ -1384,12 +1404,21 @@ export function ChatPane({
   useLayoutEffect(() => {
     const content = bodyContentRef.current;
     if (!content) return;
+    let stickyRefreshFrame: number | null = null;
     const observer = new ResizeObserver(() => {
       scheduleStickToBottom({ animated: scrollViewStatus === "streaming" });
+      if (stickyRefreshFrame !== null) cancelAnimationFrame(stickyRefreshFrame);
+      stickyRefreshFrame = requestAnimationFrame(() => {
+        stickyRefreshFrame = null;
+        updateStickyQuestionState();
+      });
     });
     observer.observe(content);
-    return () => observer.disconnect();
-  }, [scrollViewStatus, scheduleStickToBottom]);
+    return () => {
+      observer.disconnect();
+      if (stickyRefreshFrame !== null) cancelAnimationFrame(stickyRefreshFrame);
+    };
+  }, [scrollViewStatus, scheduleStickToBottom, updateStickyQuestionState]);
 
   useLayoutEffect(() => {
     pendingForceScrollRef.current = true;
@@ -2693,7 +2722,9 @@ export function ChatPane({
     }
   }, [activeStickyQuestionId]);
 
-  const showPlanningNextMove = shouldShowPlanningNextMove(displayView);
+  const showPlanningNextMove = compactMode === "very-compact"
+    ? false
+    : shouldShowPlanningNextMove(displayView);
   const teamAgentRoster = useMemo(
     () => buildTeamAgentRoster(view.blocks, subAgentViews),
     [view.blocks, subAgentViews],
@@ -5756,6 +5787,7 @@ function BlockView({
         </div>
       );
     case "compaction-summary":
+      if (compactMode === "very-compact") return null;
       return (
         <div className="msg" data-role="user">
           <CompactionSummaryBlock
@@ -5835,7 +5867,6 @@ function BlockView({
       if (
         compactMode === "very-compact" &&
         !block.isError &&
-        block.status !== "running" &&
         !isToolName(block.name, "question") &&
         !isToolName(block.name, "send_message")
       ) {
@@ -5892,6 +5923,7 @@ function BlockView({
         </div>
       );
     case "turn-duration":
+      if (compactMode === "very-compact") return null;
       return (
         <div className="msg" data-role="assistant">
           <div className="turn-duration">
