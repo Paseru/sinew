@@ -3331,7 +3331,7 @@ textarea {
 .settings-pane__body--about {
   align-content: start;
   gap: 14px;
-  max-width: 620px;
+  max-width: 100%;
   padding-top: 22px;
 }
 
