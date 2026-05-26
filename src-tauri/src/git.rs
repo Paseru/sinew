@@ -675,11 +675,27 @@ fn resolve_executable(program: &str) -> Option<PathBuf> {
             return Some(candidate);
         }
     }
+    #[cfg(windows)]
+    {
+        if direct.components().count() > 1 {
+            let direct_exe = direct.with_extension("exe");
+            if executable_works(&direct_exe) {
+                return Some(direct_exe);
+            }
+        }
+    }
 
     if let Some(path_var) = std::env::var_os("PATH") {
         for dir in std::env::split_paths(&path_var) {
             if let Some(candidate) = find_working_executable(&dir.join(program)) {
                 return Some(candidate);
+            }
+            #[cfg(windows)]
+            {
+                let candidate_exe = candidate.with_extension("exe");
+                if executable_works(&candidate_exe) {
+                    return Some(candidate_exe);
+                }
             }
         }
     }
@@ -687,6 +703,13 @@ fn resolve_executable(program: &str) -> Option<PathBuf> {
     for dir in fallback_executable_dirs(program) {
         if let Some(candidate) = find_working_executable(&dir.join(program)) {
             return Some(candidate);
+        }
+        #[cfg(windows)]
+        {
+            let candidate_exe = candidate.with_extension("exe");
+            if executable_works(&candidate_exe) {
+                return Some(candidate_exe);
+            }
         }
     }
 

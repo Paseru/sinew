@@ -3351,6 +3351,75 @@ textarea {
   line-height: 1.6;
 }
 
+.settings-pane__about-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-med);
+  background: var(--bg-1);
+}
+
+.settings-pane__about-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.settings-pane__about-card-copy h2 {
+  margin: 0;
+  color: var(--text-0);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.settings-pane__about-card-copy p {
+  margin: 0;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+}
+
+.settings-pane__locale-switch {
+  flex: 0 0 auto;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-med);
+  background: var(--bg-2);
+}
+
+.settings-pane__locale-switch button {
+  min-width: 76px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: calc(var(--r-med) - 2px);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.settings-pane__locale-switch button:hover {
+  color: var(--text-0);
+  background: var(--bg-3);
+}
+
+.settings-pane__locale-switch button[data-active="true"] {
+  color: var(--text-0);
+  background: var(--bg-0);
+}
 .settings-pane__about-links {
   display: flex;
   align-items: center;

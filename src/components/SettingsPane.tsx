@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
+import { getAppLocale, setAppLocale, type AppLocale } from "../lib/locale";
 import { api } from "../lib/ipc";
 import { canonicalToolName } from "../lib/tools";
 import { Markdown } from "./chat/Markdown";
@@ -65,6 +66,7 @@ type Section = "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
 
 export function SettingsPane({ workspacePath }: Props) {
   const [section, setSection] = useState<Section>("about");
+  const [locale, setLocaleState] = useState<AppLocale>(() => getAppLocale());
   const [settings, setSettings] = useState<McpSettings>(EMPTY_SETTINGS);
   const [savedJson, setSavedJson] = useState("");
   const [jsonText, setJsonText] = useState("");
@@ -116,6 +118,12 @@ export function SettingsPane({ workspacePath }: Props) {
   const [providersBusy, setProvidersBusy] = useState(false);
   const [providersMessage, setProvidersMessage] = useState<string | null>(null);
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
+
+  const setLocale = useCallback((nextLocale: AppLocale) => {
+    setAppLocale(nextLocale);
+    setLocaleState(nextLocale);
+    window.location.reload();
+  }, []);
 
   useEffect(() => {
     setToolSettings(null);
@@ -1155,7 +1163,7 @@ export function SettingsPane({ workspacePath }: Props) {
 
       <section className="settings-pane__main">
         {section === "about" ? (
-          <AboutSection />
+          <AboutSection locale={locale} onLocaleChange={setLocale} />
         ) : section === "providers" ? (
           <ProvidersSection
             openAiStatus={openAiStatus}
@@ -1279,7 +1287,13 @@ export function SettingsPane({ workspacePath }: Props) {
 
 // ---- About section -----------------------------------------------------
 
-function AboutSection() {
+function AboutSection({
+  locale,
+  onLocaleChange,
+}: {
+  locale: AppLocale;
+  onLocaleChange: (locale: AppLocale) => void;
+}) {
   return (
     <div className="settings-pane__body settings-pane__body--about">
       <div className="settings-pane__about-hero">
@@ -1300,6 +1314,33 @@ function AboutSection() {
         Run it minimal with a couple of tools, or unlock the full set : shell, search,
         MCP, web, images, sub-agents. Multi-provider by default.
       </p>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>Language</h2>
+          <p>Choose the interface language. Sinew reloads after a change so every panel updates cleanly.</p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Interface language">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={locale === "en"}
+            data-active={locale === "en" ? "true" : "false"}
+            onClick={() => onLocaleChange("en")}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={locale === "fr"}
+            data-active={locale === "fr" ? "true" : "false"}
+            onClick={() => onLocaleChange("fr")}
+          >
+            Français
+          </button>
+        </div>
+      </div>
 
       <div className="settings-pane__about-links">
         <a
