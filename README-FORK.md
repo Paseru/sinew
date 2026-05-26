@@ -4,40 +4,53 @@ Ce document détaille l'ensemble des fonctionnalités et des options personnalis
 
 ---
 
-## 📌 Détail des ajouts et options du Fork
+## 📌 Fonctionnalités par panneau de configuration
 
-Les options de personnalisation, de connexion et de navigation sont centralisées pour optimiser le confort d'utilisation au quotidien :
+Pour faciliter la navigation, les ajouts ont été classés selon leur emplacement dans l'application :
 
-### 1. 🌐 Interface en Français (Traduction progressive)
-* **Localisation** : `Settings > Options` (Option *Langue*).
-* **Bénéfice** : Traduit dynamiquement les éléments clés de l'interface utilisateur (boutons, menus principaux, paramètres, dialogues et infobulles) en français pour une navigation plus confortable. La traduction cible l'expérience utilisateur et préserve volontairement en anglais les éléments purement techniques (sorties de terminal, code ou diagnostics) pour maintenir la cohérence de développement.
+### 1. Dans le panneau `Settings > Options` (Paramètres > Options)
 
-### 2. 🤖 Mode "Power User"
-* **Localisation** : `Settings > Options` (Option *Mode Power User*).
-* **Bénéfice** :
-  * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
-  * **Gestion Git automatique** : L'IA prend en charge la maintenance du dépôt en arrière-plan (vérification, pull, commit, push) de manière automatisée, sans nécessiter de manipuler des commandes Git complexes.
+Ce nouvel onglet regroupe les préférences globales de l'utilisateur :
 
-### 3. 🧠 Réflexion Compacte (Compact Reasoning)
-* **Localisation** : `Settings > Options` (Option *Réflexion compacte*).
-* **Bénéfice** : Masque par défaut les longs blocs de réflexion détaillés (les étapes de réflexion de l'IA) et affiche uniquement les réponses finales pour une lecture plus rapide et directe.
+* **🌐 Interface en Français (Traduction progressive)** : 
+  * *Option* : **Langue** (English / Français).
+  * *Bénéfice* : Traduit dynamiquement les éléments clés de l'interface utilisateur (boutons, menus principaux, paramètres, dialogues et infobulles) en français pour une navigation plus confortable. Les termes purement techniques (sorties de terminal, code ou diagnostics) restent en anglais pour maintenir la cohérence de développement.
+* **🤖 Mode "Power User"** : 
+  * *Option* : **Mode Power User** (Activé / Désactivé).
+  * *Bénéfice* : 
+    * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
+    * **Gestion Git automatique** : L'IA prend en charge la maintenance du dépôt en arrière-plan (vérification, pull, commit, push) de manière automatisée, sans nécessiter de manipuler des commandes Git complexes.
+* **🧠 Réflexion Compacte (Compact Reasoning)** : 
+  * *Option* : **Réflexion compacte** (Activé / Désactivé).
+  * *Bénéfice* : Masque par défaut les longs blocs de réflexion détaillés (les étapes de réflexion de l'IA) et affiche uniquement les réponses finales pour une lecture plus rapide et directe.
+* **🔄 Synchronisation Multi-PC** : 
+  * *Option* : **Synchronisation Multi-PC** (Activé / Désactivé).
+  * *Bénéfice* : Synchronise automatiquement les conversations et configurations de manière sécurisée entre différents ordinateurs via un espace OneDrive.
+* **⚡ Diagnostic Système SOTA (State of the Art)** : 
+  * *Option* : **Diagnostic Système SOTA** (avec bouton *Actualiser*).
+  * *Bénéfice* : Permet de tester instantanément en temps réel l'état, le chemin et la version des outils système indispensables (Git, Node, Rust/Cargo, Python, Ripgrep).
 
-### 4. 🔄 Synchronisation Multi-PC
-* **Localisation** : `Settings > Options` (Option *Synchronisation Multi-PC*).
-* **Bénéfice** : Synchronise automatiquement les conversations et configurations de manière sécurisée entre différents ordinateurs via un espace OneDrive.
+---
 
-### 5. 👥 Multi-comptes OpenAI (OAuth & Business Token)
-* **Localisation** : `Settings > Providers` (Paramètres > Fournisseurs).
-* **Bénéfice** : Permet de connecter plusieurs comptes OpenAI secondaires (« OpenAI 2 », « OpenAI 3 », etc.) en cliquant sur le bouton « + » et en renseignant un *Business Access Token* pour chacun d'eux. C'est idéal pour basculer facilement et instantanément entre plusieurs abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser les coûts et la rapidité sans aucune déconnexion.
+### 2. Dans le panneau `Settings > Providers` (Paramètres > Fournisseurs)
 
-### 6. 🌐 Sinew Chrome Bridge (Contrôle du Navigateur)
-* **Localisation** : `Settings > MCP` (Serveurs MCP) + extension Chrome dédiée.
-* **Bénéfice** : Connecte en direct le navigateur Google Chrome à Sinew via un serveur MCP local pré-configuré (*Sinew Chrome*). Permet à l'assistant IA d'interagir en temps réel avec les onglets ouverts, de lire des pages web ou d'exécuter des actions automatisées directement sur le navigateur de manière sécurisée (intégration *browser-use*).
+Ce panneau gère les comptes et modèles connectés à l'application :
 
-### 7. ⚡ Panneau de Diagnostic SOTA (State of the Art)
-* **Localisation** : `Settings > Options` (Option *Diagnostic Système SOTA*).
-* **Bénéfice** : Permet de tester instantanément en temps réel l'état, le chemin et la version des outils système indispensables (Git, Node, Rust/Cargo, Python, Ripgrep).
+* **👥 Multi-comptes OpenAI (OAuth & Business Token)** :
+  * *Bénéfice* : Permet de connecter plusieurs comptes OpenAI secondaires (« OpenAI 2 », « OpenAI 3 », etc.) en cliquant sur le bouton « + » et en renseignant un *Business Access Token* pour chacun d'eux. C'est idéal pour basculer facilement et instantanément entre plusieurs abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser les coûts et la rapidité sans aucune déconnexion.
 
-### 8. 📌 Question Collante (Sticky Question)
-* **Localisation** : Intégration automatique dans l'interface de chat.
-* **Bénéfice** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
+---
+
+### 3. Dans le panneau `Settings > MCP` (Paramètres > Serveurs MCP)
+
+Ce panneau gère les serveurs de protocole de contexte de modèle :
+
+* **🌐 Sinew Chrome Bridge (Contrôle du Navigateur)** :
+  * *Bénéfice* : Connecte en direct le navigateur Google Chrome à Sinew via un serveur MCP local pré-configuré (*Sinew Chrome*). Permet à l'assistant IA d'interagir en temps réel avec les onglets ouverts, de lire des pages web ou d'exécuter des actions automatisées directement sur le navigateur de manière sécurisée (intégration *browser-use*).
+
+---
+
+### 4. Directement dans l'interface de Chat
+
+* **📌 Question Collante (Sticky Question)** :
+  * *Bénéfice* : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
