@@ -1634,8 +1634,9 @@ wss.on('connection', (ws, req) => {
   // 1. Chrome Extension WebSocket Tunnel (Fallback)
   // ============================================
   if (pathname === '/extension') {
-    if (isNativeMode) {
-      console.error("ðŸ§¬ [Proxy] WebSocket extension connected but Native Messaging is active. Rejecting to avoid collisions.");
+    const isBridgeClient = parsedUrl.query.nativeBridge === 'true';
+    if (isNativeMode && !isBridgeClient) {
+      console.error("🧬 [Proxy] WebSocket extension connected but Native Messaging is active. Rejecting to avoid collisions.");
       ws.close(1008, "Native Messaging is active");
       return;
     }
@@ -2250,12 +2251,68 @@ async function executeMacroReplay(tabId, macro) {
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error("🧬 [Proxy] Port 29002 is already in use. Another instance of Sinew Chrome Bridge is running. Exiting silently.");
-    process.exit(0);
+    if (isNativeMode) {
+      console.error("🧬 [Proxy] Port 29002 is already occupied. Starting in Bridge Client Mode...");
+      startBridgeClientMode();
+    } else {
+      console.error("🧬 [Proxy] Port 29002 is already in use. Another instance of Sinew Chrome Bridge is running. Exiting silently.");
+      process.exit(0);
+    }
   } else {
     throw err;
   }
 });
+
+function startBridgeClientMode() {
+  const ws = new WebSocket("ws://localhost:29002/extension?nativeBridge=true");
+  
+  ws.on('open', () => {
+    console.error("🧬 [Bridge Client] Tunnel established with active server!");
+  });
+  
+  let inputBuffer = Buffer.alloc(0);
+  process.stdin.on('readable', () => {
+    let chunk;
+    while ((chunk = process.stdin.read()) !== null) {
+      inputBuffer = Buffer.concat([inputBuffer, chunk]);
+    }
+    while (inputBuffer.length >= 4) {
+      const msgLen = inputBuffer.readUInt32LE(0);
+      if (inputBuffer.length < 4 + msgLen) break;
+      const msgBytes = inputBuffer.subarray(4, 4 + msgLen);
+      inputBuffer = inputBuffer.subarray(4 + msgLen);
+      
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(msgBytes.toString('utf8'));
+      }
+    }
+  });
+
+  process.stdin.on('end', () => {
+    console.error("🧬 [Bridge Client] Stdin closed. Terminating...");
+    ws.close();
+    process.exit(0);
+  });
+
+  ws.on('message', (data) => {
+    const msgJson = typeof data === 'string' ? data : data.toString('utf8');
+    const msgBytes = Buffer.from(msgJson, 'utf8');
+    const header = Buffer.alloc(4);
+    header.writeUInt32LE(msgBytes.length, 0);
+    process.stdout.write(header);
+    process.stdout.write(msgBytes);
+  });
+
+  ws.on('close', () => {
+    console.error("🧬 [Bridge Client] Tunnel closed. Exiting.");
+    process.exit(0);
+  });
+
+  ws.on('error', (err) => {
+    console.error("🧬 [Bridge Client] Tunnel error:", err.message);
+    process.exit(1);
+  });
+}
 
 server.listen(PORT, () => {
   console.log(`ðŸ§¬ [Proxy] UPGRADED Sinew Chrome Bridge listening on http://localhost:${PORT}`);
