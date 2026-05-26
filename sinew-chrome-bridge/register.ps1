@@ -3,7 +3,7 @@ $ScriptDir = $PSScriptRoot
 if (!$ScriptDir) { $ScriptDir = $pwd.Path }
 
 $ManifestPath = Join-Path $ScriptDir "com.sinew.chrome_bridge.json"
-$HostScriptPath = Join-Path $ScriptDir "native_host.bat"
+$HostScriptPath = Join-Path $ScriptDir "native-host-wrapper.exe"
 
 Write-Host "1/4 Mise a jour du manifest JSON local..."
 if (Test-Path $ManifestPath) {
