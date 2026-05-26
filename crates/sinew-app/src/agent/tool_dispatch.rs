@@ -1,10 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+﻿use std::{collections::HashMap, sync::Arc};
 
 use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::{
-    tool_names, BashTool, CreateImageTool, EditFileTool, GlobTool, GrepTool, McpToolRegistry,
+    tool_names, BashTool, CreateImageTool, EditFileTool, GlobTool, GrepTool, CheckSotaTool, McpToolRegistry,
     QuestionTool, ReadFingerprint, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool,
     TodoListState, ToolRunResult, ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
 };
@@ -29,6 +29,7 @@ pub(super) async fn run_tool(
     bash: &BashTool,
     glob: &GlobTool,
     grep: &GrepTool,
+    check_sota: &CheckSotaTool,
     read: &ReadTool,
     edit_file: &EditFileTool,
     write_file: &WriteFileTool,
@@ -66,6 +67,8 @@ pub(super) async fn run_tool(
         glob.run(input).await
     } else if canonical_name == tool_names::GREP {
         grep.run(input).await
+    } else if canonical_name == tool_names::CHECK_SOTA {
+        check_sota.run(input).await
     } else if canonical_name == tool_names::READ {
         read.run(input).await
     } else if canonical_name == tool_names::EDIT_FILE {
@@ -124,3 +127,4 @@ pub(super) async fn run_tool(
         ToolRunResult::err(format!("unknown tool: {name}"), Vec::new())
     }
 }
+

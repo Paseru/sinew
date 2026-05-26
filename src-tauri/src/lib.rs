@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     collections::{HashMap, HashSet},
     fs,
     io::{Read, Write},
@@ -44,7 +44,7 @@ use sinew_app::{
     system_prompt_for_mode_with_plan_prompt, system_prompt_with_todo, todo_list_from_history,
     tool_settings_view, trash_workspace_entry, write_workspace_file, AgentEvent, AgentMode,
     AppStore, BashTool, ConversationEvent, ConversationSummary, CreateImageTool, EditFileTool,
-    GlobTool, GoalWorkflowState, GrepTool, ImportedEntry, InstalledSkill, McpSettings,
+    GlobTool, GoalWorkflowState, GrepTool, CheckSotaTool, ImportedEntry, InstalledSkill, McpSettings,
     McpToolRegistry, ModeModelSettings, OpenRouterModelRecord, PlanArtifactState,
     PlanWorkflowState, QuestionTool, ReadTool, SavedConversation, SkillSettings, SkillTool,
     SubAgentConfig, SubAgentSettings, SubAgentTool, TeamRuntime, TeamTool, TerminalPathResolution,
@@ -657,3 +657,4 @@ pub fn run() {
             }
         })
 }
+

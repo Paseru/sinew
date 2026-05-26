@@ -1,4 +1,4 @@
-use super::*;
+﻿use super::*;
 
 impl TeamTool {
     pub(super) async fn run_agent_turn(
@@ -71,6 +71,7 @@ impl TeamTool {
             bash: Arc::new(BashTool::new(self.workspace_root.clone())),
             glob: Arc::new(GlobTool::new(self.workspace_root.clone())),
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
+            check_sota: Arc::new(CheckSotaTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(
                 EditFileTool::new(self.workspace_root.clone())
@@ -473,3 +474,4 @@ pub(super) fn emit_agent_slept_event(
         event: Box::new(AgentEvent::AgentSlept),
     });
 }
+

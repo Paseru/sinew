@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+﻿use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 use crate::tool_run::FileChange;
 use crate::{
     run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CreateImageTool, EditFileTool,
-    GlobTool, GoalWorkflowState, GrepTool, McpSettings, McpToolRegistry, QuestionTool, ReadTool,
+    GlobTool, GoalWorkflowState, GrepTool, CheckSotaTool, McpSettings, McpToolRegistry, QuestionTool, ReadTool,
     SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult, ToolSettings, TurnCancel,
     TurnContext, WebFetchTool, WebSearchTool, WriteFileTool,
 };
@@ -125,7 +125,7 @@ impl SubAgentTool {
             .agents
             .iter()
             .find(|agent| agent.enabled && tool_name_for_agent(agent) == name)
-            .map(|agent| format!("Sub-agent · {}", agent.name))
+            .map(|agent| format!("Sub-agent Â· {}", agent.name))
     }
 
     pub async fn run(
@@ -214,6 +214,7 @@ impl SubAgentTool {
             bash: Arc::new(BashTool::new(self.workspace_root.clone())),
             glob: Arc::new(GlobTool::new(self.workspace_root.clone())),
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
+            check_sota: Arc::new(CheckSotaTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(EditFileTool::new(self.workspace_root.clone())),
             write_file: Arc::new(WriteFileTool::new(self.workspace_root.clone())),
@@ -342,7 +343,7 @@ pub fn subagent_summary(name: &str, settings: &SubAgentSettings) -> Option<Strin
         .agents
         .iter()
         .find(|agent| tool_name_for_agent(agent) == name)
-        .map(|agent| format!("Sub-agent · {}", agent.name))
+        .map(|agent| format!("Sub-agent Â· {}", agent.name))
 }
 
 fn tool_name_for_agent(agent: &SubAgentConfig) -> String {
@@ -380,3 +381,4 @@ fn escape_attr(value: &str) -> String {
 fn default_enabled() -> bool {
     true
 }
+

@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     collections::{BTreeMap, BTreeSet},
     time::Duration,
 };
@@ -55,6 +55,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         bash,
         glob,
         grep,
+        check_sota,
         read,
         edit_file,
         write_file,
@@ -108,6 +109,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             bash.input_descriptor(),
             glob.descriptor(),
             grep.descriptor(),
+            check_sota.descriptor(),
             read.descriptor(),
             clean_context_descriptor(),
             web_search.descriptor(),
@@ -347,7 +349,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                                             .as_ref()
                                             .map(|label| {
                                                 format!(
-                                                    "{} · {}",
+                                                    "{} Â· {}",
                                                     display_mcp_server_name(&label.server_name),
                                                     label.tool_name
                                                 )
@@ -409,7 +411,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
 
             // Detect a silent stream close: the underlying SSE source returned `None` (or yielded
             // its last item) without ever emitting a `MessageStop`. This is the classic "OpenAI
-            // just stops without an error" symptom — usually a connection drop on the provider /
+            // just stops without an error" symptom â€” usually a connection drop on the provider /
             // edge proxy side. Surface it as an explicit stream error so the user gets feedback
             // and the normal recovery path (auto-compaction, etc.) is given a chance to run.
             if !cancelled && stream_error.is_none() && !saw_message_stop {
@@ -570,6 +572,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         &bash,
                         &glob,
                         &grep,
+                        &check_sota,
                         &read,
                         &edit_file,
                         &write_file,
@@ -614,6 +617,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                             &bash,
                             &glob,
                             &grep,
+                            &check_sota,
                             &read,
                             &edit_file,
                             &write_file,
@@ -898,3 +902,4 @@ fn assistant_has_question_tool(message: &ChatMessage) -> bool {
         )
     })
 }
+

@@ -1,4 +1,4 @@
-/// Canonical tool identifiers exposed to models.
+﻿/// Canonical tool identifiers exposed to models.
 ///
 /// Sinew used to expose a mixed casing surface (`Glob`, `WebSearch`,
 /// `ToDoList`, ...). Keep those legacy spellings accepted at dispatch and
@@ -20,6 +20,7 @@ pub const LOAD_MCP_TOOL: &str = "load_mcp_tool";
 pub const SKILL: &str = "skill";
 pub const UPDATE_GOAL: &str = "update_goal";
 pub const CONTEXT_COMPACTION: &str = "context_compaction";
+pub const CHECK_SOTA: &str = "check_sota";
 
 pub const TEAM_RUN: &str = "team_run";
 pub const TEAM_CREATE: &str = "team_create";
@@ -51,6 +52,7 @@ pub fn canonical_tool_name(name: &str) -> &str {
         "TaskCreate" => TASK_CREATE,
         "TaskList" => TASK_LIST,
         "TaskUpdate" => TASK_UPDATE,
+        "CheckSota" | "check_sota" => CHECK_SOTA,
         _ => name,
     }
 }
@@ -58,3 +60,4 @@ pub fn canonical_tool_name(name: &str) -> &str {
 pub fn is_tool_name(name: &str, canonical: &str) -> bool {
     canonical_tool_name(name) == canonical
 }
+

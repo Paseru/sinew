@@ -1,4 +1,4 @@
-use crate::*;
+﻿use crate::*;
 
 pub(super) fn agent_swarm_error_from_event(event: &AgentEvent) -> Option<(String, String)> {
     let AgentEvent::SubAgentEvent {
@@ -344,6 +344,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
         bash: Arc::new(BashTool::new(workspace_root.clone())),
         glob: Arc::new(GlobTool::new(workspace_root.clone())),
         grep: Arc::new(GrepTool::new(workspace_root.clone())),
+        check_sota: Arc::new(CheckSotaTool::new()),
         read: Arc::new(ReadTool::new(workspace_root.clone())),
         edit_file: Arc::new(EditFileTool::new(workspace_root.clone())),
         write_file: Arc::new(WriteFileTool::new(workspace_root.clone())),
@@ -604,7 +605,7 @@ pub(super) fn agent_swarm_completion_wake_text(completion: &AgentSwarmCompletion
     }
     lines.push("</agent_swarm_finished>".to_string());
     lines.push(String::new());
-    lines.push("L'Agent Swarm a terminé. Réponds maintenant à l'utilisateur pour lui dire que l'Agent Swarm a terminé, puis résume les dernières réponses structurées ci-dessus agent par agent. N'utilise pas TeamStatus, le shell, ni les fichiers juste pour vérifier que le swarm est terminé.".to_string());
+    lines.push("L'Agent Swarm a terminÃ©. RÃ©ponds maintenant Ã  l'utilisateur pour lui dire que l'Agent Swarm a terminÃ©, puis rÃ©sume les derniÃ¨res rÃ©ponses structurÃ©es ci-dessus agent par agent. N'utilise pas TeamStatus, le shell, ni les fichiers juste pour vÃ©rifier que le swarm est terminÃ©.".to_string());
     lines.join("\n")
 }
 
@@ -700,3 +701,4 @@ pub(super) async fn stop_agent_swarm_command(
         Ok(result.content)
     }
 }
+

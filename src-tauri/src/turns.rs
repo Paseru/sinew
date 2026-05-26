@@ -1,4 +1,4 @@
-use crate::*;
+﻿use crate::*;
 
 #[tauri::command]
 pub(super) async fn send_message(
@@ -159,6 +159,7 @@ pub(super) async fn send_message(
         bash: Arc::new(BashTool::new(workspace_root.clone())),
         glob: Arc::new(GlobTool::new(workspace_root.clone())),
         grep: Arc::new(GrepTool::new(workspace_root.clone())),
+        check_sota: Arc::new(CheckSotaTool::new()),
         read: Arc::new(ReadTool::new(workspace_root.clone())),
         edit_file: Arc::new(EditFileTool::new(workspace_root.clone())),
         write_file: Arc::new(WriteFileTool::new(workspace_root.clone())),
@@ -1705,3 +1706,4 @@ pub(super) fn restore_workspace_for_rewrite(
     }
     Ok(())
 }
+

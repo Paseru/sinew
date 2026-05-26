@@ -1,11 +1,11 @@
-use std::sync::Arc;
+﻿use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
 use sinew_core::{ChatMessage, Provider, ServiceTier};
 
 use crate::{
-    BashTool, CreateImageTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool,
+    BashTool, CreateImageTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CheckSotaTool,
     McpToolRegistry, QuestionTool, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool,
     TodoListState, ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
 };
@@ -39,6 +39,7 @@ pub struct TurnContext {
     pub bash: Arc<BashTool>,
     pub glob: Arc<GlobTool>,
     pub grep: Arc<GrepTool>,
+    pub check_sota: Arc<CheckSotaTool>,
     pub read: Arc<ReadTool>,
     pub edit_file: Arc<EditFileTool>,
     pub write_file: Arc<WriteFileTool>,
@@ -66,3 +67,4 @@ pub struct TurnOutput {
     pub interrupted: bool,
     pub compacted: bool,
 }
+
