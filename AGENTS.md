@@ -14,7 +14,7 @@ Code map:
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
-├── POWERUSER.md
+├── README-FORK.md
 ├── README.md
 ├── scripts
 │   └── prepare-sidecars.mjs
