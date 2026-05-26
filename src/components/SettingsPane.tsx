@@ -31,6 +31,7 @@ import type {
   McpServerProbe,
   McpSettings,
   OpenAiProviderStatus,
+  OpenAiAccountInfo,
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
@@ -109,6 +110,7 @@ export function SettingsPane({ workspacePath }: Props) {
   const [toolsStatus, setToolsStatus] = useState<string | null>(null);
 
   const [openAiStatus, setOpenAiStatus] = useState<OpenAiProviderStatus | null>(null);
+  const [openAiAccounts, setOpenAiAccounts] = useState<OpenAiAccountInfo[]>([]);
   const [anthropicStatus, setAnthropicStatus] = useState<AnthropicProviderStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleProviderStatus | null>(null);
   const [kimiStatus, setKimiStatus] = useState<KimiProviderStatus | null>(null);
@@ -365,6 +367,10 @@ export function SettingsPane({ workspacePath }: Props) {
       const status = await api.getOpenAiProviderStatus();
       setOpenAiStatus(status);
       setProvidersMessage(status.error ?? null);
+      
+      const accounts = await api.getAllOpenAiAccounts();
+      setOpenAiAccounts(accounts);
+
       if (status.connectionState !== "connecting") {
         void loadConfiguredProviders();
         window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
@@ -539,6 +545,7 @@ export function SettingsPane({ workspacePath }: Props) {
     try {
       setOpenAiStatus(await api.disconnectOpenAiProvider());
       setProvidersMessage("Disconnected");
+      void loadOpenAiStatus();
       void loadConfiguredProviders();
       window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
     } catch (err) {
@@ -546,7 +553,23 @@ export function SettingsPane({ workspacePath }: Props) {
     } finally {
       setProvidersBusy(false);
     }
-  }, [loadConfiguredProviders]);
+  }, [loadOpenAiStatus, loadConfiguredProviders]);
+
+  const disconnectOpenAiAccount = useCallback(async (key: string) => {
+    setProvidersBusy(true);
+    setProvidersMessage(null);
+    try {
+      await api.disconnectOpenAiAccount(key);
+      setProvidersMessage("Account disconnected");
+      void loadOpenAiStatus();
+      void loadConfiguredProviders();
+      window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
+    } catch (err) {
+      setProvidersMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setProvidersBusy(false);
+    }
+  }, [loadOpenAiStatus, loadConfiguredProviders]);
 
   const connectAnthropic = useCallback(async () => {
     setProvidersBusy(true);
@@ -1167,6 +1190,8 @@ export function SettingsPane({ workspacePath }: Props) {
         ) : section === "providers" ? (
           <ProvidersSection
             openAiStatus={openAiStatus}
+            openAiAccounts={openAiAccounts}
+            onDisconnectOpenAiAccount={disconnectOpenAiAccount}
             anthropicStatus={anthropicStatus}
             googleStatus={googleStatus}
             kimiStatus={kimiStatus}
@@ -1370,6 +1395,8 @@ function AboutSection({
 
 type ProvidersSectionProps = {
   openAiStatus: OpenAiProviderStatus | null;
+  openAiAccounts: OpenAiAccountInfo[];
+  onDisconnectOpenAiAccount: (key: string) => void;
   anthropicStatus: AnthropicProviderStatus | null;
   googleStatus: GoogleProviderStatus | null;
   kimiStatus: KimiProviderStatus | null;
@@ -1399,6 +1426,8 @@ type ProvidersSectionProps = {
 
 function ProvidersSection({
   openAiStatus,
+  openAiAccounts,
+  onDisconnectOpenAiAccount,
   anthropicStatus,
   googleStatus,
   kimiStatus,
@@ -1473,16 +1502,78 @@ function ProvidersSection({
           icon="simple-icons:openai"
           description="Use OAuth to connect your ChatGPT account for OpenAI models."
           status={openAiStatus}
-          connectedMeta={[
-            openAiStatus?.email || "Signed in",
-            openAiStatus?.planType ?? null,
-          ]}
+          connectedMeta={[]}
           loading={loading}
           busy={busy}
           onConnect={onConnect}
           onCancel={onCancel}
           onDisconnect={onDisconnect}
-        />
+        >
+          {openAiAccounts.length > 0 && (
+            <div style={{ display: "grid", gap: "6px", marginTop: "12px" }}>
+              <div style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Comptes connectés ({openAiAccounts.length})
+              </div>
+              {openAiAccounts.map((account) => (
+                <div
+                  key={account.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    background: "var(--bg-2)",
+                    border: "1px solid var(--line-1)",
+                    fontSize: "13px"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ color: "var(--text-1)", fontWeight: 500 }}>{account.email}</span>
+                    {account.planType && (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: "var(--bg-3)",
+                          color: "var(--text-2)",
+                          fontWeight: 500
+                        }}
+                      >
+                        {account.planType}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void onDisconnectOpenAiAccount(account.key)}
+                    disabled={busy}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      border: "none",
+                      background: "none",
+                      color: "var(--text-3)",
+                      cursor: "pointer",
+                      fontSize: "11px",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      transition: "all 140ms ease"
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-0)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-3)"; }}
+                    title="Déconnecter ce compte"
+                  >
+                    <Icon icon="solar:logout-2-linear" width={12} height={12} />
+                    <span>Déconnecter</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </ProviderCard>
         <ProviderCard
           name="Google"
           icon="simple-icons:google"
@@ -1546,6 +1637,7 @@ type ProviderCardProps = {
   onConnect: () => void;
   onCancel: () => void;
   onDisconnect: () => void;
+  children?: React.ReactNode;
 };
 
 function ProviderCard({
@@ -1559,6 +1651,7 @@ function ProviderCard({
   onConnect,
   onCancel,
   onDisconnect,
+  children,
 }: ProviderCardProps) {
   const state = status?.connectionState ?? "disconnected";
   const connected = Boolean(status?.connected);
@@ -1603,6 +1696,7 @@ function ProviderCard({
             </div>
           )}
           {error && <div className="settings-pane__provider-error">{error}</div>}
+          {children}
         </div>
       </div>
       <div className="settings-pane__provider-actions">

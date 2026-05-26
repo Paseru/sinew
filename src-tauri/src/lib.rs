@@ -74,8 +74,8 @@ use sinew_kimi::{
     MODEL_ID as KIMI_MODEL_ID,
 };
 use sinew_openai::{
-    all_auth_files, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
-    load_default_auth_status, oauth_authorize_url, OpenAiAuthStatus, OpenAiProvider, PkceCodes,
+    all_auth_files, default_auth_path, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
+    load_auth_status, load_default_auth_status, oauth_authorize_url, OpenAiAuthStatus, OpenAiProvider, PkceCodes,
     MODEL_ID as OPENAI_MODEL_ID,
 };
 use sinew_openrouter::{
@@ -361,6 +361,8 @@ pub fn run() {
             providers::start_openai_oauth_login,
             providers::cancel_openai_oauth_login,
             providers::disconnect_openai_provider,
+            providers::get_all_openai_accounts,
+            providers::disconnect_openai_account,
             providers::get_anthropic_provider_status,
             providers::start_anthropic_oauth_login,
             providers::cancel_anthropic_oauth_login,

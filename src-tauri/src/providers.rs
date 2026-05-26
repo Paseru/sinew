@@ -56,6 +56,28 @@ pub(super) fn list_configured_model_providers(
 pub(super) fn install_openai_provider(
     providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
 ) -> std::result::Result<(), String> {
+    if let Ok(default_path) = default_auth_path() {
+        if default_path.exists() {
+            let dir = default_path.parent().unwrap();
+            let mut index = 1;
+            loop {
+                let target_path = dir.join(format!("openai-auth-{}.json", index));
+                if !target_path.exists() {
+                    if let Err(err) = std::fs::rename(&default_path, &target_path) {
+                        tracing::warn!("failed to auto-rename openai-auth.json: {:?}", err);
+                    } else {
+                        tracing::info!("automatically renamed openai-auth.json to {:?}", target_path);
+                    }
+                    break;
+                }
+                index += 1;
+                if index > 100 {
+                    break;
+                }
+            }
+        }
+    }
+
     if let Ok(files) = all_auth_files() {
         let mut lock = providers
             .lock()
@@ -938,6 +960,54 @@ pub(super) async fn disconnect_openai_provider(
         None,
         None,
     ))
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct OpenAiAccountInfo {
+    pub(super) key: String,
+    pub(super) email: Option<String>,
+    pub(super) plan_type: Option<String>,
+}
+
+#[tauri::command]
+pub(super) async fn get_all_openai_accounts() -> std::result::Result<Vec<OpenAiAccountInfo>, String> {
+    let mut accounts = Vec::new();
+    if let Ok(files) = all_auth_files() {
+        for (key, path) in files {
+            if let Ok(status) = load_auth_status(&path) {
+                if status.connected {
+                    accounts.push(OpenAiAccountInfo {
+                        key,
+                        email: status.email,
+                        plan_type: status.plan_type,
+                    });
+                }
+            }
+        }
+    }
+    Ok(accounts)
+}
+
+#[tauri::command]
+pub(super) async fn disconnect_openai_account(
+    state: State<'_, DesktopState>,
+    key: String,
+) -> std::result::Result<(), String> {
+    let mut lock = state
+        .providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?;
+    lock.remove(&key);
+
+    if let Ok(files) = all_auth_files() {
+        for (fkey, path) in files {
+            if fkey == key {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]

@@ -7,8 +7,8 @@ mod websocket;
 mod wire;
 
 pub use auth::{
-    all_auth_files, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
-    load_default_auth_status, oauth_authorize_url, BearerToken, Credential, OpenAiAuthStatus,
+    all_auth_files, default_auth_path, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
+    load_auth_status, load_default_auth_status, oauth_authorize_url, BearerToken, Credential, OpenAiAuthStatus,
     PkceCodes,
 };
 pub use client::{OpenAiConfig, OpenAiProvider};

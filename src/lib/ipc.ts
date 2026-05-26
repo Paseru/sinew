@@ -23,6 +23,7 @@ import type {
   ModeModelSettings,
   ModelRef,
   OpenAiProviderStatus,
+  OpenAiAccountInfo,
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
@@ -379,6 +380,12 @@ export const api = {
   },
   getOpenAiProviderStatus() {
     return invoke<OpenAiProviderStatus>("get_openai_provider_status");
+  },
+  getAllOpenAiAccounts() {
+    return invoke<OpenAiAccountInfo[]>("get_all_openai_accounts");
+  },
+  disconnectOpenAiAccount(key: string) {
+    return invoke<void>("disconnect_openai_account", { key });
   },
   startOpenAiOAuthLogin() {
     return invoke<StartOpenAiLoginOutput>("start_openai_oauth_login");

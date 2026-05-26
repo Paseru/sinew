@@ -200,6 +200,12 @@ export type OpenAiProviderStatus = {
   error?: string | null;
 };
 
+export type OpenAiAccountInfo = {
+  key: string;
+  email?: string | null;
+  planType?: string | null;
+};
+
 export type AnthropicProviderStatus = {
   connected: boolean;
   connectionState: ProviderConnectionState;
