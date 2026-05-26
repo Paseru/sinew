@@ -19,7 +19,11 @@ export function AIThinkingBlock({
   onOpenFile,
 }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isOpen, setIsOpen] = useState(() => isStreaming && content.trim().length > 0);
+  const [isOpen, setIsOpen] = useState(() => {
+    const compact = localStorage.getItem("sinew.compact-reasoning") === "true";
+    if (compact) return false;
+    return isStreaming && content.trim().length > 0;
+  });
   const prevStreamingRef = useRef(isStreaming);
   const prevHasContentRef = useRef(false);
   const hasContent = content.trim().length > 0;
@@ -37,11 +41,24 @@ export function AIThinkingBlock({
   }, [isStreaming]);
 
   useEffect(() => {
+    const compact = localStorage.getItem("sinew.compact-reasoning") === "true";
+    if (compact) return;
     if (isStreaming && hasContent && !prevHasContentRef.current) {
       setIsOpen(true);
     }
     prevHasContentRef.current = hasContent;
   }, [hasContent, isStreaming]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      if (enabled) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("sinew:compact-reasoning-changed", handler);
+    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler);
+  }, []);
 
   useEffect(() => {
     if (!contentOpen || !isStreaming) return;

@@ -264,6 +264,8 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Edit file": "Modifier un fichier",
   "Delete this conversation?": "Supprimer cette conversation ?",
   "Power User Mode": "Mode Power User",
+  "Compact Reasoning": "Réflexion compacte",
+  "Collapse detailed thought blocks by default and show only final answers.": "Masque par défaut les blocs de réflexion détaillés et n'affiche que les réponses finales.",
   "Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers.": "Gère et automatise tout en arrière-plan (Git & autres) et active les réponses ultra-concises et simplifiées.",
   "Multi-PC Sync": "Synchronisation Multi-PC",
   "Automatically synchronize your conversations and configurations between your computers via OneDrive.": "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive.",

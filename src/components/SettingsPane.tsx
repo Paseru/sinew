@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
@@ -543,7 +543,7 @@ export function SettingsPane({ workspacePath }: Props) {
       };
       setOpenAiStatus(connecting);
       await api.openExternalUrl(login.authUrl);
-      setProvidersMessage("Waiting for browser confirmationâ€¦");
+      setProvidersMessage("Waiting for browser confirmation…");
     } catch (err) {
       setProvidersMessage(err instanceof Error ? err.message : String(err));
       void loadOpenAiStatus();
@@ -1176,7 +1176,7 @@ export function SettingsPane({ workspacePath }: Props) {
           <WrenchIcon size={15} className="settings-pane__nav-icon" />
           <span className="settings-pane__nav-label">Tools</span>
           <span className="settings-pane__nav-count">
-            {toolSettings?.tools.length ?? "Â·"}
+            {toolSettings?.tools.length ?? "·"}
           </span>
         </button>
         <button
@@ -1207,7 +1207,7 @@ export function SettingsPane({ workspacePath }: Props) {
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">Skills</span>
-          <span className="settings-pane__nav-count">{skills?.length ?? "Â·"}</span>
+          <span className="settings-pane__nav-count">{skills?.length ?? "·"}</span>
         </button>
         <button
           type="button"
@@ -1378,6 +1378,14 @@ function AboutSection({
     }
   });
 
+  const [compactReasoning, setCompactReasoning] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.compact-reasoning") === "true";
+    } catch {
+      return false;
+    }
+  });
+
   const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
 
   useEffect(() => {
@@ -1392,6 +1400,14 @@ function AboutSection({
     } catch {}
     setPowerUser(enabled);
     window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: enabled }));
+  };
+
+  const toggleCompactReasoning = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.compact-reasoning", enabled ? "true" : "false");
+    } catch {}
+    setCompactReasoning(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: enabled }));
   };
 
   const toggleMultiPcSync = (enabled: boolean) => {
@@ -1443,7 +1459,7 @@ function AboutSection({
             data-active={locale === "fr" ? "true" : "false"}
             onClick={() => onLocaleChange("fr")}
           >
-            FranÃ§ais
+            Français
           </button>
         </div>
       </div>
@@ -1469,6 +1485,33 @@ function AboutSection({
             aria-checked={!powerUser}
             data-active={!powerUser ? "true" : "false"}
             onClick={() => togglePowerUser(false)}
+          >
+            Disabled
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>Compact Reasoning</h2>
+          <p>Collapse detailed thought blocks by default and show only final answers.</p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Compact Reasoning">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={compactReasoning}
+            data-active={compactReasoning ? "true" : "false"}
+            onClick={() => toggleCompactReasoning(true)}
+          >
+            Enabled
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!compactReasoning}
+            data-active={!compactReasoning ? "true" : "false"}
+            onClick={() => toggleCompactReasoning(false)}
           >
             Disabled
           </button>
@@ -1628,7 +1671,7 @@ function ProvidersSection({
             disabled={loading || busy}
           >
             <Icon icon="solar:refresh-linear" width={13} height={13} />
-            <span>{loading ? "Refreshingâ€¦" : "Refresh"}</span>
+            <span>{loading ? "Refreshing…" : "Refresh"}</span>
           </button>
         </div>
       </header>
@@ -2301,7 +2344,7 @@ function OpenRouterProviderCard({
               type="text"
               value={query}
               disabled={!searchEnabled}
-              placeholder={searchEnabled ? "Type a model nameâ€¦" : "Save a valid key first"}
+              placeholder={searchEnabled ? "Type a model name…" : "Save a valid key first"}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
@@ -2310,7 +2353,7 @@ function OpenRouterProviderCard({
         {searchEnabled && query.trim() !== "" && (
           <div className="settings-pane__openrouter-results" aria-live="polite">
             {searching ? (
-              <div className="settings-pane__openrouter-hint">Searchingâ€¦</div>
+              <div className="settings-pane__openrouter-hint">Searching…</div>
             ) : searchError ? (
               <div className="settings-pane__provider-error">{searchError}</div>
             ) : results.length === 0 ? (
@@ -2332,7 +2375,7 @@ function OpenRouterProviderCard({
                         disabled={mutatingModelId === model.id}
                       >
                         <Icon icon="solar:add-circle-linear" width={13} height={13} />
-                        <span>{mutatingModelId === model.id ? "Addingâ€¦" : "Add"}</span>
+                        <span>{mutatingModelId === model.id ? "Adding…" : "Add"}</span>
                       </button>
                     )}
                   </div>
@@ -2452,7 +2495,7 @@ function ToolsSection({
         <div className="settings-pane__header-text">
           <h1 className="settings-pane__title">Tools</h1>
           <p className="settings-pane__subtitle">
-            {loading ? "Loadingâ€¦" : `${enabledCount}/${tools.length} enabled`}
+            {loading ? "Loading…" : `${enabledCount}/${tools.length} enabled`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -2476,7 +2519,7 @@ function ToolsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Savingâ€¦" : "Save"}</span>
+            <span>{saving ? "Saving…" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -2533,7 +2576,7 @@ function ToolsSection({
                     <span className="settings-pane__tool-toggle-hint">
                       {openAiConnected
                         ? "Authenticate image requests with your connected OpenAI account instead of an API key."
-                        : "Connect OpenAI in Settings â†’ Providers to use your subscription."}
+                        : "Connect OpenAI in Settings → Providers to use your subscription."}
                     </span>
                   </div>
                   <button
@@ -2689,7 +2732,7 @@ function PlanModePromptSettingsItem({
         aria-label="Plan mode prompt"
         value={value}
         rows={rows}
-        placeholder="Plan mode instructionsâ€¦"
+        placeholder="Plan mode instructions…"
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
@@ -2813,10 +2856,10 @@ function McpSection({
           <h1 className="settings-pane__title">MCP servers</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Loading serversâ€¦"
+              ? "Loading servers…"
               : servers.length === 0
                 ? "Add servers in advanced config, then turn them on here."
-                : `${enabledCount}/${servers.length} enabled${failedCount ? ` Â· ${failedCount} need attention` : ""}`}
+                : `${enabledCount}/${servers.length} enabled${failedCount ? ` · ${failedCount} need attention` : ""}`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -2846,7 +2889,7 @@ function McpSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Checkingâ€¦" : dirty ? "Save changes" : "Saved"}</span>
+            <span>{saving ? "Checking…" : dirty ? "Save changes" : "Saved"}</span>
           </button>
         </div>
       </header>
@@ -2856,7 +2899,7 @@ function McpSection({
           <div className="settings-pane__nav-list-head">
             <span>Servers</span>
             {probing && (
-              <span className="settings-pane__servers-meta">probingâ€¦</span>
+              <span className="settings-pane__servers-meta">probing…</span>
             )}
           </div>
           <div className="settings-pane__nav-list-items">
@@ -2928,7 +2971,7 @@ function McpSection({
             })}
             {servers.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No servers yet â€” add one in the raw config.
+                No servers yet — add one in the raw config.
               </div>
             )}
           </div>
@@ -3050,7 +3093,7 @@ function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailPr
       : "disabled"
     : !probe
       ? probing
-        ? "probingâ€¦"
+        ? "probing…"
         : "pending"
       : !probe.ok
         ? "failed"
@@ -3141,7 +3184,7 @@ function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailPr
           )}
           {!probe && (
             <div className="settings-pane__muted">
-              {probing ? "Probing serverâ€¦" : "No probe data yet."}
+              {probing ? "Probing server…" : "No probe data yet."}
             </div>
           )}
         </div>
@@ -3219,7 +3262,7 @@ function SubAgentsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Savingâ€¦" : "Save"}</span>
+            <span>{saving ? "Saving…" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -3260,7 +3303,7 @@ function SubAgentsSection({
             ))}
             {!loading && settings.agents.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No sub-agents yet â€” click + to start.
+                No sub-agents yet — click + to start.
               </div>
             )}
           </div>
@@ -3333,7 +3376,7 @@ function SettingsPicker({
           {selected?.icon && (
             <Icon icon={selected.icon} width={12} height={12} />
           )}
-          <span>{selected?.label ?? "â€”"}</span>
+          <span>{selected?.label ?? "—"}</span>
         </span>
         <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
       </button>
@@ -3584,7 +3627,7 @@ function SkillsSection({
           <h1 className="settings-pane__title">Skills</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Scanningâ€¦"
+              ? "Scanning…"
               : total === 0
                 ? "Drop SKILL.md files in .agents/skills or ~/.agents/skills."
                 : `${enabled}/${total} available to the agent`}
@@ -3633,7 +3676,7 @@ function SkillsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Savingâ€¦" : "Save"}</span>
+            <span>{saving ? "Saving…" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -3856,7 +3899,7 @@ function SkillPreview({
                     width={13}
                     height={13}
                   />
-                  <span>{saving ? "Savingâ€¦" : "Save"}</span>
+                  <span>{saving ? "Saving…" : "Save"}</span>
                 </button>
               </>
             ) : (
