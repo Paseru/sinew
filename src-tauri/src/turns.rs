@@ -1499,6 +1499,11 @@ pub(super) fn system_prompt_for_workspace(workspace_root: &Path, base: &str, pow
             sections.push(format!(
                 "# Power User Instructions\n\nThe following instructions come from the workspace POWERUSER.md configuration because Power User Mode is enabled. They describe the user's workflow preferences (simple, concise communication, minimal jargon, and automatic Git automation) and should be followed strictly.\n\n{instructions}"
             ));
+        } else {
+            sections.push(format!(
+                "# Power User Instructions\n\nPower User Mode is enabled. Please follow these rules strictly:\n\n{}",
+                crate::state::DEFAULT_POWER_USER_PROMPT
+            ));
         }
     }
 
