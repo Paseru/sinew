@@ -194,10 +194,30 @@ export function availableModelsForProviders(
   openRouterModels: readonly OpenRouterModel[] = [],
 ): ModelEntry[] {
   const configured = new Set(configuredProviders);
-  return [
+  const entries: ModelEntry[] = [
     ...MODELS.filter((model) => configured.has(model.provider)),
-    ...(configured.has("openrouter") ? openRouterModelEntries(openRouterModels) : []),
   ];
+
+  for (const provider of configuredProviders) {
+    if (provider.startsWith("openai:")) {
+      const suffix = provider.slice("openai:".length);
+      const displayName = suffix.charAt(0).toUpperCase() + suffix.slice(1);
+      entries.push({
+        value: modelId(provider, "gpt-5.5"),
+        provider: provider as any,
+        label: `GPT-5.5 (${displayName})`,
+        thinking: ["off", "low", "medium", "high", "xhigh"],
+        defaultThinking: "xhigh",
+        supportsFast: true,
+      });
+    }
+  }
+
+  if (configured.has("openrouter")) {
+    entries.push(...openRouterModelEntries(openRouterModels));
+  }
+
+  return entries;
 }
 
 function openRouterModelEntries(
@@ -220,7 +240,7 @@ export function modelIdFromRef(model: ModelRef | null | undefined): ModelId {
 }
 
 export function modelRefFromId(model: ModelId): ModelRef {
-  const separator = model.indexOf(":");
+  const separator = model.lastIndexOf(":");
   if (separator < 0) return { provider: "anthropic", name: model };
   const provider = model.slice(0, separator);
   const name = model.slice(separator + 1);

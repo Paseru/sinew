@@ -7,7 +7,7 @@ mod websocket;
 mod wire;
 
 pub use auth::{
-    delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
+    all_auth_files, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
     load_default_auth_status, oauth_authorize_url, BearerToken, Credential, OpenAiAuthStatus,
     PkceCodes,
 };

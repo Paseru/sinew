@@ -330,6 +330,9 @@ function serviceTierForSelection(
   fastEnabled: boolean,
 ): ServiceTier | null {
   const entry = availableModels.find((model) => model.value === selection.model);
+  if (entry?.provider.startsWith("openai:") || entry?.provider === "openai") {
+    return "fast";
+  }
   return fastEnabled && entry?.supportsFast ? "fast" : null;
 }
 

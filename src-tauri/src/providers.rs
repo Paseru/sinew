@@ -56,11 +56,22 @@ pub(super) fn list_configured_model_providers(
 pub(super) fn install_openai_provider(
     providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
 ) -> std::result::Result<(), String> {
-    let provider = OpenAiProvider::from_default_sources().map_err(error_to_string)?;
-    providers
-        .lock()
-        .map_err(|_| "provider registry is unavailable".to_string())?
-        .insert("openai".into(), Arc::new(provider) as Arc<dyn Provider>);
+    if let Ok(files) = all_auth_files() {
+        let mut lock = providers
+            .lock()
+            .map_err(|_| "provider registry is unavailable".to_string())?;
+        for (key, path) in files {
+            if let Ok(provider) = OpenAiProvider::from_file(&path) {
+                lock.insert(key, Arc::new(provider) as Arc<dyn Provider>);
+            }
+        }
+    } else {
+        let provider = OpenAiProvider::from_default_sources().map_err(error_to_string)?;
+        providers
+            .lock()
+            .map_err(|_| "provider registry is unavailable".to_string())?
+            .insert("openai".into(), Arc::new(provider) as Arc<dyn Provider>);
+    }
     Ok(())
 }
 

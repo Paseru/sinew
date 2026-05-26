@@ -324,6 +324,38 @@ pub fn default_auth_path() -> Result<PathBuf> {
     Ok(dirs.data_local_dir().join("openai-auth.json"))
 }
 
+pub fn all_auth_files() -> Result<Vec<(String, PathBuf)>> {
+    let dirs = ProjectDirs::from("dev", "hyrak", "sinew")
+        .ok_or_else(|| AppError::Auth("unable to resolve local data directory".into()))?;
+    let dir = dirs.data_local_dir();
+    let mut files = Vec::new();
+
+    let default_path = dir.join("openai-auth.json");
+    if default_path.exists() {
+        files.push(("openai".to_string(), default_path));
+    }
+
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
+                if filename.starts_with("openai-auth-") && filename.ends_with(".json") {
+                    let suffix = filename
+                        .strip_prefix("openai-auth-")
+                        .and_then(|s| s.strip_suffix(".json"))
+                        .unwrap_or("custom");
+                    let key = format!("openai:{}", suffix);
+                    if !files.iter().any(|(_, p)| p == &path) {
+                        files.push((key, path));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(files)
+}
+
 pub fn load_default_auth_status() -> Result<OpenAiAuthStatus> {
     load_auth_status(&default_auth_path()?)
 }

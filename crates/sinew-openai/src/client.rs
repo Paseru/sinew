@@ -49,6 +49,17 @@ impl OpenAiConfig {
             "no openai oauth credential found. Connect OpenAI in Settings > Providers".into(),
         ))
     }
+
+    pub fn from_file(path: &std::path::Path) -> Result<Self> {
+        if let Some(credential) = Credential::from_sinew_auth_file(path)? {
+            return Ok(Self::new(credential));
+        }
+
+        Err(AppError::Auth(format!(
+            "unable to load openai credential from path {}",
+            path.display()
+        )))
+    }
 }
 
 pub struct OpenAiProvider {
@@ -72,6 +83,10 @@ impl OpenAiProvider {
 
     pub fn from_default_sources() -> Result<Self> {
         Self::new(OpenAiConfig::from_default_sources()?)
+    }
+
+    pub fn from_file(path: &std::path::Path) -> Result<Self> {
+        Self::new(OpenAiConfig::from_file(path)?)
     }
 
     async fn post(&self, route: &str) -> Result<reqwest::RequestBuilder> {
@@ -105,14 +120,14 @@ impl Provider for OpenAiProvider {
     }
 
     fn capabilities(&self, model: &ModelRef) -> Option<ModelCapabilities> {
-        if model.provider != "openai" {
+        if model.provider != "openai" && !model.provider.starts_with("openai:") {
             return None;
         }
         Some(model_info::capabilities(model))
     }
 
     async fn estimate_tokens(&self, request: ProviderRequest) -> Result<TokenEstimate> {
-        if request.model.provider != "openai" {
+        if request.model.provider != "openai" && !request.model.provider.starts_with("openai:") {
             return Err(AppError::Unsupported(format!(
                 "openai provider cannot count model provider {}",
                 request.model.provider
@@ -163,7 +178,7 @@ impl Provider for OpenAiProvider {
     }
 
     async fn stream(&self, request: ProviderRequest) -> Result<ProviderStream> {
-        if request.model.provider != "openai" {
+        if request.model.provider != "openai" && !request.model.provider.starts_with("openai:") {
             return Err(AppError::Unsupported(format!(
                 "openai provider cannot run model provider {}",
                 request.model.provider

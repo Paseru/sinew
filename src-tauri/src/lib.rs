@@ -74,7 +74,7 @@ use sinew_kimi::{
     MODEL_ID as KIMI_MODEL_ID,
 };
 use sinew_openai::{
-    delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
+    all_auth_files, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
     load_default_auth_status, oauth_authorize_url, OpenAiAuthStatus, OpenAiProvider, PkceCodes,
     MODEL_ID as OPENAI_MODEL_ID,
 };
@@ -191,8 +191,12 @@ pub fn run() {
     if let Ok(provider) = AnthropicProvider::from_default_sources() {
         providers.insert("anthropic".into(), Arc::new(provider) as Arc<dyn Provider>);
     }
-    if let Ok(provider) = OpenAiProvider::from_default_sources() {
-        providers.insert("openai".into(), Arc::new(provider) as Arc<dyn Provider>);
+    if let Ok(files) = all_auth_files() {
+        for (key, path) in files {
+            if let Ok(provider) = OpenAiProvider::from_file(&path) {
+                providers.insert(key, Arc::new(provider) as Arc<dyn Provider>);
+            }
+        }
     }
     if let Ok(provider) = GoogleProvider::from_default_sources() {
         providers.insert("google".into(), Arc::new(provider) as Arc<dyn Provider>);
