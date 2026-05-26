@@ -937,7 +937,7 @@ impl McpStdioClient {
             }
 
             let trimmed = line.trim();
-            if trimmed.is_empty() {
+            if trimmed.is_empty() || !trimmed.starts_with('{') {
                 continue;
             }
             let value: Value = serde_json::from_str(trimmed)
