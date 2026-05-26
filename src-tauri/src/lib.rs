@@ -159,8 +159,114 @@ impl<'a> tracing_subscriber::fmt::writer::MakeWriter<'a> for MakeLogWriter {
     }
 }
 
+fn sync_onedrive_db_on_startup() {
+    #[cfg(target_os = "windows")]
+    {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // 1. Local AppData path
+        let localappdata = match std::env::var("LOCALAPPDATA") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+        let local_db = PathBuf::from(localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("desktop-state.sqlite3");
+
+        // 2. OneDrive path
+        let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
+            std::env::var("USERPROFILE")
+                .map(|u| format!("{}\\OneDrive", u))
+                .unwrap_or_default()
+        });
+        if onedrive.is_empty() {
+            return;
+        }
+        let onedrive_db = PathBuf::from(onedrive)
+            .join("Documents")
+            .join("Sinew")
+            .join("desktop-state.sqlite3");
+
+        if onedrive_db.exists() {
+            if let Some(parent) = local_db.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+
+            if local_db.exists() {
+                let local_meta = match fs::metadata(&local_db) {
+                    Ok(m) => m,
+                    Err(_) => return,
+                };
+                let onedrive_meta = match fs::metadata(&onedrive_db) {
+                    Ok(m) => m,
+                    Err(_) => return,
+                };
+                let local_time = match local_meta.modified() {
+                    Ok(t) => t,
+                    Err(_) => return,
+                };
+                let onedrive_time = match onedrive_meta.modified() {
+                    Ok(t) => t,
+                    Err(_) => return,
+                };
+
+                if onedrive_time > local_time {
+                    let backup_path = local_db.with_extension("sqlite3.bak");
+                    let _ = fs::copy(&local_db, &backup_path);
+                    let _ = fs::copy(&onedrive_db, &local_db);
+                }
+            } else {
+                let _ = fs::copy(&onedrive_db, &local_db);
+            }
+        }
+    }
+}
+
+fn backup_onedrive_db_on_exit() {
+    #[cfg(target_os = "windows")]
+    {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // 1. Local AppData path
+        let localappdata = match std::env::var("LOCALAPPDATA") {
+            Ok(val) => val,
+            Err(_) => return,
+        };
+        let local_db = PathBuf::from(localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("desktop-state.sqlite3");
+
+        // 2. OneDrive path
+        let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
+            std::env::var("USERPROFILE")
+                .map(|u| format!("{}\\OneDrive", u))
+                .unwrap_or_default()
+        });
+        if onedrive.is_empty() {
+            return;
+        }
+        let onedrive_db_dir = PathBuf::from(onedrive)
+            .join("Documents")
+            .join("Sinew");
+        let onedrive_db = onedrive_db_dir.join("desktop-state.sqlite3");
+
+        if local_db.exists() {
+            let _ = fs::create_dir_all(&onedrive_db_dir);
+            let _ = fs::copy(&local_db, &onedrive_db);
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    sync_onedrive_db_on_startup();
+
     let file = directories::ProjectDirs::from("dev", "hyrak", "sinew").and_then(|dirs| {
         let log_dir = dirs.data_local_dir();
         let _ = fs::create_dir_all(log_dir);
@@ -419,6 +525,10 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")
         .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                backup_onedrive_db_on_exit();
+            }
+
             #[cfg(not(target_os = "macos"))]
             let _ = (&app, &event);
 

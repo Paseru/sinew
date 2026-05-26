@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import json
 import os
 import sys
@@ -18,11 +18,12 @@ bridge_bat = os.path.join(script_dir, "run_sinew_bridge.bat")
 
 new_server = {
     "id": "browser-use",
-    "name": "Browser-Use",
+    "name": "Sinew Chrome",
     "command": bridge_bat,
     "args": [],
     "env": [
-        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"}
+        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"},
+        {"key": "MCP_SKILLS_ENABLED", "value": "true"}
     ],
     "cwd": script_dir,
     "enabled": True
@@ -70,7 +71,7 @@ try:
     
     conn.commit()
     conn.close()
-    print("SUCCESS: MCP server 'Browser-Use' registered successfully in Sinew's database!")
+    print("SUCCESS: MCP server 'Sinew Chrome' registered successfully in Sinew's database!")
 except Exception as e:
     print("ERROR: Error updating database:", e)
     sys.exit(1)
