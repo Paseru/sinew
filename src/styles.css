@@ -5764,6 +5764,13 @@ textarea {
   letter-spacing: -0.005em;
   min-width: 0;
   max-width: 100%;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.msg__body * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .msg-attachments {
