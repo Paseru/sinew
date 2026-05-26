@@ -5887,6 +5887,7 @@ function BlockView({
                 : undefined
             }
             subAgentName={block.subAgent?.name}
+            compactMode={compactMode}
           />
         </div>
       );

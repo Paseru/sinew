@@ -54,6 +54,7 @@ export type ToolCardProps = {
   teamCompletionByTeam?: Record<string, boolean>;
   activeTeamNames?: ReadonlySet<string>;
   subAgentName?: string;
+  compactMode?: "disabled" | "compact" | "very-compact";
 };
 
 export type ToolCardTeamAgent = {
@@ -921,6 +922,7 @@ export function ToolCard({
   teamAgents,
   activeTeamNames,
   subAgentName,
+  compactMode,
 }: ToolCardProps) {
   const canonicalName = canonicalToolName(name);
   const isCreateImage = canonicalName === "create_image";
@@ -985,6 +987,12 @@ export function ToolCard({
     }
     previousTeamRunActiveRef.current = !!teamRunActive;
   }, [isTeamRunSpawn, status, teamRunActive]);
+
+  useEffect(() => {
+    if (compactMode === "compact" || compactMode === "very-compact") {
+      setOpen(false);
+    }
+  }, [compactMode]);
 
   if (canonicalName === "read") {
     return (
@@ -1087,7 +1095,8 @@ export function ToolCard({
     (isEditFile || isWriteFile) &&
     !isError &&
     renderedFileChanges &&
-    renderedFileChanges.length > 0
+    renderedFileChanges.length > 0 &&
+    (compactMode === "disabled" || !compactMode)
   ) {
     return (
       <div className="tool-card__changes" data-bare="true">
@@ -1288,10 +1297,10 @@ export function ToolCard({
             />
           ) : isBash && command ? (
             <pre className="tool-card__code">{command}</pre>
-          ) : displayArgsPretty ? (
+          ) : displayArgsPretty && !isEditFile && !isWriteFile ? (
             <pre className="tool-card__code">{displayArgsPretty}</pre>
           ) : null}
-          {displayOutput !== undefined && (!isTeamRunSpawn || isError) && (
+          {displayOutput !== undefined && (!isTeamRunSpawn || isError) && (!isEditFile && !isWriteFile || isError) && (
             <pre
               className="tool-card__code"
               data-kind="output"
