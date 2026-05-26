@@ -224,8 +224,16 @@ async function handleMessage(msg) {
         runLocked(async () => {
           return new Promise(async (resolve) => {
             const urlRegex = /(https?:\/\/[^\s]+)/g;
-            const match = silentTask.match(urlRegex);
-            const urlToNavigate = match ? match[0] : null;
+            let match = silentTask.match(urlRegex);
+            let urlToNavigate = match ? match[0] : null;
+
+            if (!urlToNavigate) {
+              const domainRegex = /\b([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?:\/[^\s]*)?\b/i;
+              const domainMatch = silentTask.match(domainRegex);
+              if (domainMatch) {
+                urlToNavigate = "https://" + domainMatch[0];
+              }
+            }
 
             if (urlToNavigate) {
               console.log(`🧬 [Bridge] Silent navigating tab ${silentTabId} to ${urlToNavigate}`);
