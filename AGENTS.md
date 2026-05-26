@@ -1,17 +1,3 @@
-# Instructions pour la Navigation Browser (Sinew Chrome Bridge)
-
-Si l'utilisateur vous demande de naviguer sur le web, d'ouvrir une page ou d'interagir avec Chrome :
-1. **N'utilisez PAS l'outil MCP `run_browser_agent`** de Sinew Chrome, car il nécessite une clé API Google externe.
-2. **Utilisez votre propre intelligence via CDP Direct (Native Messaging) :**
-   - Créez un script temporaire Node.js (par exemple `sinew-chrome-bridge/interact_chrome.js`) qui utilise le module `ws` (déjà disponible dans `sinew-chrome-bridge/node_modules/ws`).
-   - Votre script doit interroger `http://localhost:29002/json` pour lister les onglets actifs et récupérer l'URL de débogage WebSocket (`webSocketDebuggerUrl`).
-   - Connectez-vous via WebSocket à l'onglet actif et envoyez des commandes Chrome DevTools Protocol (CDP) standard :
-     - `Page.navigate` pour changer d'URL.
-     - `Runtime.evaluate` pour exécuter du code JS intelligent dans la page (rechercher des boutons, cliquer sur le menu hamburger, lire du texte, remplir des champs).
-   - Exécutez le script en local avec Node (`node interact_chrome.js`) pour une automatisation instantanée, gratuite et sans clé API.
-
----
-
 # Code map
 - L'agent doit garder à jour cette carte simple des fichiers à chaque création, suppression, renommage, déplacement ou modification.
 
@@ -217,7 +203,7 @@ Si l'utilisateur vous demande de naviguer sur le web, d'ouvrir une page ou d'int
 │   │   │       └── ic_launcher_background.xml
 │   │   └── ios
 │   │       ├── AppIcon-20x20@1x.png
-│   │       ├── AppIcon-20x20@2x-1.png
+ East   ├── AppIcon-20x20@2x-1.png
 │   │       ├── AppIcon-20x20@2x.png
 │   │       ├── AppIcon-20x20@3x.png
 │   │       ├── AppIcon-29x29@1x.png
