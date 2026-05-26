@@ -112,13 +112,27 @@ async function waitForBridge() {
   throw new Error(`Chrome bridge did not become ready${lastError ? `: ${lastError.message}` : ''}`);
 }
 
+function sameOriginOrUrl(tabUrl, targetUrl) {
+  try {
+    const tab = new URL(tabUrl);
+    const target = new URL(targetUrl);
+    return tab.hostname.replace(/^www\./, '') === target.hostname.replace(/^www\./, '');
+  } catch {
+    return false;
+  }
+}
+
 async function waitForTabs(preferredUrl = null) {
   const deadline = Date.now() + CHROME_WAIT_MS;
   let lastTabs = [];
 
   while (Date.now() < deadline) {
     let tabs = await requestJSON(`${BRIDGE_ORIGIN}/json`, 3000).catch(() => []);
-    if (Array.isArray(tabs) && tabs.length > 0) return tabs;
+    if (Array.isArray(tabs) && tabs.length > 0) {
+      if (!preferredUrl) return tabs;
+      const matching = tabs.find(tab => sameOriginOrUrl(tab.url || '', preferredUrl));
+      if (matching) return [matching];
+    }
 
     if (preferredUrl) {
       const created = await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(preferredUrl)}`, 7000).catch(() => null);
