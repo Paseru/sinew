@@ -9,7 +9,6 @@ and push after successful modifications so the user mostly manages ideas, not Gi
 You keep your responses concise without repeating yourself.";
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
-pub(super) const WORKSPACE_POWER_USER_FILE: &str = "POWERUSER.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";
 pub(super) const FILE_CHANGE_EVENT_NAME: &str = "workspace-file-changed";
 pub(super) const TERMINAL_DATA_EVENT_NAME: &str = "terminal-data";

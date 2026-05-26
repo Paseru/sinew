@@ -1493,18 +1493,10 @@ pub(super) fn system_prompt_for_workspace(workspace_root: &Path, base: &str, pow
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
 
     if power_user {
-        if let Some(instructions) =
-            read_workspace_prompt_file(workspace_root, WORKSPACE_POWER_USER_FILE)?
-        {
-            sections.push(format!(
-                "# Power User Instructions\n\nThe following instructions come from the workspace POWERUSER.md configuration because Power User Mode is enabled. They describe the user's workflow preferences (simple, concise communication, minimal jargon, and automatic Git automation) and should be followed strictly.\n\n{instructions}"
-            ));
-        } else {
-            sections.push(format!(
-                "# Power User Instructions\n\nPower User Mode is enabled. Please follow these rules strictly:\n\n{}",
-                crate::state::DEFAULT_POWER_USER_PROMPT
-            ));
-        }
+        sections.push(format!(
+            "# Power User Instructions\n\nPower User Mode is enabled. Please follow these rules strictly:\n\n{}",
+            crate::state::DEFAULT_POWER_USER_PROMPT
+        ));
     }
 
     if let Some(instructions) =
