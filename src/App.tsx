@@ -28,7 +28,7 @@ export default function App() {
     setBootError(null);
     try {
       const bootstrap = await api.openWorkspace(path);
-      const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : bootstrap.workspace.name;
+      const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name;
       recordRecent(bootstrap.workspace.path, displayName);
       setState({ kind: "workspace", bootstrap });
     } catch (err) {
@@ -81,7 +81,7 @@ export default function App() {
       try {
         const bootstrap = await api.openWorkspace(last);
         if (cancelled) return;
-        const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : bootstrap.workspace.name;
+        const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name;
         recordRecent(bootstrap.workspace.path, displayName);
         setState({ kind: "workspace", bootstrap });
       } catch {

@@ -44,7 +44,7 @@ pub(super) async fn get_or_create_sandbox_workspace() -> std::result::Result<Str
     let sandbox_path = home.join(".sinew-sandbox");
     if !sandbox_path.exists() {
         let _ = std::fs::create_dir_all(&sandbox_path);
-        let readme_content = "# Espace Fourtout (Bac à sable)\n\nBienvenue dans votre espace temporaire ! Vous pouvez ici utiliser l'agent pour poser des questions générales, écrire du code, et tester des commandes sans polluer vos projets.\n";
+        let readme_content = "# Sans dossier\n\nBienvenue dans votre espace temporaire ! Vous pouvez ici utiliser l'agent pour poser des questions générales, écrire du code, et tester des commandes sans polluer vos projets.\n";
         let _ = std::fs::write(sandbox_path.join("README.md"), readme_content);
     }
     Ok(sandbox_path.display().to_string())

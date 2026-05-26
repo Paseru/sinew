@@ -497,6 +497,11 @@ export const api = {
     messageVisibility?: MessageVisibility,
     revertWorkspaceChanges?: boolean,
   ) {
+    let powerUser = true;
+    try {
+      powerUser = localStorage.getItem("sinew.power-user") !== "false";
+    } catch {}
+
     return invoke<void>("send_message", {
       input: {
         workspacePath,
@@ -511,6 +516,7 @@ export const api = {
         planControl,
         messageVisibility,
         revertWorkspaceChanges,
+        powerUser,
       },
     });
   },
@@ -548,6 +554,11 @@ export const api = {
     mode: AgentMode,
     rewriteFromHistoryIndex?: number,
   ) {
+    let powerUser = true;
+    try {
+      powerUser = localStorage.getItem("sinew.power-user") !== "false";
+    } catch {}
+
     return invoke<ContextEstimate>("estimate_context", {
       input: {
         workspacePath,
@@ -558,6 +569,7 @@ export const api = {
         thinking,
         mode,
         rewriteFromHistoryIndex,
+        powerUser,
       },
     });
   },

@@ -21,7 +21,7 @@ pub(super) async fn send_message(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -436,7 +436,7 @@ pub(super) async fn compact_conversation(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -1489,8 +1489,18 @@ pub(super) fn configurable_tool_catalog(workspace_root: &Path) -> Vec<ToolDescri
     tools
 }
 
-pub(super) fn system_prompt_for_workspace(workspace_root: &Path, base: &str) -> Result<String> {
+pub(super) fn system_prompt_for_workspace(workspace_root: &Path, base: &str, power_user: bool) -> Result<String> {
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
+
+    if power_user {
+        if let Some(instructions) =
+            read_workspace_prompt_file(workspace_root, WORKSPACE_POWER_USER_FILE)?
+        {
+            sections.push(format!(
+                "# Power User Instructions\n\nThe following instructions come from the workspace POWERUSER.md configuration because Power User Mode is enabled. They describe the user's workflow preferences (simple, concise communication, minimal jargon, and automatic Git automation) and should be followed strictly.\n\n{instructions}"
+            ));
+        }
+    }
 
     if let Some(instructions) =
         read_workspace_prompt_file(workspace_root, WORKSPACE_INSTRUCTIONS_FILE)?

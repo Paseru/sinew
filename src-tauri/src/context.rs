@@ -10,7 +10,7 @@ pub(super) async fn estimate_context(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user)
             .map_err(error_to_string)?;
 
     let mut conversation = state
@@ -120,7 +120,7 @@ pub(super) async fn estimate_sub_agent_context(
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true)
             .map_err(error_to_string)?;
     let settings = state
         .store

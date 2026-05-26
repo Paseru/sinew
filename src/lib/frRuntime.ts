@@ -159,7 +159,7 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Enter to send · Shift+Enter for newline": "Entrée pour envoyer · Maj+Entrée pour une nouvelle ligne",
   "Remove attachment": "Retirer la pièce jointe",
   "Remove from recents": "Retirer des récents",
-  "Use without folder (Sandbox)": "Utiliser sans dossier (Espace Fourtout)",
+  "Use without folder (Sandbox)": "Utiliser sans dossier",
   "Work on general tasks or system files without opening a project": "Travailler sur des tâches générales ou des fichiers du PC sans ouvrir de projet",
   "File mentions": "Mentions de fichiers",
   "Resize composer (double-click to reset)": "Redimensionner la zone de saisie (double-clic pour réinitialiser)",

@@ -1613,7 +1613,7 @@ export function Workspace({
         );
       }
       const nextBootstrap = await api.openWorkspace(targetPath);
-      const displayName = nextBootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : nextBootstrap.workspace.name;
+      const displayName = nextBootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : nextBootstrap.workspace.name;
       recordRecent(
         nextBootstrap.workspace.path,
         displayName,
@@ -1823,7 +1823,7 @@ export function Workspace({
             <div className="sidebar__head">
               <span className="sidebar__head-title">
                 <Icon icon="solar:folder-bold-duotone" width={16} height={16} />
-                <span>{bootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : bootstrap.workspace.name}</span>
+                <span>{bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name}</span>
               </span>
               <span className="sidebar__head-actions">
                 <button
