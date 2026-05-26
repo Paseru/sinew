@@ -63,10 +63,10 @@ type Props = {
   workspacePath: string;
 };
 
-type Section = "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
+type Section = "options" | "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
 
 export function SettingsPane({ workspacePath }: Props) {
-  const [section, setSection] = useState<Section>("about");
+  const [section, setSection] = useState<Section>("options");
   const [locale, setLocaleState] = useState<AppLocale>(() => getAppLocale());
   const [settings, setSettings] = useState<McpSettings>(EMPTY_SETTINGS);
   const [savedJson, setSavedJson] = useState("");
@@ -1138,6 +1138,21 @@ export function SettingsPane({ workspacePath }: Props) {
         <button
           type="button"
           className="settings-pane__nav-item"
+          data-active={section === "options" ? "true" : "false"}
+          onClick={() => setSection("options")}
+        >
+          <Icon
+            icon="solar:slider-minimal-linear"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">Options</span>
+          <span className="settings-pane__nav-count" />
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
           data-active={section === "about" ? "true" : "false"}
           onClick={() => setSection("about")}
         >
@@ -1229,8 +1244,10 @@ export function SettingsPane({ workspacePath }: Props) {
       </nav>
 
       <section className="settings-pane__main">
-        {section === "about" ? (
-          <AboutSection locale={locale} onLocaleChange={setLocale} />
+        {section === "options" ? (
+          <OptionsSection locale={locale} onLocaleChange={setLocale} />
+        ) : section === "about" ? (
+          <AboutSection locale={locale} />
         ) : section === "providers" ? (
           <ProvidersSection
             openAiStatus={openAiStatus}
@@ -1361,9 +1378,9 @@ export function SettingsPane({ workspacePath }: Props) {
   );
 }
 
-// ---- About section -----------------------------------------------------
+// ---- Options section ----------------------------------------------------
 
-function AboutSection({
+function OptionsSection({
   locale,
   onLocaleChange,
 }: {
@@ -1440,29 +1457,14 @@ function AboutSection({
 
   return (
     <div className="settings-pane__body settings-pane__body--about">
-      <div className="settings-pane__about-hero">
-        <span className="settings-pane__about-mark" aria-hidden>
-          <SinewMark size={26} />
-        </span>
-        <div className="settings-pane__about-title">
-          <h1>Sinew</h1>
-        </div>
-      </div>
-
-      <p className="settings-pane__about-line">
-        Sinew is a flexible AI coding harness. You shape it: tweak the description of
-        every tool, turn the ones you don&apos;t need off, and the assistant only sees
-        what you keep.
-      </p>
-      <p className="settings-pane__about-line">
-        Run it minimal with a couple of tools, or unlock the full set : shell, search,
-        MCP, web, images, sub-agents. Multi-provider by default.
-      </p>
-
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
-          <h2>Language</h2>
-          <p>Choose the interface language. Sinew reloads after a change so every panel updates cleanly.</p>
+          <h2>{locale === "fr" ? "Langue" : "Language"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Choisissez la langue de l'interface. Sinew se recharge après un changement afin que chaque panneau se mette à jour proprement."
+              : "Choose the interface language. Sinew reloads after a change so every panel updates cleanly."}
+          </p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Interface language">
           <button
@@ -1488,8 +1490,12 @@ function AboutSection({
 
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
-          <h2>Power User Mode</h2>
-          <p>Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers.</p>
+          <h2>{locale === "fr" ? "Mode Power User" : "Power User Mode"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Gère et automatise tout en arrière-plan (Git & autres) et active les réponses ultra-concises et simplifiées."
+              : "Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers."}
+          </p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Power User Mode">
           <button
@@ -1499,7 +1505,7 @@ function AboutSection({
             data-active={powerUser ? "true" : "false"}
             onClick={() => togglePowerUser(true)}
           >
-            Enabled
+            {locale === "fr" ? "Activé" : "Enabled"}
           </button>
           <button
             type="button"
@@ -1508,15 +1514,19 @@ function AboutSection({
             data-active={!powerUser ? "true" : "false"}
             onClick={() => togglePowerUser(false)}
           >
-            Disabled
+            {locale === "fr" ? "Désactivé" : "Disabled"}
           </button>
         </div>
       </div>
 
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
-          <h2>Compact Reasoning</h2>
-          <p>Collapse detailed thought blocks by default and show only final answers.</p>
+          <h2>{locale === "fr" ? "Réflexion compacte" : "Compact Reasoning"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Masque par défaut les blocs de réflexion détaillés et n'affiche que les réponses finales."
+              : "Collapse detailed thought blocks by default and show only final answers."}
+          </p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Compact Reasoning">
           <button
@@ -1526,7 +1536,7 @@ function AboutSection({
             data-active={compactReasoning ? "true" : "false"}
             onClick={() => toggleCompactReasoning(true)}
           >
-            Enabled
+            {locale === "fr" ? "Activé" : "Enabled"}
           </button>
           <button
             type="button"
@@ -1535,15 +1545,19 @@ function AboutSection({
             data-active={!compactReasoning ? "true" : "false"}
             onClick={() => toggleCompactReasoning(false)}
           >
-            Disabled
+            {locale === "fr" ? "Désactivé" : "Disabled"}
           </button>
         </div>
       </div>
 
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
-          <h2>Multi-PC Sync</h2>
-          <p>Automatically synchronize your conversations and configurations between your computers via OneDrive.</p>
+          <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
+              : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
+          </p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
           <button
@@ -1553,7 +1567,7 @@ function AboutSection({
             data-active={multiPcSync ? "true" : "false"}
             onClick={() => toggleMultiPcSync(true)}
           >
-            Enabled
+            {locale === "fr" ? "Activé" : "Enabled"}
           </button>
           <button
             type="button"
@@ -1562,7 +1576,7 @@ function AboutSection({
             data-active={!multiPcSync ? "true" : "false"}
             onClick={() => toggleMultiPcSync(false)}
           >
-            Disabled
+            {locale === "fr" ? "Désactivé" : "Disabled"}
           </button>
         </div>
       </div>
@@ -1697,6 +1711,34 @@ function AboutSection({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---- About section -----------------------------------------------------
+
+function AboutSection({ locale }: { locale: AppLocale }) {
+  return (
+    <div className="settings-pane__body settings-pane__body--about">
+      <div className="settings-pane__about-hero">
+        <span className="settings-pane__about-mark" aria-hidden>
+          <SinewMark size={26} />
+        </span>
+        <div className="settings-pane__about-title">
+          <h1>Sinew</h1>
+        </div>
+      </div>
+
+      <p className="settings-pane__about-line">
+        {locale === "fr"
+          ? "Sinew est un harnais de codage IA flexible. Vous le façonnez : ajustez la description de chaque outil, désactivez ceux dont vous n'avez pas besoin, et l'assistant ne verra que ce que vous conservez."
+          : "Sinew is a flexible AI coding harness. You shape it: tweak the description of every tool, turn the ones you don't need off, and the assistant only sees what you keep."}
+      </p>
+      <p className="settings-pane__about-line">
+        {locale === "fr"
+          ? "Lancez-le en mode minimal avec quelques outils, ou débloquez l'ensemble complet : terminal, recherche, MCP, web, images, sous-agents. Multi-fournisseur par défaut."
+          : "Run it minimal with a couple of tools, or unlock the full set : shell, search, MCP, web, images, sub-agents. Multi-provider by default."}
+      </p>
 
       <div className="settings-pane__about-links">
         <a
@@ -1721,7 +1763,6 @@ function AboutSection({
     </div>
   );
 }
-
 // ---- Providers section -------------------------------------------------
 
 type ProvidersSectionProps = {

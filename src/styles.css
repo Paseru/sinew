@@ -3121,6 +3121,7 @@ textarea {
   grid-template-columns: 168px 1fr;
   background: var(--bg-0);
   color: var(--text-1);
+  border-left: 1px solid var(--line);
 }
 
 .settings-pane__nav {
