@@ -1,38 +1,38 @@
 # 🛠️ Sinew — Notes de Version & Ajustements Apportés
 
-Ce document détaille l'ensemble des fonctionnalités et options personnalisées intégrées à ton fork de **Sinew**.
+Ce document détaille l'ensemble des fonctionnalités et des options personnalisées intégrées dans ce fork de **Sinew**.
 
 ---
 
-## 📌 Détail des ajouts et options de ton Fork
+## 📌 Détail des ajouts et options du Fork
 
-Tes options de personnalisation, de connexion et de navigation sont centralisées pour optimiser ton confort au quotidien :
+Les options de personnalisation, de connexion et de navigation sont centralisées pour optimiser le confort d'utilisation au quotidien :
 
 ### 1. 🌐 Traduction Intégrale en Français
 * **Localisation** : `Settings > Options` (Option *Langue*).
-* **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) en français.
+* **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) en français pour une navigation plus accessible.
 
 ### 2. 🤖 Mode "Power User"
 * **Localisation** : `Settings > Options` (Option *Mode Power User*).
 * **Bénéfice** :
   * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
-  * **Gestion Git automatique** : L'IA prend en charge la maintenance de ton dépôt en arrière-plan (vérification, pull, commit, push) sans que tu n'aies à manipuler de commandes Git.
+  * **Gestion Git automatique** : L'IA prend en charge la maintenance du dépôt en arrière-plan (vérification, pull, commit, push) de manière automatisée, sans nécessiter de manipuler des commandes Git complexes.
 
 ### 3. 🧠 Réflexion Compacte (Compact Reasoning)
 * **Localisation** : `Settings > Options` (Option *Réflexion compacte*).
-* **Bénéfice** : Masque par défaut les longs blocs de réflexion détaillés (les pensées de l'IA) et affiche uniquement les réponses finales pour une lecture plus rapide.
+* **Bénéfice** : Masque par défaut les longs blocs de réflexion détaillés (les étapes de réflexion de l'IA) et affiche uniquement les réponses finales pour une lecture plus rapide et directe.
 
 ### 4. 🔄 Synchronisation Multi-PC
 * **Localisation** : `Settings > Options` (Option *Synchronisation Multi-PC*).
-* **Bénéfice** : Synchronise automatiquement tes conversations et configurations de manière sécurisée entre tes différents ordinateurs via OneDrive.
+* **Bénéfice** : Synchronise automatiquement les conversations et configurations de manière sécurisée entre différents ordinateurs via un espace OneDrive.
 
 ### 5. 👥 Multi-comptes OpenAI (OAuth & Business Token)
 * **Localisation** : `Settings > Providers` (Paramètres > Fournisseurs).
-* **Bénéfice** : Possibilité de connecter un deuxième compte OpenAI (« OpenAI 2 ») en collant directement un Business Access Token. C'est parfait pour basculer facilement entre des abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser la rapidité sans déconnexion permanente.
+* **Bénéfice** : Permet de connecter un deuxième compte OpenAI (« OpenAI 2 ») en collant directement un *Business Access Token*. C'est idéal pour basculer facilement entre des abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser la rapidité sans déconnexion permanente.
 
 ### 6. 🌐 Sinew Chrome Bridge (Contrôle du Navigateur)
 * **Localisation** : `Settings > MCP` (Serveurs MCP) + extension Chrome dédiée.
-* **Bénéfice** : Connecte en direct ton navigateur Google Chrome à Sinew via un serveur MCP local pré-configuré (*Sinew Chrome*). Permet à l'assistant IA d'interagir en temps réel avec tes onglets ouverts, de lire des pages web ou de réaliser des actions automatisées directement sur ton navigateur de manière sécurisée (intégration *browser-use*).
+* **Bénéfice** : Connecte en direct le navigateur Google Chrome à Sinew via un serveur MCP local pré-configuré (*Sinew Chrome*). Permet à l'assistant IA d'interagir en temps réel avec les onglets ouverts, de lire des pages web ou d'exécuter des actions automatisées directement sur le navigateur de manière sécurisée (intégration *browser-use*).
 
 ### 7. ⚡ Panneau de Diagnostic SOTA (State of the Art)
 * **Localisation** : `Settings > Options` (Option *Diagnostic Système SOTA*).
@@ -40,4 +40,4 @@ Tes options de personnalisation, de connexion et de navigation sont centralisée
 
 ### 8. 📌 Question Collante (Sticky Question)
 * **Localisation** : Intégration automatique dans l'interface de chat.
-* **Bénéfice** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut. Un simple clic dessus te ramène instantanément et de manière fluide à la question.
+* **Bénéfice** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
