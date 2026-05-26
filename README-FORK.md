@@ -28,7 +28,7 @@ Les options de personnalisation, de connexion et de navigation sont centralisée
 
 ### 5. 👥 Multi-comptes OpenAI (OAuth & Business Token)
 * **Localisation** : `Settings > Providers` (Paramètres > Fournisseurs).
-* **Bénéfice** : Permet de connecter un deuxième compte OpenAI (« OpenAI 2 ») en collant directement un *Business Access Token*. C'est idéal pour basculer facilement entre des abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser la rapidité sans déconnexion permanente.
+* **Bénéfice** : Permet de connecter plusieurs comptes OpenAI secondaires (« OpenAI 2 », « OpenAI 3 », etc.) en cliquant sur le bouton « + » et en renseignant un *Business Access Token* pour chacun d'eux. C'est idéal pour basculer facilement et instantanément entre plusieurs abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser les coûts et la rapidité sans aucune déconnexion.
 
 ### 6. 🌐 Sinew Chrome Bridge (Contrôle du Navigateur)
 * **Localisation** : `Settings > MCP` (Serveurs MCP) + extension Chrome dédiée.
