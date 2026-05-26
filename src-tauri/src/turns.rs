@@ -1,4 +1,10 @@
-﻿use crate::*;
+use crate::*;
+
+const COMPACT_DISPLAY_PROMPT: &str = "\
+Display mode: Compact. Keep visible assistant text concise. Do not narrate routine tool use or internal reasoning. Prefer a short final answer with outcome, changed files, validation, and next step.";
+
+const VERY_COMPACT_DISPLAY_PROMPT: &str = "\
+Display mode: Very compact. Before the final answer, avoid progress narration and reasoning prose. Use tools silently unless you are blocked or must ask the user a required question. If a long operation truly needs a status update, use one short sentence. Keep the final answer ultra-concise (1-4 bullets/sentences), action-oriented, and mention only the outcome, key changed files, validation, and next step if useful.";
 
 #[tauri::command]
 pub(super) async fn send_message(
@@ -68,7 +74,10 @@ pub(super) async fn send_message(
         &input.attachments,
         plan_control,
     )?;
-    let turn_system_prompt = with_turn_plan_reminder(&effective_system_prompt, turn_plan_reminder);
+    let turn_system_prompt = with_display_mode_prompt(
+        &with_turn_plan_reminder(&effective_system_prompt, turn_plan_reminder),
+        input.display_mode,
+    );
     let mut mode_model_settings = conversation.mode_model_settings.clone();
     let selected_model = model_with_optional_selection(
         mode_model_settings.get(policy.mode),
@@ -1150,6 +1159,18 @@ pub(super) fn plan_implementation_turn_reminder(
     Ok(Some(lines.join("\n")))
 }
 
+pub(super) fn with_display_mode_prompt(base: &str, display_mode: DisplayModeInput) -> String {
+    match display_mode {
+        DisplayModeInput::Disabled => base.to_string(),
+        DisplayModeInput::Compact => {
+            format!("{base}\n\n<display_mode>\n{COMPACT_DISPLAY_PROMPT}\n</display_mode>")
+        }
+        DisplayModeInput::VeryCompact => {
+            format!("{base}\n\n<display_mode>\n{VERY_COMPACT_DISPLAY_PROMPT}\n</display_mode>")
+        }
+    }
+}
+
 pub(super) fn with_turn_plan_reminder(base: &str, reminder: Option<String>) -> String {
     let Some(reminder) = reminder else {
         return base.to_string();
@@ -1489,7 +1510,11 @@ pub(super) fn configurable_tool_catalog(workspace_root: &Path) -> Vec<ToolDescri
     tools
 }
 
-pub(super) fn system_prompt_for_workspace(workspace_root: &Path, base: &str, power_user: bool) -> Result<String> {
+pub(super) fn system_prompt_for_workspace(
+    workspace_root: &Path,
+    base: &str,
+    power_user: bool,
+) -> Result<String> {
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
 
     if power_user {
@@ -1713,7 +1738,6 @@ pub(super) fn restore_workspace_for_rewrite(
     }
     Ok(())
 }
-
 
 #[tauri::command]
 pub(super) async fn check_sota_diagnostics() -> std::result::Result<String, String> {

@@ -9,6 +9,7 @@ import type {
   ClipboardImageAttachment,
   ContextEstimate,
   ConversationSummary,
+  DisplayMode,
   FileDocument,
   GitCreateWorktreeOutput,
   GitOperationResult,
@@ -48,6 +49,15 @@ import type {
   WorkspaceEntry,
   WorkspaceSearchResult,
 } from "../types";
+
+function readDisplayMode(): DisplayMode {
+  try {
+    const val = localStorage.getItem("sinew.compact-reasoning");
+    if (val === "very-compact") return "very-compact";
+    if (val === "compact" || val === "true") return "compact";
+  } catch {}
+  return "disabled";
+}
 
 export const api = {
   openWorkspace(workspacePath: string) {
@@ -517,6 +527,7 @@ export const api = {
         messageVisibility,
         revertWorkspaceChanges,
         powerUser,
+        displayMode: readDisplayMode(),
       },
     });
   },
@@ -570,6 +581,7 @@ export const api = {
         mode,
         rewriteFromHistoryIndex,
         powerUser,
+        displayMode: readDisplayMode(),
       },
     });
   },

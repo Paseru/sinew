@@ -655,6 +655,8 @@ export type ClipboardImageAttachment = {
   name: string;
 };
 
+export type DisplayMode = "disabled" | "compact" | "very-compact";
+
 export type ThinkingLevel =
   | "off"
   | "minimal"

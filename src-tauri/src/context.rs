@@ -12,6 +12,8 @@ pub(super) async fn estimate_context(
     let effective_system_prompt =
         system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user)
             .map_err(error_to_string)?;
+    let effective_system_prompt =
+        with_display_mode_prompt(&effective_system_prompt, input.display_mode);
 
     let mut conversation = state
         .store

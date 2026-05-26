@@ -260,6 +260,7 @@ pub(super) struct ClipboardImageAttachment {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub(super) struct SendMessageInput {
     pub(super) workspace_path: String,
     pub(super) conversation_id: String,
@@ -278,6 +279,8 @@ pub(super) struct SendMessageInput {
     pub(super) revert_workspace_changes: bool,
     #[serde(default = "default_true")]
     pub(super) power_user: bool,
+    #[serde(default)]
+    pub(super) display_mode: DisplayModeInput,
 }
 
 #[derive(Debug, Deserialize)]
@@ -294,6 +297,7 @@ pub(super) struct CompactConversationInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub(super) struct ContextEstimateInput {
     pub(super) workspace_path: String,
     pub(super) conversation_id: String,
@@ -308,6 +312,8 @@ pub(super) struct ContextEstimateInput {
     pub(super) rewrite_from_history_index: Option<usize>,
     #[serde(default = "default_true")]
     pub(super) power_user: bool,
+    #[serde(default)]
+    pub(super) display_mode: DisplayModeInput,
 }
 
 #[derive(Debug, Deserialize)]
@@ -589,10 +595,20 @@ pub(super) enum MessageVisibilityInput {
     SystemReminder,
 }
 
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub(super) enum DisplayModeInput {
+    #[default]
+    Disabled,
+    Compact,
+    VeryCompact,
+}
+
 #[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub(super) enum ThinkingLevelInput {
     Off,
+    Minimal,
     Low,
     Medium,
     High,
@@ -603,7 +619,7 @@ pub(super) enum ThinkingLevelInput {
 impl ThinkingLevelInput {
     pub(super) fn into_effort(self) -> Effort {
         match self {
-            Self::Off => Effort::None,
+            Self::Off | Self::Minimal => Effort::None,
             Self::Low => Effort::Low,
             Self::Medium => Effort::Medium,
             Self::High => Effort::High,

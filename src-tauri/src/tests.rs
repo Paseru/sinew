@@ -128,6 +128,30 @@ fn context_estimate_stays_in_plan_mode_for_active_workflows() {
 }
 
 #[test]
+fn display_mode_prompt_is_added_only_for_compact_modes() {
+    let base = "base prompt";
+
+    assert_eq!(
+        with_display_mode_prompt(base, DisplayModeInput::Disabled),
+        base
+    );
+
+    let compact = with_display_mode_prompt(base, DisplayModeInput::Compact);
+    assert!(compact.contains("Display mode: Compact"));
+    assert!(compact.contains("concise"));
+
+    let very_compact = with_display_mode_prompt(base, DisplayModeInput::VeryCompact);
+    assert!(very_compact.contains("Display mode: Very compact"));
+    assert!(very_compact.contains("Before the final answer"));
+    assert!(very_compact.contains("ultra-concise"));
+}
+
+#[test]
+fn minimal_thinking_level_maps_to_none_effort() {
+    assert_eq!(ThinkingLevelInput::Minimal.into_effort(), Effort::None);
+}
+
+#[test]
 fn rewritable_user_message_rejects_compaction_and_hidden_messages() {
     let normal = ChatMessage {
         role: Role::User,

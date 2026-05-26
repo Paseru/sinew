@@ -85,7 +85,7 @@ export function AIThinkingBlock({
 
   if (!hasContent) return null;
 
-  if (compactMode === "very-compact" && !isStreaming) {
+  if (compactMode === "very-compact") {
     return null;
   }
 
