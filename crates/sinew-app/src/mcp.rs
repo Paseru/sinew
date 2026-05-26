@@ -937,6 +937,9 @@ impl McpStdioClient {
             }
 
             let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
             let value: Value = serde_json::from_str(trimmed)
                 .with_context(|| format!("MCP server emitted invalid JSON: {:?}", trimmed))?;
             if value.get("id") == Some(&json!(id)) {

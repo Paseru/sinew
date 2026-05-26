@@ -387,6 +387,9 @@ export const api = {
   disconnectOpenAiAccount(key: string) {
     return invoke<void>("disconnect_openai_account", { key });
   },
+  saveOpenAiAccessToken(token: string, key?: string) {
+    return invoke<void>("save_openai_access_token", { token, key: key ?? null });
+  },
   startOpenAiOAuthLogin(key?: string) {
     return invoke<StartOpenAiLoginOutput>("start_openai_oauth_login", { key: key ?? null });
   },

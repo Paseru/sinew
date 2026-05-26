@@ -112,6 +112,7 @@ export function SettingsPane({ workspacePath }: Props) {
   const [openAiStatus, setOpenAiStatus] = useState<OpenAiProviderStatus | null>(null);
   const [openAiAccounts, setOpenAiAccounts] = useState<OpenAiAccountInfo[]>([]);
   const [unconnectedAccounts, setUnconnectedAccounts] = useState<string[]>([]);
+
   const [anthropicStatus, setAnthropicStatus] = useState<AnthropicProviderStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleProviderStatus | null>(null);
   const [kimiStatus, setKimiStatus] = useState<KimiProviderStatus | null>(null);
@@ -386,6 +387,25 @@ export function SettingsPane({ workspacePath }: Props) {
       setProvidersLoading(false);
     }
   }, [loadConfiguredProviders]);
+
+  const [secondaryModels, setSecondaryModels] = useState<Record<string, string>>(() => {
+    const models: Record<string, string> = {};
+    try {
+      for (let i = 2; i <= 20; i++) {
+        const key = `openai:${i}`;
+        models[key] = localStorage.getItem(`sinew.provider-model.${key}`) || "gpt-5.5";
+      }
+    } catch {}
+    return models;
+  });
+
+  const handleUpdateSecondaryModel = useCallback((key: string, model: string) => {
+    try {
+      localStorage.setItem(`sinew.provider-model.${key}`, model);
+    } catch {}
+    setSecondaryModels((prev) => ({ ...prev, [key]: model }));
+    void loadOpenAiStatus();
+  }, [loadOpenAiStatus]);
 
   const loadAnthropicStatus = useCallback(async () => {
     setProvidersLoading(true);
@@ -1216,6 +1236,9 @@ export function SettingsPane({ workspacePath }: Props) {
             openAiStatus={openAiStatus}
             openAiAccounts={openAiAccounts}
             unconnectedAccounts={unconnectedAccounts}
+            secondaryModels={secondaryModels}
+            onUpdateSecondaryModel={handleUpdateSecondaryModel}
+            onSaveOpenAiAccessToken={async (token, key) => { await api.saveOpenAiAccessToken(token, key); }}
             onDisconnectOpenAiAccount={disconnectOpenAiAccount}
             anthropicStatus={anthropicStatus}
             googleStatus={googleStatus}
@@ -1509,6 +1532,9 @@ type ProvidersSectionProps = {
   openAiStatus: OpenAiProviderStatus | null;
   openAiAccounts: OpenAiAccountInfo[];
   unconnectedAccounts: string[];
+  secondaryModels: Record<string, string>;
+  onUpdateSecondaryModel: (key: string, model: string) => void;
+  onSaveOpenAiAccessToken: (token: string, key?: string) => Promise<void>;
   onDisconnectOpenAiAccount: (key: string) => void;
   anthropicStatus: AnthropicProviderStatus | null;
   googleStatus: GoogleProviderStatus | null;
@@ -1544,6 +1570,9 @@ function ProvidersSection({
   openAiStatus,
   openAiAccounts,
   unconnectedAccounts,
+  secondaryModels,
+  onUpdateSecondaryModel,
+  onSaveOpenAiAccessToken,
   onDisconnectOpenAiAccount,
   anthropicStatus,
   googleStatus,
@@ -1633,7 +1662,55 @@ function ProvidersSection({
           onDisconnect={onDisconnect}
           showPlus={true}
           onPlus={onAddOpenAiAccount}
-        />
+        >
+          {!openAiStatus?.connected && (
+            <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
+              <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Or paste a business access token:
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOi..."
+                  id="token-input-openai-main"
+                  style={{
+                    flex: 1,
+                    background: "var(--bg-3)",
+                    color: "var(--text-1)",
+                    border: "1px solid var(--line-2)",
+                    borderRadius: "4px",
+                    padding: "6px 10px",
+                    fontSize: "12px",
+                    outline: "none"
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const input = document.getElementById("token-input-openai-main") as HTMLInputElement;
+                    const val = input?.value || "";
+                    if (val.trim()) {
+                      await onSaveOpenAiAccessToken(val, "openai");
+                      onRefresh();
+                    }
+                  }}
+                  style={{
+                    background: "var(--accent-1, #3b82f6)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    cursor: "pointer"
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
+        </ProviderCard>
         {openAiAccounts
           .filter((account) => account.key.startsWith("openai:"))
           .map((account) => {
@@ -1645,6 +1722,7 @@ function ProvidersSection({
               email: account.email,
               planType: account.planType,
             };
+            const currentModel = secondaryModels[account.key] || "gpt-5.5";
             return (
               <ProviderCard
                 key={account.key}
@@ -1663,7 +1741,32 @@ function ProvidersSection({
                 onDisconnect={() => void onDisconnectOpenAiAccount(account.key)}
                 showMinus={true}
                 onMinus={() => void onDisconnectOpenAiAccount(account.key)}
-              />
+              >
+                <div style={{ display: "flex", gap: "12px", alignItems: "center", marginTop: "12px", padding: "8px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-2)" }}>Intelligence (Model):</span>
+                  <select
+                    value={currentModel}
+                    onChange={(e) => onUpdateSecondaryModel(account.key, e.target.value)}
+                    style={{
+                      background: "var(--bg-3)",
+                      color: "var(--text-1)",
+                      border: "1px solid var(--line-2)",
+                      borderRadius: "4px",
+                      padding: "4px 8px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      outline: "none"
+                    }}
+                  >
+                    <option value="gpt-5.5">GPT-5.5 (Maximum / Ultra Fast)</option>
+                    <option value="gpt-5.4">GPT-5.4 (High / Balanced)</option>
+                    <option value="gpt-5.4-mini">GPT-5.4 Mini (Lightweight / Extra Fast)</option>
+                    <option value="gpt-5.3-codex">GPT-5.3 Codex (Specialized Coding)</option>
+                    <option value="gpt-5.3-codex-spark">GPT-5.3 Codex Spark (Extra High Coding Speed)</option>
+                    <option value="gpt-5.2">GPT-5.2 (Classic Balanced)</option>
+                  </select>
+                </div>
+              </ProviderCard>
             );
           })}
         {unconnectedAccounts.map((key) => {
@@ -1688,7 +1791,53 @@ function ProvidersSection({
               onDisconnect={() => {}}
               showMinus={true}
               onMinus={() => onRemoveUnconnectedAccount(key)}
-            />
+            >
+              <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
+                <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Or paste a business access token:
+                </span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="password"
+                    placeholder="eyJhbGciOi..."
+                    id={`token-input-${key}`}
+                    style={{
+                      flex: 1,
+                      background: "var(--bg-3)",
+                      color: "var(--text-1)",
+                      border: "1px solid var(--line-2)",
+                      borderRadius: "4px",
+                      padding: "6px 10px",
+                      fontSize: "12px",
+                      outline: "none"
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const input = document.getElementById(`token-input-${key}`) as HTMLInputElement;
+                      const val = input?.value || "";
+                      if (val.trim()) {
+                        await onSaveOpenAiAccessToken(val, key);
+                        onRefresh();
+                      }
+                    }}
+                    style={{
+                      background: "var(--accent-1, #3b82f6)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "4px",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </ProviderCard>
           );
         })}
         <ProviderCard

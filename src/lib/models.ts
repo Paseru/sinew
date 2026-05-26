@@ -201,13 +201,24 @@ export function availableModelsForProviders(
   for (const provider of configuredProviders) {
     if (provider.startsWith("openai:")) {
       const suffix = provider.slice("openai:".length);
+      let modelName = "gpt-5.5";
+      try {
+        modelName = localStorage.getItem(`sinew.provider-model.${provider}`) || "gpt-5.5";
+      } catch {}
+
+      const matchingModel = MODELS.find((m) => m.value === `openai:${modelName}`);
+      const label = matchingModel ? matchingModel.label : "GPT-5.5";
+      const thinking = (matchingModel ? matchingModel.thinking : ["off", "low", "medium", "high", "xhigh"]) as readonly ThinkingLevel[];
+      const defaultThinking = matchingModel ? matchingModel.defaultThinking : "xhigh";
+      const supportsFast = matchingModel ? Boolean(matchingModel.supportsFast) : true;
+
       entries.push({
-        value: modelId(provider, "gpt-5.5"),
+        value: modelId(provider, modelName),
         provider: provider as any,
-        label: `OpenAI ${suffix}`,
-        thinking: ["off", "low", "medium", "high", "xhigh"],
-        defaultThinking: "xhigh",
-        supportsFast: true,
+        label: `OpenAI ${suffix} (${label})`,
+        thinking,
+        defaultThinking,
+        supportsFast,
       });
     }
   }
