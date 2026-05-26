@@ -44,8 +44,15 @@ if (isNativeMode) {
   const { spawn } = require('child_process');
   console.error("ðŸ§¬ [Proxy] Spawning Browser-Use Python MCP server in native background...");
   
-  const pythonExe = path.join(homeDir, ".gemini", "antigravity", "scratch", "browser-use-env", "Scripts", "python.exe");
-  const mcpCwd = path.join(homeDir, ".gemini", "antigravity", "scratch", "mcp-browser-use");
+  const fs = require('fs');
+  let pythonExe = path.join(homeDir, ".gemini", "antigravity", "scratch", "browser-use-env", "Scripts", "python.exe");
+  if (!fs.existsSync(pythonExe)) {
+    pythonExe = path.join(homeDir, "AppData", "Local", "Programs", "Python", "Python314", "python.exe");
+  }
+  if (!fs.existsSync(pythonExe)) {
+    pythonExe = "python";
+  }
+  const mcpCwd = __dirname;
   
   mcpProcess = spawn(pythonExe, ["-m", "mcp_server_browser_use"], {
     cwd: mcpCwd,
