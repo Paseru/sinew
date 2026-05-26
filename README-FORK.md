@@ -1,30 +1,54 @@
-# Documentation du Fork de Julien — Sinew Custom
+# 🚀 Sinew Custom — Documentation du Fork Optimisé
 
-Ce fichier liste les optimisations, corrections et scripts personnalisés de ton fork de **Sinew**.
-
----
-
-## ✨ Les modifications et ajouts de ton Fork
-
-Ces fonctionnalités personnalisées améliorent l'expérience de Sinew par rapport au projet officiel :
-
-1. **Option de Langue (Français/Anglais)** : Une option dynamique dans `Settings > About` pour traduire toute l'interface en français.
-2. **Dernière question collante (Sticky Question)** : La dernière question posée reste fixée en haut du chat pendant le défilement. Un clic dessus te ramène en haut de manière fluide.
-3. **Panneau de Diagnostic SOTA** : Bouton et panneau de contrôle en direct dans `Settings > About` (avec l'outil IA `check_sota`) pour tester si tes dépendances système (Git, Node, Rust/Cargo, Python, Ripgrep) fonctionnent parfaitement.
-4. **Mode "Power User Mode" (Bouton d'activation)** :
-   * **C'est quoi ?** C'est le bouton situé dans `Settings > About` > *Power User Mode*.
-   * **Son rôle** : Il sert à activer/désactiver l'injection des règles de `POWERUSER.md` (consignes pour l'IA : réponses concises, zéro jargon, et automatisation Git en tâche de fond).
-5. **Corrections Windows (Bug fixes)** :
-   * Détection améliorée de `git.exe`.
-   * Suppression des avertissements de compilation (warnings) inutiles liés à macOS/Linux sur Windows.
+<p align="center">
+  <b>Une version améliorée, francisée et hautement automatisée de l'environnement de développement IA Sinew.</b>
+  <br/>
+  <i>Ce fork intègre des fonctionnalités exclusives conçues pour éliminer la friction technique et offrir une expérience utilisateur fluide et sans effort sur Windows.</i>
+</p>
 
 ---
 
-## 🛠️ Scripts d'automatisation (PowerShell)
+## 🌟 Fonctionnalités exclusives et améliorations
 
-Pour ne plus te soucier de Git manuellement, lance ces scripts depuis ta console :
+Ce fork enrichit l'application officielle **Sinew** avec plusieurs optimisations majeures pour simplifier l'ergonomie, automatiser la maintenance et fiabiliser l'environnement de travail.
 
-* **`.\scripts\sinew-sync.ps1`** : Synchronise ton fork avec la version officielle de Sinew. A faire au début.
-* **`.\scripts\sinew-save.ps1`** : Sauvegarde simplement ton travail et l'envoie sur ton GitHub.
-* **`.\scripts\sinew-build-save.ps1`** : Compile l'interface et l'envoie sur GitHub (recommandé après modification).
-* **`.\scripts\sinew-build-save.ps1 -FullApp`** : Compile l'application installable complète (.exe) pour Windows et l'enregistre sur GitHub.
+### 1. 🌐 Traduction Intégrale en Français
+* **Fonctionnement** : Un sélecteur de langue dynamique est disponible dans le panneau `Settings > About`.
+* **Bénéfice** : Traduit instantanément toute l'interface (menus, paramètres, infobulles, retours d'outils) pour un confort d'utilisation optimal sans barrière de la langue.
+
+### 2. 📌 Question Collante (Sticky Question)
+* **Fonctionnement** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de la vue de discussion.
+* **Bénéfice** : Un simple clic sur cette bannière ramène instantanément l'utilisateur en haut du chat de manière fluide, éliminant les défilements manuels interminables.
+
+### 3. ⚡ Panneau de Diagnostic SOTA (State of the Art)
+* **Fonctionnement** : Accessible depuis `Settings > About`, ce module graphique interroge l'outil de diagnostic en un clic.
+* **Bénéfice** : Permet de tester instantanément l'état des outils système requis (Git, Node, Rust/Cargo, Python, Ripgrep). Tout dysfonctionnement est clairement signalé avec son chemin et sa version pour un dépannage immédiat.
+
+### 4. 🤖 Mode "Power User" & Automatisation Totale
+* **Fonctionnement** : Une fois activé dans `Settings > About`, ce mode injecte des instructions de comportement avancées pour l'IA.
+* **Bénéfice** :
+  * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action, sans jargon technique superflu.
+  * **Gestion Git & Synchronisation Invisible** : L'IA gère la maintenance de votre dépôt en arrière-plan sans aucune intervention manuelle. Elle vérifie si le projet est à jour, applique les mises à jour et sauvegarde les modifications.
+
+### 5. ☁️ Synchronisation Multi-PC & Presse-papiers Partagé (OneDrive)
+* **Fonctionnement** : Les modules de synchronisation en arrière-plan exploitent un espace sécurisé sous OneDrive (`OneDrive/Documents/Sinew`).
+* **Bénéfice** :
+  * **Conversations Synchronisées** : La base de données locale SQLite et l'historique complet des sessions de chat sont automatiquement synchronisés entre vos différents PC (Maison, Travail, etc.).
+  * **Presse-papiers Universel** : Le contenu de votre presse-papiers est partagé instantanément entre vos ordinateurs de manière sécurisée.
+
+### 6. 🪟 Optimisations Windows et Fiabilité du Build
+* **Détection Git** : Amélioration substantielle de la localisation de l'exécutable `git.exe` sur l'environnement Windows.
+* **Build Propre** : Nettoyage des avertissements (warnings) de compilation spécifiques à macOS ou Linux qui encombraient inutilement les logs sous Windows.
+
+---
+
+## ⚙️ Fonctionnement de l'automatisation en arrière-plan
+
+Pour garantir une expérience sans friction, **toute la maintenance technique est déléguée à l'IA**. L'utilisateur n'a jamais besoin d'ouvrir une console ou de saisir des commandes Git.
+
+### 🔄 Le moteur d'automatisation sous le capot
+Le répertoire `/scripts` contient les scripts PowerShell qui orchestrent cette fluidité. L'IA les exécute d'elle-même en arrière-plan selon les besoins :
+
+* **`sinew-sync.ps1`** : Synchronise en arrière-plan le projet avec la version officielle de Sinew, gère les fusions de code (rebase), résout les conflits temporaires et rapatrie l'état de la base de données SQLite et du presse-papiers depuis OneDrive.
+* **`sinew-save.ps1`** : Enregistre, versionne et pousse les modifications locales sur le dépôt distant GitHub tout en exportant la dernière version de la base de données et du presse-papiers vers OneDrive.
+* **`sinew-build-save.ps1`** : Assure la compilation propre de l'interface front-end ou de l'application Windows (.exe installable) avant de publier les résultats.
