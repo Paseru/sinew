@@ -4,74 +4,60 @@ Ce document détaille l'ensemble des fonctionnalités et des options personnalis
 
 ---
 
-## 📌 Fonctionnalités par panneau de configuration
+## 📌 Fonctionnalités par parcours utilisateur
 
-Pour faciliter la navigation, les ajouts ont été classés selon leur emplacement dans l'application :
+Pour faciliter la prise en main, les fonctionnalités ajoutées ou améliorées ont été classées selon votre parcours dans l'application :
 
-### 1. Dans le panneau `Settings > Options` (Paramètres > Options)
+### 1. Au démarrage & Gestion des Sessions (Écran d'accueil)
 
-Ce nouvel onglet regroupe les préférences globales de l'utilisateur :
+* **📂 Utilisation sans dossier (Mode Bac à sable / Sandbox / Sans projet)** :
+  * **Bénéfice** : Permet de lancer Sinew d'un simple clic en mode **« Sans dossier »** (ou Sandbox) depuis l'écran d'accueil sans devoir sélectionner ou créer un dossier projet. C'est parfait pour interagir rapidement avec l'IA, lui confier des tâches générales, exécuter des commandes système ou exploiter le pont Google Chrome (MCP) de façon ultra-légère. L'espace de travail s'affiche alors sous le nom de **« Sans dossier »** (géré dans un répertoire sécurisé `.sinew-sandbox` dans votre répertoire utilisateur).
+
+---
+
+### 2. Au quotidien : Interface de Chat & Expérience Utilisateur
+
+* **⚡ Bouton « Influencer » dans la File d'Attente (Prompt Queue)** :
+  * **Bénéfice** : Permet d'injecter et de soumettre instantanément un prompt mis en attente pour orienter, influencer et guider le flux de la discussion en cours. Ce bouton est représenté par une pilule distinctive affichant le texte « **Influencer** » accompagné d'une flèche vers le haut (`solar:arrow-up-bold`), remplaçant l'ancienne flèche simple à droite peu visible pour une interaction beaucoup plus claire et intuitive.
+* **🚀 Lancement et Exécution des Fichiers directement depuis les liens du Chat** :
+  * **Bénéfice** : Permet de faire un clic droit sur n'importe quel lien de fichier ou chemin généré par l'IA dans vos bulles de discussion du chat (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour afficher un menu contextuel et l'exécuter directement (**"Execute / Run"**), l'ouvrir dans l'éditeur ou révéler son dossier d'origine dans l'Explorateur Windows. C'est la solution ultime pour contourner le blocage des liens locaux !
+* **📌 Question Collante (Sticky Question)** :
+  * **Bénéfice** : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
+* **📋 Sélection et Copie de Texte dans le Chat** :
+  * **Bénéfice** : Permet de sélectionner et copier librement le texte des messages (réponses de l'assistant, extraits de code, questions et messages système) directement depuis la fenêtre de discussion, une action qui était auparavant bloquée par l'interface.
+
+---
+
+### 3. Panneau `Settings > Options` : Personnalisation & Confort
 
 * **🌐 Interface en Français (Traduction progressive)** : 
-  * *Option* : **Langue** (English / Français).
-  * *Bénéfice* : Traduit dynamiquement les éléments clés de l'interface utilisateur (boutons, menus principaux, paramètres, dialogues et infobulles) en français pour une navigation plus confortable. Les termes purement techniques (sorties de terminal, code ou diagnostics) restent en anglais pour maintenir la cohérence de développement.
+  * **Option** : **Langue** (English / Français).
+  * **Bénéfice** : Traduit dynamiquement les éléments clés de l'interface utilisateur (boutons, menus principaux, paramètres, dialogues et infobulles) en français pour une navigation plus confortable. Les termes purement techniques (sorties de terminal, code ou diagnostics) restent en anglais pour maintenir la cohérence de développement.
 * **🤖 Mode "Power User"** : 
-  * *Option* : **Mode Power User** (Activé / Désactivé).
-  * *Bénéfice* : 
+  * **Option** : **Mode Power User** (Activé / Désactivé).
+  * **Bénéfice** : 
     * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
     * **Gestion Git automatique** : L'IA prend en charge la maintenance du dépôt en arrière-plan (vérification, pull, commit, push) de manière automatisée, sans nécessiter de manipuler des commandes Git complexes.
 * **🧠 Réflexion Compacte (Compact Reasoning) / Mode d'affichage** : 
-  * *Option* : **Mode d'affichage** (Trois niveaux : Détaillé / Compact / Très compact).
-  * *Bénéfice* : Permet d'ajuster le niveau de visibilité et de détail des étapes de réflexion de l'IA (*thinking blocks*) ainsi que des exécutions d'outils (comme les commandes ou modifications de fichiers) dans l'interface de discussion :
+  * **Option** : **Mode d'affichage** (Trois niveaux : Détaillé / Compact / Très compact).
+  * **Bénéfice** : Permet d'ajuster le niveau de visibilité et de détail des étapes de réflexion de l'IA (*thinking blocks*) ainsi que des exécutions d'outils (comme les commandes ou modifications de fichiers) dans l'interface de discussion :
     * **Détaillé** : Visibilité maximale. Les longs blocs de réflexion de l'IA restent affichés en entier une fois terminés, et toutes les modifications de fichiers s'affichent sans filtre.
     * **Compact** : Vue équilibrée. Les blocs de réflexion se replient automatiquement après la génération pour n'afficher qu'un bandeau résumé (ex: *Thinking (5.2s)*).
     * **Très compact** : Focus total. Les étapes de réflexion sont visibles en temps réel lors de l'écriture puis **disparaissent complètement** une fois le message final généré, évitant toute surcharge visuelle.
 * **🔄 Synchronisation Multi-PC & Suivi des suppressions** : 
-  * *Option* : **Synchronisation Multi-PC** (Activé / Désactivé).
-  * *Bénéfice* : Synchronise automatiquement et de manière sécurisée vos conversations, configurations et préférences entre vos ordinateurs via votre espace OneDrive. Cette fonctionnalité inclut un moteur de fusion différentielle SQLite au démarrage et à la fermeture pour préserver vos données locales, ainsi qu'un suivi intelligent des suppressions pour empêcher les discussions supprimées sur un poste de réapparaître lors de la synchronisation.
+  * **Option** : **Synchronisation Multi-PC** (Activé / Désactivé).
+  * **Bénéfice** : Synchronise automatiquement et de manière sécurisée vos conversations, configurations et préférences entre vos ordinateurs via votre espace OneDrive. Cette fonctionnalité inclut un moteur de fusion différentielle SQLite au démarrage et à la fermeture pour préserver vos données locales, ainsi qu'un suivi intelligent des suppressions pour empêcher les discussions supprimées sur un poste de réapparaître lors de la synchronisation.
 * **⚡ Diagnostic Système SOTA (State of the Art)** : 
-  * *Option* : **Diagnostic Système SOTA** (avec bouton *Actualiser*).
-  * *Bénéfice* : Permet de tester instantanément en temps réel l'état, le chemin exact et la version des outils et compilateurs système indispensables (Git, Node/Npm, Rust/Cargo/Rustc, Python/Pip, Ripgrep).
+  * **Option** : **Diagnostic Système SOTA** (avec bouton *Actualiser*).
+  * **Bénéfice** : Permet de tester instantanément en temps réel l'état, le chemin exact et la version des outils et compilateurs système indispensables (Git, Node/Npm, Rust/Cargo/Rustc, Python/Pip, Ripgrep).
 * **📱 Interface Fluide & Responsive (Container Queries)** :
-  * *Bénéfice* : Les différents panneaux du menu des options et des configurations s'adaptent de manière fluide et dynamique grâce aux *Container Queries* CSS (au lieu de simples requêtes basées sur la taille de l'écran global). L'interface de paramétrage occupe ainsi intelligemment 100% de la largeur disponible pour un confort visuel optimal.
+  * **Bénéfice** : Les différents panneaux du menu des options et des configurations s'adaptent de manière fluide et dynamique grâce aux *Container Queries* CSS (au lieu de simples requêtes basées sur la taille de l'écran global). L'interface de paramétrage occupe ainsi intelligemment 100% de la largeur disponible pour un confort visuel optimal.
 
 ---
 
-### 2. Dans le panneau `Settings > Providers` (Paramètres > Fournisseurs)
-
-Ce panneau gère les comptes et modèles connectés à l'application :
-
-* **👥 Multi-comptes OpenAI (OAuth & Business Token)** :
-  * *Bénéfice* : Permet de connecter plusieurs comptes OpenAI secondaires (« OpenAI 2 », « OpenAI 3 », etc.) en cliquant sur le bouton « + » et en renseignant un *Business Access Token* pour chacun d'eux. C'est idéal pour basculer facilement et instantanément entre plusieurs abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser les coûts et la rapidité sans aucune déconnexion.
-
----
-
-### 3. Dans le panneau `Settings > MCP` (Paramètres > Serveurs MCP)
-
-Ce panneau gère les serveurs de protocole de contexte de modèle :
+### 4. Panneaux `Settings > Providers & MCP` : Connecteurs & Automations
 
 * **🌐 Sinew Chrome Bridge Ultra-Stable (Contrôle du Navigateur)** :
-  * *Bénéfice* : Connecte directement et en temps réel le navigateur Google Chrome à Sinew via un pont MCP local pré-configuré (*Sinew Chrome*). Cette architecture avancée intègre un wrapper compilé natif en Rust (`native-host-wrapper.exe`) pour une stabilité maximale sans plantage de scripts, résout automatiquement les conflits de ports réseau (`EADDRINUSE`) et pilote le navigateur avec des actions réalistes "humaines" (mouvements fluides du curseur de souris, clics basés sur le protocole CDP) pour contourner les protections anti-robots des sites web, sans exiger de clés API externes.
-
----
-
-### 4. Directement dans l'interface de Chat
-
-* **📌 Question Collante (Sticky Question)** :
-  * *Bénéfice* : Lors du défilement des longs historiques de discussion, la dernière question posée reste visible et fixée en haut de l'écran. Un simple clic dessus permet de remonter instantanément et de manière fluide à la question.
-* **📋 Sélection et Copie de Texte dans le Chat** :
-  * *Bénéfice* : Permet de sélectionner et copier librement le texte des messages (réponses de l'assistant, extraits de code, questions et messages système) directement depuis la fenêtre de discussion, une action qui était auparavant bloquée par l'interface.
-* **🚀 Lancement et Exécution des Fichiers directement depuis les liens du Chat** :
-  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier ou chemin généré par l'IA dans vos bulles de discussion du chat (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour afficher un menu contextuel et l'exécuter directement (**"Execute / Run"**), l'ouvrir dans l'éditeur ou révéler son dossier d'origine dans l'Explorateur Windows. C'est la solution ultime pour contourner le blocage des liens locaux !
-* **⚡ Bouton « Influencer » dans la File d'Attente (Prompt Queue)** :
-  - *Bénéfice* : Permet d'injecter et de soumettre instantanément un prompt mis en attente pour orienter, influencer et guider le flux de la discussion en cours. Ce bouton est représenté par une pilule distinctive affichant le texte « **Influencer** » accompagné d'une flèche vers le haut (`solar:arrow-up-bold`), remplaçant l'ancienne flèche simple à droite peu visible pour une interaction beaucoup plus claire et intuitive.
-
----
-
-### 5. Au démarrage & Gestion des Sessions (Écran d'accueil)
-
-* **📂 Utilisation sans dossier (Mode Bac à sable / Sandbox / Sans projet)** :
-  * *Bénéfice* : Permet de lancer Sinew d'un simple clic en mode **« Sans dossier »** (ou Sandbox) depuis l'écran d'accueil sans devoir sélectionner ou créer un dossier projet. C'est parfait pour interagir rapidement avec l'IA, lui confier des tâches générales, exécuter des commandes système ou exploiter le pont Google Chrome (MCP) de façon ultra-légère. L'espace de travail s'affiche alors sous le nom de **« Sans dossier »** (géré dans un répertoire sécurisé `.sinew-sandbox` dans votre répertoire utilisateur).
-
-
-
+  * **Bénéfice** : Connecte directement et en temps réel le navigateur Google Chrome à Sinew via un pont MCP local pré-configuré (*Sinew Chrome*). Cette architecture avancée intègre un wrapper compilé natif en Rust (`native-host-wrapper.exe`) pour une stabilité maximale sans plantage de scripts, résout automatiquement les conflits de ports réseau (`EADDRINUSE`) et pilote le navigateur avec des actions réalistes "humaines" (mouvements fluides du curseur de souris, clics basés sur le protocole CDP) pour contourner les protections anti-robots des sites web, sans exiger de clés API externes.
+* **👥 Multi-comptes OpenAI (OAuth & Business Token)** :
+  * **Bénéfice** : Permet de connecter plusieurs comptes OpenAI secondaires (« OpenAI 2 », « OpenAI 3 », etc.) en cliquant sur le bouton « + » et en renseignant un *Business Access Token* pour chacun d'eux. C'est idéal pour basculer facilement et instantanément entre plusieurs abonnements ou comptes différents, éviter d'atteindre les limites de requêtes (rate limits) et optimiser les coûts et la rapidité sans aucune déconnexion.
