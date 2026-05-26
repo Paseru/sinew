@@ -2241,6 +2241,15 @@ async function executeMacroReplay(tabId, macro) {
   console.log(`ðŸ§¬ [Replayer] Replay of macro "${macro.name}" completed successfully!`);
 }
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error("🧬 [Proxy] Port 29002 is already in use. Another instance of Sinew Chrome Bridge is running. Exiting silently.");
+    process.exit(0);
+  } else {
+    throw err;
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`ðŸ§¬ [Proxy] UPGRADED Sinew Chrome Bridge listening on http://localhost:${PORT}`);
   console.log(`ðŸ§¬ [Proxy] Standard CDP browser endpoint: ws://localhost:${PORT}/devtools/browser`);
