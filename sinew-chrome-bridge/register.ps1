@@ -3,7 +3,7 @@ $ScriptDir = $PSScriptRoot
 if (!$ScriptDir) { $ScriptDir = $pwd.Path }
 
 $ManifestPath = Join-Path $ScriptDir "com.sinew.chrome_bridge.json"
-$HostScriptPath = Join-Path $ScriptDir "native_host.bat"
+$HostScriptPath = Join-Path $ScriptDir "native-host-wrapper.exe"
 
 Write-Host "1/4 Mise a jour du manifest JSON local..."
 if (Test-Path $ManifestPath) {
@@ -35,7 +35,7 @@ if (!(Test-Path $PythonPath)) {
 }
 
 $BridgeBatPath = Join-Path $ScriptDir "run_sinew_bridge.bat"
-$BridgeBatContent = "@echo off`r`nstart /B `"`" `"$NodePath`" `"%~dp0server.js`"`r`n`"$NodePath`" `"%~dp0mcp_server.js`""
+$BridgeBatContent = "@echo off`r`n`"$NodePath`" `"%~dp0mcp_server.js`""
 [System.IO.File]::WriteAllText($BridgeBatPath, $BridgeBatContent, [System.Text.Encoding]::UTF8)
 
 # Configure also the standard native_host.bat

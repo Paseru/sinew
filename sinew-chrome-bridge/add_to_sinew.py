@@ -12,15 +12,17 @@ if not os.path.exists(db_path):
     print(f"ERROR: Database not found at {db_path}")
     sys.exit(1)
 
-# Configure the browser-use server settings dynamically
+# Configure the Sinew Chrome MCP server dynamically
 script_dir = os.path.dirname(os.path.abspath(__file__))
-bridge_bat = os.path.join(script_dir, "run_sinew_bridge.bat")
+node_path = r"C:\Program Files\nodejs\node.exe"
+if not os.path.exists(node_path):
+    node_path = "node"
 
 new_server = {
     "id": "browser-use",
     "name": "Sinew Chrome",
-    "command": bridge_bat,
-    "args": [],
+    "command": node_path,
+    "args": [os.path.join(script_dir, "mcp_server.js")],
     "env": [
         {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"}
     ],

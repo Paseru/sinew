@@ -38,48 +38,8 @@ const browserSockets = new Set(); // Set of browser-scoped playwright sockets
 let messageCounter = 0;
 const pendingRequests = new Map(); // bridgeMsgId -> { playwrightSocket, originalId, sessionId, timeout, resolve }
 
-// Spawning and monitoring Browser-Use Python MCP server in native mode
+// Native Messaging host state
 let mcpProcess = null;
-if (isNativeMode) {
-  const { spawn } = require('child_process');
-  console.error("ðŸ§¬ [Proxy] Spawning Browser-Use Python MCP server in native background...");
-  
-  const fs = require('fs');
-  let pythonExe = path.join(homeDir, ".gemini", "antigravity", "scratch", "browser-use-env", "Scripts", "python.exe");
-  if (!fs.existsSync(pythonExe)) {
-    pythonExe = path.join(homeDir, "AppData", "Local", "Programs", "Python", "Python314", "python.exe");
-  }
-  if (!fs.existsSync(pythonExe)) {
-    pythonExe = "python";
-  }
-  const mcpCwd = __dirname;
-  
-  mcpProcess = spawn(pythonExe, ["-m", "mcp_server_browser_use"], {
-    cwd: mcpCwd,
-    stdio: 'inherit'
-  });
-  
-  mcpProcess.on('error', (err) => {
-    console.error("ðŸ§¬ [Proxy] Failed to spawn Browser-Use Python MCP:", err);
-  });
-  
-  mcpProcess.on('exit', (code, signal) => {
-    console.error(`ðŸ§¬ [Proxy] Browser-Use Python MCP exited with code ${code} and signal ${signal}`);
-  });
-
-  const cleanup = () => {
-    if (mcpProcess) {
-      console.error("ðŸ§¬ [Proxy] Native host cleanup: killing Browser-Use MCP process...");
-      mcpProcess.kill();
-      mcpProcess = null;
-    }
-    process.exit();
-  };
-
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-  process.on('exit', cleanup);
-}
 
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -106,6 +66,15 @@ const server = http.createServer((req, res) => {
     };
     res.writeHead(200);
     res.end(JSON.stringify(versionInfo));
+  } 
+  else if (pathname === '/api/status') {
+    res.writeHead(200);
+    res.end(JSON.stringify({
+      isNativeMode,
+      hasExtensionSocket: !!extensionSocket,
+      extensionSocketState: extensionSocket ? extensionSocket.readyState : null,
+      extensionSocketIsVirtual: extensionSocket && extensionSocket.send && !extensionSocket.close ? true : false
+    }));
   } 
   else if (pathname === '/json' || pathname === '/json/list') {
     // Return the list of open tabs that can be debugged
@@ -1606,10 +1575,7 @@ if (isNativeMode) {
   });
 
   process.stdin.on('end', () => {
-    console.error("ðŸ§¬ [Proxy] process.stdin closed. Terminating Native Host processes...");
-    if (mcpProcess) {
-      mcpProcess.kill();
-    }
+    console.error("🧬 [Proxy] process.stdin closed. Terminating Native Host...");
     process.exit(0);
   });
 
