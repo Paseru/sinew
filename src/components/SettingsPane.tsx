@@ -2249,8 +2249,12 @@ function ProviderCard({
   const formatMinutes = (minutes: number) => {
     const hrs = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
-    return `${hrs}h ${mins}m`;
+    if (mins === 0) return `${hrs}h`;
+    return `${hrs}h ${mins.toString().padStart(2, '0')}m`;
   };
+
+  const limit5hHours = quota ? quota.limit5h / 60 : 5;
+  const limitWeekHours = quota ? quota.limitWeek / 60 : 50;
 
   return (
     <section className="settings-pane__provider-card">
@@ -2293,7 +2297,7 @@ function ProviderCard({
                 {/* 5h Quota */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Quota rapide (5h)</span>
+                    <span style={{ color: "var(--text-3)" }}>Quota rapide ({limit5hHours}h)</span>
                     <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
                       {formatMinutes(quota.remaining5h)} ({quota.percentage5h.toFixed(0)}%)
                     </span>
@@ -2331,7 +2335,7 @@ function ProviderCard({
                 {/* Week Quota */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Quota hebdo (50h)</span>
+                    <span style={{ color: "var(--text-3)" }}>Quota hebdomadaire ({limitWeekHours}h)</span>
                     <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
                       {formatMinutes(quota.remainingWeek)} ({quota.percentageWeek.toFixed(0)}%)
                     </span>
@@ -2545,9 +2549,7 @@ function OpenRouterProviderCard({
   }, [connected]);
 
   const formatMinutes = (minutes: number) => {
-    const hrs = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return `${hrs}h ${mins}m`;
+    return `$${minutes.toFixed(2)}`;
   };
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
@@ -2712,10 +2714,30 @@ function OpenRouterProviderCard({
               }}
             >
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                {/* 5h Quota */}
+                {/* Key Limit */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Quota rapide (5h)</span>
+                    <span style={{ color: "var(--text-3)" }}>Limite totale clé</span>
+                    <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
+                      {formatMinutes(quota.limit5h)}
+                    </span>
+                  </div>
+                  <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: "#3b82f6",
+                        borderRadius: "2px",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Key Balance */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+                    <span style={{ color: "var(--text-3)" }}>Solde clé restant</span>
                     <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
                       {formatMinutes(quota.remaining5h)} ({quota.percentage5h.toFixed(0)}%)
                     </span>
@@ -2739,40 +2761,6 @@ function OpenRouterProviderCard({
                     />
                   </div>
                 </div>
-
-                {/* Week Quota */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Quota hebdo (50h)</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                      {formatMinutes(quota.remainingWeek)} ({quota.percentageWeek.toFixed(0)}%)
-                    </span>
-                  </div>
-                  <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: `${quota.percentageWeek}%`,
-                        height: "100%",
-                        background:
-                          quota.percentageWeek > 80
-                            ? "#10b981"
-                            : quota.percentageWeek > 50
-                            ? "#3b82f6"
-                            : quota.percentageWeek > 20
-                            ? "#ec4899"
-                            : "#ef4444",
-                        borderRadius: "2px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "10px", marginTop: "2px" }}>
-                <span style={{ color: "var(--text-3)" }}>
-                  {quota.isReal ? "✓ Récupéré via API" : "Simulé localement"}
-                </span>
               </div>
             </div>
           )}
