@@ -3423,35 +3423,37 @@ export function ChatPane({
                   {quota && (
                     <span
                       style={{
-                        display: "inline-block",
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        backgroundColor:
-                          quota.overallPercentage > 80
-                            ? "#10b981" // Vert
-                            : quota.overallPercentage > 50
-                            ? "#3b82f6" // Bleu
-                            : quota.overallPercentage > 20
-                            ? "#ec4899" // Rose
-                            : "#ef4444", // Rouge
-                        boxShadow: `0 0 6px ${
-                          quota.overallPercentage > 80
-                            ? "#10b981cc"
-                            : quota.overallPercentage > 50
-                            ? "#3b82f6cc"
-                            : quota.overallPercentage > 20
-                            ? "#ec4899cc"
-                            : "#ef4444cc"
-                        }`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        lineHeight: 1,
+                        marginLeft: "8px",
                         cursor: "pointer",
+                        filter: `drop-shadow(0 0 6px ${
+                          quota.overallPercentage > 80
+                            ? "#10b981bb"
+                            : quota.overallPercentage > 50
+                            ? "#3b82f6bb"
+                            : quota.overallPercentage > 20
+                            ? "#ec4899bb"
+                            : "#ef4444bb"
+                        })`,
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenSettings("quotas");
                       }}
-                      title="Cliquez pour gérer vos quotas"
-                    />
+                      title={`Quota standard restants: ${quota.overallPercentage.toFixed(0)}%. Cliquez pour ouvrir les réglages.`}
+                    >
+                      {quota.overallPercentage > 80
+                        ? "😊"
+                        : quota.overallPercentage > 50
+                        ? "🙂"
+                        : quota.overallPercentage > 20
+                        ? "😐"
+                        : "😰"}
+                    </span>
                   )}
                   <Icon
                     icon="solar:alt-arrow-down-linear"
@@ -3499,15 +3501,32 @@ export function ChatPane({
                             <span>{m.label}</span>
                             <span
                               style={{
-                                display: "inline-block",
-                                width: "6px",
-                                height: "6px",
-                                borderRadius: "50%",
-                                backgroundColor: dotColor,
-                                marginLeft: "6px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "12px",
+                                lineHeight: 1,
+                                marginLeft: "8px",
+                                filter: `drop-shadow(0 0 4px ${
+                                  qPercent > 80
+                                    ? "#10b98188"
+                                    : qPercent > 50
+                                    ? "#3b82f688"
+                                    : qPercent > 20
+                                    ? "#ec489988"
+                                    : "#ef444488"
+                                })`,
                               }}
                               title={`Quota restant: ${qPercent.toFixed(0)}%`}
-                            />
+                            >
+                              {qPercent > 80
+                                ? "😊"
+                                : qPercent > 50
+                                ? "🙂"
+                                : qPercent > 20
+                                ? "😐"
+                                : "😰"}
+                            </span>
                           </span>
                           {selected && (
                             <Icon

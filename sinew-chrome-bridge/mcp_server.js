@@ -161,6 +161,19 @@ async function ensureChromeReady(preferredUrl = null) {
   return tabs;
 }
 
+async function navigateTab(tabId, url) {
+  if (!tabId || !url) return;
+  const cdp = cdpConnect(tabId);
+  try {
+    await cdp.send('Page.bringToFront').catch(() => null);
+    await cdp.send('Page.navigate', { url });
+  } finally {
+    cdp.close();
+  }
+  cursorStateByTabId.delete(String(tabId));
+  await waitForPageInteractive(tabId, 15000).catch(() => null);
+}
+
 function buildActionTasks(task) {
   const text = String(task || '').toLowerCase();
   const actions = [];
@@ -184,15 +197,23 @@ function cdpConnect(tabId) {
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch { return; }
     if (msg.id && pending.has(msg.id)) {
-      const { resolve, reject } = pending.get(msg.id);
+      const { resolve, reject, timer } = pending.get(msg.id);
       pending.delete(msg.id);
+      clearTimeout(timer);
       if (msg.error) reject(new Error(msg.error.message || 'CDP error'));
       else resolve(msg.result || {});
     }
   });
   const open = new Promise((resolve, reject) => {
-    ws.once('open', resolve);
-    ws.once('error', reject);
+    const timer = setTimeout(() => reject(new Error(`CDP open timeout for tab ${tabId}`)), 5000);
+    ws.once('open', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    ws.once('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
   return {
     async send(method, params = {}) {
@@ -200,13 +221,13 @@ function cdpConnect(tabId) {
       const id = nextId++;
       ws.send(JSON.stringify({ id, method, params }));
       return await new Promise((resolve, reject) => {
-        pending.set(id, { resolve, reject });
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           if (pending.has(id)) {
             pending.delete(id);
             reject(new Error(`CDP timeout for ${method}`));
           }
         }, 7000);
+        pending.set(id, { resolve, reject, timer });
       });
     },
     close() { try { ws.close(); } catch {} }
@@ -383,13 +404,18 @@ async function detectTargetViaCdp(tabId, taskText) {
         if (el.tagName === 'BUTTON' || el.tagName === 'A' || role === 'button' || style.cursor === 'pointer') score += 25;
         if (wantsMenu) {
           const isMenuButton = id.includes('menu') || ariaLabel.includes('menu') || title.includes('menu') || className.includes('menu') || ariaLabel.includes('hamburger') || className.includes('hamburger');
-          const isCloseButton = id.includes('close') || ariaLabel.includes('close') || ariaLabel.includes('fermer') || title.includes('close') || title.includes('fermer') || className.includes('close') || text === '×' || text === 'x';
+          const isExplicitClose = id.includes('close') || ariaLabel.includes('close') || ariaLabel.includes('fermer') || title.includes('close') || title.includes('fermer') || className.includes('close') || className.includes('modal-close');
+          const isButtonLike = el.tagName === 'BUTTON' || role === 'button';
+          const isCloseGlyph = isButtonLike && (text === '×' || text === 'x') && !className.includes('logo') && !className.includes('social');
+          const isCloseButton = isExplicitClose || isCloseGlyph;
           if (wantsMenuOpen) {
-            if (isCloseButton || className.includes('modal-close')) continue;
+            if (isCloseButton) continue;
             if (isMenuButton) score += 220;
             if (id === 'menu-button') score += 160;
           } else if (wantsMenuClose) {
-            if (isCloseButton || className.includes('modal-close')) score += 260;
+            if (!isCloseButton && !isMenuButton) continue;
+            if (isCloseButton) score += 320;
+            if (className.includes('modal-close')) score += 140;
             if (isMenuButton) score += 80;
           }
         }
@@ -495,6 +521,9 @@ async function executeBrowserTask(task) {
     const preferredUrl = extractUrl(task) || 'https://www.google.com';
     const tabs = await ensureChromeReady(preferredUrl);
     const tab = tabs[0];
+    if (extractUrl(task)) {
+      await navigateTab(tab.id, preferredUrl).catch(err => log(`Tab reset failed, continuing: ${err.message}`));
+    }
     log(`Executing on tab: ${tab.title} (ID: ${tab.id})`);
 
     const results = [];

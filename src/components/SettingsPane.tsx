@@ -4981,9 +4981,34 @@ function QuotasSection() {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "var(--text-1)" }}>
-                  {name}
-                </h3>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      fontSize: "18px",
+                      lineHeight: 1,
+                      filter: `drop-shadow(0 0 6px ${
+                        q.overallPercentage > 80
+                          ? "#10b981aa"
+                          : q.overallPercentage > 50
+                          ? "#3b82f6aa"
+                          : q.overallPercentage > 20
+                          ? "#ec4899aa"
+                          : "#ef4444aa"
+                      })`
+                    }}
+                  >
+                    {q.overallPercentage > 80
+                      ? "😊"
+                      : q.overallPercentage > 50
+                      ? "🙂"
+                      : q.overallPercentage > 20
+                      ? "😐"
+                      : "😰"}
+                  </span>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "var(--text-1)" }}>
+                    {name}
+                  </h3>
+                </div>
                 {q.label && (
                   <span
                     style={{
