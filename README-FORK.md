@@ -57,7 +57,13 @@ Ce panneau gère les serveurs de protocole de contexte de modèle :
 * **📋 Sélection et Copie de Texte dans le Chat** :
   * *Bénéfice* : Permet de sélectionner et copier librement le texte des messages (réponses de l'assistant, extraits de code, questions et messages système) directement depuis la fenêtre de discussion, une action qui était auparavant bloquée par l'interface.
 * **🚀 Lancement et Exécution des Fichiers directement depuis les liens du Chat** :
-  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier généré par l'IA dans la zone de discussion (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour faire apparaître un menu contextuel permettant de l'exécuter/le lancer directement (**"Execute / Run"**), de l'afficher dans le dossier parent (**"Reveal in Explorer"**) ou de l'ouvrir dans l'éditeur. C'est la solution ultime pour contourner les limitations de clic des liens locaux !
-* **📁 Option "Execute / Run" au clic droit dans l'Explorateur de Fichiers (barre latérale)** :
-  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel fichier de l'explorateur (barre latérale gauche) et de cliquer sur **"Execute / Run"** pour l'ouvrir ou le lancer directement sur le système d'exploitation Windows. Idéal pour lancer des installateurs, des scripts ou tout document avec son application par défaut.
+  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier ou chemin généré par l'IA dans vos bulles de discussion du chat (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour afficher un menu contextuel et l'exécuter directement (**"Execute / Run"**), l'ouvrir dans l'éditeur ou révéler son dossier d'origine dans l'Explorateur Windows. C'est la solution ultime pour contourner le blocage des liens locaux !
+
+---
+
+### 5. Dans l'Explorateur de Fichiers (Barre latérale)
+
+* **📁 Option "Execute / Run" au clic droit** :
+  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel fichier présent dans la barre latérale gauche (explorateur de projet) et de l'ouvrir ou de l'exécuter instantanément sur votre système Windows (comme lancer des installateurs, exécuter des scripts, ou ouvrir des images/PDF avec leur application système par défaut).
+
 
