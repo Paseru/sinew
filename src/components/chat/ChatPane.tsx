@@ -2866,22 +2866,24 @@ export function ChatPane({
           onClick={scrollToLastQuestion}
           title="Cliquez pour faire défiler jusqu'à la question"
         >
-          <span className="chat-sticky-question__icon">
-            <Icon icon="solar:pin-bold-duotone" width={13} height={13} />
-          </span>
-          <div className="chat-sticky-question__content">
-            <span className="chat-sticky-question__label">Dernière question :</span>
-            <span className="chat-sticky-question__text">
+          <div className="chat-sticky-question__main">
+            <div className="chat-sticky-question__header">
+              <span className="chat-sticky-question__icon">
+                <Icon icon="solar:pin-bold-duotone" width={13} height={13} />
+              </span>
+              <span className="chat-sticky-question__label">Dernière question posée</span>
+              <button 
+                type="button"
+                className="chat-sticky-question__scroll-btn"
+                aria-label="Défiler vers la question"
+              >
+                <Icon icon="solar:arrow-up-linear" width={11} height={11} />
+              </button>
+            </div>
+            <div className="chat-sticky-question__body">
               {lastUserTextBlock.text}
-            </span>
+            </div>
           </div>
-          <button 
-            type="button"
-            className="chat-sticky-question__scroll-btn"
-            aria-label="Défiler vers la question"
-          >
-            <Icon icon="solar:arrow-up-linear" width={11} height={11} />
-          </button>
         </div>
       )}
       <div className="chat-body" ref={bodyRef}>

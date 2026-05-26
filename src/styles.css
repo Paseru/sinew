@@ -9123,17 +9123,14 @@ textarea {
   right: 0;
   z-index: 25;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(20, 21, 24, 0.95); /* Deep dark background matching var(--bg-2) with alpha */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 16, 19, 0.98); /* Deeper background for maximum readability */
+  border-left: 3px solid var(--accent-2); /* Highlight border on the left (lavender) */
   border-bottom: 1px solid var(--line-strong);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   cursor: pointer;
-  animation: slide-down 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slide-down 180ms cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
+  padding: 10px 14px;
 }
 
 @keyframes slide-down {
@@ -9148,38 +9145,41 @@ textarea {
 }
 
 .chat-sticky-question:hover {
-  background: var(--bg-3);
+  background: var(--bg-2);
+}
+
+.chat-sticky-question__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-sticky-question__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
 .chat-sticky-question__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-2); /* Beautiful lavender primary accent color */
+  color: var(--accent-2);
   flex-shrink: 0;
-}
-
-.chat-sticky-question__content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-ui);
-  font-size: var(--fs-xs);
 }
 
 .chat-sticky-question__label {
-  color: var(--text-3);
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.chat-sticky-question__text {
-  color: var(--text-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--accent-2); /* Brightened to lavender to make it stand out */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+  min-width: 0;
 }
 
 .chat-sticky-question__scroll-btn {
@@ -9189,16 +9189,41 @@ textarea {
   width: 18px;
   height: 18px;
   padding: 0;
-  background: transparent;
-  border: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
   border-radius: var(--r-micro);
-  color: var(--text-3);
+  color: var(--text-2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 120ms ease, color 120ms ease;
+  transition: all 120ms ease;
 }
 
 .chat-sticky-question:hover .chat-sticky-question__scroll-btn {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-1);
+  background: var(--accent-2-soft);
+  border-color: var(--accent-2);
+  color: var(--text-0);
+}
+
+.chat-sticky-question__body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: var(--text-0); /* Brightest text color for maximum visibility */
+  line-height: 1.45;
+  white-space: pre-wrap; /* Wrap properly, including newlines */
+  word-break: break-word;
+  max-height: 100px; /* Prevent it from taking too much space if the prompt is massive */
+  overflow-y: auto; /* Internal scrollbar if exceptionally long */
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for sticky question body */
+.chat-sticky-question__body::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-sticky-question__body::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 2px;
+}
+.chat-sticky-question__body::-webkit-scrollbar-thumb:hover {
+  background: var(--line-bold);
 }
