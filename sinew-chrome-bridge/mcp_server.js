@@ -175,7 +175,18 @@ async function executeBrowserTask(task) {
               const cleanTask = targetText
                 .replace(/\\b(cliquez|clique|cliquer|click|ouvrir|ouvre|open|press|selectionne|sélectionne|va sur|aller|type|tape|saisir|écrire|ecris|saisis|dans|sur|le|la|les|un|une|et|du|de|des|site|web|page|url|navigate|navigue)\\b/g, " ")
                 .trim();
-              const queryWords = cleanTask.split(/\\s+/).filter(w => w.length >= 1);
+              const queryWordsRaw = cleanTask.split(/\\s+/).filter(w => w.length >= 1);
+              const semanticWords = [];
+              if (queryWordsRaw.some(w => w === "hamburger" || w === "burger" || w === "menu")) {
+                semanticWords.push("menu", "hamburger", "burger", "nav", "toggle");
+              }
+              if (queryWordsRaw.some(w => w === "bouton" || w === "button")) {
+                semanticWords.push("btn", "button", "bouton");
+              }
+              if (queryWordsRaw.some(w => w === "recherche" || w === "chercher" || w === "search")) {
+                semanticWords.push("search", "query", "q", "recherche", "find");
+              }
+              const queryWords = Array.from(new Set([...queryWordsRaw, ...semanticWords]));
 
               let bestEl = null;
               let bestScore = -1;
