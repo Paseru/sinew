@@ -14,15 +14,13 @@ if not os.path.exists(db_path):
 
 # Configure the browser-use server settings dynamically
 script_dir = os.path.dirname(os.path.abspath(__file__))
-python_path = os.path.join(home_dir, "AppData", "Local", "Programs", "Python", "Python314", "python.exe")
-if not os.path.exists(python_path):
-    python_path = "python"
+bridge_bat = os.path.join(script_dir, "run_sinew_bridge.bat")
 
 new_server = {
     "id": "browser-use",
     "name": "Sinew Chrome",
-    "command": python_path,
-    "args": ["-m", "mcp_server_browser_use"],
+    "command": bridge_bat,
+    "args": [],
     "env": [
         {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"}
     ],
