@@ -325,6 +325,44 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ success: false, error: e.message }));
     }
   }
+  else if (pathname === '/api/execute_silent_task') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    const tabId = parsedUrl.query.tabId;
+    const task = parsedUrl.query.task;
+    
+    if (!tabId || !task) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ success: false, error: "Missing tabId or task parameter" }));
+      return;
+    }
+    
+    if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+    
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => {
+        res.writeHead(200);
+        res.end(JSON.stringify(data));
+      },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: "Timeout waiting for extension response" }));
+      }, 15000)
+    });
+    
+    extensionSocket.send(JSON.stringify({
+      id: requestId,
+      command: "execute_silent_task",
+      params: { tabId: parseInt(tabId), task }
+    }));
+  }
   else if (pathname === '/cowork') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     const html = `

@@ -295,6 +295,39 @@ async function handleMessage(msg) {
         });
         break;
 
+      case "execute_silent_task":
+        const silentTabId = parseInt(params.tabId);
+        const { task: silentTask } = params;
+        
+        runLocked(async () => {
+          return new Promise(async (resolve) => {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const match = silentTask.match(urlRegex);
+            const urlToNavigate = match ? match[0] : null;
+
+            if (urlToNavigate) {
+              console.log(`🧬 [Bridge] Silent navigating tab ${silentTabId} to ${urlToNavigate}`);
+              chrome.tabs.update(silentTabId, { url: urlToNavigate });
+              await new Promise(r => setTimeout(r, 4500));
+            }
+
+            ensureCursorInjected(silentTabId).then(() => {
+              chrome.tabs.sendMessage(silentTabId, { type: "RUN_SILENT_TASK", task: silentTask }, (response) => {
+                if (chrome.runtime.lastError) {
+                  sendResponse(id, { success: false, error: chrome.runtime.lastError.message });
+                } else {
+                  sendResponse(id, response);
+                }
+                resolve();
+              });
+            }).catch((err) => {
+              sendResponse(id, { success: false, error: err.message });
+              resolve();
+            });
+          });
+        });
+        break;
+
       default:
         sendResponse(id, { success: false, error: `Unknown command: ${command}` });
     }
