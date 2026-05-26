@@ -9124,7 +9124,7 @@ textarea {
   z-index: 25;
   display: flex;
   background: rgba(15, 16, 19, 0.98); /* Deeper background for maximum readability */
-  border-left: 3px solid var(--accent); /* Highlight border on the left (electric blue) */
+  border-left: 3px solid var(--text-2); /* Clean, modern light gray border on the left */
   border-bottom: 1px solid var(--line-strong);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   cursor: pointer;
@@ -9154,18 +9154,6 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  animation: fade-in 220ms cubic-bezier(0.16, 1, 0.3, 1); /* SOTA fade-in animation between questions */
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .chat-sticky-question__header {
@@ -9179,14 +9167,14 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent); /* Primary blue accent color */
+  color: var(--text-2); /* Clean light gray */
   flex-shrink: 0;
 }
 
 .chat-sticky-question__label {
   font-family: var(--font-ui);
   font-size: 10px;
-  color: var(--accent); /* Electric blue to match brand */
+  color: var(--text-3); /* Modern dark gray for label */
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -9211,21 +9199,33 @@ textarea {
 }
 
 .chat-sticky-question:hover .chat-sticky-question__scroll-btn {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+  background: var(--bg-3);
+  border-color: var(--text-3);
   color: var(--text-0);
 }
 
 .chat-sticky-question__body {
   font-family: var(--font-ui);
   font-size: var(--fs-sm);
-  color: var(--text-0); /* Brightest text color for maximum visibility */
+  color: var(--text-1); /* Light gray for superb contrast on dark background */
   line-height: 1.45;
   white-space: pre-wrap; /* Wrap properly, including newlines */
   word-break: break-word;
   max-height: 100px; /* Prevent it from taking too much space if the prompt is massive */
   overflow-y: auto; /* Internal scrollbar if exceptionally long */
   padding-right: 4px;
+  animation: fade-in 180ms ease-out; /* Smooth text-only fade-in when changing questions */
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Custom scrollbar for sticky question body */
