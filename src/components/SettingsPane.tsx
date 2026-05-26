@@ -1388,6 +1388,28 @@ function AboutSection({
 
   const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
 
+  const [sotaData, setSotaData] = useState<any>(null);
+  const [loadingSota, setLoadingSota] = useState<boolean>(false);
+  const [sotaError, setSotaError] = useState<string | null>(null);
+
+  const runSotaDiagnostics = useCallback(async () => {
+    setLoadingSota(true);
+    setSotaError(null);
+    try {
+      const dataStr = await api.checkSotaDiagnostics();
+      const parsed = JSON.parse(dataStr);
+      setSotaData(parsed);
+    } catch (err: any) {
+      setSotaError(err.toString());
+    } finally {
+      setLoadingSota(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    runSotaDiagnostics();
+  }, [runSotaDiagnostics]);
+
   useEffect(() => {
     api.isMultiPcSyncEnabled().then((enabled) => {
       setMultiPcSync(enabled);
@@ -1543,6 +1565,137 @@ function AboutSection({
             Disabled
           </button>
         </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="settings-pane__about-card-copy">
+            <h2>{locale === "fr" ? "Diagnostic Système SOTA" : "SOTA System Diagnostics"}</h2>
+            <p>
+              {locale === "fr"
+                ? "Vérifiez en temps réel le statut et la version de vos outils système indispensables."
+                : "Check the real-time status and version of your essential system tools."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="settings-pane__button"
+            onClick={runSotaDiagnostics}
+            disabled={loadingSota}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              backgroundColor: "var(--bg-accent, #3b82f6)",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: 500,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            {loadingSota ? (
+              <Icon icon="eos-icons:loading" width={14} height={14} />
+            ) : (
+              <Icon icon="solar:refresh-linear" width={14} height={14} />
+            )}
+            {locale === "fr" ? "Actualiser" : "Refresh"}
+          </button>
+        </div>
+
+        {sotaError && (
+          <div style={{ color: "#ef4444", fontSize: "13px", padding: "8px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.1)" }}>
+            Error: {sotaError}
+          </div>
+        )}
+
+        {sotaData && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 12px",
+              borderRadius: "6px",
+              backgroundColor: sotaData.status === "ok" ? "rgba(34, 197, 94, 0.1)" : "rgba(234, 179, 8, 0.1)",
+              border: `1px solid ${sotaData.status === "ok" ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}`,
+              fontSize: "13px",
+              color: sotaData.status === "ok" ? "#22c55e" : "#eab308"
+            }}>
+              <Icon
+                icon={sotaData.status === "ok" ? "solar:check-circle-bold" : "solar:danger-bold"}
+                width={18}
+                height={18}
+              />
+              <span>
+                {locale === "fr"
+                  ? (sotaData.status === "ok"
+                      ? "Tous les outils système SOTA sont installés et configurés."
+                      : "Certains outils système SOTA ou dépendances sont manquants.")
+                  : sotaData.message}
+              </span>
+            </div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: "10px"
+            }}>
+              {Object.entries(sotaData.tools || {}).map((entry) => {
+                const name = entry[0];
+                const info = entry[1] as any;
+                const isAvailable = info.available;
+                return (
+                  <div
+                    key={name}
+                    style={{
+                      padding: "12px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--bg-card, rgba(255, 255, 255, 0.03))",
+                      border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: 600, textTransform: "capitalize", fontSize: "14px" }}>
+                        {name}
+                      </span>
+                      <span style={{
+                        fontSize: "11px",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontWeight: 600,
+                        backgroundColor: isAvailable ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                        color: isAvailable ? "#22c55e" : "#ef4444"
+                      }}>
+                        {isAvailable ? (locale === "fr" ? "Disponible" : "Available") : (locale === "fr" ? "Manquant" : "Missing")}
+                      </span>
+                    </div>
+
+                    {isAvailable ? (
+                      <div style={{ fontSize: "11px", opacity: 0.8, display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={info.version || ""}>
+                          <strong>Version:</strong> {info.version || "Unknown"}
+                        </div>
+                        <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={info.path || ""}>
+                          <strong>Path:</strong> {info.path || "N/A"}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "11px", color: "#ef4444", fontStyle: "italic" }}>
+                        {info.error || (locale === "fr" ? "Exécutable introuvable dans le PATH" : "Executable not found in PATH")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="settings-pane__about-links">
