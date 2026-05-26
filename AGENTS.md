@@ -280,3 +280,22 @@
     │   ├── models.ts
     │   ├── recents.ts
     │   └── tools.ts
+└── sinew-chrome-bridge
+    ├── add_to_sinew.py
+    ├── background.js
+    ├── com.sinew.chrome_bridge.json
+    ├── mcp_server.js
+    ├── native-host-wrapper.exe
+    ├── native_host.bat
+    ├── package-lock.json
+    ├── package.json
+    ├── popup.html
+    ├── popup.js
+    ├── register.ps1
+    ├── run_sinew_bridge.bat
+    ├── server.js
+    ├── sinew_cursor.js
+    └── native-host-wrapper
+        ├── Cargo.toml
+        └── src
+            └── main.rs

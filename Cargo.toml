@@ -8,7 +8,7 @@ members = [
     "crates/sinew-openai",
     "crates/sinew-openrouter",
     "crates/sinew-app",
-    "src-tauri",
+    "src-tauri", "sinew-chrome-bridge/native-host-wrapper",
 ]
 
 [workspace.package]
