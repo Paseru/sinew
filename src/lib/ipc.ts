@@ -55,6 +55,9 @@ export const api = {
       input: { workspacePath },
     });
   },
+  getOrCreateSandboxWorkspace() {
+    return invoke<string>("get_or_create_sandbox_workspace");
+  },
   gitSnapshot(workspacePath: string) {
     return invoke<GitRepositorySnapshot>("git_repository_snapshot_command", {
       input: { workspacePath },

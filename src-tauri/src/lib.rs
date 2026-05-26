@@ -535,6 +535,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             workspace::open_workspace,
             workspace::open_new_window,
+            workspace::get_or_create_sandbox_workspace,
             workspace::reset_window_title,
             workspace::watch_workspace_command,
             workspace::unwatch_workspace_command,

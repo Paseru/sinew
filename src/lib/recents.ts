@@ -42,6 +42,24 @@ export function loadLastWorkspace(): string | null {
   }
 }
 
+export function clearLastWorkspace(): void {
+  try {
+    localStorage.removeItem(LAST_KEY);
+  } catch {}
+}
+
+export function removeRecent(path: string): RecentWorkspace[] {
+  const existing = loadRecents().filter((r) => r.path !== path);
+  try {
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(existing));
+    const last = localStorage.getItem(LAST_KEY);
+    if (last === path) {
+      localStorage.removeItem(LAST_KEY);
+    }
+  } catch {}
+  return existing;
+}
+
 export function deriveName(path: string): string {
   const trimmed = path.replace(/\/$/, "");
   const idx = trimmed.lastIndexOf("/");

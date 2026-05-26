@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Welcome } from "./components/Welcome";
 import { Workspace } from "./components/Workspace";
 import { UpdaterLockScreen } from "./components/UpdaterLockScreen";
-import { loadLastWorkspace, recordRecent, deriveName } from "./lib/recents";
+import { loadLastWorkspace, recordRecent, deriveName, clearLastWorkspace } from "./lib/recents";
 import { api } from "./lib/ipc";
 import type { UpdateInfo, WorkspaceBootstrap } from "./types";
 
@@ -28,7 +28,8 @@ export default function App() {
     setBootError(null);
     try {
       const bootstrap = await api.openWorkspace(path);
-      recordRecent(bootstrap.workspace.path, bootstrap.workspace.name);
+      const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : bootstrap.workspace.name;
+      recordRecent(bootstrap.workspace.path, displayName);
       setState({ kind: "workspace", bootstrap });
     } catch (err) {
       setBootError(String(err));
@@ -80,7 +81,8 @@ export default function App() {
       try {
         const bootstrap = await api.openWorkspace(last);
         if (cancelled) return;
-        recordRecent(bootstrap.workspace.path, bootstrap.workspace.name);
+        const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : bootstrap.workspace.name;
+        recordRecent(bootstrap.workspace.path, displayName);
         setState({ kind: "workspace", bootstrap });
       } catch {
         if (!cancelled) setState({ kind: "welcome" });

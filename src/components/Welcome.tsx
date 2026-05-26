@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Icon } from "@iconify/react";
-import { loadRecents } from "../lib/recents";
+import { loadRecents, removeRecent } from "../lib/recents";
 import { api } from "../lib/ipc";
 import type {
   ActiveTurnSummary,
@@ -92,6 +92,19 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     }
   };
 
+  const openSandbox = async () => {
+    if (picking) return;
+    setPicking(true);
+    try {
+      const sandboxPath = await api.getOrCreateSandboxWorkspace();
+      onPick(sandboxPath);
+    } catch {
+      // ignore
+    } finally {
+      setPicking(false);
+    }
+  };
+
   return (
     <div className="welcome">
       {IS_WINDOWS && (
@@ -119,24 +132,45 @@ export function Welcome({ onPick, error, deriveName }: Props) {
           <p className="welcome__tag">Your personal Agentic IDE</p>
         </header>
 
-        <button
-          className="welcome__cta"
-          onClick={pickFolder}
-          disabled={picking}
-        >
-          <span className="welcome__cta-icon">
-            <Icon icon="solar:folder-with-files-bold-duotone" width={22} height={22} />
-          </span>
-          <span className="welcome__cta-body">
-            <span className="welcome__cta-title">Open a folder</span>
-            <span className="welcome__cta-sub">
-              {picking ? "Opening…" : "Choose any directory to start a session"}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <button
+            className="welcome__cta"
+            onClick={pickFolder}
+            disabled={picking}
+          >
+            <span className="welcome__cta-icon">
+              <Icon icon="solar:folder-with-files-bold-duotone" width={22} height={22} />
             </span>
-          </span>
-          <span className="welcome__cta-chev">
-            <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
-          </span>
-        </button>
+            <span className="welcome__cta-body">
+              <span className="welcome__cta-title">Open a folder</span>
+              <span className="welcome__cta-sub">
+                {picking ? "Opening…" : "Choose any directory to start a session"}
+              </span>
+            </span>
+            <span className="welcome__cta-chev">
+              <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
+            </span>
+          </button>
+
+          <button
+            className="welcome__cta"
+            onClick={openSandbox}
+            disabled={picking}
+          >
+            <span className="welcome__cta-icon" style={{ background: "var(--accent-2-soft)", color: "var(--accent-2)" }}>
+              <Icon icon="solar:box-bold-duotone" width={22} height={22} />
+            </span>
+            <span className="welcome__cta-body">
+              <span className="welcome__cta-title">Use without folder (Sandbox)</span>
+              <span className="welcome__cta-sub">
+                Work on general tasks or system files without opening a project
+              </span>
+            </span>
+            <span className="welcome__cta-chev">
+              <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
+            </span>
+          </button>
+        </div>
 
         {error && (
           <div className="welcome__error">{error}</div>
@@ -149,11 +183,19 @@ export function Welcome({ onPick, error, deriveName }: Props) {
               {recents.slice(0, MAX_VISIBLE_RECENTS).map((recent) => {
                 const isActive = activeWorkspaces.has(recent.path);
                 return (
-                  <button
+                  <div
                     key={recent.path}
                     className="welcome__recent"
                     data-active={isActive ? "true" : "false"}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onPick(recent.path)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onPick(recent.path);
+                      }
+                    }}
                   >
                     <span className="welcome__recent-icon">
                       {isActive ? (
@@ -176,7 +218,22 @@ export function Welcome({ onPick, error, deriveName }: Props) {
                       </span>
                       <span className="welcome__recent-path">{recent.path}</span>
                     </span>
-                  </button>
+                    <button
+                      type="button"
+                      className="welcome__recent-remove"
+                      title="Remove from recents"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = removeRecent(recent.path);
+                        setRecents(next);
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <Icon icon="solar:close-circle-linear" width={16} height={16} />
+                    </button>
+                  </div>
                 );
               })}
             </div>

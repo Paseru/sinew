@@ -1613,9 +1613,10 @@ export function Workspace({
         );
       }
       const nextBootstrap = await api.openWorkspace(targetPath);
+      const displayName = nextBootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : nextBootstrap.workspace.name;
       recordRecent(
         nextBootstrap.workspace.path,
-        nextBootstrap.workspace.name,
+        displayName,
       );
       // Drop editor / settings / search state that belongs to the
       // outgoing workspace so the incoming one boots cleanly. The
@@ -1822,7 +1823,7 @@ export function Workspace({
             <div className="sidebar__head">
               <span className="sidebar__head-title">
                 <Icon icon="solar:folder-bold-duotone" width={16} height={16} />
-                <span>{bootstrap.workspace.name}</span>
+                <span>{bootstrap.workspace.name === ".sinew-sandbox" ? "Espace Fourtout (Sandbox)" : bootstrap.workspace.name}</span>
               </span>
               <span className="sidebar__head-actions">
                 <button

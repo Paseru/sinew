@@ -1,71 +1,62 @@
-# Sinew custom - mode simple
+# Guide de Julien (Power User) — Sinew Custom
 
-Ton fork public :
+Ce fichier regroupe toutes les fonctionnalités, configurations et scripts de ton fork personnalisé de **Sinew**.
 
-```text
-https://github.com/pironjulien/sinew
-```
+---
 
-Branche avec tes options :
+## 🚀 Le mode "Power User" : C'est quoi ?
 
-```text
-main
-```
+Oui ! Le bouton **Power User Mode** (situé dans `Settings > About`) est la clé. Lorsqu'il est activé, il configure l'environnement pour toi (un utilisateur exigeant mais non-développeur) :
+1. **Zéro Jargon** : L'assistant IA te répond de manière simple, concise et orientée vers l'action, sans jargon technique ou Git inutile.
+2. **Automatisation Git** : L'assistant gère les commits, les pushs et les synchronisations en arrière-plan pour que tu n'aies pas à taper de commandes Git compliquées.
 
-## Ce qui est en place
+---
 
-- Option `English / Français` dans `Settings > About`.
-- Règle globale intégrée : te répondre simple, concis, power-user, options SOTA sans jargon.
-- Dernière question posée fixée (sticky) en haut du chat pendant le défilement (défilement fluide vers la question au clic).
-- Correction Windows pour mieux trouver `git.exe`.
-- Correction Windows pour désactiver les warnings de compilation liés aux menus macOS/Linux (imports inutilisés).
-- Scripts pour que tu gères le moins possible Git.
-- **Diagnostic SOTA** : Bouton et panneau d'affichage visuel en temps réel dans Settings > About (ainsi que l'outil IA check_sota) pour tester instantanément et sans jargon si tes dépendances système de pointe (ripgrep/rg, git, python, rust/cargo, node, npm) sont installées et configurées.
+## ✨ Fonctionnalités et optimisations de ton Fork
 
-## Scripts utiles
+Ton fork contient plusieurs améliorations majeures par rapport à la version officielle de Sinew :
 
-Depuis ce dossier :
+- **Traduction Française Dynamique** : Option de langue intégrée dans `Settings > About` pour basculer instantanément toute l'interface en français.
+- **Sticky Question** : La dernière question posée reste fixée (sticky) en haut du chat pendant le défilement. Un simple clic dessus te ramène en haut de manière fluide.
+- **Diagnostic SOTA en temps réel** : Un bouton et un panneau visuel dans `Settings > About` (ainsi que l'outil IA `check_sota`) pour tester instantanément si tes outils système de pointe (Git, Node, Cargo, Python, Ripgrep) sont opérationnels.
+- **Corrections Windows** :
+  - Meilleure détection automatique de `git.exe` sur ton système.
+  - Suppression des avertissements (warnings) inutiles lors de la compilation sur Windows.
+- **Auto-enregistrement MCP & Logs** : Sauvegarde propre des logs de l'application dans `desktop-app.log` et détection automatique des serveurs MCP.
 
+---
+
+## 🛠️ Scripts utiles pour automatiser ton quotidien
+
+Pour te simplifier la vie, utilise ces scripts depuis la console (PowerShell) :
+
+### 1. Démarrer ta session de travail (Synchroniser)
+Avant de commencer à travailler sur ton projet, mets à jour ton code avec le dépôt officiel :
 ```powershell
 .\scripts\sinew-sync.ps1
 ```
 
-Met à jour depuis Sinew officiel.
-
+### 2. Sauvegarder tes modifications (sans compiler l'application)
+Si tu veux juste enregistrer ton travail actuel sur GitHub :
 ```powershell
-.\scripts\sinew-save.ps1
+.\scripts\sinew-save.ps1 -Message "Description de tes changements"
 ```
 
-Commit + push tes changements sur GitHub.
-
+### 3. Compiler et sauvegarder (Recommandé après modification)
+Pour compiler l'interface et envoyer tes modifications sur GitHub d'un coup :
 ```powershell
-.\scripts\sinew-build-save.ps1 -Message "Description courte"
+.\scripts\sinew-build-save.ps1 -Message "Description de tes changements"
 ```
 
-Build frontend + commit + push.
-
+### 4. Build complet de l'application installable (.exe)
+Si tu as installé Rust/Cargo et que tu veux générer l'installateur Windows final tout en le sauvegardant :
 ```powershell
-.\scripts\sinew-build-save.ps1 -FullApp -Message "Description courte"
+.\scripts\sinew-build-save.ps1 -FullApp -Message "Description"
 ```
+*Note : L'installateur généré se trouvera dans `src-tauri\target\release\bundle\`.*
 
-Build complet installable + commit + push. Nécessite Rust/Cargo.
+---
 
-## Règle simple
+## 🧹 Maintenance & Propreté du projet
 
-Quand tu ouvres ce repo pour travailler dessus :
-
-```powershell
-.\scripts\sinew-sync.ps1
-```
-
-Après une modification validée :
-
-```powershell
-.\scripts\sinew-build-save.ps1 -Message "Description courte"
-```
-
-Si tu veux juste sauvegarder sans build :
-
-```powershell
-.\scripts\sinew-save.ps1 -Message "Description courte"
-```
+Afin de garder le dossier de travail clair et professionnel, les fichiers temporaires et les patches obsolètes ont été nettoyés de la racine. Tout est maintenant directement intégré et versionné dans ton dépôt !

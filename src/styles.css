@@ -484,6 +484,30 @@ textarea {
   text-align: left;
 }
 
+.welcome__recent-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-3);
+  transition: color 120ms ease, background 120ms ease, opacity 120ms ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  flex: 0 0 auto;
+}
+.welcome__recent:hover .welcome__recent-remove,
+.welcome__recent:focus-within .welcome__recent-remove {
+  opacity: 1;
+}
+.welcome__recent-remove:hover {
+  color: var(--text-0);
+  background: var(--bg-5);
+}
+
 /* ---- empty + footer ------------------------------------------ */
 .welcome__empty {
   padding: 20px 22px;

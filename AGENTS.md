@@ -14,8 +14,8 @@ Code map:
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
+├── POWERUSER.md
 ├── README.md
-├── test-stop.md
 ├── scripts
 │   └── prepare-sidecars.mjs
 ├── tsconfig.json
