@@ -1,4 +1,4 @@
-﻿use serde_json::{json, Value};
+use serde_json::{json, Value};
 use sinew_core::ToolDescriptor;
 use std::path::PathBuf;
 use std::process::Command as StdCommand;
@@ -40,9 +40,31 @@ impl CheckSotaTool {
         let python_status = check_binary("python");
         results.insert("python".into(), python_status);
 
+        // 3b. Pip (pip / pip3)
+        let mut pip_status = check_binary("pip");
+        if !pip_status
+            .get("available")
+            .and_then(|a| a.as_bool())
+            .unwrap_or(false)
+        {
+            let pip3_status = check_binary("pip3");
+            if pip3_status
+                .get("available")
+                .and_then(|a| a.as_bool())
+                .unwrap_or(false)
+            {
+                pip_status = pip3_status;
+            }
+        }
+        results.insert("pip".into(), pip_status);
+
         // 4. Cargo / Rust
         let cargo_status = check_binary("cargo");
         results.insert("cargo".into(), cargo_status);
+
+        // 4b. Rust Compiler (rustc)
+        let rustc_status = check_binary("rustc");
+        results.insert("rustc".into(), rustc_status);
 
         // 5. Node
         let node_status = check_binary("node");
@@ -72,14 +94,17 @@ impl CheckSotaTool {
             "tools": results
         });
 
-        ToolRunResult::ok(serde_json::to_string_pretty(&output).unwrap_or_default(), Vec::new())
+        ToolRunResult::ok(
+            serde_json::to_string_pretty(&output).unwrap_or_default(),
+            Vec::new(),
+        )
     }
 }
 
 fn check_binary(name: &str) -> Value {
     let path = find_in_path(name);
     let available = path.is_some();
-    
+
     let mut version = None;
     let mut error = None;
 
@@ -97,7 +122,10 @@ fn check_binary(name: &str) -> Value {
                     version = Some(String::from_utf8_lossy(&output.stdout).trim().to_string());
                 } else {
                     let err_msg = String::from_utf8_lossy(&output.stderr).trim().to_string();
-                    error = Some(format!("Exit status: {}. Error: {}", output.status, err_msg));
+                    error = Some(format!(
+                        "Exit status: {}. Error: {}",
+                        output.status, err_msg
+                    ));
                 }
             }
             Err(e) => {
