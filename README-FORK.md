@@ -1,16 +1,16 @@
-# 🚀 Sinew Custom — Documentation du Fork Optimisé
+# 🛠️ Sinew — Notes de Version & Ajustements Apportés
 
 <p align="center">
-  <b>Une version améliorée, francisée et optimisée de l'environnement de développement IA Sinew.</b>
+  <b>Adaptation, traduction et ajustements spécifiques pour l'environnement de développement IA Sinew.</b>
   <br/>
-  <i>Ce fork intègre des fonctionnalités exclusives conçues pour éliminer la friction technique et offrir une expérience utilisateur fluide sur Windows.</i>
+  <i>Ce document détaille les ajouts, les corrections de bugs et les options pratiques intégrés à cette version pour faciliter la prise en main, notamment sous Windows.</i>
 </p>
 
 ---
 
-## 🌟 Fonctionnalités exclusives et améliorations
+## 📌 Détail des ajouts et corrections apportés
 
-Ce fork enrichit l'application officielle **Sinew** avec plusieurs optimisations majeures pour simplifier l'ergonomie et fiabiliser l'environnement de travail.
+Cette version intègre quelques modifications pratiques destinées à faciliter la compatibilité et le confort d'utilisation au quotidien.
 
 ### 1. 🌐 Traduction Intégrale en Français
 * **Fonctionnement** : Un sélecteur de langue dynamique est disponible dans le panneau `Settings > About`.
