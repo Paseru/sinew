@@ -26,12 +26,14 @@ Ce nouvel onglet regroupe les préférences globales de l'utilisateur :
     * **Détaillé** : Visibilité maximale. Les longs blocs de réflexion de l'IA restent affichés en entier une fois terminés, et toutes les modifications de fichiers s'affichent sans filtre.
     * **Compact** : Vue équilibrée. Les blocs de réflexion se replient automatiquement après la génération pour n'afficher qu'un bandeau résumé (ex: *Thinking (5.2s)*).
     * **Très compact** : Focus total. Les étapes de réflexion sont visibles en temps réel lors de l'écriture puis **disparaissent complètement** une fois le message final généré, évitant toute surcharge visuelle.
-* **🔄 Synchronisation Multi-PC** : 
+* **🔄 Synchronisation Multi-PC & Suivi des suppressions** : 
   * *Option* : **Synchronisation Multi-PC** (Activé / Désactivé).
-  * *Bénéfice* : Synchronise automatiquement les conversations et configurations de manière sécurisée entre différents ordinateurs via un espace OneDrive.
+  * *Bénéfice* : Synchronise automatiquement et de manière sécurisée vos conversations, configurations et préférences entre vos ordinateurs via votre espace OneDrive. Cette fonctionnalité inclut un moteur de fusion différentielle SQLite au démarrage et à la fermeture pour préserver vos données locales, ainsi qu'un suivi intelligent des suppressions pour empêcher les discussions supprimées sur un poste de réapparaître lors de la synchronisation.
 * **⚡ Diagnostic Système SOTA (State of the Art)** : 
   * *Option* : **Diagnostic Système SOTA** (avec bouton *Actualiser*).
-  * *Bénéfice* : Permet de tester instantanément en temps réel l'état, le chemin et la version des outils système indispensables (Git, Node, Rust/Cargo, Python, Ripgrep).
+  * *Bénéfice* : Permet de tester instantanément en temps réel l'état, le chemin exact et la version des outils et compilateurs système indispensables (Git, Node/Npm, Rust/Cargo/Rustc, Python/Pip, Ripgrep).
+* **📱 Interface Fluide & Responsive (Container Queries)** :
+  * *Bénéfice* : Les différents panneaux du menu des options et des configurations s'adaptent de manière fluide et dynamique grâce aux *Container Queries* CSS (au lieu de simples requêtes basées sur la taille de l'écran global). L'interface de paramétrage occupe ainsi intelligemment 100% de la largeur disponible pour un confort visuel optimal.
 
 ---
 
@@ -48,8 +50,8 @@ Ce panneau gère les comptes et modèles connectés à l'application :
 
 Ce panneau gère les serveurs de protocole de contexte de modèle :
 
-* **🌐 Sinew Chrome Bridge (Contrôle du Navigateur)** :
-  * *Bénéfice* : Connecte en direct le navigateur Google Chrome à Sinew via un serveur MCP local pré-configuré (*Sinew Chrome*). Permet à l'assistant IA d'interagir en temps réel avec les onglets ouverts, de lire des pages web ou d'exécuter des actions automatisées directement sur le navigateur de manière sécurisée (intégration *browser-use*).
+* **🌐 Sinew Chrome Bridge Ultra-Stable (Contrôle du Navigateur)** :
+  * *Bénéfice* : Connecte directement et en temps réel le navigateur Google Chrome à Sinew via un pont MCP local pré-configuré (*Sinew Chrome*). Cette architecture avancée intègre un wrapper compilé natif en Rust (`native-host-wrapper.exe`) pour une stabilité maximale sans plantage de scripts, résout automatiquement les conflits de ports réseau (`EADDRINUSE`) et pilote le navigateur avec des actions réalistes "humaines" (mouvements fluides du curseur de souris, clics basés sur le protocole CDP) pour contourner les protections anti-robots des sites web, sans exiger de clés API externes.
 
 ---
 
