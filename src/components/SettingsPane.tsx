@@ -1395,11 +1395,14 @@ function OptionsSection({
     }
   });
 
-  const [compactReasoning, setCompactReasoning] = useState<boolean>(() => {
+  const [compactReasoning, setCompactReasoning] = useState<"disabled" | "compact" | "very-compact">(() => {
     try {
-      return localStorage.getItem("sinew.compact-reasoning") === "true";
+      const val = localStorage.getItem("sinew.compact-reasoning");
+      if (val === "very-compact") return "very-compact";
+      if (val === "compact" || val === "true") return "compact";
+      return "disabled";
     } catch {
-      return false;
+      return "disabled";
     }
   });
 
@@ -1441,12 +1444,12 @@ function OptionsSection({
     window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: enabled }));
   };
 
-  const toggleCompactReasoning = (enabled: boolean) => {
+  const changeCompactReasoning = (value: "disabled" | "compact" | "very-compact") => {
     try {
-      localStorage.setItem("sinew.compact-reasoning", enabled ? "true" : "false");
+      localStorage.setItem("sinew.compact-reasoning", value);
     } catch {}
-    setCompactReasoning(enabled);
-    window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: enabled }));
+    setCompactReasoning(value);
+    window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: value }));
   };
 
   const toggleMultiPcSync = (enabled: boolean) => {
@@ -1521,31 +1524,40 @@ function OptionsSection({
 
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Réflexion compacte" : "Compact Reasoning"}</h2>
+          <h2>{locale === "fr" ? "Mode d'affichage" : "Display Mode"}</h2>
           <p>
             {locale === "fr"
-              ? "Masque par défaut les blocs de réflexion détaillés et n'affiche que les réponses finales."
-              : "Collapse detailed thought blocks by default and show only final answers."}
+              ? "Choisissez le niveau de détails techniques et de réflexion affichés dans le chat."
+              : "Choose the level of technical details and reasoning displayed in the chat."}
           </p>
         </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Compact Reasoning">
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Display Mode">
           <button
             type="button"
             role="radio"
-            aria-checked={compactReasoning}
-            data-active={compactReasoning ? "true" : "false"}
-            onClick={() => toggleCompactReasoning(true)}
+            aria-checked={compactReasoning === "very-compact"}
+            data-active={compactReasoning === "very-compact" ? "true" : "false"}
+            onClick={() => changeCompactReasoning("very-compact")}
           >
-            {locale === "fr" ? "Activé" : "Enabled"}
+            {locale === "fr" ? "Très compact" : "Very compact"}
           </button>
           <button
             type="button"
             role="radio"
-            aria-checked={!compactReasoning}
-            data-active={!compactReasoning ? "true" : "false"}
-            onClick={() => toggleCompactReasoning(false)}
+            aria-checked={compactReasoning === "compact"}
+            data-active={compactReasoning === "compact" ? "true" : "false"}
+            onClick={() => changeCompactReasoning("compact")}
           >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
+            {locale === "fr" ? "Compact" : "Compact"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={compactReasoning === "disabled"}
+            data-active={compactReasoning === "disabled" ? "true" : "false"}
+            onClick={() => changeCompactReasoning("disabled")}
+          >
+            {locale === "fr" ? "Détaillé" : "Detailed"}
           </button>
         </div>
       </div>

@@ -5624,21 +5624,24 @@ function BlockView({
   activeAgentName?: string;
   workspacePath: string;
 }) {
-  const [compact, setCompact] = useState(() => {
+  const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
     try {
-      return localStorage.getItem("sinew.compact-reasoning") === "true";
+      const val = localStorage.getItem("sinew.compact-reasoning");
+      if (val === "very-compact") return "very-compact";
+      if (val === "compact" || val === "true") return "compact";
+      return "disabled";
     } catch {
-      return false;
+      return "disabled";
     }
   });
 
   useEffect(() => {
     const handler = (event: Event) => {
-      const enabled = (event as CustomEvent<boolean>).detail;
-      setCompact(enabled);
+      const mode = (event as CustomEvent<"disabled" | "compact" | "very-compact">).detail;
+      setCompactMode(mode);
     };
-    window.addEventListener("sinew:compact-reasoning-changed", handler);
-    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler);
+    window.addEventListener("sinew:compact-reasoning-changed", handler as any);
+    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler as any);
   }, []);
 
   switch (block.kind) {
@@ -5811,7 +5814,7 @@ function BlockView({
         return null;
       }
       if (
-        compact &&
+        compactMode === "very-compact" &&
         !block.isError &&
         block.status !== "running" &&
         !isToolName(block.name, "question") &&

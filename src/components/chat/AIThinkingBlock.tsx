@@ -12,6 +12,17 @@ type Props = {
 
 const noopOpenFile = () => {};
 
+function readCompactReasoning(): "disabled" | "compact" | "very-compact" {
+  try {
+    const val = localStorage.getItem("sinew.compact-reasoning");
+    if (val === "very-compact") return "very-compact";
+    if (val === "compact" || val === "true") return "compact";
+    return "disabled";
+  } catch {
+    return "disabled";
+  }
+}
+
 export function AIThinkingBlock({
   content,
   isStreaming = false,
@@ -19,15 +30,11 @@ export function AIThinkingBlock({
   onOpenFile,
 }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [compact, setCompact] = useState(() => {
-    try {
-      return localStorage.getItem("sinew.compact-reasoning") === "true";
-    } catch {
-      return false;
-    }
+  const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
+    return readCompactReasoning();
   });
   const [isOpen, setIsOpen] = useState(() => {
-    if (compact) return false;
+    if (compactMode === "compact" || compactMode === "very-compact") return false;
     return isStreaming && content.trim().length > 0;
   });
   const prevStreamingRef = useRef(isStreaming);
@@ -47,23 +54,23 @@ export function AIThinkingBlock({
   }, [isStreaming]);
 
   useEffect(() => {
-    if (compact) return;
+    if (compactMode === "compact" || compactMode === "very-compact") return;
     if (isStreaming && hasContent && !prevHasContentRef.current) {
       setIsOpen(true);
     }
     prevHasContentRef.current = hasContent;
-  }, [hasContent, isStreaming, compact]);
+  }, [hasContent, isStreaming, compactMode]);
 
   useEffect(() => {
     const handler = (event: Event) => {
-      const enabled = (event as CustomEvent<boolean>).detail;
-      setCompact(enabled);
-      if (enabled) {
+      const mode = (event as CustomEvent<"disabled" | "compact" | "very-compact">).detail;
+      setCompactMode(mode);
+      if (mode === "compact" || mode === "very-compact") {
         setIsOpen(false);
       }
     };
-    window.addEventListener("sinew:compact-reasoning-changed", handler);
-    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler);
+    window.addEventListener("sinew:compact-reasoning-changed", handler as any);
+    return () => window.removeEventListener("sinew:compact-reasoning-changed", handler as any);
   }, []);
 
   useEffect(() => {
@@ -78,7 +85,7 @@ export function AIThinkingBlock({
 
   if (!hasContent) return null;
 
-  if (compact && !isStreaming) {
+  if (compactMode === "very-compact" && !isStreaming) {
     return null;
   }
 
