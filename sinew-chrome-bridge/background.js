@@ -249,11 +249,20 @@ async function handleMessage(msg) {
 
             const runAction = (taskText) => new Promise((actionResolve) => {
               ensureCursorInjected(silentTabId).then(() => {
-                chrome.tabs.sendMessage(silentTabId, { type: "RUN_SILENT_TASK", task: taskText }, (response) => {
+                chrome.tabs.sendMessage(silentTabId, { type: "RUN_SILENT_TASK", task: taskText }, async (response) => {
                   if (chrome.runtime.lastError) {
                     actionResolve({ success: false, error: chrome.runtime.lastError.message, task: taskText });
-                  } else {
-                    actionResolve({ ...(response || {}), task: taskText });
+                    return;
+                  }
+                  if (!response || response.success === false) {
+                    actionResolve({ ...(response || { success: false, error: 'No target response' }), task: taskText });
+                    return;
+                  }
+                  try {
+                    const performed = await performHumanCdpAction(silentTabId, response, taskText);
+                    actionResolve({ ...performed, task: taskText, target: response.target });
+                  } catch (err) {
+                    actionResolve({ success: false, error: err.message, task: taskText, target: response.target });
                   }
                 });
               }).catch((err) => {
@@ -299,6 +308,102 @@ function buildSilentActionTasks(task) {
   }
 
   return actions.length > 0 ? actions : [task];
+}
+
+function cdp(tabId, method, params = {}) {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.sendCommand({ tabId }, method, params, (result) => {
+      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+      else resolve(result || {});
+    });
+  });
+}
+
+async function attachDebuggerIfNeeded(tabId) {
+  if (attachedTabs.has(tabId)) return;
+  await new Promise((resolve, reject) => {
+    chrome.debugger.attach({ tabId }, "1.3", () => {
+      if (chrome.runtime.lastError && !chrome.runtime.lastError.message.includes("already attached") && !chrome.runtime.lastError.message.includes("Already attached")) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        attachedTabs.add(tabId);
+        resolve();
+      }
+    });
+  });
+}
+
+function humanPath(start, end, steps = 34) {
+  const points = [];
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const dist = Math.max(1, Math.hypot(dx, dy));
+  const curve = Math.min(120, Math.max(24, dist * 0.18));
+  const nx = -dy / dist;
+  const ny = dx / dist;
+  const c1 = { x: start.x + dx * 0.35 + nx * curve, y: start.y + dy * 0.35 + ny * curve };
+  const c2 = { x: start.x + dx * 0.72 - nx * curve * 0.55, y: start.y + dy * 0.72 - ny * curve * 0.55 };
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const u = 1 - ease;
+    points.push({
+      x: u * u * u * start.x + 3 * u * u * ease * c1.x + 3 * u * ease * ease * c2.x + ease * ease * ease * end.x,
+      y: u * u * u * start.y + 3 * u * u * ease * c1.y + 3 * u * ease * ease * c2.y + ease * ease * ease * end.y,
+    });
+  }
+  return points;
+}
+
+async function showCursor(tabId, x, y, moveSequence = ++cursorMoveSeq) {
+  await chrome.tabs.sendMessage(tabId, {
+    type: "AGENT_CURSOR_STATE",
+    state: { x, y, visible: true, moveSequence, sessionId: "session-" + tabId, turnId: "turn-human-cdp" }
+  }).catch(() => {});
+}
+
+async function performHumanCdpAction(tabId, detection, taskText) {
+  if (detection.action === 'scroll') {
+    await attachDebuggerIfNeeded(tabId);
+    await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseWheel", x: 500, y: 500, deltaX: 0, deltaY: detection.scrollY || 500 });
+    return { success: true, action: 'scroll', message: 'Scroll CDP humain effectué.' };
+  }
+
+  const target = detection.target;
+  if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y)) {
+    throw new Error('Invalid target bounding box');
+  }
+
+  await attachDebuggerIfNeeded(tabId);
+  await ensureCursorInjected(tabId);
+
+  const start = { x: Math.max(24, target.x - 260), y: Math.max(24, target.y + 160) };
+  const end = { x: target.x, y: target.y };
+  const points = humanPath(start, end, 38);
+  const sequence = ++cursorMoveSeq;
+
+  for (const p of points) {
+    const x = Math.round(p.x);
+    const y = Math.round(p.y);
+    await showCursor(tabId, x, y, sequence);
+    await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseMoved", x, y, button: "none" });
+    await new Promise(r => setTimeout(r, 12 + Math.random() * 18));
+  }
+
+  await new Promise(r => setTimeout(r, 140 + Math.random() * 90));
+  await chrome.tabs.sendMessage(tabId, { type: "AGENT_CLICK_EVENT", event: { x: end.x, y: end.y, type: "mousePressed", button: "left" } }).catch(() => {});
+  await cdp(tabId, "Input.dispatchMouseEvent", { type: "mousePressed", x: end.x, y: end.y, button: "left", clickCount: 1 });
+  await new Promise(r => setTimeout(r, 55 + Math.random() * 50));
+  await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseReleased", x: end.x, y: end.y, button: "left", clickCount: 1 });
+  await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: true, moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-cdp" } }).catch(() => {});
+  await new Promise(r => setTimeout(r, 220));
+
+  return {
+    success: true,
+    action: detection.action || 'click',
+    element: target.element,
+    message: `Clic humain CDP effectué à (${end.x}, ${end.y}) sur ${target.element?.tagName || 'target'}.`
+  };
 }
 
 function sendCDPCommand(msgId, tabId, method, cdpParams) {
