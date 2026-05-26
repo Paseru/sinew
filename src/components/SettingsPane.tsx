@@ -1319,6 +1319,22 @@ function AboutSection({
   locale: AppLocale;
   onLocaleChange: (locale: AppLocale) => void;
 }) {
+  const [powerUser, setPowerUser] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.power-user") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const togglePowerUser = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.power-user", enabled ? "true" : "false");
+    } catch {}
+    setPowerUser(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: enabled }));
+  };
+
   return (
     <div className="settings-pane__body settings-pane__body--about">
       <div className="settings-pane__about-hero">
@@ -1363,6 +1379,33 @@ function AboutSection({
             onClick={() => onLocaleChange("fr")}
           >
             Français
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>Power User Mode</h2>
+          <p>Enable automated background updates, code/Git automation, and ultra-concise plain language answers.</p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Power User Mode">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={powerUser}
+            data-active={powerUser ? "true" : "false"}
+            onClick={() => togglePowerUser(true)}
+          >
+            Enabled
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!powerUser}
+            data-active={!powerUser ? "true" : "false"}
+            onClick={() => togglePowerUser(false)}
+          >
+            Disabled
           </button>
         </div>
       </div>

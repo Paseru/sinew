@@ -263,6 +263,10 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Stopping team": "Arrêt de l’équipe",
   "Edit file": "Modifier un fichier",
   "Delete this conversation?": "Supprimer cette conversation ?",
+  "Power User Mode": "Mode Power User",
+  "Enable automated background updates, code/Git automation, and ultra-concise plain language answers.": "Active les mises à jour en arrière-plan, l'automatisation de Git, et les réponses ultra-concises.",
+  "Enabled": "Activé",
+  "Disabled": "Désactivé",
 };
 
 type RegexTranslation = [RegExp, (...matches: string[]) => string];
