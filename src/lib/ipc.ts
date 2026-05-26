@@ -454,6 +454,9 @@ export const api = {
   getOpenRouterProviderStatus() {
     return invoke<OpenRouterProviderStatus>("get_openrouter_provider_status");
   },
+  getOpenRouterKeyDetails() {
+    return invoke<any>("get_openrouter_key_details");
+  },
   validateOpenRouterApiKey(apiKey: string) {
     return invoke<OpenRouterProviderStatus>("validate_openrouter_api_key", {
       input: { apiKey },

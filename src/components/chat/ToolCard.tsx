@@ -506,9 +506,10 @@ function mcpTitleParts(name: string, summary?: string) {
     .map((part) => part.trim())
     .filter(Boolean);
   if (summaryParts && summaryParts.length >= 2) {
+    const meta = summaryParts.slice(1).join(" · ");
     return {
       main: `${mcpServerLabel(summaryParts[0])} ·`,
-      meta: summaryParts.slice(1).join(" · "),
+      meta: mcpToolLabel(meta),
     };
   }
   if (summaryParts && summaryParts.length === 1) {
@@ -520,7 +521,7 @@ function mcpTitleParts(name: string, summary?: string) {
 
   const [, rawServer, ...rawToolParts] = name.split("__");
   const server = mcpServerLabel(rawServer || "MCP", true);
-  const tool = genericMcpLabel(rawToolParts.join("__") || "tool");
+  const tool = mcpToolLabel(rawToolParts.join("__") || "tool", true);
   return {
     main: `${server} ·`,
     meta: tool,
@@ -777,6 +778,12 @@ function fallbackSwarmAgentColor(name: string): string {
   return TEAM_AGENT_COLORS[hash % TEAM_AGENT_COLORS.length];
 }
 
+function mcpToolLabel(value: string, generated = false): string {
+  const trimmed = value.trim();
+  if (/^run_browser_agent$/i.test(trimmed)) return "Local Chrome control";
+  return generated ? genericMcpLabel(trimmed) : trimmed;
+}
+
 function mcpServerLabel(value: string, generated = false): string {
   const trimmed = value.trim();
   const stripped = trimmed
@@ -784,6 +791,7 @@ function mcpServerLabel(value: string, generated = false): string {
     .replace(/^mcp[-_.\s]+/i, "")
     .trim();
   const label = stripped || trimmed || "MCP";
+  if (/^sinew\s+chrome(?:\s+[a-z])?$/i.test(label)) return "Sinew Chrome";
   return generated ? genericMcpLabel(label) : label;
 }
 

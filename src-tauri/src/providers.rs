@@ -1524,6 +1524,29 @@ pub(super) async fn get_openrouter_provider_status(
 }
 
 #[tauri::command]
+pub(super) async fn get_openrouter_key_details() -> std::result::Result<serde_json::Value, String> {
+    let api_key = load_default_openrouter_api_key().map_err(error_to_string)?;
+    let Some(api_key) = api_key else {
+        return Err("No OpenRouter API key found".to_string());
+    };
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://openrouter.ai/api/v1/auth/key")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+        .map_err(|err| format!("Failed to fetch OpenRouter key details: {err}"))?;
+    if !response.status().is_success() {
+        return Err(format!("OpenRouter returned status {}", response.status()));
+    }
+    let data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|err| format!("Failed to parse response: {err}"))?;
+    Ok(data)
+}
+
+#[tauri::command]
 pub(super) async fn validate_openrouter_api_key(
     state: State<'_, DesktopState>,
     input: ValidateOpenRouterApiKeyInput,

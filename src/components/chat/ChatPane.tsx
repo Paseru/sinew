@@ -27,6 +27,7 @@ import {
 import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
 import { api } from "../../lib/ipc";
+import { fetchProviderQuota, deductLocalQuota, type QuotaInfo } from "../../lib/quotas";
 import { canonicalToolName, isToolName } from "../../lib/tools";
 import {
   MODELS,
@@ -180,7 +181,7 @@ type Props = {
   ) => Promise<void>;
   onStop: () => Promise<void>;
   onOpenFile: (path: string) => void;
-  onOpenSettings: (section?: "providers") => void;
+  onOpenSettings: (section?: "providers" | "quotas") => void;
   externalDrops: ExternalDropFeed;
   dropZoneRef: RefObject<HTMLDivElement>;
 };
@@ -689,6 +690,40 @@ export function ChatPane({
   const modelEntry = availableModels.find((m) => m.value === model) ?? null;
   const displayModelEntry =
     modelEntry ?? allModels.find((m) => m.value === model) ?? null;
+
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
+  useEffect(() => {
+    const provider = displayModelEntry?.provider ?? "openai";
+    let active = true;
+
+    const update = async () => {
+      const q = await fetchProviderQuota(provider);
+      if (active) setQuota(q);
+    };
+
+    update();
+
+    const handleUpdate = () => {
+      update();
+    };
+
+    window.addEventListener("sinew:quota-updated", handleUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("sinew:quota-updated", handleUpdate);
+    };
+  }, [displayModelEntry?.provider]);
+
+  const wasStreamingRef = useRef(false);
+  useEffect(() => {
+    const wasStreaming = wasStreamingRef.current;
+    wasStreamingRef.current = isStreaming;
+    if (wasStreaming && !isStreaming) {
+      const provider = displayModelEntry?.provider ?? "openai";
+      deductLocalQuota(provider);
+    }
+  }, [isStreaming, displayModelEntry?.provider]);
   const availableThinking = modelEntry
     ? THINKING_LEVELS.filter((l) => modelEntry.thinking.includes(l.value))
     : [];
@@ -3380,11 +3415,44 @@ export function ChatPane({
                     setThinkingOpen(false);
                     setModeOpen(false);
                   }}
-                  title={selectorLocked ? "Model locked while streaming" : "Model"}
+                  title={selectorLocked ? "Model locked while streaming" : `Quota standard restants: ${quota ? quota.overallPercentage.toFixed(0) : 100}%. Cliquez sur le point pour ouvrir les réglages.`}
                 >
                   <span className="composer__picker-label">
                     {displayModelEntry?.label ?? "No models"}
                   </span>
+                  {quota && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        backgroundColor:
+                          quota.overallPercentage > 80
+                            ? "#10b981" // Vert
+                            : quota.overallPercentage > 50
+                            ? "#3b82f6" // Bleu
+                            : quota.overallPercentage > 20
+                            ? "#ec4899" // Rose
+                            : "#ef4444", // Rouge
+                        boxShadow: `0 0 6px ${
+                          quota.overallPercentage > 80
+                            ? "#10b981cc"
+                            : quota.overallPercentage > 50
+                            ? "#3b82f6cc"
+                            : quota.overallPercentage > 20
+                            ? "#ec4899cc"
+                            : "#ef4444cc"
+                        }`,
+                        cursor: "pointer",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenSettings("quotas");
+                      }}
+                      title="Cliquez pour gérer vos quotas"
+                    />
+                  )}
                   <Icon
                     icon="solar:alt-arrow-down-linear"
                     width={11}

@@ -8,6 +8,7 @@ const WebSocket = require('./node_modules/ws');
 const BRIDGE_ORIGIN = process.env.MCP_BROWSER_CDP_URL || 'http://localhost:29002';
 const CHROME_WAIT_MS = 20000;
 const BRIDGE_WAIT_MS = 20000;
+const cursorStateByTabId = new Map();
 
 // Log errors to stderr so they don't corrupt the stdout JSON-RPC stream
 function log(msg) {
@@ -212,6 +213,39 @@ function cdpConnect(tabId) {
   };
 }
 
+async function waitForPageInteractive(tabId, timeoutMs = 15000) {
+  const cdp = cdpConnect(tabId);
+  const deadline = Date.now() + timeoutMs;
+  let lastState = null;
+  try {
+    while (Date.now() < deadline) {
+      try {
+        const result = await cdp.send('Runtime.evaluate', {
+          expression: `(() => ({
+            href: location.href,
+            readyState: document.readyState,
+            hasBody: !!document.body,
+            textLength: (document.body?.innerText || '').length,
+            actionableCount: document.querySelectorAll('button, a, [role="button"], [onclick], article, section').length
+          }))()`,
+          returnByValue: true
+        });
+        const value = result?.result?.value || result?.value;
+        lastState = value || lastState;
+        if (value?.hasBody && value.readyState !== 'loading' && (value.actionableCount > 0 || value.textLength > 20)) {
+          return value;
+        }
+      } catch {
+        // The page can briefly reject Runtime.evaluate while navigating or reloading.
+      }
+      await sleep(350);
+    }
+    return lastState || { readyState: 'unknown' };
+  } finally {
+    cdp.close();
+  }
+}
+
 function humanPath(start, end, steps = 36) {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
@@ -236,14 +270,37 @@ function humanPath(start, end, steps = 36) {
 
 async function ensureCdpCursor(cdp) {
   const expression = `(() => {
-    if (window.__sinewCdpCursor) return true;
-    const root = document.createElement('div');
-    root.id = 'sinew-cdp-human-cursor';
-    root.style.cssText = 'position:fixed;left:0;top:0;width:28px;height:28px;z-index:2147483647;pointer-events:none;transform:translate3d(-100px,-100px,0);transition:none;filter:drop-shadow(0 0 6px rgba(255,107,0,.9)) drop-shadow(0 0 14px rgba(255,0,128,.55));';
-    root.innerHTML = '<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><path d="M4 2 L22 14 L14 16 L11 25 Z" fill="#fff" stroke="#111827" stroke-width="2"/><path d="M4 2 L22 14 L14 16 L11 25 Z" fill="none" stroke="#ff6b00" stroke-width="1" opacity=".85"/></svg>';
-    document.documentElement.appendChild(root);
-    window.__sinewCdpCursor = root;
+    const removeLegacyOverlays = () => {
+      const selectors = [
+        '#Sinew-agent-overlay-root',
+        '#sinew-agent-overlay-root',
+        '#codex-agent-overlay-root',
+        '#Codex-agent-overlay-root',
+        '[id$="-agent-overlay-root"]',
+        '[id*="agent-overlay-root"]'
+      ];
+      for (const selector of selectors) {
+        for (const node of document.querySelectorAll(selector)) {
+          if (node.id !== 'sinew-cdp-human-cursor') node.remove();
+        }
+      }
+    };
+
+    removeLegacyOverlays();
+
+    let root = window.__sinewCdpCursor;
+    if (!root || !root.isConnected || root.id !== 'sinew-cdp-human-cursor') {
+      document.querySelectorAll('#sinew-cdp-human-cursor').forEach(node => node.remove());
+      root = document.createElement('div');
+      root.id = 'sinew-cdp-human-cursor';
+      root.style.cssText = 'position:fixed;left:0;top:0;width:28px;height:28px;z-index:2147483647;pointer-events:none;transform:translate3d(-100px,-100px,0);transition:none;filter:drop-shadow(0 0 6px rgba(255,107,0,.9)) drop-shadow(0 0 14px rgba(255,0,128,.55));will-change:transform,opacity;';
+      root.innerHTML = '<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><path d="M4 2 L22 14 L14 16 L11 25 Z" fill="#fff" stroke="#111827" stroke-width="2"/><path d="M4 2 L22 14 L14 16 L11 25 Z" fill="none" stroke="#ff6b00" stroke-width="1" opacity=".85"/></svg>';
+      document.documentElement.appendChild(root);
+      window.__sinewCdpCursor = root;
+    }
+
     window.__sinewCdpCursorMove = (x, y, scale = 1) => {
+      window.__sinewCdpCursorPosition = { x: Math.round(x), y: Math.round(y) };
       root.style.opacity = '1';
       root.style.transform = 'translate3d(' + Math.round(x - 5) + 'px,' + Math.round(y - 4) + 'px,0) rotate(-12deg) scale(' + scale + ')';
     };
@@ -285,6 +342,12 @@ async function detectTargetViaCdp(tabId, taskText) {
       const semanticWords = [];
       if (queryWordsRaw.some(w => w === 'hamburger' || w === 'burger' || w === 'menu')) semanticWords.push('menu', 'hamburger', 'burger', 'nav', 'toggle');
       const queryWords = Array.from(new Set([...queryWordsRaw, ...semanticWords]));
+      if (taskText.includes('trinity')) {
+        const directTrinity = document.querySelector('[id*="trinity" i], [class*="trinity" i], [href*="trinity" i], [aria-label*="trinity" i], [title*="trinity" i]');
+        if (directTrinity && typeof directTrinity.scrollIntoView === 'function') {
+          directTrinity.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+        }
+      }
       let best = null;
       let bestScore = -1;
       for (const el of elements) {
@@ -317,8 +380,13 @@ async function detectTargetViaCdp(tabId, taskText) {
         if (el.tagName === 'BUTTON' || el.tagName === 'A' || role === 'button' || style.cursor === 'pointer') score += 25;
         if ((taskText.includes('hamburger') || taskText.includes('menu')) && (id.includes('menu') || ariaLabel.includes('menu') || className.includes('menu'))) score += 150;
         if (taskText.includes('trinity')) {
-          if (id.includes('trinity') || className.includes('trinity') || text.includes('trinity')) score += 260;
-          if (className.includes('social-icon')) score -= 260;
+          const hasTrinitySignal = id.includes('trinity') || className.includes('trinity') || text.includes('trinity') || href.includes('trinity') || ariaLabel.includes('trinity') || title.includes('trinity');
+          if (!hasTrinitySignal) continue;
+          score += 320;
+          if (id.includes('trinity')) score += 120;
+          if (className.includes('trinity')) score += 100;
+          if (el.tagName === 'ARTICLE' || className.includes('project-card')) score += 90;
+          if (className.includes('social-icon')) score -= 400;
           if (rect.width * rect.height > 5000) score += 60;
         }
         if (score > bestScore && score > 0) {
@@ -335,6 +403,26 @@ async function detectTargetViaCdp(tabId, taskText) {
   }
 }
 
+async function getCdpCursorStart(cdp, tabId, target) {
+  const saved = cursorStateByTabId.get(String(tabId));
+  if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+    return saved;
+  }
+
+  const expression = `(() => {
+    const pos = window.__sinewCdpCursorPosition;
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) return pos;
+    return { x: Math.round(window.innerWidth * 0.5), y: Math.round(window.innerHeight * 0.5) };
+  })()`;
+  try {
+    const result = await cdp.send('Runtime.evaluate', { expression, returnByValue: true });
+    const value = result?.result?.value || result?.value;
+    if (value && Number.isFinite(value.x) && Number.isFinite(value.y)) return value;
+  } catch {}
+
+  return { x: Math.max(24, target.x - 220), y: Math.max(24, target.y + 120) };
+}
+
 async function performHumanCdpClick(tabId, target) {
   if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y)) {
     throw new Error('Missing target coordinates for human CDP click');
@@ -343,7 +431,7 @@ async function performHumanCdpClick(tabId, target) {
   try {
     await cdp.send('Page.bringToFront');
     await ensureCdpCursor(cdp);
-    const start = { x: Math.max(24, target.x - 260), y: Math.max(24, target.y + 160) };
+    const start = await getCdpCursorStart(cdp, tabId, target);
     const end = { x: Math.round(target.x), y: Math.round(target.y) };
     for (const p of humanPath(start, end, 40)) {
       const x = Math.round(p.x);
@@ -358,6 +446,7 @@ async function performHumanCdpClick(tabId, target) {
     await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: end.x, y: end.y, button: 'left', clickCount: 1 });
     await sleep(55 + Math.random() * 55);
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: end.x, y: end.y, button: 'left', clickCount: 1 });
+    cursorStateByTabId.set(String(tabId), end);
     await sleep(250);
     return { success: true, action: 'human_cdp_click', message: `Human CDP click at (${end.x}, ${end.y})` };
   } finally {
@@ -366,12 +455,22 @@ async function performHumanCdpClick(tabId, target) {
 }
 
 async function executeAction(tabId, taskText, timeoutMs = 30000) {
-  const detection = await detectTargetViaCdp(tabId, taskText);
-  if (detection?.target) {
-    const performed = await performHumanCdpClick(tabId, detection.target);
-    return { detection, performed };
+  const deadline = Date.now() + timeoutMs;
+  let lastDetection = null;
+
+  await waitForPageInteractive(tabId, Math.min(10000, timeoutMs)).catch(() => null);
+
+  while (Date.now() < deadline) {
+    const detection = await detectTargetViaCdp(tabId, taskText);
+    lastDetection = detection;
+    if (detection?.target) {
+      const performed = await performHumanCdpClick(tabId, detection.target);
+      return { detection, performed };
+    }
+    await sleep(450);
   }
-  return detection;
+
+  return lastDetection || { success: false, error: 'No target found before timeout' };
 }
 
 // Execute the smart browser automation natively and silently (Codex-style local mode)
@@ -419,7 +518,7 @@ rl.on('line', async (line) => {
         result: {
           protocolVersion: '2024-11-05',
           capabilities: { tools: {} },
-          serverInfo: { name: 'sinew-chrome-mcp-native', version: '1.0.0' }
+          serverInfo: { name: 'Sinew Chrome', version: '1.0.0' }
         }
       }));
     } else if (method === 'tools/list') {

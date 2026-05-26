@@ -654,6 +654,7 @@ pub fn run() {
             providers::cancel_kimi_oauth_login,
             providers::disconnect_kimi_provider,
             providers::get_openrouter_provider_status,
+            providers::get_openrouter_key_details,
             providers::validate_openrouter_api_key,
             providers::disconnect_openrouter_provider,
             providers::list_openrouter_models,

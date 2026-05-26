@@ -762,7 +762,7 @@ function mcpSummaryFromMeta(
     typeof record.serverName === "string" ? record.serverName.trim() : "";
   const toolName =
     typeof record.toolName === "string" ? record.toolName.trim() : "";
-  if (serverName && toolName) return `${mcpServerLabel(serverName)} · ${toolName}`;
+  if (serverName && toolName) return `${mcpServerLabel(serverName)} · ${mcpToolLabel(toolName)}`;
   if (serverName) return mcpServerLabel(serverName);
   return undefined;
 }
@@ -770,8 +770,14 @@ function mcpSummaryFromMeta(
 function mcpSummaryFromName(name: string): string | undefined {
   const [, rawServer, ...rawToolParts] = name.split("__");
   const server = mcpServerLabel(rawServer || "MCP", true);
-  const tool = genericMcpLabel(rawToolParts.join("__") || "tool");
+  const tool = mcpToolLabel(rawToolParts.join("__") || "tool", true);
   return `${server} · ${tool}`;
+}
+
+function mcpToolLabel(value: string, generated = false): string {
+  const trimmed = value.trim();
+  if (/^run_browser_agent$/i.test(trimmed)) return "Local Chrome control";
+  return generated ? genericMcpLabel(trimmed) : trimmed;
 }
 
 function mcpServerLabel(value: string, generated = false): string {
@@ -781,6 +787,7 @@ function mcpServerLabel(value: string, generated = false): string {
     .replace(/^mcp[-_.\s]+/i, "")
     .trim();
   const label = stripped || trimmed || "MCP";
+  if (/^sinew\s+chrome(?:\s+[a-z])?$/i.test(label)) return "Sinew Chrome";
   return generated ? genericMcpLabel(label) : label;
 }
 

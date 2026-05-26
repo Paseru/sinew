@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { getAppLocale, setAppLocale, type AppLocale } from "../lib/locale";
 import { api } from "../lib/ipc";
+import { getLocalQuota, saveLocalQuota, resetLocalQuota, fetchProviderQuota, type QuotaInfo } from "../lib/quotas";
 import { canonicalToolName } from "../lib/tools";
 import { Markdown } from "./chat/Markdown";
 import { SinewMark } from "./SinewMark";
@@ -63,7 +64,7 @@ type Props = {
   workspacePath: string;
 };
 
-type Section = "options" | "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
+type Section = "options" | "about" | "providers" | "tools" | "mcp" | "skills" | "subagents" | "quotas";
 
 export function SettingsPane({ workspacePath }: Props) {
   const [section, setSection] = useState<Section>("options");
@@ -1241,6 +1242,21 @@ export function SettingsPane({ workspacePath }: Props) {
             {subAgentSettings.agents.length}
           </span>
         </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
+          data-active={section === "quotas" ? "true" : "false"}
+          onClick={() => setSection("quotas")}
+        >
+          <Icon
+            icon="solar:pie-chart-linear"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">Quotas</span>
+          <span className="settings-pane__nav-count" />
+        </button>
       </nav>
 
       <section className="settings-pane__main">
@@ -1357,7 +1373,7 @@ export function SettingsPane({ workspacePath }: Props) {
             onDeleteSkill={(skill) => void deleteSkill(skill)}
             onSaveSkillContent={saveSkillContent}
           />
-        ) : (
+        ) : section === "subagents" ? (
           <SubAgentsSection
             settings={subAgentSettings}
             selectedAgent={selectedSubAgent}
@@ -1372,7 +1388,9 @@ export function SettingsPane({ workspacePath }: Props) {
             onSave={() => void saveSubAgents()}
             onUpdate={updateSubAgent}
           />
-        )}
+        ) : section === "quotas" ? (
+          <QuotasSection />
+        ) : null}
       </section>
     </div>
   );
@@ -4860,5 +4878,204 @@ function humanizeToolName(name: string): string {
     .trim();
   if (!spaced) return name;
   return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+}
+
+function QuotasSection() {
+  const [quotas, setQuotas] = useState<Record<string, QuotaInfo>>({});
+  const [loading, setLoading] = useState(true);
+
+  const loadAllQuotas = useCallback(async () => {
+    const list = ["openai", "anthropic", "google", "kimi", "openrouter"];
+    const results: Record<string, QuotaInfo> = {};
+    for (const p of list) {
+      results[p] = await fetchProviderQuota(p);
+    }
+    setQuotas(results);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadAllQuotas();
+    const handleUpdate = () => {
+      void loadAllQuotas();
+    };
+    window.addEventListener("sinew:quota-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("sinew:quota-updated", handleUpdate);
+    };
+  }, [loadAllQuotas]);
+
+  const handleRefill = (providerId: string) => {
+    resetLocalQuota(providerId);
+    void loadAllQuotas();
+  };
+
+  const handleManualAdjust = (providerId: string, value: number, type: "5h" | "week") => {
+    const q = getLocalQuota(providerId);
+    const limit = type === "5h" ? q.limit5h : q.limitWeek;
+    const newValue = (value / 100) * limit;
+
+    if (type === "5h") {
+      saveLocalQuota(providerId, newValue, q.remainingWeek);
+    } else {
+      saveLocalQuota(providerId, q.remaining5h, newValue);
+    }
+    void loadAllQuotas();
+  };
+
+  const formatMinutes = (minutes: number) => {
+    const hrs = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hrs}h ${mins}m`;
+  };
+
+  const providerNames: Record<string, string> = {
+    openai: "OpenAI / Codex Mode",
+    anthropic: "Anthropic / Claude",
+    google: "Google / Antigravity",
+    kimi: "Kimi / Moonshot",
+    openrouter: "OpenRouter",
+  };
+
+  return (
+    <div className="settings-section">
+      <div className="settings-section__header">
+        <h2 className="settings-section__title">Suivi des Quotas d'Utilisation</h2>
+        <p className="settings-section__subtitle">
+          Visualisez et ajustez vos limites d'utilisation par fournisseur. Sinew récupère ces informations sans consommer de tokens.
+        </p>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginTop: "16px" }}>
+        {Object.entries(providerNames).map(([id, name]) => {
+          const q = quotas[id] || getLocalQuota(id);
+          const color5h =
+            q.percentage5h > 80
+              ? "#10b981"
+              : q.percentage5h > 50
+              ? "#3b82f6"
+              : q.percentage5h > 20
+              ? "#ec4899"
+              : "#ef4444";
+
+          const colorWeek =
+            q.percentageWeek > 80
+              ? "#10b981"
+              : q.percentageWeek > 50
+              ? "#3b82f6"
+              : q.percentageWeek > 20
+              ? "#ec4899"
+              : "#ef4444";
+
+          return (
+            <div
+              key={id}
+              style={{
+                background: "var(--bg-2)",
+                border: "1px solid var(--border-3)",
+                borderRadius: "8px",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "var(--text-1)" }}>
+                  {name}
+                </h3>
+                {q.label && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      background: "var(--bg-3)",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      color: "var(--text-2)",
+                    }}
+                  >
+                    {q.label}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                {/* 5h Quota Block */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+                    <span style={{ color: "var(--text-2)" }}>Quota rapide (5h)</span>
+                    <span style={{ fontWeight: 600, color: color5h }}>
+                      {formatMinutes(q.remaining5h)} / 5h ({q.percentage5h.toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div style={{ width: "100%", height: "8px", background: "var(--bg-3)", borderRadius: "4px", overflow: "hidden" }}>
+                    <div style={{ width: `${q.percentage5h}%`, height: "100%", background: color5h, borderRadius: "4px", transition: "width 0.3s ease" }} />
+                  </div>
+                  {!q.isReal && (
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={q.percentage5h}
+                      onChange={(e) => handleManualAdjust(id, parseInt(e.target.value), "5h")}
+                      style={{ cursor: "pointer", marginTop: "4px" }}
+                    />
+                  )}
+                </div>
+
+                {/* Week Quota Block */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+                    <span style={{ color: "var(--text-2)" }}>Quota hebdomadaire (50h)</span>
+                    <span style={{ fontWeight: 600, color: colorWeek }}>
+                      {formatMinutes(q.remainingWeek)} / 50h ({q.percentageWeek.toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div style={{ width: "100%", height: "8px", background: "var(--bg-3)", borderRadius: "4px", overflow: "hidden" }}>
+                    <div style={{ width: `${q.percentageWeek}%`, height: "100%", background: colorWeek, borderRadius: "4px", transition: "width 0.3s ease" }} />
+                  </div>
+                  {!q.isReal && (
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={q.percentageWeek}
+                      onChange={(e) => handleManualAdjust(id, parseInt(e.target.value), "week")}
+                      style={{ cursor: "pointer", marginTop: "4px" }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-3)" }}>
+                  {q.isReal
+                    ? "✓ Données réelles récupérées via l'API"
+                    : "Simulé localement (se décrémente à chaque message de l'assistant)"}
+                </span>
+                {!q.isReal && (
+                  <button
+                    type="button"
+                    onClick={() => handleRefill(id)}
+                    style={{
+                      background: "var(--bg-3)",
+                      border: "1px solid var(--border-2)",
+                      color: "var(--text-2)",
+                      padding: "4px 10px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Recharger
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
