@@ -2251,21 +2251,7 @@ function ProviderCard({
           )}
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {children}
-          {connected && quota?.kind === "unavailable" && (
-            <div
-              style={{
-                marginTop: "12px",
-                padding: "9px 10px",
-                background: "var(--bg-1)",
-                border: "1px solid var(--border-3, var(--line-1))",
-                borderRadius: "6px",
-                color: "var(--text-3)",
-                fontSize: "11px",
-              }}
-            >
-              Quotas réels non exposés par ce fournisseur. Aucun compteur simulé n'est affiché.
-            </div>
-          )}
+          {connected && quota && <QuotaInlinePanel quota={quota} />}
         </div>
       </div>
       <div className="settings-pane__provider-actions">
@@ -2349,6 +2335,94 @@ function ProviderCard({
   );
 }
 
+function formatResetLabel(value: number | string | null | undefined) {
+  if (value == null) return null;
+  const targetMs = typeof value === "number" ? value * 1000 : Date.parse(value);
+  if (!Number.isFinite(targetMs)) return null;
+  const deltaMs = Math.max(0, targetMs - Date.now());
+  const totalMinutes = Math.max(0, Math.round(deltaMs / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `reset ${hours}h${minutes ? ` ${minutes}m` : ""}`;
+  return `reset ${minutes}m`;
+}
+
+function formatWindowLabel(window: { label: string; windowMinutes?: number | null }) {
+  if (!window.windowMinutes) return window.label;
+  const hours = Math.round(window.windowMinutes / 60);
+  if (hours >= 1 && window.windowMinutes % 60 === 0) return `${window.label} (${hours}h)`;
+  return `${window.label} (${window.windowMinutes}m)`;
+}
+
+function QuotaBar({ item }: { item: { label: string; remainingPercent: number | null; windowMinutes?: number | null; resetAt?: number | null; resetTime?: string | null } }) {
+  const percent = item.remainingPercent;
+  const reset = formatResetLabel(item.resetAt ?? item.resetTime ?? null);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "11px" }}>
+        <span style={{ color: "var(--text-3)" }}>{formatWindowLabel(item)}</span>
+        <span style={{ color: "var(--text-2)", fontWeight: 600 }}>
+          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` · ${reset}` : ""}
+        </span>
+      </div>
+      <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
+        <div
+          style={{
+            width: `${percent ?? 0}%`,
+            height: "100%",
+            background: quotaColor(percent),
+            borderRadius: "2px",
+            transition: "width 0.3s ease",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function QuotaInlinePanel({ quota }: { quota: QuotaInfo }) {
+  if (quota.kind === "unavailable") {
+    return (
+      <div style={{ marginTop: "12px", color: "var(--text-3)", fontSize: "11px" }}>
+        {quota.label ?? "Quota non disponible"}
+      </div>
+    );
+  }
+
+  const creditLimit = quota.creditLimit;
+  const creditRemaining = quota.creditRemaining;
+  const windows = quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? [];
+
+  return (
+    <div
+      style={{
+        marginTop: "12px",
+        padding: "10px",
+        background: "var(--bg-1)",
+        border: "1px solid var(--border-3, var(--line-1))",
+        borderRadius: "6px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "9px",
+      }}
+    >
+      {quota.label && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
+      {quota.kind === "credits" ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+          <QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: windows.length > 1 ? "1fr 1fr" : "1fr", gap: "16px" }}>
+          {windows.map((item) => (
+            <QuotaBar key={item.label} item={item} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type OpenRouterProviderCardProps = {
   status: OpenRouterProviderStatus | null;
   models: OpenRouterModel[];
@@ -2419,10 +2493,6 @@ function OpenRouterProviderCard({
     };
   }, [connected]);
 
-  const formatCredits = (value: number | null | undefined) => {
-    if (value == null) return "—";
-    return `$${value.toFixed(2)}`;
-  };
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
   const statusLabel = connecting
@@ -2572,65 +2642,7 @@ function OpenRouterProviderCard({
           </div>
           <p>Use any OpenRouter model with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
-          {connected && quota?.kind === "credits" && (
-            <div
-              style={{
-                marginTop: "12px",
-                padding: "10px",
-                background: "var(--bg-1)",
-                border: "1px solid var(--border-3, var(--line-1))",
-                borderRadius: "6px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-              }}
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                {/* Key Limit */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Limite totale clé</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                      {formatCredits(quota.creditLimit)}
-                    </span>
-                  </div>
-                  <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        background: "#3b82f6",
-                        borderRadius: "2px",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Key Balance */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
-                    <span style={{ color: "var(--text-3)" }}>Solde clé restant</span>
-                    {quota.percentage != null && (
-                      <span style={{ fontWeight: 600, color: "var(--text-2)" }}>
-                        {formatCredits(quota.creditRemaining)} ({quota.percentage.toFixed(0)}%)
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: `${quota.percentage ?? 0}%`,
-                        height: "100%",
-                        background: quotaColor(quota.percentage),
-                        borderRadius: "2px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {connected && quota && <QuotaInlinePanel quota={quota} />}
         </div>
       </div>
 

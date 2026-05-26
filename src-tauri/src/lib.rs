@@ -62,7 +62,8 @@ use sinew_google::{
     generate_state as generate_google_state,
     load_default_auth_status as load_default_google_auth_status,
     oauth_authorize_url as google_oauth_authorize_url,
-    purge_legacy_oauth_if_needed as purge_legacy_google_oauth, GoogleAuthStatus, GoogleProvider,
+    purge_legacy_oauth_if_needed as purge_legacy_google_oauth, Credential as GoogleCredential,
+    GoogleAuthStatus, GoogleProvider,
     PkceCodes as GooglePkceCodes, MODEL_ID as GOOGLE_MODEL_ID,
 };
 use sinew_kimi::{
@@ -76,7 +77,8 @@ use sinew_kimi::{
 use sinew_openai::{
     all_auth_files, default_auth_path, delete_default_auth, exchange_oauth_code, generate_pkce,
     generate_state, load_auth_status, load_default_auth_status, oauth_authorize_url,
-    OpenAiAuthStatus, OpenAiProvider, PkceCodes, MODEL_ID as OPENAI_MODEL_ID,
+    Credential as OpenAiCredential, OpenAiAuthStatus, OpenAiProvider, PkceCodes,
+    MODEL_ID as OPENAI_MODEL_ID,
 };
 use sinew_openrouter::{
     delete_default_auth as delete_default_openrouter_auth,
@@ -639,6 +641,7 @@ pub fn run() {
             providers::cancel_openai_oauth_login,
             providers::disconnect_openai_provider,
             providers::get_all_openai_accounts,
+            providers::get_openai_codex_rate_limits,
             providers::disconnect_openai_account,
             providers::save_openai_access_token,
             providers::get_anthropic_provider_status,
@@ -646,6 +649,7 @@ pub fn run() {
             providers::cancel_anthropic_oauth_login,
             providers::disconnect_anthropic_provider,
             providers::get_google_provider_status,
+            providers::get_antigravity_quota,
             providers::start_google_oauth_login,
             providers::cancel_google_oauth_login,
             providers::disconnect_google_provider,

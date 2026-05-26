@@ -397,6 +397,9 @@ export const api = {
   getOpenAiProviderStatus() {
     return invoke<OpenAiProviderStatus>("get_openai_provider_status");
   },
+  getOpenAiCodexRateLimits(key?: string) {
+    return invoke<any>("get_openai_codex_rate_limits", { key: key ?? null });
+  },
   getAllOpenAiAccounts() {
     return invoke<OpenAiAccountInfo[]>("get_all_openai_accounts");
   },
@@ -429,6 +432,9 @@ export const api = {
   },
   getGoogleProviderStatus() {
     return invoke<GoogleProviderStatus>("get_google_provider_status");
+  },
+  getAntigravityQuota() {
+    return invoke<any>("get_antigravity_quota");
   },
   startGoogleOAuthLogin() {
     return invoke<StartGoogleLoginOutput>("start_google_oauth_login");

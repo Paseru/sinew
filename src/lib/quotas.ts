@@ -1,6 +1,15 @@
 import { api } from "./ipc";
 
-export type QuotaKind = "time" | "credits" | "unavailable";
+export type QuotaKind = "rateLimits" | "credits" | "groups" | "unavailable";
+
+export interface QuotaWindow {
+  label: string;
+  remainingPercent: number | null;
+  usedPercent?: number | null;
+  windowMinutes?: number | null;
+  resetAt?: number | null;
+  resetTime?: string | null;
+}
 
 export interface QuotaInfo {
   kind: QuotaKind;
@@ -9,42 +18,11 @@ export interface QuotaInfo {
   label?: string;
   error?: string;
   source?: string;
-  limit5h: number;
-  remaining5h: number;
-  limitWeek: number;
-  remainingWeek: number;
-  percentage5h: number;
-  percentageWeek: number;
-  overallPercentage: number;
+  windows?: QuotaWindow[];
+  groups?: QuotaWindow[];
   creditLimit?: number | null;
   creditUsed?: number | null;
   creditRemaining?: number | null;
-}
-
-function withLegacyFields(input: Omit<QuotaInfo, "limit5h" | "remaining5h" | "limitWeek" | "remainingWeek" | "percentage5h" | "percentageWeek" | "overallPercentage"> & Partial<Pick<QuotaInfo, "limit5h" | "remaining5h" | "limitWeek" | "remainingWeek" | "percentage5h" | "percentageWeek" | "overallPercentage">>): QuotaInfo {
-  const limit5h = input.limit5h ?? input.creditLimit ?? 300;
-  const remaining5h = input.remaining5h ?? input.creditRemaining ?? limit5h;
-  const limitWeek = input.limitWeek ?? input.creditLimit ?? 3000;
-  const remainingWeek = input.remainingWeek ?? input.creditRemaining ?? limitWeek;
-  const percentage = input.percentage ?? Math.min(
-    limit5h > 0 ? (remaining5h / limit5h) * 100 : 100,
-    limitWeek > 0 ? (remainingWeek / limitWeek) * 100 : 100,
-  );
-  const percentage5h = input.percentage5h ?? Math.max(0, Math.min(100, limit5h > 0 ? (remaining5h / limit5h) * 100 : percentage));
-  const percentageWeek = input.percentageWeek ?? Math.max(0, Math.min(100, limitWeek > 0 ? (remainingWeek / limitWeek) * 100 : percentage));
-  const overallPercentage = input.overallPercentage ?? Math.max(0, Math.min(100, percentage ?? Math.min(percentage5h, percentageWeek)));
-
-  return {
-    ...input,
-    percentage,
-    limit5h,
-    remaining5h,
-    limitWeek,
-    remainingWeek,
-    percentage5h,
-    percentageWeek,
-    overallPercentage,
-  };
 }
 
 export function quotaColor(percentage: number | null | undefined) {
@@ -55,63 +33,32 @@ export function quotaColor(percentage: number | null | undefined) {
   return "#ef4444";
 }
 
-export function unavailableQuota(label = "Quota non exposé par ce fournisseur"): QuotaInfo {
-  return withLegacyFields({
+export function unavailableQuota(label = "Quota non disponible"): QuotaInfo {
+  return {
     kind: "unavailable",
     percentage: null,
     isReal: false,
     label,
-  });
+  };
 }
 
-export function getProviderLimits(providerId: string) {
-  if (providerId === "anthropic") return { limit5h: 300, limitWeek: 1200 };
-  if (providerId === "google") return { limit5h: 300, limitWeek: 600 };
-  if (providerId === "kimi") return { limit5h: 300, limitWeek: 900 };
-  if (providerId.startsWith("openai")) return { limit5h: 300, limitWeek: 1800 };
-  return { limit5h: 300, limitWeek: 3000 };
+function minPercent(items: QuotaWindow[]) {
+  const values = items
+    .map((item) => item.remainingPercent)
+    .filter((value): value is number => typeof value === "number");
+  if (!values.length) return null;
+  return Math.min(...values);
 }
 
-export function getLocalQuota(providerId: string): QuotaInfo {
-  const { limit5h, limitWeek } = getProviderLimits(providerId);
-  try {
-    const r5h = localStorage.getItem(`sinew.quota.${providerId}.5h`);
-    const rW = localStorage.getItem(`sinew.quota.${providerId}.week`);
-    const remaining5h = r5h !== null ? parseFloat(r5h) : limit5h;
-    const remainingWeek = rW !== null ? parseFloat(rW) : limitWeek;
-    return withLegacyFields({
-      kind: "time",
-      percentage: null,
-      isReal: false,
-      limit5h,
-      remaining5h,
-      limitWeek,
-      remainingWeek,
-    });
-  } catch {
-    return withLegacyFields({
-      kind: "time",
-      percentage: null,
-      isReal: false,
-      limit5h,
-      remaining5h: limit5h,
-      limitWeek,
-      remainingWeek: limitWeek,
-    });
-  }
-}
-
-export function saveLocalQuota(providerId: string, remaining5h: number, remainingWeek: number) {
-  try {
-    localStorage.setItem(`sinew.quota.${providerId}.5h`, Math.max(0, remaining5h).toFixed(2));
-    localStorage.setItem(`sinew.quota.${providerId}.week`, Math.max(0, remainingWeek).toFixed(2));
-    window.dispatchEvent(new CustomEvent("sinew:quota-updated", { detail: { providerId } }));
-  } catch {}
-}
-
-export function resetLocalQuota(providerId: string) {
-  const { limit5h, limitWeek } = getProviderLimits(providerId);
-  saveLocalQuota(providerId, limit5h, limitWeek);
+function codexWindow(label: string, input: any): QuotaWindow | null {
+  if (!input) return null;
+  return {
+    label,
+    remainingPercent: typeof input.remainingPercent === "number" ? input.remainingPercent : null,
+    usedPercent: typeof input.usedPercent === "number" ? input.usedPercent : null,
+    windowMinutes: typeof input.windowMinutes === "number" ? input.windowMinutes : null,
+    resetAt: typeof input.resetAt === "number" ? input.resetAt : null,
+  };
 }
 
 export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo> {
@@ -119,7 +66,7 @@ export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo>
     try {
       const details = await api.getOpenRouterKeyDetails();
       const data = details?.data;
-      if (!data) return unavailableQuota("OpenRouter n'a pas renvoyé de données de quota");
+      if (!data) return unavailableQuota("OpenRouter n'a pas renvoye de donnees de quota");
 
       const limit = typeof data.limit === "number" ? data.limit : null;
       const usage = typeof data.usage === "number" ? data.usage : null;
@@ -128,45 +75,82 @@ export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo>
       if (limit && limit > 0 && usage != null) {
         const remaining = Math.max(0, limit - usage);
         const percentage = Math.max(0, Math.min(100, (remaining / limit) * 100));
-        return withLegacyFields({
+        return {
           kind: "credits",
           percentage,
           isReal: true,
           label,
           source: "OpenRouter /auth/key",
-          limit5h: limit,
-          remaining5h: remaining,
-          limitWeek: limit,
-          remainingWeek: remaining,
           creditLimit: limit,
           creditUsed: usage,
           creditRemaining: remaining,
-        });
+        };
       }
 
-      return withLegacyFields({
+      return {
         kind: "credits",
         percentage: null,
         isReal: true,
-        label: `${label} · illimité ou sans limite configurée`,
+        label: `${label} - illimite ou sans limite configuree`,
         source: "OpenRouter /auth/key",
         creditLimit: limit,
         creditUsed: usage,
         creditRemaining: null,
-      });
+      };
     } catch (err) {
       return unavailableQuota(`Impossible de lire OpenRouter: ${String(err)}`);
     }
   }
 
-  return unavailableQuota();
+  if (providerId === "google") {
+    try {
+      const quota = await api.getAntigravityQuota();
+      const groups: QuotaWindow[] = Array.isArray(quota?.groups)
+        ? quota.groups.map((group: any) => ({
+            label: group.label || group.group,
+            remainingPercent:
+              typeof group.remainingPercent === "number" ? group.remainingPercent : null,
+            resetTime: typeof group.resetTime === "string" ? group.resetTime : null,
+          }))
+        : [];
+      if (!groups.length) return unavailableQuota("Antigravity n'a pas renvoye de quota modele");
+      return {
+        kind: "groups",
+        percentage: minPercent(groups),
+        isReal: true,
+        label: quota?.projectId ? `Projet ${quota.projectId}` : "Antigravity",
+        source: "Antigravity fetchAvailableModels",
+        groups,
+      };
+    } catch (err) {
+      return unavailableQuota(`Impossible de lire Antigravity: ${String(err)}`);
+    }
+  }
+
+  if (providerId === "openai" || providerId.startsWith("openai:")) {
+    try {
+      const quota = await api.getOpenAiCodexRateLimits(providerId === "openai" ? undefined : providerId);
+      const windows = [
+        codexWindow("Fenetre courte", quota?.primary),
+        codexWindow("Fenetre longue", quota?.secondary),
+      ].filter((value): value is QuotaWindow => Boolean(value));
+      if (!windows.length) return unavailableQuota("Codex n'a pas renvoye de fenetre de quota");
+      return {
+        kind: "rateLimits",
+        percentage: minPercent(windows),
+        isReal: true,
+        label: quota?.planType ? `Codex ${quota.planType}` : "Codex",
+        source: "ChatGPT Codex /wham/usage",
+        windows,
+      };
+    } catch (err) {
+      return unavailableQuota(`Impossible de lire Codex: ${String(err)}`);
+    }
+  }
+
+  return unavailableQuota("Quota reel non expose par ce fournisseur");
 }
 
-export function deductLocalQuota(providerId: string, minutes5h = 4, minutesWeek = 30) {
-  const current = getLocalQuota(providerId);
-  saveLocalQuota(
-    providerId,
-    Math.max(0, current.remaining5h - minutes5h),
-    Math.max(0, current.remainingWeek - minutesWeek),
-  );
+export function deductLocalQuota(_providerId: string) {
+  // Real quota endpoints are polled instead of simulated locally.
 }

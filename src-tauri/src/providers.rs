@@ -966,6 +966,232 @@ pub(super) struct OpenAiAccountInfo {
     pub(super) plan_type: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct RateLimitWindowInfo {
+    pub(super) used_percent: f64,
+    pub(super) remaining_percent: f64,
+    pub(super) window_minutes: Option<i64>,
+    pub(super) reset_at: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct OpenAiCodexRateLimitInfo {
+    pub(super) key: String,
+    pub(super) email: Option<String>,
+    pub(super) plan_type: Option<String>,
+    pub(super) limit_id: Option<String>,
+    pub(super) primary: Option<RateLimitWindowInfo>,
+    pub(super) secondary: Option<RateLimitWindowInfo>,
+    pub(super) raw: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct AntigravityQuotaGroupInfo {
+    pub(super) group: String,
+    pub(super) label: String,
+    pub(super) remaining_percent: Option<f64>,
+    pub(super) reset_time: Option<String>,
+    pub(super) count: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct AntigravityQuotaInfo {
+    pub(super) project_id: Option<String>,
+    pub(super) groups: Vec<AntigravityQuotaGroupInfo>,
+    pub(super) raw: serde_json::Value,
+}
+
+#[tauri::command]
+pub(super) async fn get_openai_codex_rate_limits(
+    key: Option<String>,
+) -> std::result::Result<OpenAiCodexRateLimitInfo, String> {
+    let target_key = key.unwrap_or_else(|| "openai".to_string());
+    let path = if target_key == "openai" {
+        default_auth_path().map_err(error_to_string)?
+    } else {
+        let suffix = target_key.strip_prefix("openai:").unwrap_or(&target_key);
+        default_auth_path()
+            .map_err(error_to_string)?
+            .parent()
+            .ok_or_else(|| "OpenAI auth directory is unavailable".to_string())?
+            .join(format!("openai-auth-{suffix}.json"))
+    };
+
+    let status = load_auth_status(&path).map_err(error_to_string)?;
+    let credential = OpenAiCredential::from_sinew_auth_file(&path)
+        .map_err(error_to_string)?
+        .ok_or_else(|| "OpenAI OAuth credential not found".to_string())?;
+    let http = reqwest::Client::new();
+    let bearer = credential.bearer(&http).await.map_err(error_to_string)?;
+    if !bearer.is_oauth {
+        return Err("Codex quotas require OpenAI OAuth".to_string());
+    }
+
+    let mut request = http
+        .get("https://chatgpt.com/backend-api/codex/wham/usage")
+        .header("authorization", format!("Bearer {}", bearer.token))
+        .header("user-agent", "codex-cli")
+        .header("accept", "application/json");
+    if let Some(account_id) = bearer.account_id.as_deref() {
+        request = request.header("ChatGPT-Account-Id", account_id);
+    }
+
+    let response = request
+        .send()
+        .await
+        .map_err(|err| format!("Failed to fetch Codex quotas: {err}"))?;
+    if !response.status().is_success() {
+        return Err(format!("Codex quota endpoint returned status {}", response.status()));
+    }
+    let raw: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|err| format!("Failed to parse Codex quota response: {err}"))?;
+
+    let rate_limit = raw.get("rate_limit").and_then(|value| {
+        if value.is_null() {
+            None
+        } else {
+            Some(value)
+        }
+    });
+    let primary = rate_limit
+        .and_then(|value| value.get("primary_window"))
+        .and_then(parse_rate_limit_window);
+    let secondary = rate_limit
+        .and_then(|value| value.get("secondary_window"))
+        .and_then(parse_rate_limit_window);
+
+    Ok(OpenAiCodexRateLimitInfo {
+        key: target_key,
+        email: status.email,
+        plan_type: raw
+            .get("plan_type")
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string())
+            .or(status.plan_type),
+        limit_id: Some("codex".to_string()),
+        primary,
+        secondary,
+        raw,
+    })
+}
+
+fn parse_rate_limit_window(value: &serde_json::Value) -> Option<RateLimitWindowInfo> {
+    if value.is_null() {
+        return None;
+    }
+    let used_percent = value.get("used_percent")?.as_f64()?;
+    let remaining_percent = (100.0 - used_percent).clamp(0.0, 100.0);
+    let window_minutes = value
+        .get("limit_window_seconds")
+        .and_then(|value| value.as_i64())
+        .filter(|seconds| *seconds > 0)
+        .map(|seconds| (seconds + 59) / 60);
+    let reset_at = value.get("reset_at").and_then(|value| value.as_i64());
+    Some(RateLimitWindowInfo {
+        used_percent,
+        remaining_percent,
+        window_minutes,
+        reset_at,
+    })
+}
+
+#[tauri::command]
+pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQuotaInfo, String> {
+    let credential = GoogleCredential::load_default()
+        .map_err(error_to_string)?
+        .ok_or_else(|| "Google OAuth credential not found".to_string())?;
+    let http = reqwest::Client::new();
+    let token = credential.bearer(&http).await.map_err(error_to_string)?;
+    let project = sinew_google::load_default_user_data()
+        .map_err(error_to_string)?
+        .map(|user| user.project_id);
+    let body = if let Some(project_id) = project.as_deref() {
+        serde_json::json!({ "project": project_id })
+    } else {
+        serde_json::json!({})
+    };
+    let response = http
+        .post("https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels")
+        .bearer_auth(token)
+        .header("content-type", "application/json")
+        .header("accept", "application/json")
+        .header("user-agent", "antigravity/windows/amd64")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|err| format!("Failed to fetch Antigravity quotas: {err}"))?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "Antigravity quota endpoint returned status {}",
+            response.status()
+        ));
+    }
+    let raw: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|err| format!("Failed to parse Antigravity quota response: {err}"))?;
+
+    let mut groups: HashMap<String, AntigravityQuotaGroupInfo> = HashMap::new();
+    if let Some(models) = raw.get("models").and_then(|value| value.as_object()) {
+        for (model_name, info) in models {
+            let lower = model_name.to_ascii_lowercase();
+            let Some((group, label)) = antigravity_quota_group(&lower) else {
+                continue;
+            };
+            let quota = info.get("quotaInfo");
+            let remaining = quota
+                .and_then(|value| value.get("remainingFraction"))
+                .and_then(|value| value.as_f64())
+                .map(|value| (value * 100.0).clamp(0.0, 100.0));
+            let reset_time = quota
+                .and_then(|value| value.get("resetTime"))
+                .and_then(|value| value.as_str())
+                .map(|value| value.to_string());
+            let entry = groups.entry(group.to_string()).or_insert_with(|| AntigravityQuotaGroupInfo {
+                group: group.to_string(),
+                label: label.to_string(),
+                remaining_percent: remaining,
+                reset_time: reset_time.clone(),
+                count: 0,
+            });
+            entry.count += 1;
+            if let Some(remaining) = remaining {
+                entry.remaining_percent = Some(entry.remaining_percent.map_or(remaining, |current| current.min(remaining)));
+            }
+            if entry.reset_time.is_none() {
+                entry.reset_time = reset_time;
+            }
+        }
+    }
+    let mut groups = groups.into_values().collect::<Vec<_>>();
+    groups.sort_by(|a, b| a.group.cmp(&b.group));
+
+    Ok(AntigravityQuotaInfo {
+        project_id: project,
+        groups,
+        raw,
+    })
+}
+
+fn antigravity_quota_group(model_name: &str) -> Option<(&'static str, &'static str)> {
+    if model_name.contains("claude") {
+        return Some(("claude", "Claude"));
+    }
+    if !model_name.contains("gemini-3") {
+        return None;
+    }
+    if model_name.contains("flash") {
+        return Some(("gemini-flash", "Gemini 3 Flash"));
+    }
+    Some(("gemini-pro", "Gemini 3 Pro"))
+}
+
 #[tauri::command]
 pub(super) async fn get_all_openai_accounts() -> std::result::Result<Vec<OpenAiAccountInfo>, String> {
     let mut accounts = Vec::new();
