@@ -549,6 +549,8 @@ export function ChatPane({
       estimate: null,
     });
 
+  const [lastQuestionScrolledOut, setLastQuestionScrolledOut] = useState(false);
+
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1322,6 +1324,15 @@ export function ChatPane({
       if (autoScrollingRef.current) return;
       stickToBottomRef.current =
         el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+
+      const lastQuestionEl = el.querySelector("#last-user-question");
+      if (lastQuestionEl) {
+        const rect = lastQuestionEl.getBoundingClientRect();
+        const bodyRect = el.getBoundingClientRect();
+        setLastQuestionScrolledOut(rect.bottom < bodyRect.top);
+      } else {
+        setLastQuestionScrolledOut(false);
+      }
     };
     const cancelOnUpwardWheel = (event: WheelEvent) => {
       if (event.deltaY >= 0) return;
@@ -1335,7 +1346,7 @@ export function ChatPane({
       el.removeEventListener("scroll", updateStickiness);
       el.removeEventListener("wheel", cancelOnUpwardWheel);
     };
-  }, [stopAutoScroll]);
+  }, [stopAutoScroll, view, subAgentViews, activeSubAgentId]);
 
   useLayoutEffect(() => {
     if (pendingForceScrollRef.current) {
@@ -2641,6 +2652,21 @@ export function ChatPane({
     activeSubAgentId !== null ? subAgentViews.get(activeSubAgentId) ?? null : null;
   const viewingSubAgent = activeSubAgent !== null;
   const displayView = activeSubAgent?.view ?? view;
+
+  const lastUserTextBlock = useMemo(() => {
+    const userBlocks = displayView.blocks.filter((b) => b.kind === "user-text");
+    return userBlocks.length > 0 ? userBlocks[userBlocks.length - 1] : null;
+  }, [displayView.blocks]);
+
+  const scrollToLastQuestion = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const lastQuestionEl = el.querySelector("#last-user-question");
+    if (lastQuestionEl) {
+      lastQuestionEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, []);
+
   const showPlanningNextMove = shouldShowPlanningNextMove(displayView);
   const teamAgentRoster = useMemo(
     () => buildTeamAgentRoster(view.blocks, subAgentViews),
@@ -2834,6 +2860,30 @@ export function ChatPane({
         </span>
         <span className="chat-head__dot" data-status={displayView.status} />
       </div>
+      {lastQuestionScrolledOut && lastUserTextBlock && (
+        <div 
+          className="chat-sticky-question" 
+          onClick={scrollToLastQuestion}
+          title="Cliquez pour faire défiler jusqu'à la question"
+        >
+          <span className="chat-sticky-question__icon">
+            <Icon icon="solar:pin-bold-duotone" width={13} height={13} />
+          </span>
+          <div className="chat-sticky-question__content">
+            <span className="chat-sticky-question__label">Dernière question :</span>
+            <span className="chat-sticky-question__text">
+              {lastUserTextBlock.text}
+            </span>
+          </div>
+          <button 
+            type="button"
+            className="chat-sticky-question__scroll-btn"
+            aria-label="Défiler vers la question"
+          >
+            <Icon icon="solar:arrow-up-linear" width={11} height={11} />
+          </button>
+        </div>
+      )}
       <div className="chat-body" ref={bodyRef}>
         <div className="chat-body__content" ref={bodyContentRef}>
           {displayView.blocks.length === 0 && !showPlanningNextMove ? (
@@ -2863,6 +2913,7 @@ export function ChatPane({
               {displayView.blocks.length > 0 && (
                 <ChatBlocks
                   blocks={displayView.blocks}
+                  lastUserTextBlockId={lastUserTextBlock?.id}
                   onPreviewImage={setPreviewImage}
                   onRewindMessage={viewingSubAgent ? () => {} : handleRewindToMessage}
                   rewindDisabled={viewingSubAgent || view.status === "streaming"}
@@ -5411,6 +5462,7 @@ function toQuestionItem(block: QuestionToolBlock): QuestionItem {
 
 function ChatBlocks({
   blocks,
+  lastUserTextBlockId,
   onPreviewImage,
   onRewindMessage,
   rewindDisabled,
@@ -5434,6 +5486,7 @@ function ChatBlocks({
   activeAgentName,
 }: {
   blocks: ChatBlock[];
+  lastUserTextBlockId?: string | null;
   onPreviewImage: (path: string) => void;
   onRewindMessage: (block: Extract<ChatBlock, { kind: "user-text" }>) => void;
   rewindDisabled: boolean;
@@ -5485,6 +5538,7 @@ function ChatBlocks({
           <BlockView
             key={item.block.id + ":" + index}
             block={item.block}
+            isLastUserText={lastUserTextBlockId !== undefined && lastUserTextBlockId !== null && item.block.id === lastUserTextBlockId}
             onPreviewImage={onPreviewImage}
             onRewindMessage={onRewindMessage}
             rewindDisabled={rewindDisabled}
@@ -5512,6 +5566,7 @@ function ChatBlocks({
 
 function BlockView({
   block,
+  isLastUserText,
   onPreviewImage,
   onRewindMessage,
   rewindDisabled,
@@ -5532,6 +5587,7 @@ function BlockView({
   activeAgentName,
 }: {
   block: ChatBlock;
+  isLastUserText?: boolean;
   onPreviewImage: (path: string) => void;
   onRewindMessage: (block: Extract<ChatBlock, { kind: "user-text" }>) => void;
   rewindDisabled: boolean;
@@ -5560,7 +5616,11 @@ function BlockView({
       );
       if (teamMessages && visibleTeamMessages.length === 0) return null;
       return (
-        <div className="msg" data-role="user">
+        <div 
+          className="msg" 
+          data-role="user"
+          id={isLastUserText ? "last-user-question" : undefined}
+        >
           <div
             className="msg__body user-text"
             data-rewindable={rewindDisabled ? "false" : "true"}
