@@ -606,7 +606,13 @@ impl AppStore {
     ) -> Result<SavedConversation> {
         let id = Uuid::new_v4().to_string();
         let now = now_ms();
-        let title = DEFAULT_CONVERSATION_TITLE.to_string();
+        let computer_name = std::env::var("COMPUTERNAME").unwrap_or_default();
+        let tag = if computer_name.to_lowercase() == "pcportable" {
+            "[Bureau] "
+        } else {
+            "[Perso] "
+        };
+        let title = format!("{}{}", tag, DEFAULT_CONVERSATION_TITLE);
         let todo_list = TodoListState::default();
         let todo_list_json = serde_json::to_string(&todo_list)?;
         let plan_workflow = PlanWorkflowState::default();
