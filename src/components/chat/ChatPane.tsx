@@ -27,7 +27,7 @@ import {
 import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
 import { api } from "../../lib/ipc";
-import { fetchProviderQuota, deductLocalQuota, type QuotaInfo } from "../../lib/quotas";
+import { fetchProviderQuota, deductLocalQuota, getLocalQuota, type QuotaInfo } from "../../lib/quotas";
 import { canonicalToolName, isToolName } from "../../lib/tools";
 import {
   MODELS,
@@ -3470,6 +3470,18 @@ export function ChatPane({
                       const providerIcon = m.provider.startsWith("openai:")
                         ? "simple-icons:openai"
                         : PROVIDERS.find((p) => p.value === m.provider)?.icon;
+                      
+                      const providerQuota = getLocalQuota(m.provider);
+                      const qPercent = providerQuota.overallPercentage;
+                      const dotColor =
+                        qPercent > 80
+                          ? "#10b981"
+                          : qPercent > 50
+                          ? "#3b82f6"
+                          : qPercent > 20
+                          ? "#ec4899"
+                          : "#ef4444";
+
                       return (
                         <button
                           key={m.value}
@@ -3485,6 +3497,17 @@ export function ChatPane({
                               <Icon icon={providerIcon} width={13} height={13} />
                             )}
                             <span>{m.label}</span>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: dotColor,
+                                marginLeft: "6px",
+                              }}
+                              title={`Quota restant: ${qPercent.toFixed(0)}%`}
+                            />
                           </span>
                           {selected && (
                             <Icon

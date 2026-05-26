@@ -165,9 +165,9 @@ function buildActionTasks(task) {
   const text = String(task || '').toLowerCase();
   const actions = [];
   if (text.includes('hamburger') || text.includes('menu')) {
-    actions.push('clique le bouton menu hamburger');
+    actions.push('ouvre le menu hamburger');
     if (text.includes('referme') || text.includes('ferme') || text.includes('close')) {
-      actions.push('clique le bouton menu hamburger');
+      actions.push('ferme le menu ouvert');
     }
   }
   if (text.includes('trinity')) {
@@ -336,8 +336,11 @@ async function detectTargetViaCdp(tabId, taskText) {
     const expression = `(() => {
       const task = ${taskLiteral};
       const taskText = task.toLowerCase();
+      const wantsMenu = taskText.includes('hamburger') || taskText.includes('menu');
+      const wantsMenuClose = wantsMenu && /\\b(referme|ferme|fermer|close|dismiss)\\b/.test(taskText);
+      const wantsMenuOpen = wantsMenu && !wantsMenuClose;
       const elements = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [onclick], div, span, svg, li, summary, article, section'));
-      const cleanTask = taskText.replace(/\\b(cliquez|clique|cliquer|click|ouvrir|ouvre|open|press|selectionne|sélectionne|va sur|aller|dans|sur|le|la|les|un|une|et|du|de|des|site|web|page|url|navigate|navigue|carte|bouton)\\b/g, ' ').trim();
+      const cleanTask = taskText.replace(/\\b(cliquez|clique|cliquer|click|ouvrir|ouvre|open|press|selectionne|sélectionne|va sur|aller|dans|sur|le|la|les|un|une|et|du|de|des|site|web|page|url|navigate|navigue|carte|bouton|ferme|fermer|referme|close|ouvert)\\b/g, ' ').trim();
       const queryWordsRaw = cleanTask.split(/\\s+/).filter(w => w.length >= 1);
       const semanticWords = [];
       if (queryWordsRaw.some(w => w === 'hamburger' || w === 'burger' || w === 'menu')) semanticWords.push('menu', 'hamburger', 'burger', 'nav', 'toggle');
@@ -378,7 +381,18 @@ async function detectTargetViaCdp(tabId, taskText) {
           if (href.includes(word)) score += 35;
         }
         if (el.tagName === 'BUTTON' || el.tagName === 'A' || role === 'button' || style.cursor === 'pointer') score += 25;
-        if ((taskText.includes('hamburger') || taskText.includes('menu')) && (id.includes('menu') || ariaLabel.includes('menu') || className.includes('menu'))) score += 150;
+        if (wantsMenu) {
+          const isMenuButton = id.includes('menu') || ariaLabel.includes('menu') || title.includes('menu') || className.includes('menu') || ariaLabel.includes('hamburger') || className.includes('hamburger');
+          const isCloseButton = id.includes('close') || ariaLabel.includes('close') || ariaLabel.includes('fermer') || title.includes('close') || title.includes('fermer') || className.includes('close') || text === '×' || text === 'x';
+          if (wantsMenuOpen) {
+            if (isCloseButton || className.includes('modal-close')) continue;
+            if (isMenuButton) score += 220;
+            if (id === 'menu-button') score += 160;
+          } else if (wantsMenuClose) {
+            if (isCloseButton || className.includes('modal-close')) score += 260;
+            if (isMenuButton) score += 80;
+          }
+        }
         if (taskText.includes('trinity')) {
           const hasTrinitySignal = id.includes('trinity') || className.includes('trinity') || text.includes('trinity') || href.includes('trinity') || ariaLabel.includes('trinity') || title.includes('trinity');
           if (!hasTrinitySignal) continue;
