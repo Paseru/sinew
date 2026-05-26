@@ -59,11 +59,5 @@ Ce panneau gère les serveurs de protocole de contexte de modèle :
 * **🚀 Lancement et Exécution des Fichiers directement depuis les liens du Chat** :
   * *Bénéfice* : Permet de faire un clic droit sur n'importe quel lien de fichier ou chemin généré par l'IA dans vos bulles de discussion du chat (comme `installers/Sinew_0.1.25_x64-setup.exe`) pour afficher un menu contextuel et l'exécuter directement (**"Execute / Run"**), l'ouvrir dans l'éditeur ou révéler son dossier d'origine dans l'Explorateur Windows. C'est la solution ultime pour contourner le blocage des liens locaux !
 
----
-
-### 5. Dans l'Explorateur de Fichiers (Barre latérale)
-
-* **📁 Option "Execute / Run" au clic droit** :
-  * *Bénéfice* : Permet de faire un clic droit sur n'importe quel fichier présent dans la barre latérale gauche (explorateur de projet) et de l'ouvrir ou de l'exécuter instantanément sur votre système Windows (comme lancer des installateurs, exécuter des scripts, ou ouvrir des images/PDF avec leur application système par défaut).
 
 
