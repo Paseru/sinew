@@ -28,6 +28,11 @@ pub(super) async fn create_conversation(
             &state.system_prompt,
         )
         .map_err(error_to_string)?;
+
+    std::thread::spawn(|| {
+        crate::backup_onedrive_db_on_exit();
+    });
+
     state
         .store
         .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)
@@ -67,6 +72,11 @@ pub(super) async fn rename_conversation(
         .store
         .rename_conversation(&workspace_id, &input.conversation_id, title)
         .map_err(error_to_string)?;
+
+    std::thread::spawn(|| {
+        crate::backup_onedrive_db_on_exit();
+    });
+
     state
         .store
         .list_conversations(&workspace_id)
@@ -91,6 +101,11 @@ pub(super) async fn delete_conversation(
         .store
         .delete_conversation(&workspace_id, &input.conversation_id)
         .map_err(error_to_string)?;
+
+    std::thread::spawn(|| {
+        crate::backup_onedrive_db_on_exit();
+    });
+
     state
         .store
         .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)
