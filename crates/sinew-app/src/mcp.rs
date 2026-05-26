@@ -936,8 +936,9 @@ impl McpStdioClient {
                 bail!("MCP server closed stdout ({status:?})");
             }
 
-            let value: Value = serde_json::from_str(line.trim())
-                .with_context(|| "MCP server emitted invalid JSON")?;
+            let trimmed = line.trim();
+            let value: Value = serde_json::from_str(trimmed)
+                .with_context(|| format!("MCP server emitted invalid JSON: {:?}", trimmed))?;
             if value.get("id") == Some(&json!(id)) {
                 if let Some(error) = value.get("error") {
                     bail!("{}", format_json_rpc_error(error));
