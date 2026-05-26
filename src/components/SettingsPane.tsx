@@ -1142,13 +1142,13 @@ export function SettingsPane({ workspacePath }: Props) {
           onClick={() => setSection("options")}
         >
           <Icon
-            icon="solar:slider-minimal-linear"
+            icon="solar:tuning-2-linear"
             width={15}
             height={15}
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">Options</span>
-          <span className="settings-pane__nav-count" />
+          <span className="settings-pane__nav-count">4</span>
         </button>
         <button
           type="button"
