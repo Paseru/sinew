@@ -1,6 +1,6 @@
 # 🛠️ Sinew — Notes de Version & Ajustements Apportés
 
-Ce document détaille les ajouts, fonctionnalités et scripts d'automatisation intégrés à ton fork de **Sinew**.
+Ce document détaille les ajouts et les fonctionnalités personnalisés intégrés à ton fork de **Sinew**.
 
 ---
 
@@ -25,14 +25,3 @@ Cette version intègre des modifications pratiques destinées à faciliter la co
 * **Bénéfice** :
   * **Zéro jargon** : L'IA formule des réponses concises, simples et directement orientées vers l'action.
   * **Gestion Git simplifiée** : L'IA prend en charge toute la maintenance de ton dépôt en arrière-plan (vérification, pull, commit, push) sans que tu n'aies à manipuler de commandes Git.
-
----
-
-## 🛠️ Scripts d'automatisation (PowerShell)
-
-Pour ne plus te soucier de Git manuellement, lance ces scripts depuis ta console PowerShell :
-
-* **`.\scripts\sinew-sync.ps1`** : Synchronise ton fork avec la version officielle de Sinew. À faire au début de ta session de travail.
-* **`.\scripts\sinew-save.ps1`** : Sauvegarde simplement ton travail et l'envoie sur ton dépôt GitHub.
-* **`.\scripts\sinew-build-save.ps1`** : Compile l'interface et l'envoie sur GitHub (recommandé après modification).
-* **`.\scripts\sinew-build-save.ps1 -FullApp`** : Compile l'application installable complète (.msi / .exe) pour Windows et l'enregistre sur GitHub.
