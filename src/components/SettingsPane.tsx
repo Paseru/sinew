@@ -2030,8 +2030,6 @@ function ProvidersSection({
               planType: account.planType,
             };
             const currentModel = secondaryModels[account.key] || "gpt-5.5";
-            const currentThinking = secondaryThinking[account.key] || "medium";
-            const currentFast = secondaryFast[account.key] || "true";
             
             const selectStyle = {
               background: "var(--bg-3)",
