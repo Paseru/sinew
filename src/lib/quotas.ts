@@ -74,6 +74,11 @@ function codexWindow(label: string, input: any): QuotaWindow | null {
 export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo> {
   const result = await doFetchProviderQuota(providerId);
   quotaCache.set(providerId, { data: result, timestamp: Date.now() });
+  try {
+    window.dispatchEvent(new CustomEvent("sinew:quota-updated"));
+  } catch (err) {
+    console.error("Failed to dispatch sinew:quota-updated event:", err);
+  }
   return result;
 }
 

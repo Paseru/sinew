@@ -4,7 +4,7 @@ import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { getAppLocale, setAppLocale, type AppLocale } from "../lib/locale";
 import { api } from "../lib/ipc";
-import { fetchProviderQuota, quotaColor, type QuotaInfo } from "../lib/quotas";
+import { fetchProviderQuota, quotaColor, getCachedQuota, type QuotaInfo } from "../lib/quotas";
 import { canonicalToolName } from "../lib/tools";
 import { Markdown } from "./chat/Markdown";
 import { SinewMark } from "./SinewMark";
@@ -2315,7 +2315,12 @@ function ProviderCard({
     };
     update();
     const handleUpdate = () => {
-      update();
+      const cached = getCachedQuota(providerId);
+      if (cached && active) {
+        setQuota(cached);
+      } else {
+        update();
+      }
     };
     window.addEventListener("sinew:quota-updated", handleUpdate);
     return () => {
@@ -2635,7 +2640,12 @@ function OpenRouterProviderCard({
     };
     update();
     const handleUpdate = () => {
-      update();
+      const cached = getCachedQuota("openrouter");
+      if (cached && active) {
+        setQuota(cached);
+      } else {
+        update();
+      }
     };
     window.addEventListener("sinew:quota-updated", handleUpdate);
     return () => {

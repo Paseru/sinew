@@ -710,7 +710,12 @@ export function ChatPane({
     update();
 
     const handleUpdate = () => {
-      update();
+      const cached = getCachedQuota(provider);
+      if (cached && active) {
+        setQuota(cached);
+      } else {
+        update();
+      }
     };
 
     window.addEventListener("sinew:quota-updated", handleUpdate);
