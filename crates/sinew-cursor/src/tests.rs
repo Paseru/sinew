@@ -94,6 +94,7 @@ mod tests {
             "CLIENT_SIDE_TOOL_V2_READ_FILE_V2",
             "file contents",
             false,
+            None,
         );
         assert_eq!(result["toolCallId"], "call_1");
         assert_eq!(result["readFileV2Result"]["contents"], "file contents");

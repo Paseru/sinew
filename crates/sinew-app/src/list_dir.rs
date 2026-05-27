@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sinew_core::ToolDescriptor;
@@ -66,7 +66,13 @@ impl ListDirTool {
             .filter(|value| !value.is_empty())
             .unwrap_or(".");
         let relative = normalize_workspace_relative_path(relative)?;
-        let target = resolve_workspace_path(&self.workspace_root, &relative)?;
+        let target = if relative.is_empty() {
+            self.workspace_root
+                .canonicalize()
+                .with_context(|| format!("unable to resolve workspace root {}", self.workspace_root.display()))?
+        } else {
+            resolve_workspace_path(&self.workspace_root, &relative)?
+        };
         if !target.is_dir() {
             bail!("path is not a directory: {relative}");
         }
@@ -125,6 +131,7 @@ mod tests {
         ));
         fs::create_dir_all(root.join("src")).unwrap();
         fs::write(root.join("Cargo.toml"), "").unwrap();
+        let root = root.canonicalize().expect("canonical temp workspace");
         let tool = ListDirTool::new(&root);
         let result = tool
             .run(json!({ "path": "." }))

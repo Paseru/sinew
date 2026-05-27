@@ -43,6 +43,7 @@ new_server = {
     ],
     "cwd": str(script_dir),
     "enabled": True,
+    "autoLoad": True,
 }
 
 try:

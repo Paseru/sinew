@@ -93,6 +93,7 @@ mod tests {
         ));
         fs::create_dir_all(&root).unwrap();
         fs::write(root.join("tmp.txt"), "x").unwrap();
+        let root = root.canonicalize().expect("canonical temp workspace");
         let tool = DeleteFileTool::new(&root);
         let result = tool.run(json!({ "path": "tmp.txt" })).await;
         assert!(!result.is_error);

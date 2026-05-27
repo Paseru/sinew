@@ -2,6 +2,13 @@ use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde_json::{json, Value};
 use sinew_core::{ChatMessage, Part};
 
+pub fn wire_images_from_tool_results(images: &[sinew_core::ToolResultImage]) -> Vec<Value> {
+    images
+        .iter()
+        .filter_map(|image| wire_image(&image.media_type, &image.data))
+        .collect()
+}
+
 /// Build Cursor `ConversationMessage.images` payloads (`ImageProto` in JSON).
 pub fn message_images(message: &ChatMessage) -> Vec<Value> {
     message

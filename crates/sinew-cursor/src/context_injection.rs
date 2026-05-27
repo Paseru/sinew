@@ -5,8 +5,8 @@ use sinew_core::{Part, ProviderRequest, Role};
 use crate::sanitize::sanitize_outbound_text;
 
 const MIN_QUERY_CHARS: usize = 12;
-const MAX_INJECTED_CHARS: usize = 10_000;
-const INJECT_CHUNK_LIMIT: usize = 6;
+const MAX_INJECTED_CHARS: usize = 12_000;
+const INJECT_CHUNK_LIMIT: usize = 8;
 
 pub fn append_local_index_excerpts(request: &ProviderRequest, context: &mut String) {
     if is_tool_result_continuation(request) {

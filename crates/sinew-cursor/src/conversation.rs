@@ -368,6 +368,7 @@ fn tool_results_from_message(
             Part::ToolResult {
                 tool_call_id,
                 content,
+                images,
                 is_error,
                 ..
             } => {
@@ -399,6 +400,7 @@ fn tool_results_from_message(
                         &cursor_tool,
                         content,
                         *is_error,
+                        Some(images),
                     ),
                 }))
             }
@@ -437,6 +439,7 @@ fn build_tool_result_frames(
         let Part::ToolResult {
             tool_call_id,
             content,
+            images,
             is_error,
             ..
         } = part
@@ -458,6 +461,7 @@ fn build_tool_result_frames(
                     &cursor_tool,
                     content,
                     *is_error,
+                    Some(images),
                 )
             },
             "idempotencyKey": idempotency_key,

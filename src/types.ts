@@ -331,6 +331,7 @@ export type McpServerConfig = {
   env: McpEnvVar[];
   cwd?: string | null;
   enabled: boolean;
+  autoLoad?: boolean;
 };
 
 export type McpSettings = {

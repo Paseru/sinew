@@ -55,6 +55,8 @@ pub struct McpServerConfig {
     pub cwd: Option<String>,
     #[serde(default = "default_enabled")]
     pub enabled: bool,
+    #[serde(default)]
+    pub auto_load: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,6 +168,13 @@ impl McpToolRegistry {
             }
         }
         loaded.retain(|name| next_bindings.contains_key(name));
+
+        // Auto-load tools for configured servers
+        for (name, binding) in &next_bindings {
+            if binding.server.auto_load {
+                loaded.insert(name.clone());
+            }
+        }
 
         *self.bindings.write().await = next_bindings;
         *self.loaded.write().await = loaded;

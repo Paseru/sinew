@@ -1024,6 +1024,46 @@ export function SettingsPane({ workspacePath }: Props) {
     [parseError, saving, settings],
   );
 
+  const toggleAutoLoad = useCallback(
+    async (id: string) => {
+      if (parseError || saving) return;
+      const next = normalizeSettings({
+        servers: settings.servers.map((server) =>
+          server.id === id ? { ...server, autoLoad: !server.autoLoad } : server,
+        ),
+      });
+      const optimisticJson = settingsToJson(next);
+      setSettings(next);
+      setJsonText(optimisticJson);
+      setSaving(true);
+      setStatus(null);
+      try {
+        const saved = normalizeSettings(await api.saveMcpSettings(next));
+        const nextJson = settingsToJson(saved);
+        setSettings(saved);
+        setSavedJson(nextJson);
+        setJsonText(nextJson);
+        setParseError(null);
+
+        const nextProbes = await api.probeMcpTools();
+        setProbes(nextProbes);
+        const failures = nextProbes.filter((probe) => probe.enabled && !probe.ok).length;
+        setStatus(
+          failures
+            ? `${failures} server${failures === 1 ? "" : "s"} failed`
+            : "Saved",
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setParseError(message);
+        setStatus(message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [parseError, saving, settings],
+  );
+
   // ---- Skills load ------------------------------------------------------
   const loadSkills = useCallback(async () => {
     setSkillsLoading(true);
@@ -1527,6 +1567,7 @@ export function SettingsPane({ workspacePath }: Props) {
             selectedProbe={selectedProbe}
             knownToolCounts={knownToolCounts}
             onToggleEnabled={toggleEnabled}
+            onToggleAutoLoad={toggleAutoLoad}
             onMount={handleEditorMount}
           />
         ) : section === "skills" ? (
@@ -3600,7 +3641,8 @@ type McpSectionProps = {
   selectedProbe: McpServerProbe | null;
   knownToolCounts: Record<string, number>;
   onToggleEnabled: (id: string) => void;
-  onMount: OnMount;
+  onToggleAutoLoad: (id: string) => void;
+  onMount?: (editor: any) => void;
 };
 
 function McpSection({
@@ -3622,6 +3664,7 @@ function McpSection({
   selectedProbe,
   knownToolCounts,
   onToggleEnabled,
+  onToggleAutoLoad,
   onMount,
 }: McpSectionProps) {
   const enabledCount = servers.filter((server) => server.enabled).length;
@@ -3820,6 +3863,7 @@ function McpSection({
               probe={selectedProbe}
               probing={probing}
               knownToolCount={knownToolCounts[selectedServer.id]}
+              onToggleAutoLoad={onToggleAutoLoad}
             />
           ) : (
             <div className="settings-pane__empty-state">
@@ -3841,9 +3885,10 @@ type ServerDetailProps = {
   probe: McpServerProbe | null;
   probing: boolean;
   knownToolCount: number | undefined;
+  onToggleAutoLoad?: (id: string) => void;
 };
 
-function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailProps) {
+function ServerDetail({ server, probe, probing, knownToolCount, onToggleAutoLoad }: ServerDetailProps) {
   const [expandedTools, setExpandedTools] = useState<Set<string>>(
     () => new Set<string>(),
   );
@@ -3894,6 +3939,20 @@ function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailPr
             {command}
           </code>
         )}
+        <div className="settings-pane__detail-meta">
+          <span className="settings-pane__detail-key">Exposer tous les outils au démarrage</span>
+          <button
+            type="button"
+            className="settings-pane__switch"
+            role="switch"
+            aria-checked={server.autoLoad ?? false}
+            aria-label={`Toujours exposer les outils de ${server.name}`}
+            data-on={server.autoLoad ? "true" : "false"}
+            onClick={() => onToggleAutoLoad?.(server.id)}
+          >
+            <span className="settings-pane__switch-thumb" />
+          </button>
+        </div>
         {server.cwd && (
           <div className="settings-pane__detail-meta">
             <span className="settings-pane__detail-key">cwd</span>
@@ -5047,6 +5106,7 @@ function serverFromUnknown(value: unknown, fallbackName: string): McpServerConfi
     env: envFromUnknown(value.env),
     cwd: stringValue(value.cwd) || null,
     enabled: value.enabled === false || value.disabled === true ? false : true,
+    autoLoad: value.autoLoad === true || value.auto_load === true,
   };
 }
 
@@ -5067,6 +5127,7 @@ function normalizeSettings(settings: McpSettings): McpSettings {
         env: server.env ?? [],
         cwd: server.cwd ?? null,
         enabled: server.enabled ?? true,
+        autoLoad: server.autoLoad ?? false,
       };
     }),
   };

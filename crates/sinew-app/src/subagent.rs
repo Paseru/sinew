@@ -10,7 +10,8 @@ use crate::{
     run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CheckSotaTool, CreateImageTool,
     EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CodebaseSearchTool, McpSettings, McpToolRegistry,
     QuestionTool, ReadTool, SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult,
-    ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool, WriteFileTool,
+    DeleteFileTool, ListDirTool, ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool,
+    WriteFileTool,
 };
 
 const TOOL_PREFIX: &str = "subagent_";
@@ -214,12 +215,14 @@ impl SubAgentTool {
             goal_workflow: GoalWorkflowState::Idle,
             bash: Arc::new(BashTool::new(self.workspace_root.clone())),
             glob: Arc::new(GlobTool::new(self.workspace_root.clone())),
+            list_dir: Arc::new(ListDirTool::new(self.workspace_root.clone())),
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
             codebase_search: Arc::new(CodebaseSearchTool::new(self.workspace_root.clone())),
             check_sota: Arc::new(CheckSotaTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(EditFileTool::new(self.workspace_root.clone())),
             write_file: Arc::new(WriteFileTool::new(self.workspace_root.clone())),
+            delete_file: Arc::new(DeleteFileTool::new(self.workspace_root.clone())),
             create_image: Arc::new(CreateImageTool::with_settings(
                 self.workspace_root.clone(),
                 self.tool_settings.image_provider,

@@ -8,7 +8,7 @@ use sinew_index::{ensure_workspace_index, search_workspace};
 
 use crate::{tool_names, tool_run::ToolRunResult};
 
-const DEFAULT_LIMIT: usize = 20;
+const DEFAULT_LIMIT: usize = 30;
 const MAX_LIMIT: usize = 50;
 
 #[derive(Debug, Clone)]
@@ -26,7 +26,7 @@ impl CodebaseSearchTool {
     pub fn descriptor(&self) -> ToolDescriptor {
         ToolDescriptor {
             name: tool_names::CODEBASE_SEARCH.into(),
-            description: "Search the local Sinew codebase index for relevant code chunks by meaning or keywords. Faster than grep for exploration; uses a local FTS index (no cloud).".into(),
+            description: "Search the local workspace index for relevant code chunks by meaning or keywords.".into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {

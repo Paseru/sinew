@@ -32,7 +32,7 @@ pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
     match cursor_tool {
         "CLIENT_SIDE_TOOL_V2_READ_FILE_V2" | "CLIENT_SIDE_TOOL_V2_READ_FILE" => Some("read"),
         "CLIENT_SIDE_TOOL_V2_EDIT_FILE_V2" | "CLIENT_SIDE_TOOL_V2_EDIT_FILE" => Some("edit_file"),
-        "CLIENT_SIDE_TOOL_V2_LIST_DIR_V2" | "CLIENT_SIDE_TOOL_V2_LIST_DIR" => Some("glob"),
+        "CLIENT_SIDE_TOOL_V2_LIST_DIR_V2" | "CLIENT_SIDE_TOOL_V2_LIST_DIR" => Some("list_dir"),
         "CLIENT_SIDE_TOOL_V2_RIPGREP_RAW_SEARCH" | "CLIENT_SIDE_TOOL_V2_RIPGREP_SEARCH" => {
             Some("grep")
         }
@@ -45,7 +45,7 @@ pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
         "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL" | "CLIENT_SIDE_TOOL_V2_MCP" => Some("load_mcp_tool"),
         "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE" => Some("create_image"),
         "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL" => Some("codebase_search"),
-        "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => Some("bash"),
+        "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => Some("delete_file"),
         _ => None,
     }
 }
@@ -60,6 +60,8 @@ pub fn cursor_tool_name(sinew_tool: &str) -> &'static str {
         "edit_file" => "CLIENT_SIDE_TOOL_V2_EDIT_FILE_V2",
         "write_file" => "CLIENT_SIDE_TOOL_V2_EDIT_FILE_V2",
         "glob" => "CLIENT_SIDE_TOOL_V2_GLOB_FILE_SEARCH",
+        "list_dir" => "CLIENT_SIDE_TOOL_V2_LIST_DIR_V2",
+        "delete_file" => "CLIENT_SIDE_TOOL_V2_DELETE_FILE",
         "grep" => "CLIENT_SIDE_TOOL_V2_RIPGREP_RAW_SEARCH",
         "codebase_search" => "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL",
         "bash" => "CLIENT_SIDE_TOOL_V2_RUN_TERMINAL_COMMAND_V2",
@@ -172,6 +174,7 @@ pub fn build_client_tool_result(
     cursor_tool: &str,
     content: &str,
     is_error: bool,
+    result_images: Option<&[sinew_core::ToolResultImage]>,
 ) -> Value {
     let mut result = json!({
         "toolCallId": tool_call_id,
@@ -201,6 +204,15 @@ pub fn build_client_tool_result(
         "glob" => {
             result["globFileSearchResult"] = json!({ "directories": [] , "output": content });
         }
+        "list_dir" => {
+            result["listDirV2Result"] = json!({ "directoryTree": content });
+        }
+        "codebase_search" => {
+            result["semanticSearchFullResult"] = json!({ "resultForModel": content });
+        }
+        "delete_file" => {
+            result["deleteFileResult"] = json!({ "resultForModel": content });
+        }
         "web_search" => {
             result["webSearchResult"] = json!({ "references": [], "output": content });
         }
@@ -221,7 +233,15 @@ pub fn build_client_tool_result(
             result["callMcpToolResult"] = json!({ "result": content });
         }
         "create_image" => {
-            result["generateImageResult"] = json!({ "resultForModel": content });
+            let mut payload = json!({ "resultForModel": content });
+            let images = crate::images::wire_images_from_tool_results(result_images.unwrap_or(&[]));
+            if !images.is_empty() {
+                payload["images"] = json!(images);
+            }
+            result["generateImageResult"] = payload;
+        }
+        "composer_unsupported_tool" => {
+            result["resultForModel"] = json!(content);
         }
         _ => {
             result["resultForModel"] = json!(content);
@@ -287,25 +307,23 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
                 "query": field(params, &["query", "searchQuery", "search_query", "pattern"])
                     .unwrap_or(json!("")),
                 "path": field(params, &["targetDirectory", "target_directory", "path"]).unwrap_or(json!(".")),
-                "limit": field(params, &["limit", "maxResults", "max_results"]).unwrap_or(json!(20)),
+                "limit": field(params, &["limit", "maxResults", "max_results"]).unwrap_or(json!(40)),
             })
         }
         "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => {
             let params = params(value, "deleteFileParams", "delete_file_params")
                 .or_else(|| params(value, "deleteFileV2Params", "delete_file_v2_params"));
-            let path = field(
-                params,
-                &[
-                    "relativeWorkspacePath",
-                    "relative_workspace_path",
-                    "targetFile",
-                    "target_file",
-                ],
-            )
-            .and_then(|value| value.as_str().map(str::to_string))
-            .unwrap_or_default();
             json!({
-                "command": delete_file_command(&path),
+                "path": field(
+                    params,
+                    &[
+                        "relativeWorkspacePath",
+                        "relative_workspace_path",
+                        "targetFile",
+                        "target_file",
+                    ],
+                )
+                .unwrap_or(json!("")),
             })
         }
         "CLIENT_SIDE_TOOL_V2_RUN_TERMINAL_COMMAND_V2" => {
@@ -335,9 +353,8 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             let params = params(value, "listDirV2Params", "list_dir_v2_params")
                 .or_else(|| params(value, "listDirParams", "list_dir_params"));
             json!({
-                "pattern": "*",
                 "path": field(params, &["targetDirectory", "target_directory"]).unwrap_or(json!(".")),
-                "limit": field(params, &["limit"]).unwrap_or(json!(200)),
+                "limit": field(params, &["limit"]).unwrap_or(json!(500)),
             })
         }
         _ => flatten_params(value),
@@ -501,21 +518,6 @@ fn map_search_replace_blocks(path: &Value, text: &str) -> Option<Value> {
     Some(json!({ "files": [{ "path": path, "edits": edits }] }))
 }
 
-fn delete_file_command(path: &str) -> String {
-    if path.is_empty() {
-        return String::new();
-    }
-    let escaped = path.replace('\'', "''");
-    #[cfg(windows)]
-    {
-        format!("Remove-Item -LiteralPath '{escaped}' -Force")
-    }
-    #[cfg(not(windows))]
-    {
-        format!("rm -- {escaped}")
-    }
-}
-
 fn params<'a>(value: &'a Value, camel: &str, snake: &str) -> Option<&'a Value> {
     value.get(camel).or_else(|| value.get(snake))
 }
@@ -568,13 +570,13 @@ mod tests {
             }
         });
         let parsed = parse_tool_call(&value).expect("parsed");
-        assert_eq!(parsed.input["pattern"], "*");
+        assert_eq!(parsed.sinew_name, "list_dir");
         assert_eq!(parsed.input["path"], "src");
-        assert_eq!(parsed.input["limit"], 200);
+        assert_eq!(parsed.input["limit"], 500);
     }
 
     #[test]
-    fn maps_delete_file_to_shell_command() {
+    fn maps_delete_file_to_native_delete() {
         let value = json!({
             "tool": "CLIENT_SIDE_TOOL_V2_DELETE_FILE",
             "toolCallId": "call_1",
@@ -583,11 +585,8 @@ mod tests {
             }
         });
         let parsed = parse_tool_call(&value).expect("parsed");
-        assert_eq!(parsed.sinew_name, "bash");
-        assert!(parsed.input["command"]
-            .as_str()
-            .unwrap_or("")
-            .contains("tmp/old.txt"));
+        assert_eq!(parsed.sinew_name, "delete_file");
+        assert_eq!(parsed.input["path"], "tmp/old.txt");
     }
 
     #[test]
@@ -604,7 +603,7 @@ mod tests {
         assert_eq!(parsed.sinew_name, "codebase_search");
         assert_eq!(parsed.input["query"], "auth token");
         assert_eq!(parsed.input["path"], "src");
-        assert_eq!(parsed.input["limit"], 20);
+        assert_eq!(parsed.input["limit"], 40);
     }
 
     #[test]
@@ -659,6 +658,7 @@ mod tests {
             "CLIENT_SIDE_TOOL_V2_TODO_READ",
             "[]",
             false,
+            None,
         );
         assert_eq!(result["todoReadResult"]["content"], "[]");
         assert!(result.get("todoWriteResult").is_none());
@@ -686,10 +686,19 @@ mod tests {
             "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE",
             "saved: assets/logo.png",
             false,
+            Some(&[sinew_core::ToolResultImage {
+                media_type: "image/png".into(),
+                data: PNG_1X1.into(),
+                path: Some("assets/logo.png".into()),
+            }]),
         );
         assert_eq!(
             result["generateImageResult"]["resultForModel"],
             "saved: assets/logo.png"
         );
+        assert_eq!(result["generateImageResult"]["images"][0]["dimension"]["width"], 1);
     }
+
+    const PNG_1X1: &str =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 }

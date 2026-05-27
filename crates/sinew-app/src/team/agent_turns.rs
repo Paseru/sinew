@@ -71,6 +71,7 @@ impl TeamTool {
             goal_workflow: GoalWorkflowState::Idle,
             bash: Arc::new(BashTool::new(self.workspace_root.clone())),
             glob: Arc::new(GlobTool::new(self.workspace_root.clone())),
+            list_dir: Arc::new(ListDirTool::new(self.workspace_root.clone())),
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
             codebase_search: Arc::new(CodebaseSearchTool::new(self.workspace_root.clone())),
             check_sota: Arc::new(CheckSotaTool::new()),
@@ -83,6 +84,7 @@ impl TeamTool {
                 WriteFileTool::new(self.workspace_root.clone())
                     .with_workspace_write_lock(workspace_write_lock.clone()),
             ),
+            delete_file: Arc::new(DeleteFileTool::new(self.workspace_root.clone())),
             create_image: Arc::new(
                 CreateImageTool::with_settings(
                     self.workspace_root.clone(),
