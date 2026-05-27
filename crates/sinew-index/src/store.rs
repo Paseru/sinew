@@ -63,8 +63,14 @@ impl IndexStore {
                 INSERT INTO chunks_fts(chunks_fts, rowid, path, content) VALUES('delete', old.id, old.path, old.content);
                 INSERT INTO chunks_fts(rowid, path, content) VALUES (new.id, new.path, new.content);
             END;
+            CREATE TABLE IF NOT EXISTS query_cache (
+                query_hash TEXT PRIMARY KEY,
+                embedding BLOB NOT NULL,
+                cached_at_ms INTEGER NOT NULL
+            );
             ",
         )?;
+        let _ = conn.execute("ALTER TABLE chunks ADD COLUMN embedding BLOB", []);
         Ok(())
     }
 
@@ -103,9 +109,19 @@ impl IndexStore {
             params![path, content_hash, mtime_ms, now],
         )?;
         for chunk in chunks {
+            let embedding = chunk
+                .embedding
+                .as_ref()
+                .map(|values| crate::embeddings::vector_to_bytes(values));
             tx.execute(
-                "INSERT INTO chunks (path, start_line, end_line, content) VALUES (?1, ?2, ?3, ?4)",
-                params![path, chunk.start_line, chunk.end_line, chunk.content],
+                "INSERT INTO chunks (path, start_line, end_line, content, embedding) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    path,
+                    chunk.start_line,
+                    chunk.end_line,
+                    chunk.content,
+                    embedding
+                ],
             )?;
         }
         tx.commit()?;
@@ -126,6 +142,32 @@ impl IndexStore {
         let files: i64 = conn.query_row("SELECT COUNT(*) FROM files", [], |row| row.get(0))?;
         let chunks: i64 = conn.query_row("SELECT COUNT(*) FROM chunks", [], |row| row.get(0))?;
         Ok((files as usize, chunks as usize))
+    }
+
+    pub fn load_query_embedding(&self, query_hash: &str) -> Result<Option<Vec<f32>>> {
+        let conn = self.connection()?;
+        let mut stmt =
+            conn.prepare("SELECT embedding FROM query_cache WHERE query_hash = ?1 LIMIT 1")?;
+        let mut rows = stmt.query(params![query_hash])?;
+        if let Some(row) = rows.next()? {
+            let bytes: Vec<u8> = row.get(0)?;
+            return Ok(Some(crate::embeddings::bytes_to_vector(&bytes)));
+        }
+        Ok(None)
+    }
+
+    pub fn save_query_embedding(&self, query_hash: &str, embedding: &[f32]) -> Result<()> {
+        let conn = self.connection()?;
+        conn.execute(
+            "INSERT INTO query_cache (query_hash, embedding, cached_at_ms) VALUES (?1, ?2, ?3)
+             ON CONFLICT(query_hash) DO UPDATE SET embedding = excluded.embedding, cached_at_ms = excluded.cached_at_ms",
+            params![
+                query_hash,
+                crate::embeddings::vector_to_bytes(embedding),
+                now_ms()
+            ],
+        )?;
+        Ok(())
     }
 }
 

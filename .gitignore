@@ -21,4 +21,5 @@ sinew-chrome-bridge/node_modules/
 *.key
 
 /installers
+.fastembed_cache/
 

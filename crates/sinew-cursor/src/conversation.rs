@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use sha2::{Digest, Sha256};
 use serde_json::{json, Value};
 use sinew_core::{Effort, Part, ProviderRequest, Role, ServiceTier, ToolDescriptor};
 
@@ -43,7 +44,7 @@ fn build_full_request(
         .and_then(snapshot);
     let (model_name, enable_slow_pool, max_mode, thinking_level) =
         model_details(&request.model.name, request.effective_effort(), request.service_tier);
-    let (conversation, headers) = build_conversation(request);
+    let (conversation, headers) = build_conversation(request, conversation_id);
     let explicit_context = build_explicit_context(request, &request.tools);
     let mut stream_request = json!({
         "streamUnifiedChatRequest": {
@@ -184,10 +185,11 @@ fn build_environment_info(identity: &CursorIdeIdentity, workspace: Option<&Works
     info
 }
 
-fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
+fn build_conversation(request: &ProviderRequest, conversation_id: &str) -> (Vec<Value>, Vec<Value>) {
     let mut messages = Vec::new();
     let mut headers = Vec::new();
     let mut pending_calls: HashMap<String, (String, String, Value)> = HashMap::new();
+    let mut message_index = 0usize;
 
     for message in &request.transcript {
         match message.role {
@@ -201,7 +203,8 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                     );
                 }
                 if !text.is_empty() || !tool_calls.is_empty() {
-                    let bubble_id = uuid::Uuid::new_v4().to_string();
+                    let bubble_id =
+                        stable_bubble_id(conversation_id, message_index, Role::Assistant, message);
                     headers.push(json!({
                         "bubbleId": bubble_id,
                         "type": "MESSAGE_TYPE_AI",
@@ -217,6 +220,7 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                             Value::Array(assistant_tool_calls_payload(&tool_calls));
                     }
                     messages.push(entry);
+                    message_index += 1;
                 }
             }
             Role::User => {
@@ -225,7 +229,9 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                 if text.is_empty() && tool_results.is_empty() {
                     continue;
                 }
-                let bubble_id = uuid::Uuid::new_v4().to_string();
+                let bubble_id =
+                    stable_bubble_id(conversation_id, message_index, Role::User, message);
+                let request_id = stable_request_id(conversation_id, message_index, message);
                 headers.push(json!({
                     "bubbleId": bubble_id,
                     "type": "MESSAGE_TYPE_HUMAN",
@@ -234,7 +240,7 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                     "type": "MESSAGE_TYPE_HUMAN",
                     "text": text,
                     "bubbleId": bubble_id,
-                    "requestId": uuid::Uuid::new_v4().to_string(),
+                    "requestId": request_id,
                 });
                 if !tool_results.is_empty() {
                     entry["toolResults"] = Value::Array(tool_results);
@@ -248,16 +254,28 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                     entry["gitStatusRaw"] = json!(sanitize_outbound_text(&status));
                 }
                 messages.push(entry);
+                message_index += 1;
             }
         }
     }
 
     if messages.is_empty() {
+        let bubble_id = stable_bubble_id(
+            conversation_id,
+            0,
+            Role::User,
+            &sinew_core::ChatMessage::user_text("Continue."),
+        );
+        let request_id = stable_request_id(
+            conversation_id,
+            0,
+            &sinew_core::ChatMessage::user_text("Continue."),
+        );
         messages.push(json!({
             "type": "MESSAGE_TYPE_HUMAN",
             "text": "Continue.",
-            "bubbleId": uuid::Uuid::new_v4().to_string(),
-            "requestId": uuid::Uuid::new_v4().to_string(),
+            "bubbleId": bubble_id,
+            "requestId": request_id,
         }));
     }
 
@@ -482,6 +500,136 @@ fn effort_to_thinking_level(effort: Option<Effort>) -> Option<&'static str> {
     }
 }
 
+fn stable_bubble_id(
+    conversation_id: &str,
+    message_index: usize,
+    role: Role,
+    message: &sinew_core::ChatMessage,
+) -> String {
+    if let Some(id) = message
+        .parts
+        .iter()
+        .find_map(|part| part_meta(part).and_then(|meta| meta.get("cursor_bubble_id")))
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    {
+        return id.to_string();
+    }
+    deterministic_uuid(
+        "bubble",
+        conversation_id,
+        message_index,
+        role,
+        &message_fingerprint(message),
+    )
+}
+
+fn stable_request_id(
+    conversation_id: &str,
+    message_index: usize,
+    message: &sinew_core::ChatMessage,
+) -> String {
+    if let Some(id) = message
+        .parts
+        .iter()
+        .find_map(|part| part_meta(part).and_then(|meta| meta.get("cursor_request_id")))
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    {
+        return id.to_string();
+    }
+    deterministic_uuid(
+        "request",
+        conversation_id,
+        message_index,
+        Role::User,
+        &message_fingerprint(message),
+    )
+}
+
+fn part_meta(part: &Part) -> Option<&Value> {
+    match part {
+        Part::Text { meta, .. }
+        | Part::Image { meta, .. }
+        | Part::Thinking { meta, .. }
+        | Part::ToolCall { meta, .. }
+        | Part::ToolResult { meta, .. } => meta.as_ref(),
+    }
+}
+
+fn message_fingerprint(message: &sinew_core::ChatMessage) -> String {
+    let mut hasher = Sha256::new();
+    for part in &message.parts {
+        match part {
+            Part::Text { text, .. } => {
+                hasher.update(b"text:");
+                hasher.update(text.as_bytes());
+            }
+            Part::Image { media_type, data, .. } => {
+                hasher.update(b"image:");
+                hasher.update(media_type.as_bytes());
+                hasher.update(data.as_bytes());
+            }
+            Part::Thinking { text, .. } => {
+                hasher.update(b"thinking:");
+                hasher.update(text.as_bytes());
+            }
+            Part::ToolCall {
+                id,
+                name,
+                input,
+                ..
+            } => {
+                hasher.update(b"tool_call:");
+                hasher.update(id.as_bytes());
+                hasher.update(name.as_bytes());
+                if let Ok(encoded) = serde_json::to_vec(input) {
+                    hasher.update(&encoded);
+                }
+            }
+            Part::ToolResult {
+                tool_call_id,
+                content,
+                is_error,
+                ..
+            } => {
+                hasher.update(b"tool_result:");
+                hasher.update(tool_call_id.as_bytes());
+                hasher.update(content.as_bytes());
+                hasher.update([u8::from(*is_error)]);
+            }
+        }
+    }
+    hex_digest(hasher.finalize())
+}
+
+fn deterministic_uuid(
+    kind: &str,
+    conversation_id: &str,
+    message_index: usize,
+    role: Role,
+    fingerprint: &str,
+) -> String {
+    let role_tag = match role {
+        Role::User => "human",
+        Role::Assistant => "ai",
+    };
+    let seed = format!("{kind}:{conversation_id}:{message_index}:{role_tag}:{fingerprint}");
+    let digest = Sha256::digest(seed.as_bytes());
+    let bytes: [u8; 16] = digest[..16]
+        .try_into()
+        .unwrap_or([0u8; 16]);
+    uuid::Uuid::from_bytes(bytes).to_string()
+}
+
+fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
+    bytes
+        .as_ref()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
 fn message_text(message: &sinew_core::ChatMessage) -> String {
     message
         .parts
@@ -525,5 +673,27 @@ mod tests {
 
         let (_, _, _, level) = super::model_details("composer-2.5-fast", Some(Effort::High), None);
         assert_eq!(level, Some("THINKING_LEVEL_HIGH"));
+    }
+
+    #[test]
+    fn bubble_ids_stay_stable_for_same_transcript() {
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2.5-fast"),
+            vec![
+                ChatMessage::user_text("Find auth code"),
+                ChatMessage::assistant_text("I'll search the codebase."),
+            ],
+        )
+        .with_cache_key("conv-stable-test");
+        let (first, _) = build_conversation(&request, "conv-stable-test");
+        let (second, _) = build_conversation(&request, "conv-stable-test");
+        assert_eq!(
+            first[0]["bubbleId"].as_str(),
+            second[0]["bubbleId"].as_str()
+        );
+        assert_eq!(
+            first[1]["bubbleId"].as_str(),
+            second[1]["bubbleId"].as_str()
+        );
     }
 }

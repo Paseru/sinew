@@ -61,6 +61,18 @@ pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
             continue;
         }
         let chunks = chunk_file_content(&content);
+        let mut chunks = chunks;
+        if crate::embeddings::is_available() {
+            let texts = chunks
+                .iter()
+                .map(|chunk| chunk.content.clone())
+                .collect::<Vec<_>>();
+            if let Ok(vectors) = crate::embeddings::embed_passages(&texts) {
+                for (chunk, vector) in chunks.iter_mut().zip(vectors) {
+                    chunk.embedding = Some(vector);
+                }
+            }
+        }
         store.replace_file(&relative, &hash, mtime_ms, &chunks)?;
         stats.files_updated += 1;
     }

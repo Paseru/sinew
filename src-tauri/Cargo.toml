@@ -23,6 +23,7 @@ sinew-kimi = { workspace = true }
 sinew-openai = { workspace = true }
 sinew-openrouter = { workspace = true }
 sinew-cursor = { workspace = true }
+sinew-index = { workspace = true }
 directories = { workspace = true }
 rusqlite = { workspace = true }
 

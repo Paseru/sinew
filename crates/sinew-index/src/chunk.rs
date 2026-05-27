@@ -3,6 +3,7 @@ pub struct FileChunk {
     pub start_line: i64,
     pub end_line: i64,
     pub content: String,
+    pub embedding: Option<Vec<f32>>,
 }
 
 const CHUNK_LINES: usize = 80;
@@ -25,12 +26,14 @@ pub fn chunk_file_content(content: &str) -> Vec<FileChunk> {
                 start_line: (start + 1) as i64,
                 end_line: end as i64,
                 content: truncated,
+                embedding: None,
             });
         } else if !body.trim().is_empty() {
             chunks.push(FileChunk {
                 start_line: (start + 1) as i64,
                 end_line: end as i64,
                 content: body,
+                embedding: None,
             });
         }
         if end >= lines.len() {

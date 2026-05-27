@@ -30,6 +30,7 @@ pub(super) async fn open_workspace(
         }
     }
     apply_window_title(&window, &bootstrap.workspace.name);
+    sinew_index::warm_workspace_index(&workspace_root);
     Ok(bootstrap)
 }
 
@@ -113,6 +114,7 @@ pub(super) async fn watch_workspace_command(
     watcher
         .watch(&workspace_root, RecursiveMode::Recursive)
         .map_err(error_to_string)?;
+    sinew_index::warm_workspace_index(&workspace_root);
     watchers.insert(workspace_id, watcher);
     Ok(())
 }

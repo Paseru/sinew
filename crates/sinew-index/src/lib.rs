@@ -1,8 +1,11 @@
+mod background;
 mod chunk;
+mod embeddings;
 mod indexer;
 mod search;
 mod store;
 
+pub use background::{start_background_indexing, warm_workspace_index};
 pub use indexer::{ensure_workspace_index, index_stats, IndexStats};
 pub use search::{search_workspace, CodebaseHit};
 
