@@ -111,12 +111,12 @@ pub fn antigravity_model_and_thinking(
         Effort::High | Effort::Xhigh | Effort::Max => "high",
     };
 
-    // Antigravity exposes 3.5-flash with separate low/medium/high IDs matching your plan's quotas.
+    // Antigravity exposes 3.5-flash with separate extra-low/low/agent IDs matching your plan's quotas.
     if base == "gemini-3.5-flash" {
         let model_id = match thinking_level {
-            "minimal" | "low" => "gemini-3.5-flash-low",
-            "medium" => "gemini-3.5-flash-medium",
-            _ => "gemini-3.5-flash-high",
+            "minimal" | "low" => "gemini-3.5-flash-extra-low",
+            "medium" => "gemini-3.5-flash-low",
+            _ => "gemini-3-flash-agent",
         };
         return (model_id.into(), Some(thinking_level));
     }
@@ -127,6 +127,18 @@ pub fn antigravity_model_and_thinking(
             _ => "gemini-3.1-pro-high",
         };
         return (model_id.into(), Some(thinking_level));
+    }
+    // Claude Opus 4.6 uses a specific thinking ID on the server.
+    if base == "claude-opus-4.6" {
+        return ("claude-opus-4-6-thinking".into(), Some(thinking_level));
+    }
+    // Claude Sonnet 4.6 on the server does not have dots.
+    if base == "claude-sonnet-4.6" {
+        return ("claude-sonnet-4-6".into(), Some(thinking_level));
+    }
+    // GPT-OSS 120B on the server is called gpt-oss-120b-medium.
+    if base == "gpt-oss-120b" {
+        return ("gpt-oss-120b-medium".into(), Some(thinking_level));
     }
     if is_pro {
         (format!("{base}-{thinking_level}"), Some(thinking_level))
