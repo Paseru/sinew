@@ -6057,14 +6057,15 @@ textarea {
 }
 
 .user-text__pending-label {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
   align-items: center;
   gap: 4px;
-  margin: 0 0 5px;
+  margin: 0 0 6px;
   padding: 1px 7px;
   border-radius: 999px;
-  color: var(--accent-hi);
-  background: var(--accent-soft);
+  color: var(--text-2);
+  background: var(--bg-4);
   font-family: var(--font-ui);
   font-size: var(--fs-xs);
   font-weight: 650;

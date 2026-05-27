@@ -12,6 +12,7 @@ import type {
   CursorApiAuthStatus,
   CursorComposerAuthStatus,
   CursorUsageQuotaInfo,
+  StartCursorLoginOutput,
   DisplayMode,
   FileDocument,
   GitCreateWorktreeOutput,
@@ -494,6 +495,12 @@ export const api = {
   },
   getCursorComposerStatus() {
     return invoke<CursorComposerAuthStatus>("get_cursor_composer_status");
+  },
+  startCursorOAuthLogin() {
+    return invoke<StartCursorLoginOutput>("start_cursor_oauth_login");
+  },
+  cancelCursorOAuthLogin() {
+    return invoke<CursorComposerAuthStatus>("cancel_cursor_oauth_login");
   },
   syncCursorComposerAuth() {
     return invoke<CursorComposerAuthStatus>("sync_cursor_composer_auth");

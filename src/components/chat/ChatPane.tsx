@@ -6091,10 +6091,10 @@ function BlockView({
             }
           >
             {block.pendingLabel && (
-              <span className="user-text__pending-label">
+              <div className="user-text__pending-label">
                 <Icon icon="solar:hourglass-line-duotone" width={12} height={12} />
                 {block.pendingLabel}
-              </span>
+              </div>
             )}
             {teamMessages ? (
               <TeamMessageStack

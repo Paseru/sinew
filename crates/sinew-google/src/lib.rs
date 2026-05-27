@@ -5,9 +5,10 @@ pub mod stream;
 pub mod wire;
 
 pub use auth::{
-    delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
-    load_default_auth_status, load_default_user_data, oauth_authorize_url,
-    purge_legacy_oauth_if_needed, Credential, GoogleAuthStatus, GoogleUserData, PkceCodes,
+    all_auth_files, delete_default_auth, exchange_oauth_code, generate_pkce, generate_state,
+    load_auth_status, load_default_auth_status, load_default_user_data, load_user_data,
+    oauth_authorize_url, path_for_auth_key, purge_legacy_oauth_if_needed, save_user_data,
+    Credential, GoogleAuthStatus, GoogleUserData, PkceCodes,
 };
 pub use client::{GoogleConfig, GoogleProvider, antigravity_user_agent, antigravity_load_code_assist_user_agent};
 pub use model_info::MODEL_ID;

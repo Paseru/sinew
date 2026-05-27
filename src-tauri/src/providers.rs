@@ -2081,9 +2081,153 @@ pub(super) fn install_cursor_provider(
     Ok(())
 }
 
+pub(super) fn cursor_composer_status_from_auth(
+    auth: CursorComposerAuthStatus,
+    connection_state: &str,
+    login_id: Option<String>,
+    error: Option<String>,
+) -> CursorComposerAuthStatus {
+    auth.with_connection_state(connection_state, login_id, error)
+}
+
 #[tauri::command]
-pub(super) fn get_cursor_composer_status() -> std::result::Result<CursorComposerAuthStatus, String> {
-    load_composer_auth_status().map_err(error_to_string)
+pub(super) async fn get_cursor_composer_status(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<CursorComposerAuthStatus, String> {
+    let mut active_login = state.cursor_login.lock().await;
+    let attempt = active_login.clone();
+    if let Some(attempt) = attempt {
+        let outcome = attempt
+            .outcome
+            .lock()
+            .map_err(|_| "login state is unavailable".to_string())?
+            .clone();
+
+        if let Some(outcome) = outcome {
+            *active_login = None;
+            let auth = load_composer_auth_status().map_err(error_to_string)?;
+            if outcome.success {
+                return Ok(cursor_composer_status_from_auth(
+                    auth,
+                    "connected",
+                    None,
+                    None,
+                ));
+            }
+            return Ok(cursor_composer_status_from_auth(
+                auth,
+                "error",
+                None,
+                outcome.error,
+            ));
+        }
+
+        let auth = load_composer_auth_status().map_err(error_to_string)?;
+        return Ok(cursor_composer_status_from_auth(
+            auth,
+            "connecting",
+            Some(attempt.id),
+            None,
+        ));
+    }
+
+    let auth = load_composer_auth_status().map_err(error_to_string)?;
+    let connection_state = if auth.connected {
+        "connected"
+    } else {
+        "disconnected"
+    };
+    Ok(cursor_composer_status_from_auth(auth, connection_state, None, None))
+}
+
+#[tauri::command]
+pub(super) async fn start_cursor_oauth_login(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<StartCursorLoginOutput, String> {
+    if let Some(existing) = state.cursor_login.lock().await.take() {
+        existing.cancel.notify_one();
+    }
+
+    let challenge = create_login_challenge();
+    let login_id = generate_kimi_state();
+    let cancel = Arc::new(Notify::new());
+    let outcome = Arc::new(StdMutex::new(None));
+
+    {
+        let mut active_login = state.cursor_login.lock().await;
+        *active_login = Some(CursorLoginAttempt {
+            id: login_id.clone(),
+            cancel: cancel.clone(),
+            outcome: outcome.clone(),
+        });
+    }
+
+    let providers = state.providers.clone();
+    let auth_url = challenge.auth_url.clone();
+    tauri::async_runtime::spawn(async move {
+        let result = run_cursor_oauth_login(challenge, cancel).await;
+        let login_outcome = match result {
+            Ok(()) => match install_cursor_provider(&providers) {
+                Ok(()) => CursorLoginOutcome {
+                    success: true,
+                    error: None,
+                },
+                Err(err) => CursorLoginOutcome {
+                    success: false,
+                    error: Some(err),
+                },
+            },
+            Err(err) => CursorLoginOutcome {
+                success: false,
+                error: Some(err.to_string()),
+            },
+        };
+        if let Ok(mut slot) = outcome.lock() {
+            *slot = Some(login_outcome);
+        }
+    });
+
+    Ok(StartCursorLoginOutput { login_id, auth_url })
+}
+
+pub(super) async fn run_cursor_oauth_login(
+    challenge: CursorLoginChallenge,
+    cancel: Arc<Notify>,
+) -> Result<()> {
+    let http = reqwest::Client::builder()
+        .user_agent("Sinew/0.1 (Cursor provider)")
+        .build()
+        .context("unable to build Cursor OAuth client")?;
+
+    tokio::select! {
+        _ = cancel.notified() => {
+            anyhow::bail!("Login canceled");
+        }
+        result = wait_for_oauth_login(&http, &challenge, &cancel) => {
+            result.map(|_| ()).map_err(|err| anyhow::anyhow!(err.to_string()))
+        }
+    }
+}
+
+#[tauri::command]
+pub(super) async fn cancel_cursor_oauth_login(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<CursorComposerAuthStatus, String> {
+    if let Some(attempt) = state.cursor_login.lock().await.take() {
+        attempt.cancel.notify_one();
+    }
+    let auth = load_composer_auth_status().map_err(error_to_string)?;
+    let connection_state = if auth.connected {
+        "connected"
+    } else {
+        "disconnected"
+    };
+    Ok(cursor_composer_status_from_auth(
+        auth,
+        connection_state,
+        None,
+        None,
+    ))
 }
 
 #[tauri::command]
@@ -2096,9 +2240,12 @@ pub(super) fn sync_cursor_composer_auth(
 }
 
 #[tauri::command]
-pub(super) fn disconnect_cursor_composer(
+pub(super) async fn disconnect_cursor_composer(
     state: State<'_, DesktopState>,
 ) -> std::result::Result<(), String> {
+    if let Some(attempt) = state.cursor_login.lock().await.take() {
+        attempt.cancel.notify_one();
+    }
     delete_composer_auth().map_err(error_to_string)?;
     install_cursor_provider(&state.providers).ok();
     Ok(())

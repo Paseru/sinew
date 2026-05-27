@@ -90,9 +90,10 @@ use sinew_openrouter::{
     OpenRouterCatalogModel, OpenRouterProvider, PROVIDER_ID as OPENROUTER_PROVIDER_ID,
 };
 use sinew_cursor::{
-    delete_composer_auth, delete_default_api_auth, load_composer_auth_status,
+    create_login_challenge, delete_composer_auth, delete_default_api_auth, load_composer_auth_status,
     load_default_api_auth_status, save_default_api_key as persist_cursor_api_key,
-    sync_composer_auth_from_ide, CursorApiAuthStatus, CursorComposerAuthStatus, CursorProvider,
+    sync_composer_auth_from_ide, wait_for_oauth_login, CursorApiAuthStatus,
+    CursorComposerAuthStatus, CursorLoginChallenge, CursorProvider,
     PROVIDER_ID as CURSOR_PROVIDER_ID,
 };
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
@@ -533,6 +534,7 @@ pub fn run() {
         anthropic_login: Arc::new(Mutex::new(None)),
         google_login: Arc::new(Mutex::new(None)),
         kimi_login: Arc::new(Mutex::new(None)),
+        cursor_login: Arc::new(Mutex::new(None)),
     };
 
     tauri::Builder::default()
@@ -678,6 +680,8 @@ pub fn run() {
             providers::add_openrouter_model,
             providers::remove_openrouter_model,
             providers::get_cursor_composer_status,
+            providers::start_cursor_oauth_login,
+            providers::cancel_cursor_oauth_login,
             providers::sync_cursor_composer_auth,
             providers::disconnect_cursor_composer,
             providers::get_cursor_api_status,

@@ -576,12 +576,14 @@ export function SettingsPane({ workspacePath }: Props) {
     const anthropicConnecting = anthropicStatus?.connectionState === "connecting";
     const googleConnecting = googleStatus?.connectionState === "connecting";
     const kimiConnecting = kimiStatus?.connectionState === "connecting";
-    if (!openAiConnecting && !anthropicConnecting && !googleConnecting && !kimiConnecting) return;
+    const cursorConnecting = cursorComposerStatus?.connectionState === "connecting";
+    if (!openAiConnecting && !anthropicConnecting && !googleConnecting && !kimiConnecting && !cursorConnecting) return;
     const timer = window.setInterval(() => {
       if (openAiConnecting) void loadOpenAiStatus();
       if (anthropicConnecting) void loadAnthropicStatus();
       if (googleConnecting) void loadGoogleStatus();
       if (kimiConnecting) void loadKimiStatus();
+      if (cursorConnecting) void loadCursorStatus();
     }, 1200);
     return () => window.clearInterval(timer);
   }, [
@@ -589,6 +591,7 @@ export function SettingsPane({ workspacePath }: Props) {
     anthropicStatus?.connectionState,
     googleStatus?.connectionState,
     kimiStatus?.connectionState,
+    cursorComposerStatus?.connectionState,
     loadOpenAiStatus,
     loadAnthropicStatus,
     loadGoogleStatus,
@@ -794,12 +797,44 @@ export function SettingsPane({ workspacePath }: Props) {
     }
   }, [loadConfiguredProviders, loadCursorStatus]);
 
+  const connectCursor = useCallback(async () => {
+    setProvidersBusy(true);
+    setProvidersMessage(null);
+    try {
+      const login = await api.startCursorOAuthLogin();
+      setCursorComposerStatus({
+        connected: false,
+        connectionState: "connecting",
+        loginId: login.loginId,
+      });
+      await api.openExternalUrl(login.authUrl);
+      setProvidersMessage("Waiting for browser confirmation...");
+    } catch (err) {
+      setProvidersMessage(err instanceof Error ? err.message : String(err));
+      void loadCursorStatus();
+    } finally {
+      setProvidersBusy(false);
+    }
+  }, [loadCursorStatus]);
+
+  const cancelCursorComposer = useCallback(async () => {
+    setProvidersBusy(true);
+    setProvidersMessage(null);
+    try {
+      setCursorComposerStatus(await api.cancelCursorOAuthLogin());
+    } catch (err) {
+      setProvidersMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setProvidersBusy(false);
+    }
+  }, []);
+
   const disconnectCursorComposer = useCallback(async () => {
     setProvidersBusy(true);
     setProvidersMessage(null);
     try {
       await api.disconnectCursorComposer();
-      setCursorComposerStatus({ connected: false });
+      setCursorComposerStatus({ connected: false, connectionState: "disconnected" });
       setProvidersMessage("Disconnected");
       void loadConfiguredProviders();
       window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
@@ -1392,6 +1427,8 @@ export function SettingsPane({ workspacePath }: Props) {
             onConnectGoogle={() => void connectGoogle()}
             onCancelGoogle={() => void cancelGoogle()}
             onDisconnectGoogle={() => void disconnectGoogle()}
+            onConnectCursor={() => void connectCursor()}
+            onCancelCursorComposer={() => void cancelCursorComposer()}
             onSyncCursorComposer={() => void syncCursorComposer()}
             onDisconnectCursorComposer={() => void disconnectCursorComposer()}
             onConnectKimi={() => void connectKimi()}
@@ -1922,6 +1959,8 @@ type ProvidersSectionProps = {
   onConnectGoogle: () => void;
   onCancelGoogle: () => void;
   onDisconnectGoogle: () => void;
+  onConnectCursor: () => void;
+  onCancelCursorComposer: () => void;
   onSyncCursorComposer: () => void;
   onDisconnectCursorComposer: () => void;
   onConnectKimi: () => void;
@@ -1968,6 +2007,8 @@ function ProvidersSection({
   onConnectGoogle,
   onCancelGoogle,
   onDisconnectGoogle,
+  onConnectCursor,
+  onCancelCursorComposer,
   onSyncCursorComposer,
   onDisconnectCursorComposer,
   onConnectKimi,
@@ -1978,11 +2019,14 @@ function ProvidersSection({
   onOpenRouterModelsChange,
   onOpenRouterChanged,
 }: ProvidersSectionProps) {
-  const cursorStatus: ProviderCardStatus = {
+  const cursorStatus: CursorComposerAuthStatus = {
     connected: Boolean(cursorComposerStatus?.connected || cursorApiStatus?.connected),
-    connectionState: cursorComposerStatus?.connected || cursorApiStatus?.connected ? "connected" : "disconnected",
+    connectionState:
+      cursorComposerStatus?.connectionState ??
+      (cursorComposerStatus?.connected || cursorApiStatus?.connected ? "connected" : "disconnected"),
     email: cursorComposerStatus?.email ?? undefined,
-    planType: cursorComposerStatus?.membershipType ?? undefined,
+    membershipType: cursorComposerStatus?.membershipType ?? undefined,
+    error: cursorComposerStatus?.error ?? undefined,
   };
 
   return (
@@ -2247,7 +2291,7 @@ function ProvidersSection({
         <ProviderCard
           name="Cursor"
           icon="local:cursor"
-          description="Sync your Cursor IDE subscription (Auto + Composer) first, then optional API key for the API pool."
+          description="Connect your Cursor account (Google/GitHub) for Auto + Composer, then optional API key for the API pool."
           status={cursorStatus}
           connectedMeta={[
             cursorComposerStatus?.email || "Composer session",
@@ -2256,13 +2300,35 @@ function ProvidersSection({
           ]}
           loading={loading}
           busy={busy}
-          onConnect={onSyncCursorComposer}
-          onCancel={() => {}}
+          onConnect={onConnectCursor}
+          onCancel={onCancelCursorComposer}
           onDisconnect={onDisconnectCursorComposer}
           providerId="cursor"
-          connectLabel="Sync from IDE"
-          busyConnectLabel="Syncing..."
+          connectLabel="Connect"
+          busyConnectLabel="Opening..."
         >
+          <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
+            <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Or sync from Cursor IDE (if already signed in there):
+            </span>
+            <button
+              type="button"
+              onClick={onSyncCursorComposer}
+              disabled={loading || busy}
+              style={{
+                background: "transparent",
+                color: "var(--text-1)",
+                border: "1px solid var(--line-2)",
+                borderRadius: "4px",
+                padding: "6px 10px",
+                fontSize: "12px",
+                cursor: "pointer",
+                width: "fit-content",
+              }}
+            >
+              Sync from IDE
+            </button>
+          </div>
           <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
             <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               API pool (secondary, after Composer quota):
@@ -2382,6 +2448,7 @@ type ProviderCardStatus =
   | AnthropicProviderStatus
   | GoogleProviderStatus
   | KimiProviderStatus
+  | CursorComposerAuthStatus
   | null;
 
 type ProviderCardProps = {

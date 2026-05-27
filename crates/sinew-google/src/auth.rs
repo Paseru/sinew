@@ -144,6 +144,18 @@ impl Credential {
         })))
     }
 
+    pub fn source_path(&self) -> Option<PathBuf> {
+        match self {
+            Self::OAuth(state) => {
+                if let Ok(guard) = state.try_lock() {
+                    guard.source_path.clone()
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
     pub fn load_default() -> Result<Option<Self>> {
         Self::from_sinew_auth_file(&default_auth_path()?)
     }
@@ -326,6 +338,52 @@ pub fn default_auth_path() -> Result<PathBuf> {
     Ok(dirs.data_local_dir().join("google-auth.json"))
 }
 
+pub fn path_for_auth_key(key: &str) -> Result<PathBuf> {
+    let dirs = ProjectDirs::from("dev", "hyrak", "sinew")
+        .ok_or_else(|| AppError::Auth("unable to resolve local data directory".into()))?;
+    let dir = dirs.data_local_dir();
+    if key == "google" {
+        Ok(dir.join("google-auth.json"))
+    } else if key.starts_with("google:") {
+        let suffix = key.strip_prefix("google:").unwrap();
+        Ok(dir.join(format!("google-auth-{}.json", suffix)))
+    } else {
+        Err(AppError::Auth(format!("invalid auth key: {key}")))
+    }
+}
+
+pub fn all_auth_files() -> Result<Vec<(String, PathBuf)>> {
+    let dirs = ProjectDirs::from("dev", "hyrak", "sinew")
+        .ok_or_else(|| AppError::Auth("unable to resolve local data directory".into()))?;
+    let dir = dirs.data_local_dir();
+    let mut files = Vec::new();
+
+    let default_path = dir.join("google-auth.json");
+    if default_path.exists() {
+        files.push(("google".to_string(), default_path));
+    }
+
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
+                if filename.starts_with("google-auth-") && filename.ends_with(".json") {
+                    let suffix = filename
+                        .strip_prefix("google-auth-")
+                        .and_then(|s| s.strip_suffix(".json"))
+                        .unwrap_or("custom");
+                    let key = format!("google:{}", suffix);
+                    if !files.iter().any(|(_, p)| p == &path) {
+                        files.push((key, path));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(files)
+}
+
 pub fn load_default_auth_status() -> Result<GoogleAuthStatus> {
     load_auth_status(&default_auth_path()?)
 }
@@ -343,9 +401,8 @@ pub fn load_auth_status(path: &Path) -> Result<GoogleAuthStatus> {
     Ok(status_from_auth(&payload))
 }
 
-pub fn load_default_user_data() -> Result<Option<GoogleUserData>> {
-    let path = default_auth_path()?;
-    let bytes = match std::fs::read(&path) {
+pub fn load_user_data(path: &Path) -> Result<Option<GoogleUserData>> {
+    let bytes = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(err) => return Err(AppError::Auth(format!("unable to read auth file: {err}"))),
@@ -360,9 +417,8 @@ pub fn load_default_user_data() -> Result<Option<GoogleUserData>> {
         .filter(|user| !user.is_stale_antigravity_default()))
 }
 
-pub fn save_default_user_data(user: &GoogleUserData) -> Result<()> {
-    let path = default_auth_path()?;
-    let bytes = std::fs::read(&path)
+pub fn save_user_data(path: &Path, user: &GoogleUserData) -> Result<()> {
+    let bytes = std::fs::read(path)
         .map_err(|err| AppError::Auth(format!("unable to read auth file: {err}")))?;
     let mut payload: StoredAuth = serde_json::from_slice(&bytes)
         .map_err(|err| AppError::Auth(format!("invalid auth file: {err}")))?;
@@ -372,7 +428,15 @@ pub fn save_default_user_data(user: &GoogleUserData) -> Result<()> {
         ));
     }
     payload.user = Some(user.clone());
-    write_auth_file(&path, &payload)
+    write_auth_file(path, &payload)
+}
+
+pub fn load_default_user_data() -> Result<Option<GoogleUserData>> {
+    load_user_data(&default_auth_path()?)
+}
+
+pub fn save_default_user_data(user: &GoogleUserData) -> Result<()> {
+    save_user_data(&default_auth_path()?, user)
 }
 
 pub fn delete_default_auth() -> Result<()> {
@@ -475,6 +539,7 @@ pub async fn exchange_oauth_code(
     code: &str,
     redirect_uri: &str,
     pkce: &PkceCodes,
+    target_key: Option<String>,
 ) -> Result<GoogleAuthStatus> {
     let response = http
         .post(GOOGLE_OAUTH_TOKEN_URL)
@@ -508,7 +573,34 @@ pub async fn exchange_oauth_code(
         .await
         .ok()
         .or_else(|| body.id_token.as_deref().and_then(token_email));
-    save_oauth_tokens(&default_auth_path()?, body, email)
+
+    let target_path = if let Some(key) = target_key {
+        path_for_auth_key(&key)?
+    } else {
+        let default_path = default_auth_path()?;
+        if default_path.exists()
+            && load_auth_status(&default_path)
+                .map(|s| s.connected)
+                .unwrap_or(false)
+        {
+            let dir = default_path.parent().unwrap();
+            let mut index = 2;
+            loop {
+                let p = dir.join(format!("google-auth-{}.json", index));
+                if !p.exists() {
+                    break p;
+                }
+                index += 1;
+                if index > 100 {
+                    break dir.join(format!("google-auth-{}.json", index));
+                }
+            }
+        } else {
+            default_path
+        }
+    };
+
+    save_oauth_tokens(&target_path, body, email)
 }
 
 fn save_oauth_tokens(

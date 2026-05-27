@@ -28,25 +28,48 @@ fn default_ide_state_db() -> PathBuf {
 #[serde(rename_all = "camelCase")]
 pub struct CursorComposerAuthStatus {
     pub connected: bool,
+    #[serde(default = "default_disconnected_state")]
+    pub connection_state: String,
     pub email: Option<String>,
     pub membership_type: Option<String>,
     pub subscription_status: Option<String>,
     pub source: Option<String>,
     pub expires_at_ms: Option<i64>,
     pub last_sync_ms: Option<i64>,
+    pub login_id: Option<String>,
+    pub error: Option<String>,
+}
+
+fn default_disconnected_state() -> String {
+    "disconnected".into()
 }
 
 impl CursorComposerAuthStatus {
     pub fn disconnected() -> Self {
         Self {
             connected: false,
+            connection_state: "disconnected".into(),
             email: None,
             membership_type: None,
             subscription_status: None,
             source: None,
             expires_at_ms: None,
             last_sync_ms: None,
+            login_id: None,
+            error: None,
         }
+    }
+
+    pub fn with_connection_state(
+        mut self,
+        connection_state: impl Into<String>,
+        login_id: Option<String>,
+        error: Option<String>,
+    ) -> Self {
+        self.connection_state = connection_state.into();
+        self.login_id = login_id;
+        self.error = error;
+        self
     }
 }
 
@@ -116,6 +139,34 @@ pub fn load_composer_auth_status_from(path: &Path) -> Result<CursorComposerAuthS
     Ok(status_from_auth(&auth))
 }
 
+pub fn save_oauth_tokens(
+    access_token: String,
+    refresh_token: String,
+    email: Option<String>,
+    membership_type: Option<String>,
+    subscription_status: Option<String>,
+) -> Result<CursorComposerAuthStatus> {
+    let path = default_composer_auth_path()?;
+    let mut auth = StoredAuth {
+        provider: PROVIDER_ID.into(),
+        auth_mode: "oauth".into(),
+        tokens: StoredTokens {
+            access_token,
+            refresh_token: Some(refresh_token),
+            expires_at_ms: None,
+        },
+        profile: StoredProfile {
+            email,
+            membership_type,
+            subscription_status,
+        },
+        last_sync_ms: Some(now_ms()),
+    };
+    auth.tokens.expires_at_ms = jwt_exp_ms(&auth.tokens.access_token);
+    write_auth_file(&path, &auth)?;
+    Ok(status_from_auth(&auth))
+}
+
 pub fn sync_composer_auth_from_ide() -> Result<CursorComposerAuthStatus> {
     let session = read_ide_session(&default_ide_state_db())?;
     let path = default_composer_auth_path()?;
@@ -148,6 +199,9 @@ pub fn load_composer_session() -> Result<Option<ComposerSession>> {
     let auth: StoredAuth = serde_json::from_slice(&bytes)
         .map_err(|err| AppError::Auth(format!("invalid auth file: {err}")))?;
     if auth.provider != PROVIDER_ID || auth.tokens.access_token.trim().is_empty() {
+        return Ok(None);
+    }
+    if auth.auth_mode != "oauth" && auth.auth_mode != "ide_session" {
         return Ok(None);
     }
     Ok(Some(ComposerSession {
@@ -276,15 +330,26 @@ fn read_item_value(row: &rusqlite::Row<'_>) -> rusqlite::Result<String> {
 }
 
 fn status_from_auth(auth: &StoredAuth) -> CursorComposerAuthStatus {
-    CursorComposerAuthStatus {
+    let mut status = CursorComposerAuthStatus {
         connected: !auth.tokens.access_token.trim().is_empty(),
+        connection_state: if auth.tokens.access_token.trim().is_empty() {
+            "disconnected".into()
+        } else {
+            "connected".into()
+        },
         email: auth.profile.email.clone(),
         membership_type: auth.profile.membership_type.clone(),
         subscription_status: auth.profile.subscription_status.clone(),
-        source: Some("ide_session".into()),
+        source: Some(auth.auth_mode.clone()),
         expires_at_ms: auth.tokens.expires_at_ms,
         last_sync_ms: auth.last_sync_ms,
+        login_id: None,
+        error: None,
+    };
+    if status.expires_at_ms.is_none() {
+        status.expires_at_ms = jwt_exp_ms(&auth.tokens.access_token);
     }
+    status
 }
 
 fn write_auth_file(path: &Path, auth: &StoredAuth) -> Result<()> {

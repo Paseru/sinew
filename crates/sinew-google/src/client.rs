@@ -11,6 +11,7 @@ use tokio::sync::Mutex;
 use crate::{
     auth::{
         generate_state, load_default_user_data, save_default_user_data, Credential, GoogleUserData,
+        load_user_data, save_user_data, default_auth_path,
     },
     model_info,
     stream::map_stream,
@@ -49,6 +50,17 @@ impl GoogleConfig {
             "no Antigravity OAuth credential found. Connect Google in Settings > Providers.".into(),
         ))
     }
+
+    pub fn from_file(path: &std::path::Path) -> Result<Self> {
+        if let Some(credential) = Credential::from_sinew_auth_file(path)? {
+            return Ok(Self::new(credential));
+        }
+
+        Err(AppError::Auth(format!(
+            "unable to load google credential from path {}",
+            path.display()
+        )))
+    }
 }
 
 pub struct GoogleProvider {
@@ -63,7 +75,11 @@ impl GoogleProvider {
             .user_agent(USER_AGENT)
             .build()
             .map_err(|err| AppError::Network(err.to_string()))?;
-        let user_data = load_default_user_data().unwrap_or(None);
+        
+        let path = config.credential.source_path()
+            .unwrap_or_else(|| default_auth_path().unwrap_or_default());
+        let user_data = load_user_data(&path).unwrap_or(None);
+
         Ok(Self {
             config,
             http,
@@ -73,6 +89,10 @@ impl GoogleProvider {
 
     pub fn from_default_sources() -> Result<Self> {
         Self::new(GoogleConfig::from_default_sources()?)
+    }
+
+    pub fn from_file(path: &std::path::Path) -> Result<Self> {
+        Self::new(GoogleConfig::from_file(path)?)
     }
 
     async fn post(&self, method: &str) -> Result<reqwest::RequestBuilder> {
@@ -112,7 +132,9 @@ impl GoogleProvider {
 
         let user_data = self.setup_user().await?;
         if user_data.project_id != FALLBACK_PROJECT_ID {
-            if let Err(err) = save_default_user_data(&user_data) {
+            let path = self.config.credential.source_path()
+                .unwrap_or_else(|| default_auth_path().unwrap_or_default());
+            if let Err(err) = save_user_data(&path, &user_data) {
                 tracing::warn!(error = %err, "failed to persist Antigravity user data");
             }
         }
@@ -351,14 +373,14 @@ impl Provider for GoogleProvider {
     }
 
     fn capabilities(&self, model: &ModelRef) -> Option<ModelCapabilities> {
-        if model.provider != "google" {
+        if model.provider != "google" && !model.provider.starts_with("google:") {
             return None;
         }
         Some(model_info::capabilities(model))
     }
 
     async fn estimate_tokens(&self, request: ProviderRequest) -> Result<TokenEstimate> {
-        if request.model.provider != "google" {
+        if request.model.provider != "google" && !request.model.provider.starts_with("google:") {
             return Err(AppError::Unsupported(format!(
                 "Antigravity provider cannot count model provider {}",
                 request.model.provider
@@ -371,7 +393,7 @@ impl Provider for GoogleProvider {
     }
 
     async fn stream(&self, mut request: ProviderRequest) -> Result<ProviderStream> {
-        if request.model.provider != "google" {
+        if request.model.provider != "google" && !request.model.provider.starts_with("google:") {
             return Err(AppError::Unsupported(format!(
                 "Antigravity provider cannot stream model provider {}",
                 request.model.provider

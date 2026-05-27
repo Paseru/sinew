@@ -253,12 +253,20 @@ export type KimiProviderStatus = {
 
 export type CursorComposerAuthStatus = {
   connected: boolean;
+  connectionState?: ProviderConnectionState;
   email?: string | null;
   membershipType?: string | null;
   subscriptionStatus?: string | null;
   source?: string | null;
   expiresAtMs?: number | null;
   lastSyncMs?: number | null;
+  loginId?: string | null;
+  error?: string | null;
+};
+
+export type StartCursorLoginOutput = {
+  loginId: string;
+  authUrl: string;
 };
 
 export type CursorApiAuthStatus = {

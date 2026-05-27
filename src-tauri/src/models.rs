@@ -73,6 +73,13 @@ pub(super) struct KimiProviderStatus {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub(super) struct StartCursorLoginOutput {
+    pub(super) login_id: String,
+    pub(super) auth_url: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct StartKimiLoginOutput {
     pub(super) login_id: String,
     pub(super) auth_url: String,
