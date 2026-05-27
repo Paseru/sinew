@@ -36,7 +36,7 @@ impl GoogleConfig {
     pub fn new(credential: Credential) -> Self {
         Self {
             credential,
-            base_url: BASE_URL.into(),
+            base_url: PROD_BASE_URL.into(),
         }
     }
 
@@ -377,7 +377,10 @@ impl GoogleProvider {
             let err = read_http_error(response).await;
             if matches!(
                 status,
-                reqwest::StatusCode::FORBIDDEN | reqwest::StatusCode::NOT_FOUND
+                reqwest::StatusCode::FORBIDDEN
+                    | reqwest::StatusCode::NOT_FOUND
+                    | reqwest::StatusCode::SERVICE_UNAVAILABLE
+                    | reqwest::StatusCode::TOO_MANY_REQUESTS
             ) {
                 last_error = Some(err);
                 continue;
