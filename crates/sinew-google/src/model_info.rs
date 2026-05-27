@@ -41,6 +41,34 @@ const MODELS: &[GoogleModelInfo] = &[
         max_output_tokens: GEMINI_MAX_OUTPUT,
         supports_images: true,
     },
+    GoogleModelInfo {
+        id: "claude-opus-4.6",
+        context_window: 200_000,
+        preferred_window: 180_000,
+        max_output_tokens: 8192,
+        supports_images: true,
+    },
+    GoogleModelInfo {
+        id: "claude-sonnet-4.6",
+        context_window: 200_000,
+        preferred_window: 180_000,
+        max_output_tokens: 8192,
+        supports_images: true,
+    },
+    GoogleModelInfo {
+        id: "gpt-oss-120b",
+        context_window: 128_000,
+        preferred_window: 100_000,
+        max_output_tokens: 4096,
+        supports_images: false,
+    },
+    GoogleModelInfo {
+        id: "gemini-2.5-pro",
+        context_window: GEMINI_WINDOW,
+        preferred_window: 950_000,
+        max_output_tokens: GEMINI_MAX_OUTPUT,
+        supports_images: true,
+    },
 ];
 
 fn model_info(model_id: &str) -> &'static GoogleModelInfo {
@@ -83,16 +111,22 @@ pub fn antigravity_model_and_thinking(
         Effort::High | Effort::Xhigh | Effort::Max => "high",
     };
 
-    // Antigravity exposes 3.5-flash uniquement sous l'ID `gemini-3.5-flash-low`.
-    // Le thinkingLevel reste libre, mais l'ID modèle est figé.
+    // Antigravity exposes 3.5-flash with separate low/medium/high IDs matching your plan's quotas.
     if base == "gemini-3.5-flash" {
-        return ("gemini-3.5-flash-low".into(), Some(thinking_level));
+        let model_id = match thinking_level {
+            "minimal" | "low" => "gemini-3.5-flash-low",
+            "medium" => "gemini-3.5-flash-medium",
+            _ => "gemini-3.5-flash-high",
+        };
+        return (model_id.into(), Some(thinking_level));
     }
-    // Gemini 3.1 Pro on Antigravity is always routed to the agentic variant
-    // (`gemini-pro-agent`), which is the fine-tuned artefact for tool use and
-    // long thinking. The `thinkingLevel` is still variable.
+    // Gemini 3.1 Pro on Antigravity is routed to either -low or -high to leverage your active quotas.
     if base == "gemini-3.1-pro" {
-        return ("gemini-pro-agent".into(), Some(thinking_level));
+        let model_id = match thinking_level {
+            "minimal" | "low" => "gemini-3.1-pro-low",
+            _ => "gemini-3.1-pro-high",
+        };
+        return (model_id.into(), Some(thinking_level));
     }
     if is_pro {
         (format!("{base}-{thinking_level}"), Some(thinking_level))

@@ -1140,10 +1140,16 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
     let mut groups: HashMap<String, AntigravityQuotaGroupInfo> = HashMap::new();
     if let Some(models) = raw.get("models").and_then(|value| value.as_object()) {
         for (model_name, info) in models {
-            let label = info.get("displayName")
-                .and_then(|v| v.as_str())
-                .unwrap_or(model_name)
-                .to_string();
+            // On ignore les modèles internes qui n'ont pas de vrai "displayName" public
+            let Some(label) = info.get("displayName").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            
+            // On ignore aussi s'il s'agit explicitement de endpoints internes (ex: tab_, chat_)
+            if label.starts_with("tab_") || label.starts_with("chat_") || model_name.starts_with("tab_") || model_name.starts_with("chat_") {
+                continue;
+            }
+
             let quota = info.get("quotaInfo");
             let remaining = quota
                 .and_then(|value| value.get("remainingFraction"))
@@ -1159,13 +1165,17 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
                 continue;
             }
 
-            groups.insert(model_name.clone(), AntigravityQuotaGroupInfo {
-                group: model_name.clone(),
-                label,
+            let entry = groups.entry(label.to_string()).or_insert_with(|| AntigravityQuotaGroupInfo {
+                group: label.to_string(),
+                label: label.to_string(),
                 remaining_percent: remaining,
-                reset_time,
-                count: 1,
+                reset_time: reset_time.clone(),
+                count: 0,
             });
+            entry.count += 1;
+            if let Some(rem) = remaining {
+                entry.remaining_percent = Some(entry.remaining_percent.map_or(rem, |current| current.min(rem)));
+            }
         }
     }
     let mut groups = groups.into_values().collect::<Vec<_>>();

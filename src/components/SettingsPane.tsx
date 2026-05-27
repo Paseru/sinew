@@ -2533,7 +2533,7 @@ function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: bool
           <QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: windows.length > 1 ? "repeat(auto-fit, minmax(180px, 1fr))" : "1fr", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: windows.length > 1 ? "repeat(auto-fill, minmax(260px, 1fr))" : "1fr", gap: "16px" }}>
           {windows.map((item) => (
             <QuotaBar key={item.label} item={item} />
           ))}
