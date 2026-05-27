@@ -20,6 +20,7 @@ mod tests {
     fn oauth_only_identity_is_ready() {
         let identity = CursorIdeIdentity {
             machine_id: uuid::Uuid::new_v4().to_string(),
+            mac_machine_id: None,
             client_version: crate::identity::CURSOR_CLIENT_VERSION.into(),
             timezone: "UTC".into(),
             platform: "windows".into(),
@@ -201,5 +202,35 @@ mod tests {
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("clientSideToolV2Calls"));
         assert!(body.contains("CLIENT_SIDE_TOOL_V2_READ_FILE_V2"));
+    }
+
+    #[tokio::test]
+    async fn test_live_composer_request() {
+        use sinew_core::Provider;
+        use futures::StreamExt;
+        
+        let provider = match crate::client::CursorProvider::from_default_sources() {
+            Ok(provider) => provider,
+            Err(e) => {
+                println!("Skipping live test: unable to load provider: {e:?}");
+                return;
+            }
+        };
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2.5"),
+            vec![ChatMessage::user_text("Say OK")],
+        );
+        println!("Sending live Composer request...");
+        match provider.stream(request).await {
+            Ok(mut stream) => {
+                println!("Stream established. Reading events:");
+                while let Some(event) = stream.next().await {
+                    println!("EVENT: {:?}", event);
+                }
+            }
+            Err(err) => {
+                println!("STREAM ERROR: {:?}", err);
+            }
+        }
     }
 }

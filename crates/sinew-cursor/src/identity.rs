@@ -20,6 +20,7 @@ static EPHEMERAL_MACHINE_ID: OnceLock<String> = OnceLock::new();
 pub struct CursorIdeIdentity {
     pub client_version: String,
     pub machine_id: String,
+    pub mac_machine_id: Option<String>,
     pub timezone: String,
     pub platform: String,
     pub arch: String,
@@ -50,12 +51,14 @@ impl CursorIdeIdentity {
     }
 
     fn assemble() -> Self {
-        let machine_id = load_or_create_sinew_machine_id();
+        let (machine_id, mac_machine_id) = load_cursor_storage_ids()
+            .unwrap_or_else(|| (load_or_create_sinew_machine_id(), None));
         let client_version = Self::resolve_client_version();
         let (platform, arch) = detect_platform();
         Self {
             client_version,
             machine_id,
+            mac_machine_id,
             timezone: read_local_timezone(),
             platform,
             arch,
@@ -112,7 +115,35 @@ impl CursorIdeIdentity {
             state = *byte;
         }
         let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
-        format!("{encoded}{}", self.machine_id)
+        if let Some(mac_id) = &self.mac_machine_id {
+            format!("{encoded}{}/{}", self.machine_id, mac_id)
+        } else {
+            format!("{encoded}{}", self.machine_id)
+        }
+    }
+}
+
+fn cursor_storage_json_path() -> Option<PathBuf> {
+    let base_dirs = directories::BaseDirs::new()?;
+    let config_dir = base_dirs.config_dir();
+    let path = config_dir.join("Cursor").join("User").join("globalStorage").join("storage.json");
+    if path.exists() {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+fn load_cursor_storage_ids() -> Option<(String, Option<String>)> {
+    let path = cursor_storage_json_path()?;
+    let content = fs::read_to_string(path).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let machine_id = json.get("telemetry.machineId")?.as_str()?.to_string();
+    let mac_machine_id = json.get("telemetry.macMachineId").and_then(|v| v.as_str()).map(|s| s.to_string());
+    if !machine_id.trim().is_empty() {
+        Some((machine_id, mac_machine_id))
+    } else {
+        None
     }
 }
 
