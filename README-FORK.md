@@ -33,8 +33,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `src/components/chat/AIThinkingBlock.tsx`, `src/lib/ipc.ts`*
 * **🤖 Mode "Power User"** : L'IA répond de manière ultra-concise (zéro jargon) et gère automatiquement toute la maintenance Git (commit, pull, push) en arrière-plan.
   * 📂 *Fichiers : `src-tauri/src/state.rs`*
-* **🌐 Version Française** : Traduction dynamique des panneaux de configurations et boutons clés pour un meilleur confort visuel.
-  * 📂 *Fichiers : `src/lib/locale.ts`*
+* **🌐 Version Française** : Traduction dynamique et progressive des panneaux de configurations, boutons et éléments clés pour un meilleur confort visuel.
+  * 📂 *Fichiers : `src/lib/locale.ts`, `src/lib/frRuntime.ts`*
 * **🔄 Synchro OneDrive & SQLite** : Fusion différentielle automatique de votre historique et préférences entre plusieurs PC avec gestion intelligente des suppressions. La synchronisation de l'historique et des suppressions (tombstones) s'effectue désormais en temps réel et en arrière-plan dès qu'une action de modification (création, renommage, suppression) a lieu (plus besoin d'attendre la fermeture de l'application).
   * 📂 *Fichiers : `src-tauri/src/lib.rs`, `src-tauri/src/conversations.rs`*
 * **⚡ Diagnostic SOTA** : Un panneau de contrôle en un clic pour tester en temps réel l'état et la version de vos outils (Git, Node, Rust, Python, Ripgrep).
@@ -111,9 +111,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP, des commandes Git ou de l'analyse globale SOTA.
   * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`, `src-tauri/src/git.rs`, `crates/sinew-app/src/check_sota.rs`*
 
-* **🎨 Ajustements UI, Encodage & Traduction Dynamique** :
+* **🎨 Ajustements UI, Encodage & Mode Très Compact** :
   * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
-  * *Dictionnaire frRuntime* : Intégration d'un dictionnaire d'internationalisation runtime (`frRuntime.ts`) pour la traduction à la volée de toute l'interface.
   * *Rendu Grand Écran & Démarrage* : Fixation de la largeur `#root` à 100% sur écran large et animations d'introduction stylisées de l'icône de boot.
   * *Mode Ultra Pur* : Amélioration du mode "Très compact" pour masquer les tools réussis et n'afficher que l'animation d'état en cours.
-  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`, `src/lib/frRuntime.ts`*
+  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`*
