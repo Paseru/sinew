@@ -213,7 +213,11 @@ export function availableModelsForProviders(
     ...MODELS.filter((model) => configured.has(model.provider)),
   ];
 
-  for (const provider of configuredProviders) {
+  const sortedProviders = [...configuredProviders].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
+  );
+
+  for (const provider of sortedProviders) {
     if (provider.startsWith("openai:")) {
       const suffix = provider.slice("openai:".length);
       let modelName = "gpt-5.5";

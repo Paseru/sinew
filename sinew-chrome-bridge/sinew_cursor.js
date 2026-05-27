@@ -702,17 +702,19 @@
       const wantsMenuClose = wantsMenu && /\b(referme|ferme|fermer|close|dismiss|x)\b/.test(taskText);
       const wantsMenuOpen = wantsMenu && !wantsMenuClose;
 
+      let bestEl = null;
+      let bestScore = -1;
+
       if (taskText.includes("trinity")) {
         const directTrinity = document.querySelector('#trinity-card, .trinity-card, article[id*="trinity" i], article[class*="trinity" i], a[href*="trinity" i], [data-project*="trinity" i], [data-id*="trinity" i]');
         if (directTrinity && typeof directTrinity.scrollIntoView === "function") {
           directTrinity.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+          bestEl = directTrinity;
+          bestScore = 1000;
         }
       }
 
-      let bestEl = null;
-      let bestScore = -1;
-
-      elements.forEach(el => {
+      if (!bestEl) elements.forEach(el => {
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return;
         if (rect.width * rect.height > window.innerWidth * window.innerHeight * 0.4) return;
@@ -770,9 +772,12 @@
           if (rect.top < window.innerHeight * 0.35 && (rect.left < 180 || rect.right > window.innerWidth - 180)) score += 80;
         }
         if (taskText.includes("trinity")) {
-          if (el.tagName === "IFRAME") return;
-          if (!(text.includes("trinity") || id.includes("trinity") || className.includes("trinity") || href.includes("trinity") || ariaLabel.includes("trinity") || title.includes("trinity"))) return;
+          if (el.tagName === "IFRAME" || className.includes("terminal-panel") || className.includes("terminal")) return;
+          const hasTrinity = text.includes("trinity") || id.includes("trinity") || className.includes("trinity") || href.includes("trinity") || ariaLabel.includes("trinity") || title.includes("trinity");
+          if (!hasTrinity) return;
           score += 220;
+          if (id.includes("trinity-card") || className.includes("trinity-card")) score += 500;
+          if (el.tagName === "ARTICLE" || className.includes("project-card")) score += 120;
         }
 
         if (score > bestScore && score > 0) {

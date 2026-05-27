@@ -49,8 +49,23 @@ pub(super) fn list_configured_model_providers(
         .keys()
         .cloned()
         .collect::<Vec<_>>();
-    providers.sort();
+    providers.sort_by(|a, b| compare_provider_keys(a, b));
     Ok(providers)
+}
+
+fn compare_provider_keys(a: &str, b: &str) -> std::cmp::Ordering {
+    let split_a = a.split_once(':');
+    let split_b = b.split_once(':');
+    match (split_a, split_b) {
+        (Some((p_a, s_a)), Some((p_b, s_b))) if p_a == p_b => {
+            if let (Ok(num_a), Ok(num_b)) = (s_a.parse::<u32>(), s_b.parse::<u32>()) {
+                num_a.cmp(&num_b)
+            } else {
+                s_a.cmp(s_b)
+            }
+        }
+        _ => a.cmp(b),
+    }
 }
 
 pub(super) fn install_openai_provider(
@@ -1312,6 +1327,7 @@ pub(super) async fn get_all_openai_accounts() -> std::result::Result<Vec<OpenAiA
             }
         }
     }
+    accounts.sort_by(|a, b| compare_provider_keys(&a.key, &b.key));
     Ok(accounts)
 }
 

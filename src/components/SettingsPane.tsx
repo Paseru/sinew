@@ -2017,8 +2017,9 @@ function ProvidersSection({
         </ProviderCard>
         {(openAiAccounts.some((account) => account.key.startsWith("openai:")) || unconnectedAccounts.length > 0) && (
           <div className="settings-pane__secondary-grid">
-            {openAiAccounts
+            {[...openAiAccounts]
               .filter((account) => account.key.startsWith("openai:"))
+              .sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: "base" }))
               .map((account) => {
                 const suffix = account.key.slice("openai:".length);
             const displayName = `OpenAI ${suffix}`;
@@ -2116,7 +2117,9 @@ function ProvidersSection({
               </ProviderCard>
             );
           })}
-        {unconnectedAccounts.map((key) => {
+        {[...unconnectedAccounts]
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }))
+          .map((key) => {
           const suffix = key.slice("openai:".length);
           const displayName = `OpenAI ${suffix}`;
           const accountStatus: ProviderCardStatus = {
