@@ -22,6 +22,20 @@
 
 ---
 
+> [!NOTE]
+> **OAuth providers — a quick heads-up, then chill ✌️**
+>
+> Sinew can sign you in to **Codex**, **Claude Code** and **Antigravity** through their native OAuth flow, so you can plug Sinew into the subscription you already pay for instead of double-paying through an API key.
+>
+> - **Codex (OpenAI)** — fully in-bounds. The Codex CLI is open-source (Apache 2.0) and its OAuth flow is part of the publicly supported tooling, so third-party clients using it sit on solid ground.
+> - **Claude Code (Anthropic)** and **Antigravity (Google)** — the same OAuth flow is technically reserved for their own first-party clients. So in theory, those providers *could* flag accounts using it through a third-party harness.
+>
+> In practice: **no ban has ever been reported to us**, and this is the exact same approach every other open-source coding agent out there uses (opencode, crush, and friends). We track the upstream clients closely and ship updates fast whenever the flow shifts — so what Sinew sends keeps looking like a normal first-party session and stays clear of any flagging heuristics.
+>
+> Want to stay 100% sanctioned? Every provider also works with a plain **API key** or through **OpenRouter** — both fully in-bounds usages. Pick the path that feels right. Use at your own risk, but honestly: stay chill.
+
+---
+
 ## Contents
 
 - [The three modes](#the-three-modes) — Act, Goal, Plan
