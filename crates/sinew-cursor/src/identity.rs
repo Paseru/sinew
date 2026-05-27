@@ -11,7 +11,7 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use sinew_core::{AppError, Result};
 
-pub const CURSOR_CLIENT_VERSION: &str = "3.5.33";
+pub const CURSOR_CLIENT_VERSION: &str = "3.5.38";
 // Last verified against Cursor IDE 3.5.33 (May 2026). Override with SINEW_CURSOR_CLIENT_VERSION.
 
 static EPHEMERAL_MACHINE_ID: OnceLock<String> = OnceLock::new();

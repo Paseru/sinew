@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -15,12 +16,15 @@ struct PersistedStateFile {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PersistedConversationState {
     idempotency_key: String,
+    #[serde(default)]
+    encryption_key: Option<String>,
     seqno: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct ConversationStreamState {
     pub idempotency_key: String,
+    pub encryption_key: String,
     pub seqno: u32,
 }
 
@@ -39,10 +43,16 @@ impl StreamStateStore {
                 file.conversations
                     .into_iter()
                     .map(|(key, value)| {
+                        let encryption_key = value.encryption_key.unwrap_or_else(|| {
+                            let mut raw_key = [0u8; 32];
+                            rand::RngCore::fill_bytes(&mut rand::rng(), &mut raw_key);
+                            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_key)
+                        });
                         (
                             key,
                             ConversationStreamState {
                                 idempotency_key: value.idempotency_key,
+                                encryption_key,
                                 seqno: value.seqno,
                             },
                         )
@@ -56,9 +66,15 @@ impl StreamStateStore {
     pub fn conversation_state(&mut self, cache_key: &str) -> ConversationStreamState {
         self.conversations
             .entry(cache_key.to_string())
-            .or_insert_with(|| ConversationStreamState {
-                idempotency_key: uuid::Uuid::new_v4().to_string(),
-                seqno: 0,
+            .or_insert_with(|| {
+                let mut raw_key = [0u8; 32];
+                rand::RngCore::fill_bytes(&mut rand::rng(), &mut raw_key);
+                let encryption_key = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_key);
+                ConversationStreamState {
+                    idempotency_key: uuid::Uuid::new_v4().to_string(),
+                    encryption_key,
+                    seqno: 0,
+                }
             })
             .clone()
     }
@@ -84,6 +100,7 @@ impl StreamStateStore {
                         key.clone(),
                         PersistedConversationState {
                             idempotency_key: value.idempotency_key.clone(),
+                            encryption_key: Some(value.encryption_key.clone()),
                             seqno: value.seqno,
                         },
                     )

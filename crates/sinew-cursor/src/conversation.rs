@@ -21,11 +21,12 @@ pub fn build_stream_request(
     idempotency_key: &str,
     seqno: u32,
     identity: &CursorIdeIdentity,
+    encryption_key: &str,
 ) -> (Vec<u8>, u32) {
     if is_tool_result_continuation(request) {
         return build_tool_result_frames(request, idempotency_key, seqno);
     }
-    let body = build_full_request(request, conversation_id, identity);
+    let body = build_full_request(request, conversation_id, identity, encryption_key);
     let chunk = json!({
         "clientChunk": body,
         "idempotencyKey": idempotency_key,
@@ -39,6 +40,7 @@ fn build_full_request(
     request: &ProviderRequest,
     conversation_id: &str,
     identity: &CursorIdeIdentity,
+    encryption_key: &str,
 ) -> Value {
     let workspace = request
         .workspace_root
@@ -68,6 +70,8 @@ fn build_full_request(
             "shouldDisableTools": false,
             "allowModelFallbacks": false,
             "mcpTools": build_mcp_tools(&request.tools),
+            "blobEncryptionKey": encryption_key,
+            "speculativeSummarizationEncryptionKey": encryption_key,
         }
     });
     if let Some(level) = thinking_level {

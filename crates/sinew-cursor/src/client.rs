@@ -160,7 +160,7 @@ async fn stream_composer(
         .filter(|value| !value.trim().is_empty())
         .map(str::to_string)
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let (conversation_id, idempotency_key, seqno) = {
+    let (conversation_id, idempotency_key, encryption_key, seqno) = {
         let mut guard = provider.stream_state.lock().map_err(|_| {
             AppError::Provider("cursor stream state lock poisoned".into())
         })?;
@@ -168,6 +168,7 @@ async fn stream_composer(
         (
             session_key.clone(),
             state.idempotency_key.clone(),
+            state.encryption_key.clone(),
             state.seqno,
         )
     };
@@ -177,6 +178,7 @@ async fn stream_composer(
         &idempotency_key,
         seqno,
         &identity,
+        &encryption_key,
     );
     if let Ok(mut guard) = provider.stream_state.lock() {
         guard.update_seqno(&session_key, next_seqno);
@@ -186,6 +188,15 @@ async fn stream_composer(
     let request_id = uuid::Uuid::new_v4().to_string();
     let mut headers = reqwest::header::HeaderMap::new();
     identity.apply(&mut headers, &session_id, &request_id);
+
+    headers.insert(
+        reqwest::header::HeaderName::from_static("x-idempotency-key"),
+        reqwest::header::HeaderValue::from_str(&idempotency_key).unwrap(),
+    );
+    headers.insert(
+        reqwest::header::HeaderName::from_static("x-idempotent-encryption-key"),
+        reqwest::header::HeaderValue::from_str(&encryption_key).unwrap(),
+    );
 
     let response = provider
         .http
