@@ -304,7 +304,8 @@ textarea {
   justify-content: center;
   background: var(--bg-2);
   color: var(--text-1);
-  animation: welcome-pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: welcome-pop-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.05s;
 }
 .welcome__mark-inner {
   display: inline-flex;
@@ -313,20 +314,21 @@ textarea {
 }
 .welcome__mark-glyph rect {
   fill: currentColor;
-  animation-duration: 0.35s;
+  animation-duration: 0.7s;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   animation-fill-mode: both;
 }
 .welcome__mark-glyph rect:nth-child(1) {
   animation-name: welcome-slide-in-top-bar;
+  animation-delay: 0.1s;
 }
 .welcome__mark-glyph rect:nth-child(2) {
   animation-name: welcome-slide-in-mid-bar;
-  animation-delay: 0.03s;
+  animation-delay: 0.18s;
 }
 .welcome__mark-glyph rect:nth-child(3) {
   animation-name: welcome-slide-in-bot-bar;
-  animation-delay: 0.06s;
+  animation-delay: 0.26s;
 }
 
 

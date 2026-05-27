@@ -13,22 +13,23 @@ const homeDir = os.homedir();
 
 // Configure log file redirection (SINEW_CHROME_BRIDGE_DIR or standard localappdata path)
 const STATE_DIR = process.env.SINEW_CHROME_BRIDGE_DIR || path.join(process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'Sinew', 'ChromeBridge');
-let logStream = null;
+const LOG_FILE_PATH = path.join(STATE_DIR, 'bridge.log');
 try {
   fs.mkdirSync(STATE_DIR, { recursive: true });
-  logStream = fs.createWriteStream(path.join(STATE_DIR, 'bridge.log'), { flags: 'a' });
 } catch (e) {
-  // Silent fallback if directory creation or stream creation fails
+  // Silent fallback if directory creation fails
 }
 
 function writeToLogFile(prefix, args) {
-  if (logStream) {
+  try {
     const timestamp = new Date().toISOString();
     const formatted = args.map(arg => {
       if (arg instanceof Error) return arg.stack || arg.message;
       return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
     }).join(' ');
-    logStream.write(`[${timestamp}] [${prefix}] ${formatted}\n`);
+    fs.appendFileSync(LOG_FILE_PATH, `[${timestamp}] [${prefix}] ${formatted}\n`, 'utf8');
+  } catch (e) {
+    // Silent fallback if append fails
   }
 }
 

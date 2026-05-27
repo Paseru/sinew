@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use sinew_core::{AppError, Result};
+use sinew_core::Result;
 
 pub fn frame_connect_json(payload: &[u8], flags: u8) -> Vec<u8> {
     let mut frame = Vec::with_capacity(5 + payload.len());
@@ -43,14 +43,4 @@ pub fn parse_json_text(payload: &[u8]) -> Option<String> {
         return Some(format!("[cursor-error] {message}"));
     }
     None
-}
-
-pub fn connect_error(payload: &[u8]) -> Option<AppError> {
-    let value: serde_json::Value = serde_json::from_slice(payload).ok()?;
-    let error = value.get("error")?;
-    let message = error
-        .get("message")
-        .and_then(|item| item.as_str())
-        .unwrap_or("Cursor connect error");
-    Some(AppError::Network(message.to_string()))
 }

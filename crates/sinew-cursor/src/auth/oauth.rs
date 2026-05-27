@@ -11,7 +11,6 @@ use sinew_core::{AppError, Result};
 
 use super::composer::{save_oauth_tokens, CursorComposerAuthStatus};
 
-pub const CURSOR_AUTH_CLIENT_ID: &str = "KbZUR41cY7W6zRSdpSUJ7I7mLYBKOCmB";
 const CURSOR_WEBSITE_URL: &str = "https://cursor.com";
 const CURSOR_BACKEND_URL: &str = "https://api2.cursor.sh";
 const CURSOR_LOGIN_PATH: &str = "/loginDeepControl";

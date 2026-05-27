@@ -10,25 +10,19 @@ struct CursorModelInfo {
     context_window: u32,
     preferred_window: u32,
     max_output_tokens: u32,
-    supports_fast: bool,
 }
 
-const MODELS: &[CursorModelInfo] = &[
-    CursorModelInfo {
-        id: MODEL_COMPOSER_25_FAST,
-        context_window: 272_000,
-        preferred_window: 240_000,
-        max_output_tokens: 128_000,
-        supports_fast: true,
-    },
-    CursorModelInfo {
-        id: MODEL_COMPOSER_25,
-        context_window: 272_000,
-        preferred_window: 240_000,
-        max_output_tokens: 128_000,
-        supports_fast: false,
-    },
-];
+const MODELS: &[CursorModelInfo] = &[CursorModelInfo {
+    id: MODEL_COMPOSER_25_FAST,
+    context_window: 272_000,
+    preferred_window: 240_000,
+    max_output_tokens: 128_000,
+}, CursorModelInfo {
+    id: MODEL_COMPOSER_25,
+    context_window: 272_000,
+    preferred_window: 240_000,
+    max_output_tokens: 128_000,
+}];
 
 fn model_info(model_id: &str) -> &'static CursorModelInfo {
     MODELS

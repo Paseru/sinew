@@ -48,7 +48,7 @@ impl CursorComposerAuthStatus {
     pub fn disconnected() -> Self {
         Self {
             connected: false,
-            connection_state: "disconnected".into(),
+            connection_state: default_disconnected_state(),
             email: None,
             membership_type: None,
             subscription_status: None,
