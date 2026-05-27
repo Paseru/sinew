@@ -36,7 +36,7 @@ impl GoogleConfig {
     pub fn new(credential: Credential) -> Self {
         Self {
             credential,
-            base_url: PROD_BASE_URL.into(),
+            base_url: BASE_URL.into(),
         }
     }
 
@@ -86,6 +86,7 @@ impl GoogleProvider {
             .post(method_url(base_url, method))
             .bearer_auth(token)
             .header("user-agent", antigravity_user_agent())
+            .header("x-goog-api-client", "gl-node/22.21.1")
             .header("content-type", "application/json")
             .header("accept", "application/json"))
     }
@@ -377,10 +378,7 @@ impl GoogleProvider {
             let err = read_http_error(response).await;
             if matches!(
                 status,
-                reqwest::StatusCode::FORBIDDEN
-                    | reqwest::StatusCode::NOT_FOUND
-                    | reqwest::StatusCode::SERVICE_UNAVAILABLE
-                    | reqwest::StatusCode::TOO_MANY_REQUESTS
+                reqwest::StatusCode::FORBIDDEN | reqwest::StatusCode::NOT_FOUND
             ) {
                 last_error = Some(err);
                 continue;
