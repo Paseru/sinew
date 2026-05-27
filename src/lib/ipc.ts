@@ -48,6 +48,7 @@ import type {
   ThinkingLevel,
   ToolSettings,
   UpdateInfo,
+  CodebaseIndexStatus,
   WorkspaceBootstrap,
   WorkspaceDeletedEntry,
   WorkspaceEntry,
@@ -167,6 +168,11 @@ export const api = {
   },
   unwatchWorkspace(workspacePath: string) {
     return invoke<boolean>("unwatch_workspace_command", {
+      input: { workspacePath },
+    });
+  },
+  codebaseIndexStats(workspacePath: string) {
+    return invoke<CodebaseIndexStatus>("codebase_index_stats_command", {
       input: { workspacePath },
     });
   },

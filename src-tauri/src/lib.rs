@@ -35,7 +35,7 @@ use sinew_anthropic::{
 };
 use sinew_app::{
     checkpoint_from_snapshots, clean_context_descriptor, compact_conversation_history,
-    copy_workspace_entries, create_installed_skill, create_workspace_directory,
+    copy_workspace_entries, codebase_index_status, create_installed_skill, create_workspace_directory,
     create_workspace_file, delete_workspace_entry, import_workspace_paths, list_installed_skills,
     list_workspace_entries, list_workspace_files, normalize_workspace_root, probe_mcp_servers,
     read_external_file, read_workspace_file, rename_workspace_entry, resolve_terminal_path,
@@ -615,6 +615,7 @@ pub fn run() {
             workspace::reset_window_title,
             workspace::watch_workspace_command,
             workspace::unwatch_workspace_command,
+            workspace::codebase_index_stats_command,
             workspace::list_workspace_entries_command,
             workspace::list_workspace_files_command,
             workspace::search_workspace_files_command,

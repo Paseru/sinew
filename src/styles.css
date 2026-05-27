@@ -1277,12 +1277,35 @@ textarea {
   letter-spacing: -0.005em;
   min-width: 0;
 }
-.sidebar__head-title > span {
+.sidebar__head-title > span:not(.sidebar__head-title-stack) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
   max-width: min(220px, 100%);
+}
+.sidebar__head-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+.sidebar__head-title-stack > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar__index-status {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-3);
+  letter-spacing: 0;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sidebar__head-title svg {
   color: var(--text-3);
@@ -4434,6 +4457,13 @@ textarea {
 .settings-pane__tool-group-head span {
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
+}
+.settings-pane__tool-group-note {
+  margin: 0 2px 4px;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
 }
 .settings-pane__tool-group-list {
   display: flex;

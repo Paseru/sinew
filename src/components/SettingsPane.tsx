@@ -3316,26 +3316,31 @@ function ToolsSection({
           {hasImageTool && (
             <section className="settings-pane__tool-group">
               <div className="settings-pane__tool-group-head">
-                <h2>Image generation</h2>
+                <h2>Génération d&apos;images</h2>
+                <span>Outil create_image (OpenAI / Google)</span>
               </div>
+              <p className="settings-pane__tool-group-note">
+                Les images générées passent par ChatGPT (OpenAI) ou Gemini (Google).
+                Non disponible avec le modèle Composer Cursor dans le chat agent.
+              </p>
               <div
                 className="settings-pane__tool-provider-switch"
                 role="group"
-                aria-label="Image provider"
+                aria-label="Fournisseur d'images"
               >
                 <button
                   type="button"
                   data-active={imageProvider === "gptImage2" ? "true" : "false"}
                   onClick={() => onImageProviderChange("gptImage2")}
                 >
-                  GPT Image 2
+                  ChatGPT
                 </button>
                 <button
                   type="button"
                   data-active={imageProvider === "nanoBanana2" ? "true" : "false"}
                   onClick={() => onImageProviderChange("nanoBanana2")}
                 >
-                  Nano Banana 2
+                  Gemini
                 </button>
               </div>
               {imageProvider === "gptImage2" && (
@@ -3345,12 +3350,12 @@ function ToolsSection({
                 >
                   <div className="settings-pane__tool-toggle-text">
                     <span className="settings-pane__tool-toggle-label">
-                      Use OpenAI subscription
+                      Utiliser l&apos;abonnement OpenAI
                     </span>
                     <span className="settings-pane__tool-toggle-hint">
                       {openAiConnected
-                        ? "Authenticate image requests with your connected OpenAI account instead of an API key."
-                        : "Connect OpenAI in Settings → Providers to use your subscription."}
+                        ? "Authentifie les requêtes image avec ton compte OpenAI connecté, sans clé API."
+                        : "Connecte OpenAI dans Paramètres → Providers pour utiliser ton abonnement."}
                     </span>
                   </div>
                   <button
@@ -3377,8 +3382,8 @@ function ToolsSection({
                 <ApiKeyField
                   label={
                     imageProvider === "nanoBanana2"
-                      ? "Gemini API key"
-                      : "OpenAI API key"
+                      ? "Clé API Gemini"
+                      : "Clé API OpenAI"
                   }
                   value={activeImageKey}
                   placeholder={imageProvider === "nanoBanana2" ? "AIza..." : "sk-..."}

@@ -136,6 +136,15 @@ pub(super) async fn unwatch_workspace_command(
 }
 
 #[tauri::command]
+pub(super) async fn codebase_index_stats_command(
+    input: WorkspaceInput,
+) -> std::result::Result<sinew_app::CodebaseIndexStatus, String> {
+    let workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    Ok(codebase_index_status(&workspace_root))
+}
+
+#[tauri::command]
 pub(super) async fn list_workspace_entries_command(
     input: WorkspaceEntriesInput,
 ) -> std::result::Result<Vec<sinew_app::WorkspaceEntry>, String> {

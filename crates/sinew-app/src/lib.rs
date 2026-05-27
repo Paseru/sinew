@@ -65,12 +65,12 @@ pub use tool_run::{
 pub use web::{WebFetchTool, WebSearchTool};
 pub use workspace::{
     copy_workspace_entries, create_workspace_directory, create_workspace_file,
-    delete_workspace_entry, import_workspace_paths, list_workspace_entries, list_workspace_files,
-    normalize_workspace_root, read_external_file, read_workspace_file, rename_workspace_entry,
-    resolve_terminal_path, restore_workspace_deleted_entries, search_workspace_files,
-    trash_workspace_entry, write_workspace_file, FileDocument, ImportedEntry,
-    TerminalPathResolution, WorkspaceCopyOperation, WorkspaceDeletedEntry, WorkspaceEntry,
-    WorkspaceEntryKind, WorkspaceFileChangeEvent, WorkspaceInfo, WorkspaceSearchFile,
-    WorkspaceSearchMatch, WorkspaceSearchResult,
+    codebase_index_status, delete_workspace_entry, import_workspace_paths, list_workspace_entries,
+    list_workspace_files, normalize_workspace_root, read_external_file, read_workspace_file,
+    rename_workspace_entry, resolve_terminal_path, restore_workspace_deleted_entries,
+    search_workspace_files, trash_workspace_entry, write_workspace_file, CodebaseIndexStatus,
+    FileDocument, ImportedEntry, TerminalPathResolution, WorkspaceCopyOperation,
+    WorkspaceDeletedEntry, WorkspaceEntry, WorkspaceEntryKind, WorkspaceFileChangeEvent,
+    WorkspaceInfo, WorkspaceSearchFile, WorkspaceSearchMatch, WorkspaceSearchResult,
 };
 pub use write::WriteFileTool;

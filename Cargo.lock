@@ -5067,6 +5067,7 @@ dependencies = [
  "directories",
  "fastembed",
  "notify",
+ "regex",
  "rusqlite",
  "sha2",
  "walkdir",

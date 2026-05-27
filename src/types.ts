@@ -94,9 +94,17 @@ export type ChatMessage = {
   parts: Part[];
 };
 
+export type CodebaseIndexStatus = {
+  filesIndexed: number;
+  chunksIndexed: number;
+  engine: string;
+  semanticEnabled: boolean;
+};
+
 export type WorkspaceInfo = {
   path: string;
   name: string;
+  codebaseIndex: CodebaseIndexStatus;
 };
 
 export type ConversationSummary = {

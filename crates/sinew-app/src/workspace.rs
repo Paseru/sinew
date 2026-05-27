@@ -46,9 +46,19 @@ const IGNORED_DIRS: &[&str] = &[
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CodebaseIndexStatus {
+    pub files_indexed: usize,
+    pub chunks_indexed: usize,
+    pub engine: String,
+    pub semantic_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceInfo {
     pub path: String,
     pub name: String,
+    pub codebase_index: CodebaseIndexStatus,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -152,6 +162,21 @@ pub fn workspace_info(root: &Path) -> WorkspaceInfo {
             .and_then(|value| value.to_str())
             .map(|value| value.to_string())
             .unwrap_or_else(|| root.display().to_string()),
+        codebase_index: codebase_index_status(root),
+    }
+}
+
+pub fn codebase_index_status(root: &Path) -> CodebaseIndexStatus {
+    let stats = sinew_index::index_stats(root).unwrap_or_default();
+    CodebaseIndexStatus {
+        files_indexed: stats.files_indexed,
+        chunks_indexed: stats.chunks_indexed,
+        engine: if sinew_index::semantic_search_enabled() {
+            "fts+embeddings".into()
+        } else {
+            "fts".into()
+        },
+        semantic_enabled: sinew_index::semantic_search_enabled(),
     }
 }
 

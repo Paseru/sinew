@@ -40,6 +40,7 @@ import type {
   SavedConversation,
   ServiceTier,
   ThinkingLevel,
+  CodebaseIndexStatus,
   WorkspaceBootstrap,
   WorkspaceEntry,
   WorkspaceFileChangedPayload,
@@ -77,6 +78,9 @@ export function Workspace({
   onBootstrapReplace,
 }: Props) {
   const workspacePath = bootstrap.workspace.path;
+  const [codebaseIndex, setCodebaseIndex] = useState<CodebaseIndexStatus>(
+    bootstrap.workspace.codebaseIndex,
+  );
 
   const [conversations, setConversations] = useState<ConversationSummary[]>(
     bootstrap.conversations,
@@ -123,7 +127,28 @@ export function Workspace({
     setConversations(bootstrap.conversations);
     setActiveConv(bootstrap.activeConversation);
     setGlobalModeModelSettings(bootstrap.modeModelSettings);
+    setCodebaseIndex(bootstrap.workspace.codebaseIndex);
   }, [bootstrap]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshIndex = async () => {
+      try {
+        const stats = await api.codebaseIndexStats(workspacePath);
+        if (!cancelled) {
+          setCodebaseIndex(stats);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    };
+    void refreshIndex();
+    const timer = window.setInterval(refreshIndex, 20_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [workspacePath]);
 
   useEffect(() => {
     navigationSeqRef.current += 1;
@@ -1823,7 +1848,13 @@ export function Workspace({
             <div className="sidebar__head">
               <span className="sidebar__head-title">
                 <Icon icon="solar:folder-bold-duotone" width={16} height={16} />
-                <span>{bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name}</span>
+                <span className="sidebar__head-title-stack">
+                  <span>{bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name}</span>
+                  <span className="sidebar__index-status" title={`Moteur ${codebaseIndex.engine}`}>
+                    Index local · {codebaseIndex.filesIndexed} fichiers · {codebaseIndex.chunksIndexed} chunks
+                    {codebaseIndex.semanticEnabled ? " · sémantique" : ""}
+                  </span>
+                </span>
               </span>
               <span className="sidebar__head-actions">
                 <button
