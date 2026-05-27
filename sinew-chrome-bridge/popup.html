@@ -4,72 +4,102 @@
   <meta charset="utf-8">
   <style>
     :root {
-      --bg: #12131a;
-      --card-bg: #1a1b26;
-      --text: #ffffff;
-      --text-muted: #787a91;
-      --green: #4ade80;
-      --green-bg: rgba(74, 222, 128, 0.15);
-      --red: #f87171;
-      --red-bg: rgba(248, 113, 113, 0.15);
+      --bg: #08090d;
+      --card-bg: #101118;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --neon-orange: #ff6b00;
+      --neon-pink: #ff0080;
+      --neon-teal: #66f7ff;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.12);
       --border: rgba(255, 255, 255, 0.08);
-      --accent: #5e5ce6;
+      --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     }
 
     body {
       width: 280px;
       margin: 0;
-      padding: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
+      font-family: var(--font-stack);
       background: var(--bg);
       color: var(--text);
       display: flex;
       flex-direction: column;
       align-items: center;
       box-sizing: border-box;
+      overflow-x: hidden;
     }
 
     .logo-container {
+      margin-top: 4px;
       margin-bottom: 12px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      position: relative;
     }
 
     .logo-img {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      transition: filter 0.3s ease;
+    }
+
+    .connected .logo-img {
+      filter: drop-shadow(0 0 8px rgba(255, 107, 0, 0.6)) drop-shadow(0 0 16px rgba(255, 0, 128, 0.3));
     }
 
     .title {
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 700;
-      margin: 0 0 12px 0;
-      letter-spacing: -0.4px;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--text) 30%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .description {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.4;
+      margin: 0 0 16px 0;
+    }
+
+    .status-row {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
     }
 
     .status-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 16px;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
-      transition: all 0.3s ease;
-      margin-bottom: 16px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
     }
 
     .status-pill.connected {
       background: var(--green-bg);
       color: var(--green);
+      border-color: rgba(16, 185, 129, 0.2);
     }
 
     .status-pill.disconnected {
       background: var(--red-bg);
       color: var(--red);
+      border-color: rgba(239, 68, 68, 0.2);
     }
 
     .status-dot {
@@ -79,128 +109,187 @@
       background: currentColor;
     }
 
-    .description {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-align: center;
-      line-height: 1.4;
-      margin: 0 0 20px 0;
+    .connected .status-dot {
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-green 2s infinite;
     }
 
-    .stats-container {
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-icon svg {
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-icon:hover svg {
+      transform: rotate(45deg);
+    }
+
+    /* Diagnostics expandable section */
+    .diagnostics-panel {
       width: 100%;
+      height: 0;
+      overflow: hidden;
+      transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-sizing: border-box;
+    }
+
+    .diagnostics-panel.expanded {
+      height: auto;
       border-top: 1px solid var(--border);
       padding-top: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+    }
+
+    .stats-row {
+      width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 12px;
       color: var(--text-muted);
+      margin-bottom: 10px;
     }
 
     .stats-value {
       font-weight: 600;
       color: var(--text);
-    }
-
-    .btn-refresh {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.2s ease, transform 0.1s ease;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-refresh:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .btn-refresh:active {
-      transform: scale(0.98);
-    }
-
-    .btn-refresh:disabled {
-      opacity: 0.65;
-      cursor: wait;
-    }
-
-    .btn-row {
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
+      font-family: 'Share Tech Mono', Monaco, monospace;
     }
 
     .diagnostic {
       width: 100%;
-      margin-top: 10px;
       padding: 8px 10px;
+      background: rgba(0, 0, 0, 0.2);
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text-muted);
       font-size: 11px;
-      line-height: 1.35;
-      word-break: break-word;
+      font-family: 'Share Tech Mono', Monaco, monospace;
+      line-height: 1.4;
+      word-break: break-all;
       box-sizing: border-box;
     }
 
-    .footer {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 20px;
-      border-top: 1px solid var(--border);
+    /* Action buttons */
+    .btn-row {
       width: 100%;
-      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 9px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 107, 0, 0.3);
+      box-shadow: 0 0 10px rgba(255, 107, 0, 0.05);
+    }
+
+    .btn-action:active {
+      transform: scale(0.98);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
+    .footer {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      opacity: 0.6;
+      width: 100%;
       text-align: center;
     }
   </style>
 </head>
-<body>
+<body class="disconnected" id="body-container">
   <div class="logo-container">
     <img src="icon-128.png" class="logo-img" alt="Sinew Logo">
   </div>
   
   <h1 class="title">Sinew</h1>
   
-  <div class="status-pill disconnected" id="status-pill">
-    <span class="status-dot"></span>
-    <span id="status-text">Disconnected</span>
-  </div>
-
   <p class="description">Control Chrome with Sinew.</p>
 
-  <div class="stats-container">
-    <span>Active tabs tracked</span>
-    <span class="stats-value" id="attached-count">0</span>
+  <div class="status-row">
+    <div class="status-pill disconnected" id="status-pill">
+      <span class="status-dot"></span>
+      <span id="status-text">Disconnected</span>
+    </div>
+    
+    <button class="btn-icon" id="btn-settings" title="Diagnostics">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="diagnostics-panel" id="diagnostics-panel">
+    <div class="stats-row">
+      <span>Active tabs tracked</span>
+      <span class="stats-value" id="attached-count">0</span>
+    </div>
+    <div class="diagnostic" id="diagnostic">Diagnostic: starting...</div>
   </div>
 
   <div class="btn-row">
-    <button class="btn-refresh" id="btn-refresh">
+    <button class="btn-action" id="btn-refresh">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
       </svg>
       <span>Reconnect</span>
     </button>
 
-    <button class="btn-refresh" id="btn-restart">
+    <button class="btn-action" id="btn-restart">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"/>
       </svg>
       <span>Restart bridge</span>
     </button>
   </div>
-
-  <div class="diagnostic" id="diagnostic">Diagnostic: starting...</div>
 
   <div class="footer">
     Version v1.0.0

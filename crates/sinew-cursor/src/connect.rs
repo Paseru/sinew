@@ -2,7 +2,7 @@ use bytes::Bytes;
 use serde_json::Value;
 use sinew_core::{Result, Usage};
 
-use crate::tools::{parse_tool_call, ParsedToolCall};
+use crate::tools::{resolve_tool_call, ParsedToolCall};
 
 pub fn frame_connect_json(payload: &[u8], flags: u8) -> Vec<u8> {
     let mut frame = Vec::with_capacity(5 + payload.len());
@@ -63,7 +63,7 @@ fn collect_events(value: &Value) -> Vec<ComposerEvent> {
             push_events_from_value(nested, &mut events);
         }
         if let Some(nested) = server_chunk.get("clientSideToolV2Call") {
-            if let Some(parsed) = parse_tool_call(nested) {
+            if let Some(parsed) = resolve_tool_call(nested) {
                 events.push(ComposerEvent::ToolCall(parsed));
             }
         }
@@ -84,7 +84,7 @@ fn collect_events(value: &Value) -> Vec<ComposerEvent> {
         "partial_tool_call",
     ] {
         if let Some(call) = value.get(key) {
-            if let Some(parsed) = parse_tool_call(call) {
+            if let Some(parsed) = resolve_tool_call(call) {
                 events.push(ComposerEvent::ToolCall(parsed));
             }
         }
@@ -120,7 +120,7 @@ fn push_events_from_value(value: &Value, events: &mut Vec<ComposerEvent>) {
         "tool_call",
     ] {
         if let Some(call) = value.get(key) {
-            if let Some(parsed) = parse_tool_call(call) {
+            if let Some(parsed) = resolve_tool_call(call) {
                 events.push(ComposerEvent::ToolCall(parsed));
             }
         }
@@ -222,6 +222,22 @@ mod tests {
                 if usage.input_tokens == 120
                     && usage.output_tokens == 45
                     && usage.reasoning_tokens == 10
+        )));
+    }
+
+    #[test]
+    fn resolves_unsupported_tool_calls_from_stream() {
+        let events = collect_events(&json!({
+            "clientSideToolV2Call": {
+                "tool": "CLIENT_SIDE_TOOL_V2_APPLY_PATCH",
+                "toolCallId": "call_unknown"
+            }
+        }));
+        assert!(events.iter().any(|event| matches!(
+            event,
+            ComposerEvent::ToolCall(call)
+                if call.sinew_name == crate::tools::COMPOSER_UNSUPPORTED_TOOL
+                    && call.cursor_tool == "CLIENT_SIDE_TOOL_V2_APPLY_PATCH"
         )));
     }
 }

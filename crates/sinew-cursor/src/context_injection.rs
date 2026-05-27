@@ -31,7 +31,7 @@ pub fn append_local_index_excerpts(request: &ProviderRequest, context: &mut Stri
         return;
     }
 
-    context.push_str("\n\n## Relevant workspace excerpts (local index)\n");
+    context.push_str("\n\n## Relevant workspace excerpts\n");
     let mut remaining = MAX_INJECTED_CHARS;
     for hit in hits {
         let block = format!(

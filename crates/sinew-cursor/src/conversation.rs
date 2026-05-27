@@ -91,22 +91,25 @@ fn attach_workspace_context(stream_request: &mut Value, workspace: &WorkspaceSna
     };
     req.insert(
         "workspaceFolders".into(),
-        json!([{ "uri": workspace.uri, "name": workspace.name }]),
+        json!([{
+            "uri": sanitize_outbound_text(&workspace.uri),
+            "name": sanitize_outbound_text(&workspace.name),
+        }]),
     );
     req.insert(
         "projectLayouts".into(),
         json!([{
-            "rootPath": workspace.name,
-            "content": workspace.project_layout,
+            "rootPath": sanitize_outbound_text(&workspace.name),
+            "content": sanitize_outbound_json(workspace.project_layout.clone()),
         }]),
     );
     if let Some(branch) = workspace.branch.as_ref() {
         req.insert(
             "repositoryInfo".into(),
             json!({
-                "repoName": workspace.name,
-                "branchName": branch,
-                "workspaceUri": workspace.uri,
+                "repoName": sanitize_outbound_text(&workspace.name),
+                "branchName": sanitize_outbound_text(branch),
+                "workspaceUri": sanitize_outbound_text(&workspace.uri),
             }),
         );
     }

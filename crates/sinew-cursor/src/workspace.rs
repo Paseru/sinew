@@ -48,7 +48,7 @@ pub fn snapshot(workspace_root: &str) -> Option<WorkspaceSnapshot> {
             json!({
                 "filesIndexed": index_stats.files_indexed,
                 "chunksIndexed": index_stats.chunks_indexed,
-                "engine": "sinew-fts5+embeddings"
+                "engine": "cursor-local-index"
             }),
         );
     }

@@ -1,26 +1,34 @@
 // popup.js — Dynamic high-performance UI state driver for Sinew Chrome Bridge
 
 document.addEventListener('DOMContentLoaded', () => {
+  const bodyContainer = document.getElementById('body-container');
   const pill = document.getElementById('status-pill');
   const text = document.getElementById('status-text');
   const count = document.getElementById('attached-count');
   const btn = document.getElementById('btn-refresh');
   const restartBtn = document.getElementById('btn-restart');
   const diag = document.getElementById('diagnostic');
+  const btnSettings = document.getElementById('btn-settings');
+  const diagPanel = document.getElementById('diagnostics-panel');
+
+  // Toggle diagnostics panel
+  btnSettings.addEventListener('click', () => {
+    diagPanel.classList.toggle('expanded');
+  });
 
   function diagnosticText(response, fallback = '') {
     const when = response?.lastConnectedAt ? new Date(response.lastConnectedAt).toLocaleTimeString() : 'never';
     const causes = response?.diagnostics?.causes || [];
     if (response?.connected) {
-      return `Diagnostic: native host connected · tabs ${response.attachedCount || 0} · since ${when}${causes.length ? ` · ${causes.join(' · ')}` : ''}`;
+      return `native host connected · tabs ${response.attachedCount || 0} · since ${when}${causes.length ? ` · ${causes.join(' · ')}` : ''}`;
     }
-    return `Diagnostic: ${response?.lastNativeError || causes.join(' · ') || fallback || 'native host not connected yet'}`;
+    return `${response?.lastNativeError || causes.join(' · ') || fallback || 'native host not connected yet'}`;
   }
 
   function updateStatus() {
     chrome.runtime.sendMessage({ action: "get_status" }, (response) => {
       if (chrome.runtime.lastError || !response) {
-        const reason = chrome.runtime.lastError?.message || 'service worker sleeping / no response';
+        const reason = chrome.runtime.lastError?.message || 'service worker sleeping';
         chrome.storage.local.get(['connected', 'attachedCount', 'lastNativeError', 'lastConnectedAt', 'diagnostics'], (data) => {
           setConnected(!!data.connected);
           count.textContent = data.attachedCount || 0;
@@ -40,10 +48,17 @@ document.addEventListener('DOMContentLoaded', () => {
       pill.classList.remove('disconnected');
       pill.classList.add('connected');
       text.textContent = 'Connected';
+      bodyContainer.classList.remove('disconnected');
+      bodyContainer.classList.add('connected');
     } else {
       pill.classList.remove('connected');
       pill.classList.add('disconnected');
       text.textContent = 'Disconnected';
+      bodyContainer.classList.remove('connected');
+      bodyContainer.classList.add('disconnected');
+      
+      // Auto expand diagnostics if disconnected to help developers
+      diagPanel.classList.add('expanded');
     }
   }
 

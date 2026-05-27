@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::OnceLock,
     time::{Duration, Instant},
 };
 
@@ -11,6 +12,9 @@ use serde::{Deserialize, Serialize};
 use sinew_core::{AppError, Result};
 
 pub const CURSOR_CLIENT_VERSION: &str = "3.5.33";
+// Keep aligned with a recent Cursor IDE release when bumping Sinew.
+
+static EPHEMERAL_MACHINE_ID: OnceLock<String> = OnceLock::new();
 
 #[derive(Clone, Debug)]
 pub struct CursorIdeIdentity {
@@ -166,7 +170,12 @@ fn load_or_create_sinew_machine_id() -> String {
     }
 
     let machine_id = uuid::Uuid::new_v4().to_string();
-    let _ = persist_sinew_machine_id(&path, &machine_id);
+    if let Err(err) = persist_sinew_machine_id(&path, &machine_id) {
+        tracing::warn!("unable to persist composer device id: {err}");
+        return EPHEMERAL_MACHINE_ID
+            .get_or_init(|| machine_id.clone())
+            .clone();
+    }
     machine_id
 }
 

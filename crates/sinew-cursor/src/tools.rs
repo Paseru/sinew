@@ -8,6 +8,8 @@ pub struct ParsedToolCall {
     pub input: Value,
 }
 
+pub const COMPOSER_UNSUPPORTED_TOOL: &str = "composer_unsupported_tool";
+
 pub const SUPPORTED_TOOLS: &[&str] = &[
     "CLIENT_SIDE_TOOL_V2_READ_FILE_V2",
     "CLIENT_SIDE_TOOL_V2_EDIT_FILE_V2",
@@ -121,6 +123,49 @@ pub fn parse_tool_call(value: &Value) -> Option<ParsedToolCall> {
     })
 }
 
+pub fn resolve_tool_call(value: &Value) -> Option<ParsedToolCall> {
+    let tool = tool_name_from_value(value)?;
+    if let Some(parsed) = parse_tool_call(value) {
+        return Some(parsed);
+    }
+    tracing::warn!(cursor_tool = %tool, "unsupported Composer tool call");
+    Some(ParsedToolCall {
+        id: tool_call_id_from_value(value),
+        cursor_tool: tool.clone(),
+        sinew_name: COMPOSER_UNSUPPORTED_TOOL.into(),
+        input: json!({
+            "message": format!("Unsupported Composer tool: {tool}"),
+        }),
+    })
+}
+
+fn tool_name_from_value(value: &Value) -> Option<String> {
+    value
+        .get("tool")
+        .and_then(|tool| {
+            tool.as_str()
+                .map(str::trim)
+                .filter(|name| !name.is_empty())
+                .map(str::to_string)
+                .or_else(|| {
+                    tool.as_i64()
+                        .and_then(tool_name_from_number)
+                        .map(str::to_string)
+                })
+        })
+}
+
+fn tool_call_id_from_value(value: &Value) -> String {
+    value
+        .get("toolCallId")
+        .or_else(|| value.get("tool_call_id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+}
+
 pub fn build_client_tool_result(
     tool_call_id: &str,
     sinew_name: &str,
@@ -163,7 +208,11 @@ pub fn build_client_tool_result(
             result["webFetchResult"] = json!({ "markdown": content });
         }
         "todo_list" => {
-            result["todoWriteResult"] = json!({ "content": content });
+            if cursor_tool == "CLIENT_SIDE_TOOL_V2_TODO_READ" {
+                result["todoReadResult"] = json!({ "content": content });
+            } else {
+                result["todoWriteResult"] = json!({ "content": content });
+            }
         }
         "question" => {
             result["askQuestionResult"] = json!({ "content": content });
@@ -196,6 +245,8 @@ fn tool_name_from_number(value: i64) -> Option<&'static str> {
         51 => Some("CLIENT_SIDE_TOOL_V2_ASK_QUESTION"),
         49 => Some("CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL"),
         53 => Some("CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE"),
+        58 => Some("CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL"),
+        59 => Some("CLIENT_SIDE_TOOL_V2_DELETE_FILE"),
         _ => None,
     }
 }
@@ -318,13 +369,12 @@ fn map_generate_image_params(value: &Value) -> Value {
 }
 
 fn map_builtin_mcp_call(input: &Value) -> Option<(String, Value)> {
-    const MCP_CREATE_IMAGE: &str = "mcp__sinew__create_image";
     let tool_name = input
         .get("toolName")
         .or_else(|| input.get("tool_name"))
         .or_else(|| input.get("name"))
         .and_then(Value::as_str)?;
-    if tool_name != MCP_CREATE_IMAGE {
+    if !is_create_image_mcp_tool(tool_name) {
         return None;
     }
     let args = input
@@ -334,6 +384,13 @@ fn map_builtin_mcp_call(input: &Value) -> Option<(String, Value)> {
         .cloned()
         .unwrap_or_else(|| json!({}));
     Some(("create_image".into(), map_create_image_input(&args)))
+}
+
+fn is_create_image_mcp_tool(name: &str) -> bool {
+    matches!(
+        name,
+        "mcp__sinew__create_image" | "mcp__cursor__create_image"
+    )
 }
 
 fn map_create_image_input(value: &Value) -> Value {
@@ -577,6 +634,48 @@ mod tests {
         let parsed = parse_tool_call(&value).expect("parsed");
         assert_eq!(parsed.sinew_name, "create_image");
         assert_eq!(parsed.input["prompt"], "Sunset over mountains");
+    }
+
+    #[test]
+    fn maps_sanitized_mcp_create_image_call() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL",
+            "toolCallId": "call_mcp_img",
+            "callMcpToolParams": {
+                "toolName": "mcp__cursor__create_image",
+                "args": { "prompt": "Sunset over mountains" }
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.sinew_name, "create_image");
+        assert_eq!(parsed.input["prompt"], "Sunset over mountains");
+    }
+
+    #[test]
+    fn builds_todo_read_tool_result() {
+        let result = build_client_tool_result(
+            "call_todo",
+            "todo_list",
+            "CLIENT_SIDE_TOOL_V2_TODO_READ",
+            "[]",
+            false,
+        );
+        assert_eq!(result["todoReadResult"]["content"], "[]");
+        assert!(result.get("todoWriteResult").is_none());
+    }
+
+    #[test]
+    fn resolves_unsupported_tool_call() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_APPLY_PATCH",
+            "toolCallId": "call_unknown",
+        });
+        let parsed = resolve_tool_call(&value).expect("resolved");
+        assert_eq!(parsed.sinew_name, COMPOSER_UNSUPPORTED_TOOL);
+        assert!(parsed.input["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains("APPLY_PATCH"));
     }
 
     #[test]

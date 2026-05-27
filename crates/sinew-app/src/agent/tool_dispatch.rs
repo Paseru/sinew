@@ -55,6 +55,13 @@ pub(super) async fn run_tool(
     input: Value,
 ) -> ToolRunResult {
     let canonical_name = tool_names::canonical_tool_name(name);
+    if name == "composer_unsupported_tool" {
+        let message = input
+            .get("message")
+            .and_then(Value::as_str)
+            .unwrap_or("Unsupported Composer tool");
+        return ToolRunResult::err(message.to_string(), Vec::new());
+    }
     if !tool_settings.is_enabled(canonical_name) {
         return ToolRunResult::err(
             format!("{canonical_name} is disabled in Settings"),
