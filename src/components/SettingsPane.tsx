@@ -4,7 +4,7 @@ import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { getAppLocale, setAppLocale, type AppLocale } from "../lib/locale";
 import { api } from "../lib/ipc";
-import { fetchProviderQuota, quotaColor, getCachedQuota, type QuotaInfo } from "../lib/quotas";
+import { fetchProviderQuota, quotaColor, getCachedQuota, type QuotaInfo, quotaCache } from "../lib/quotas";
 import { canonicalToolName } from "../lib/tools";
 import { Markdown } from "./chat/Markdown";
 import { SinewMark } from "./SinewMark";
@@ -1309,6 +1309,8 @@ export function SettingsPane({ workspacePath }: Props) {
             busy={providersBusy}
             message={providersMessage}
             onRefresh={() => {
+              quotaCache.clear();
+              window.dispatchEvent(new CustomEvent("sinew:quota-updated"));
               void loadOpenAiStatus();
               void loadAnthropicStatus();
               void loadGoogleStatus();
