@@ -352,6 +352,10 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
         edit_file: Arc::new(EditFileTool::new(workspace_root.clone())),
         write_file: Arc::new(WriteFileTool::new(workspace_root.clone())),
         delete_file: Arc::new(DeleteFileTool::new(workspace_root.clone())),
+        read_lints: Arc::new(ReadLintsTool::new(
+            workspace_root.clone(),
+            state.editor_diagnostics.clone(),
+        )),
         create_image: Arc::new(CreateImageTool::with_settings(
             workspace_root.clone(),
             tool_settings.image_provider,
@@ -382,6 +386,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
             state.max_tool_rounds,
             None,
             cancel.clone(),
+            state.editor_diagnostics.clone(),
         ))),
         teams: Some(Arc::new(TeamTool::new(
             conversation.id.clone(),
@@ -396,6 +401,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
             state.max_tool_rounds,
             None,
             state.team_runtime.clone(),
+            state.editor_diagnostics.clone(),
             cancel.clone(),
         ))),
         tool_settings,
@@ -674,6 +680,7 @@ pub(super) async fn stop_agent_swarm_command(
         state.max_tool_rounds,
         None,
         state.team_runtime.clone(),
+        state.editor_diagnostics.clone(),
         TurnCancel::empty(),
     );
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();

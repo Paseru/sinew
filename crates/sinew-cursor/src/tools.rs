@@ -26,6 +26,8 @@ pub const SUPPORTED_TOOLS: &[&str] = &[
     "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL",
     "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE",
     "CLIENT_SIDE_TOOL_V2_DELETE_FILE",
+    "CLIENT_SIDE_TOOL_V2_READ_LINTS",
+    "READ_LINTS",
 ];
 
 pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
@@ -46,6 +48,7 @@ pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
         "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE" => Some("create_image"),
         "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL" => Some("codebase_search"),
         "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => Some("delete_file"),
+        "CLIENT_SIDE_TOOL_V2_READ_LINTS" | "READ_LINTS" => Some("read_lints"),
         _ => None,
     }
 }
@@ -62,6 +65,7 @@ pub fn cursor_tool_name(sinew_tool: &str) -> &'static str {
         "glob" => "CLIENT_SIDE_TOOL_V2_GLOB_FILE_SEARCH",
         "list_dir" => "CLIENT_SIDE_TOOL_V2_LIST_DIR_V2",
         "delete_file" => "CLIENT_SIDE_TOOL_V2_DELETE_FILE",
+        "read_lints" => "CLIENT_SIDE_TOOL_V2_READ_LINTS",
         "grep" => "CLIENT_SIDE_TOOL_V2_RIPGREP_RAW_SEARCH",
         "codebase_search" => "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL",
         "bash" => "CLIENT_SIDE_TOOL_V2_RUN_TERMINAL_COMMAND_V2",
@@ -213,6 +217,9 @@ pub fn build_client_tool_result(
         "delete_file" => {
             result["deleteFileResult"] = json!({ "resultForModel": content });
         }
+        "read_lints" => {
+            result["readLintsResult"] = json!({ "resultForModel": content });
+        }
         "web_search" => {
             result["webSearchResult"] = json!({ "references": [], "output": content });
         }
@@ -267,6 +274,7 @@ fn tool_name_from_number(value: i64) -> Option<&'static str> {
         53 => Some("CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE"),
         58 => Some("CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL"),
         59 => Some("CLIENT_SIDE_TOOL_V2_DELETE_FILE"),
+        30 => Some("CLIENT_SIDE_TOOL_V2_READ_LINTS"),
         _ => None,
     }
 }
@@ -355,6 +363,19 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             json!({
                 "path": field(params, &["targetDirectory", "target_directory"]).unwrap_or(json!(".")),
                 "limit": field(params, &["limit"]).unwrap_or(json!(500)),
+            })
+        }
+        "CLIENT_SIDE_TOOL_V2_READ_LINTS" | "READ_LINTS" => {
+            let params = params(value, "readLintsParams", "read_lints_params");
+            json!({
+                "paths": field(params, &[
+                    "paths",
+                    "path",
+                    "relativeWorkspacePaths",
+                    "relative_workspace_paths",
+                    "targetFiles",
+                    "target_files",
+                ]),
             })
         }
         _ => flatten_params(value),

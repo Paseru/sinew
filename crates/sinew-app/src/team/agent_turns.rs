@@ -85,6 +85,10 @@ impl TeamTool {
                     .with_workspace_write_lock(workspace_write_lock.clone()),
             ),
             delete_file: Arc::new(DeleteFileTool::new(self.workspace_root.clone())),
+            read_lints: Arc::new(ReadLintsTool::new(
+                self.workspace_root.clone(),
+                self.editor_store.clone(),
+            )),
             create_image: Arc::new(
                 CreateImageTool::with_settings(
                     self.workspace_root.clone(),

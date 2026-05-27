@@ -10,7 +10,7 @@ use crate::{
     run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CheckSotaTool, CreateImageTool,
     EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CodebaseSearchTool, McpSettings, McpToolRegistry,
     QuestionTool, ReadTool, SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult,
-    DeleteFileTool, ListDirTool, ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool,
+    DeleteFileTool, ListDirTool, ReadLintsTool, SharedEditorDiagnosticsStore, ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool,
     WriteFileTool,
 };
 
@@ -69,6 +69,7 @@ pub struct SubAgentTool {
     max_tool_rounds: usize,
     service_tier: Option<ServiceTier>,
     cancel: TurnCancel,
+    editor_store: SharedEditorDiagnosticsStore,
 }
 
 impl SubAgentTool {
@@ -83,6 +84,7 @@ impl SubAgentTool {
         max_tool_rounds: usize,
         service_tier: Option<ServiceTier>,
         cancel: TurnCancel,
+        editor_store: SharedEditorDiagnosticsStore,
     ) -> Self {
         Self {
             workspace_root,
@@ -95,6 +97,7 @@ impl SubAgentTool {
             max_tool_rounds,
             service_tier,
             cancel,
+            editor_store,
         }
     }
 
@@ -223,6 +226,10 @@ impl SubAgentTool {
             edit_file: Arc::new(EditFileTool::new(self.workspace_root.clone())),
             write_file: Arc::new(WriteFileTool::new(self.workspace_root.clone())),
             delete_file: Arc::new(DeleteFileTool::new(self.workspace_root.clone())),
+            read_lints: Arc::new(ReadLintsTool::new(
+                self.workspace_root.clone(),
+                self.editor_store.clone(),
+            )),
             create_image: Arc::new(CreateImageTool::with_settings(
                 self.workspace_root.clone(),
                 self.tool_settings.image_provider,

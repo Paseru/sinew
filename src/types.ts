@@ -347,6 +347,17 @@ export type McpToolInfo = {
   description?: string | null;
 };
 
+export type EditorDiagnosticInput = {
+  path: string;
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+  severity: string;
+  message: string;
+  source?: string;
+};
+
 export type McpServerProbe = {
   serverId: string;
   serverName: string;

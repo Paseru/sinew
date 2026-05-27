@@ -11,8 +11,9 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Icon } from "@iconify/react";
 import { languageForPath } from "../lib/language";
 import { fileIcon } from "../lib/fileIcon";
+import { api } from "../lib/ipc";
 import { Markdown } from "./chat/Markdown";
-import type { EditorRevealTarget, EditorTab } from "../types";
+import type { EditorDiagnosticInput, EditorRevealTarget, EditorTab } from "../types";
 import { ImageContextMenu } from "./ImageContextMenu";
 
 if (!(globalThis as typeof globalThis & { MonacoEnvironment?: unknown }).MonacoEnvironment) {
@@ -301,6 +302,34 @@ export function EditorPane({
     revealTarget?.id,
     showTextEditor,
   ]);
+
+  useEffect(() => {
+    if (!showTextEditor) return;
+    let disposed = false;
+    let timer: number | undefined;
+
+    const pushDiagnostics = () => {
+      if (disposed) return;
+      const diagnostics = collectMonacoDiagnostics(monacoNs);
+      void api.pushEditorDiagnostics(diagnostics).catch(() => {});
+    };
+
+    const schedulePush = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(pushDiagnostics, 400);
+    };
+
+    schedulePush();
+    const subscription = monacoNs.editor.onDidChangeMarkers(() => {
+      schedulePush();
+    });
+
+    return () => {
+      disposed = true;
+      if (timer) window.clearTimeout(timer);
+      subscription.dispose();
+    };
+  }, [showTextEditor, tabs, activeTab?.relativePath, editorReadySeq, activeTab?.buffer]);
 
   const onEditorChange = useCallback(
     (value: string | undefined) => {
@@ -628,4 +657,38 @@ function isMarkdownPath(relativePath: string): boolean {
 
 function isPlanMarkdownPath(relativePath: string): boolean {
   return /^\.sinew\/plans\/.+\.md$/i.test(relativePath);
+}
+
+function collectMonacoDiagnostics(monaco: typeof monacoNs): EditorDiagnosticInput[] {
+  const diagnostics: EditorDiagnosticInput[] = [];
+  for (const model of monaco.editor.getModels()) {
+    const path = relativePathFromModelUri(model.uri);
+    if (!path) continue;
+    for (const marker of monaco.editor.getModelMarkers({ resource: model.uri })) {
+      diagnostics.push({
+        path,
+        line: marker.startLineNumber,
+        column: marker.startColumn,
+        endLine: marker.endLineNumber,
+        endColumn: marker.endColumn,
+        severity: markerSeverityName(marker.severity),
+        message: marker.message,
+        source: marker.source ?? languageForPath(path),
+      });
+    }
+  }
+  return diagnostics;
+}
+
+function relativePathFromModelUri(uri: Monaco.Uri): string | null {
+  const path = uri.path.replace(/^\/+/, "");
+  if (!path || path.startsWith("inmemory:")) return null;
+  return path.replace(/\\/g, "/");
+}
+
+function markerSeverityName(severity: Monaco.MarkerSeverity): string {
+  if (severity === monacoNs.MarkerSeverity.Error) return "error";
+  if (severity === monacoNs.MarkerSeverity.Warning) return "warning";
+  if (severity === monacoNs.MarkerSeverity.Info) return "info";
+  return "hint";
 }

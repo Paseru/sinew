@@ -548,3 +548,22 @@ pub(super) async fn read_clipboard_file_paths_command() -> std::result::Result<V
         .map_err(error_to_string)?
         .map_err(error_to_string)
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PushEditorDiagnosticsInput {
+    pub diagnostics: Vec<EditorDiagnostic>,
+}
+
+#[tauri::command]
+pub(super) async fn push_editor_diagnostics(
+    state: State<'_, DesktopState>,
+    input: PushEditorDiagnosticsInput,
+) -> std::result::Result<(), String> {
+    let mut store = state
+        .editor_diagnostics
+        .write()
+        .map_err(|err| err.to_string())?;
+    store.replace(input.diagnostics);
+    Ok(())
+}

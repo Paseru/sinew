@@ -78,6 +78,7 @@ pub(super) async fn estimate_context(
         state.max_tool_rounds,
         None,
         TurnCancel::empty(),
+        state.editor_diagnostics.clone(),
     )
     .descriptors();
     let team_tools = TeamTool::descriptors_static();

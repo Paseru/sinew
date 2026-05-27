@@ -14,6 +14,7 @@ impl TeamTool {
         max_tool_rounds: usize,
         service_tier: Option<ServiceTier>,
         runtime: Arc<RwLock<TeamRuntime>>,
+        editor_store: SharedEditorDiagnosticsStore,
         cancel: TurnCancel,
     ) -> Self {
         Self {
@@ -29,6 +30,7 @@ impl TeamTool {
             max_tool_rounds,
             service_tier,
             runtime,
+            editor_store,
             cancel,
             current_agent: None,
         }

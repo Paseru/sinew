@@ -4,6 +4,7 @@ pub mod check_sota;
 pub mod codebase_search;
 pub mod compact;
 pub mod delete_file;
+pub mod editor_diagnostics;
 pub mod edit;
 pub mod glob;
 pub mod grep;
@@ -12,6 +13,7 @@ pub mod list_dir;
 pub mod mcp;
 pub mod question;
 pub mod read;
+pub mod read_lints;
 mod ripgrep;
 pub mod skill;
 pub mod store;
@@ -35,6 +37,10 @@ pub use codebase_search::CodebaseSearchTool;
 pub use check_sota::CheckSotaTool;
 pub use compact::{compact_conversation_history, CompactConversationOutput};
 pub use delete_file::DeleteFileTool;
+pub use editor_diagnostics::{
+    new_editor_diagnostics_store, EditorDiagnostic, EditorDiagnosticsStore,
+    SharedEditorDiagnosticsStore,
+};
 pub use edit::EditFileTool;
 pub use glob::GlobTool;
 pub use grep::GrepTool;
@@ -43,6 +49,7 @@ pub use list_dir::ListDirTool;
 pub use mcp::{probe_mcp_servers, McpServerProbe, McpSettings, McpToolRegistry};
 pub use question::QuestionTool;
 pub use read::{ReadFingerprint, ReadTool};
+pub use read_lints::ReadLintsTool;
 pub use skill::{
     create_installed_skill, list_installed_skills, InstalledSkill, SkillConfig, SkillSettings,
     SkillSource, SkillTool,

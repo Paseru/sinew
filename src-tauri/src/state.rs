@@ -56,6 +56,7 @@ pub(super) struct DesktopState {
     pub(super) google_login: Arc<Mutex<Option<GoogleLoginAttempt>>>,
     pub(super) kimi_login: Arc<Mutex<Option<KimiLoginAttempt>>>,
     pub(super) cursor_login: Arc<Mutex<Option<CursorLoginAttempt>>>,
+    pub(super) editor_diagnostics: SharedEditorDiagnosticsStore,
 }
 
 #[derive(Clone)]

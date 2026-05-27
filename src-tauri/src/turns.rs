@@ -179,6 +179,10 @@ pub(super) async fn send_message(
         edit_file: Arc::new(EditFileTool::new(workspace_root.clone())),
         write_file: Arc::new(WriteFileTool::new(workspace_root.clone())),
         delete_file: Arc::new(DeleteFileTool::new(workspace_root.clone())),
+        read_lints: Arc::new(ReadLintsTool::new(
+            workspace_root.clone(),
+            state.editor_diagnostics.clone(),
+        )),
         create_image: Arc::new(CreateImageTool::with_settings(
             workspace_root.clone(),
             tool_settings.image_provider,
@@ -209,6 +213,7 @@ pub(super) async fn send_message(
             state.max_tool_rounds,
             service_tier,
             cancel.clone(),
+            state.editor_diagnostics.clone(),
         ))),
         teams: Some(Arc::new(TeamTool::new(
             conversation.id.clone(),
@@ -223,6 +228,7 @@ pub(super) async fn send_message(
             state.max_tool_rounds,
             service_tier,
             state.team_runtime.clone(),
+            state.editor_diagnostics.clone(),
             cancel.clone(),
         ))),
         tool_settings,
@@ -1555,6 +1561,7 @@ pub(super) fn tool_descriptors_for_workspace(
         GrepTool::new(workspace_root).descriptor(),
         CodebaseSearchTool::new(workspace_root).descriptor(),
         ReadTool::new(workspace_root).descriptor(),
+        ReadLintsTool::new(workspace_root, new_editor_diagnostics_store()).descriptor(),
         clean_context_descriptor(),
         ToDoListTool::new().descriptor(),
         QuestionTool::new().descriptor(),

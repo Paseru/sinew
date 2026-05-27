@@ -250,15 +250,21 @@ async function ensureChromeReady(preferredUrl = null) {
 
   if (bridgeReady) {
     await releaseExtensionDebuggers();
-    const existingTabs = await waitForTabs(targetUrl);
-    if (existingTabs && existingTabs.length > 0) return existingTabs;
+    // Fetch tabs list instantly without 20-second polling
+    const tabs = await requestJSON(`${BRIDGE_ORIGIN}/json`, 1500).catch(() => []);
+    if (tabs && tabs.length > 0) {
+      const match = tabs.filter(t => sameOriginOrUrl(t.url, targetUrl));
+      if (match.length > 0) return match;
+      return tabs; // Return open tabs immediately to avoid the 20-second timeout
+    }
   }
 
   await requestBridgeLaunch(targetUrl);
   launchChrome(targetUrl);
   await waitForBridge();
   await releaseExtensionDebuggers();
-  const tabs = await waitForTabs(targetUrl);
+  // Wait for Chrome to startup (null targetUrl returns as soon as the first tab is seen)
+  const tabs = await waitForTabs(null);
 
   if (!tabs || tabs.length === 0) {
     throw new Error('Chrome bridge is connected, but no controllable normal-profile tab could be found.');

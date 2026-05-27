@@ -79,18 +79,32 @@ impl ReadLintsTool {
         let parsed: ReadLintsInput = serde_json::from_value(input)
             .map_err(|err| anyhow::anyhow!("invalid read_lints input: {err}"))?;
         let requested_paths = normalize_requested_paths(parsed.paths)?;
-        let mut diagnostics = self.collect_editor_diagnostics(requested_paths.as_deref());
+        let path_filter = if requested_paths.is_empty() {
+            None
+        } else {
+            Some(requested_paths.as_slice())
+        };
+        let diagnostics = self.collect_editor_diagnostics(path_filter);
         let project_paths = if requested_paths.is_empty() {
             self.default_project_paths(&diagnostics)
         } else {
-            requested_paths.clone()
+            requested_paths
         };
+        let mut diagnostics = diagnostics;
         diagnostics.extend(
             self.collect_project_diagnostics(&project_paths)
                 .await
                 .context("project linter failed")?,
         );
+        let mut diagnostics = dedupe_diagnostics(diagnostics);
         diagnostics.sort_by(|left, right| {
+            left.path
+                .cmp(&right.path)
+                .then(left.line.cmp(&right.line))
+                .then(left.column.cmp(&right.column))
+        });
+        diagnostics.truncate(MAX_DIAGNOSTICS);
+        Ok(format_diagnostics(&diagnostics))
     }
 
     fn collect_editor_diagnostics(&self, paths: Option<&[String]>) -> Vec<EditorDiagnostic> {
@@ -138,11 +152,12 @@ impl ReadLintsTool {
                 }
                 continue;
             }
-            match extension_lower(&absolute) {
-                Some("rs") => rust_paths.push(normalized),
-                Some("ts" | "tsx" | "js" | "jsx" | "mjs" | "cjs") => js_paths.push(normalized),
-                Some("py") => py_paths.push(normalized),
-                _ => {}
+            if is_rust_path(&absolute) {
+                rust_paths.push(normalized);
+            } else if is_js_path(&absolute) {
+                js_paths.push(normalized);
+            } else if is_py_path(&absolute) {
+                py_paths.push(normalized);
             }
         }
 
@@ -173,8 +188,7 @@ fn normalize_requested_paths(paths: Option<Value>) -> Result<Vec<String>> {
         Value::String(path) => vec![path],
         Value::Array(items) => items
             .into_iter()
-            .filter_map(Value::as_str)
-            .map(str::to_string)
+            .filter_map(|value| value.as_str().map(str::to_string))
             .collect(),
         _ => {
             return Err(anyhow::anyhow!(
@@ -219,8 +233,36 @@ fn format_diagnostics(diagnostics: &[EditorDiagnostic]) -> String {
         .join("\n")
 }
 
-fn extension_lower(path: &Path) -> Option<&str> {
-    path.extension()?.to_str()?.to_lowercase().leak().into()
+fn is_rust_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"))
+}
+
+fn is_js_path(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_ascii_lowercase()),
+        Some(ext) if matches!(
+            ext.as_str(),
+            "ts" | "tsx" | "js" | "jsx" | "mjs" | "cjs"
+        )
+    )
+}
+
+fn is_py_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("py"))
+}
+
+fn dedupe_diagnostics(diagnostics: Vec<EditorDiagnostic>) -> Vec<EditorDiagnostic> {
+    let mut seen = HashSet::new();
+    diagnostics
+        .into_iter()
+        .filter(|diag| seen.insert(diag_key(diag)))
+        .collect()
 }
 
 fn eslint_config_exists(workspace_root: &Path) -> bool {

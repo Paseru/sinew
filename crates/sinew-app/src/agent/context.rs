@@ -6,8 +6,8 @@ use sinew_core::{ChatMessage, Provider, ServiceTier};
 
 use crate::{
     BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, DeleteFileTool, EditFileTool,
-    GlobTool, GoalWorkflowState, GrepTool, ListDirTool, McpToolRegistry, QuestionTool, ReadTool,
-    SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolSettings, WebFetchTool,
+    GlobTool, GoalWorkflowState, GrepTool, ListDirTool, McpToolRegistry, QuestionTool, ReadLintsTool,
+    ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolSettings, WebFetchTool,
     WebSearchTool, WriteFileTool,
 };
 
@@ -48,6 +48,7 @@ pub struct TurnContext {
     pub edit_file: Arc<EditFileTool>,
     pub write_file: Arc<WriteFileTool>,
     pub delete_file: Arc<DeleteFileTool>,
+    pub read_lints: Arc<ReadLintsTool>,
     pub create_image: Arc<CreateImageTool>,
     pub todo_list_tool: Option<Arc<ToDoListTool>>,
     pub question: Option<Arc<QuestionTool>>,

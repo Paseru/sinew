@@ -45,13 +45,14 @@ use sinew_app::{
     tool_settings_view, trash_workspace_entry, write_workspace_file, AgentEvent, AgentMode,
     AppStore, BashTool, CheckSotaTool, ConversationEvent, ConversationSummary, CreateImageTool,
     DeleteFileTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CodebaseSearchTool,
-    ImportedEntry, InstalledSkill, ListDirTool,
+    ImportedEntry, InstalledSkill, ListDirTool, new_editor_diagnostics_store,
     McpSettings, McpToolRegistry, ModeModelSettings, OpenRouterModelRecord, PlanArtifactState,
-    PlanWorkflowState, QuestionTool, ReadTool, SavedConversation, SkillSettings, SkillTool,
+    PlanWorkflowState, QuestionTool, ReadLintsTool, ReadTool, SavedConversation, SkillSettings, SkillTool,
     SubAgentConfig, SubAgentSettings, SubAgentTool, TeamRuntime, TeamTool, TerminalPathResolution,
     ToDoListTool, TodoListState, ToolSettings, ToolSettingsView, TurnCancel, TurnContext,
     WebFetchTool, WebSearchTool, WorkspaceBootstrap, WorkspaceCopyOperation, WorkspaceDeletedEntry,
     WorkspaceFileChangeEvent, WorkspaceSearchResult, WriteFileTool,
+    EditorDiagnostic, SharedEditorDiagnosticsStore,
 };
 use sinew_core::{
     ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest, Role,
@@ -540,6 +541,7 @@ pub fn run() {
         google_login: Arc::new(Mutex::new(None)),
         kimi_login: Arc::new(Mutex::new(None)),
         cursor_login: Arc::new(Mutex::new(None)),
+        editor_diagnostics: new_editor_diagnostics_store(),
     };
 
     tauri::Builder::default()
@@ -642,6 +644,7 @@ pub fn run() {
             workspace::import_workspace_paths_command,
             workspace::save_clipboard_image_attachment_command,
             workspace::read_clipboard_file_paths_command,
+            workspace::push_editor_diagnostics,
             conversations::list_conversations,
             conversations::create_conversation,
             conversations::load_conversation,

@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use crate::{
     tool_names, BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, DeleteFileTool,
     EditFileTool, GlobTool, GrepTool, ListDirTool, McpToolRegistry, QuestionTool, ReadFingerprint,
-    ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolRunResult,
+    ReadLintsTool, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolRunResult,
     ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
 };
 
@@ -37,6 +37,7 @@ pub(super) async fn run_tool(
     edit_file: &EditFileTool,
     write_file: &WriteFileTool,
     delete_file: &DeleteFileTool,
+    read_lints: &ReadLintsTool,
     create_image: &CreateImageTool,
     todo_list_tool: Option<&ToDoListTool>,
     question: Option<&QuestionTool>,
@@ -101,6 +102,8 @@ pub(super) async fn run_tool(
             return ToolRunResult::err("delete_file is unavailable in Plan mode", Vec::new());
         }
         delete_file.run(input).await
+    } else if canonical_name == tool_names::READ_LINTS {
+        read_lints.run(input).await
     } else if canonical_name == tool_names::CREATE_IMAGE {
         if mode == AgentMode::Plan {
             return ToolRunResult::err("create_image is unavailable in Plan mode", Vec::new());

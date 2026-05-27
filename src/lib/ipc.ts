@@ -12,6 +12,7 @@ import type {
   CursorComposerAuthStatus,
   CursorUsageQuotaInfo,
   StartCursorLoginOutput,
+  EditorDiagnosticInput,
   DisplayMode,
   FileDocument,
   GitCreateWorktreeOutput,
@@ -525,6 +526,11 @@ export const api = {
   },
   probeMcpTools() {
     return invoke<McpServerProbe[]>("probe_mcp_tools");
+  },
+  pushEditorDiagnostics(diagnostics: EditorDiagnosticInput[]) {
+    return invoke<void>("push_editor_diagnostics", {
+      input: { diagnostics },
+    });
   },
   listInstalledSkills(workspacePath: string) {
     return invoke<InstalledSkill[]>("list_installed_skills_command", {
