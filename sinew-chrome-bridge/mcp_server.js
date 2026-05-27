@@ -185,8 +185,8 @@ function launchChrome(targetUrl = 'about:blank') {
   }
 }
 
-async function waitForBridge() {
-  const deadline = Date.now() + BRIDGE_WAIT_MS;
+async function waitForBridge(timeoutMs = BRIDGE_WAIT_MS) {
+  const deadline = Date.now() + timeoutMs;
   let lastError = null;
 
   while (Date.now() < deadline) {
@@ -242,10 +242,10 @@ async function ensureChromeReady(preferredUrl = null) {
   let bridgeReady = false;
 
   try {
-    await waitForBridge();
+    await waitForBridge(1200);
     bridgeReady = true;
   } catch (err) {
-    log(`Bridge not ready yet, will launch Chrome once: ${err.message}`);
+    log(`Bridge not ready yet, launching Chrome now: ${err.message}`);
   }
 
   if (bridgeReady) {
@@ -259,8 +259,10 @@ async function ensureChromeReady(preferredUrl = null) {
     }
   }
 
-  await requestBridgeLaunch(targetUrl);
-  launchChrome(targetUrl);
+  const launchedViaBridge = await requestBridgeLaunch(targetUrl);
+  if (!launchedViaBridge || launchedViaBridge.success === false) {
+    launchChrome(targetUrl);
+  }
   await waitForBridge();
   await releaseExtensionDebuggers();
   // Wait for Chrome to startup (null targetUrl returns as soon as the first tab is seen)
@@ -334,7 +336,7 @@ async function navigateTab(tabId, url) {
   }
 
   cursorStateByTabId.delete(String(tabId));
-  await sleep(600);
+  await sleep(120);
   return location;
 }
 
@@ -360,6 +362,9 @@ function buildActionTasks(task) {
   }
   if (text.includes('trinity')) {
     actions.push('clique la carte Trinity');
+  }
+  if (actions.length === 0 && extractNavigationUrl(original) && hasNavigationIntent(original)) {
+    return [];
   }
   return actions.length > 0 ? actions : [task];
 }
@@ -1100,6 +1105,20 @@ async function executeGetPageState() {
   }
 }
 
+async function executeStructuredDomAction(command, args = {}) {
+  const tab = await getReadyTab(null);
+  const timeoutMs = Math.max(1000, Math.min(60000, Number(args.timeoutMs) || 12000));
+  const params = new URLSearchParams({ tabId: String(tab.id), timeoutMs: String(timeoutMs) });
+  if (args.selector) params.set('selector', String(args.selector));
+  if (args.text !== undefined) params.set('text', String(args.text));
+  if (args.expression) params.set('expression', String(args.expression));
+  if (args.submit !== undefined) params.set('submit', args.submit ? 'true' : 'false');
+  if (args.visible !== undefined) params.set('visible', args.visible ? 'true' : 'false');
+  if (args.scroll !== undefined) params.set('scroll', args.scroll ? 'true' : 'false');
+  const result = await requestJSON(`${BRIDGE_ORIGIN}/api/${command}?${params.toString()}`, timeoutMs + 2500).catch(err => ({ success: false, error: err.message }));
+  return JSON.stringify({ success: result && result.success !== false && result.ok !== false, tab: compactTab(tab), result });
+}
+
 async function executeScreenshot(format = 'jpeg', quality = 70) {
   if (!ALLOW_CDP_FALLBACK) {
     return JSON.stringify({ success: false, error: 'screenshot requires CDP fallback; disabled to avoid Chrome debugging banner' });
@@ -1122,7 +1141,7 @@ async function executeScreenshot(format = 'jpeg', quality = 70) {
 const MCP_TOOLS = [
   {
     name: 'run_browser_agent',
-    description: "Exécute une tâche de navigation ou d'interaction avec Google Chrome localement, sans API cloud, sans Python et sans ouverture manuelle de Chrome.",
+    description: "Fallback natural-language browser agent for complex ambiguous tasks. Prefer navigate/open_browser + page_snapshot/query_selector + wait_for_selector + click_selector/type_selector first; use this only when selectors are unknown or the user wants visible human-like automation.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -1141,17 +1160,17 @@ const MCP_TOOLS = [
   },
   {
     name: 'open_browser',
-    description: 'Ouvre Google Chrome localement et prépare un onglet contrôlable, sans intervention utilisateur.',
+    description: 'Ouvre Google Chrome localement vers une URL et prépare un onglet contrôlable. For pure navigation/open requests, use this and stop; do not click afterwards.',
     inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'URL optionnelle à ouvrir' } } }
   },
   {
     name: 'navigate',
-    description: 'Navigue l’onglet Chrome contrôlé vers une URL.',
+    description: 'Navigue l’onglet Chrome contrôlé vers une URL. For pure navigation requests, use this and stop; do not run heuristic clicks afterwards.',
     inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'URL ou domaine à ouvrir' } }, required: ['url'] }
   },
   {
     name: 'click',
-    description: 'Clique une cible visible par texte, aria-label, id, classe ou description locale.',
+    description: 'Fallback text/heuristic click by visible text, aria-label, id, class or local description. Prefer click_selector when a selector is known.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1181,8 +1200,33 @@ const MCP_TOOLS = [
   },
   {
     name: 'page_snapshot',
-    description: 'Retourne une perception DOM structurée de la page active, sans CDP ni barre debug.',
+    description: 'Returns a structured DOM snapshot of visible interactive elements with generated CSS selectors. Use this before click_selector/type_selector when selector is unknown.',
     inputSchema: { type: 'object', properties: { limit: { type: 'number', description: 'Nombre maximal d’éléments' } } }
+  },
+  {
+    name: 'click_selector',
+    description: 'TURBO: click a visible CSS selector directly, no text heuristic and no human cursor delay. Preferred click tool when selector is known.',
+    inputSchema: { type: 'object', properties: { selector: { type: 'string' }, timeoutMs: { type: 'number' }, scroll: { type: 'boolean' } }, required: ['selector'] }
+  },
+  {
+    name: 'type_selector',
+    description: 'TURBO: type text directly into an input/textarea/contenteditable selected by CSS selector. Preferred typing tool.',
+    inputSchema: { type: 'object', properties: { selector: { type: 'string' }, text: { type: 'string' }, submit: { type: 'boolean' }, timeoutMs: { type: 'number' } }, required: ['selector', 'text'] }
+  },
+  {
+    name: 'query_selector',
+    description: 'Inspect a CSS selector and return text, value, href, visibility, bbox and center. Use before acting if unsure.',
+    inputSchema: { type: 'object', properties: { selector: { type: 'string' }, timeoutMs: { type: 'number' }, scroll: { type: 'boolean' } }, required: ['selector'] }
+  },
+  {
+    name: 'wait_for_selector',
+    description: 'Wait for a CSS selector to exist/be visible. Use before click_selector/type_selector on dynamic pages.',
+    inputSchema: { type: 'object', properties: { selector: { type: 'string' }, visible: { type: 'boolean' }, timeoutMs: { type: 'number' } }, required: ['selector'] }
+  },
+  {
+    name: 'evaluate',
+    description: 'Evaluate a small JavaScript expression in the active page and return a JSON-serializable value. Use for fast page-state checks.',
+    inputSchema: { type: 'object', properties: { expression: { type: 'string' }, timeoutMs: { type: 'number' } }, required: ['expression'] }
   },
   {
     name: 'screenshot',
@@ -1215,12 +1259,17 @@ async function executeBrowserTask(task, cursorOptions = {}) {
     }
     log(`Executing on tab: ${tab.title} (ID: ${tab.id})`);
 
+    const actionTasks = buildActionTasks(task);
+    if (actionTasks.length === 0) {
+      return JSON.stringify({ success: true, navigation: location, results: [] });
+    }
+
     const results = [];
-    for (const actionTask of buildActionTasks(task)) {
+    for (const actionTask of actionTasks) {
       log(`Executing action step: ${actionTask}`);
       const result = await executeAction(tab.id, actionTask, 30000, cursor);
       results.push({ task: actionTask, result });
-      await sleep(/\b(entrée|enter|submit|valide|appuie)\b/i.test(actionTask) ? 1800 : 900);
+      await sleep(/\b(entrée|enter|submit|valide|appuie)\b/i.test(actionTask) ? 900 : 250);
     }
     return JSON.stringify({ success: results.every(r => r.result && r.result.success !== false), results });
   } catch (err) {
@@ -1294,6 +1343,21 @@ rl.on('line', async (line) => {
       } else if (toolName === 'page_snapshot') {
         const tab = await getReadyTab(null);
         const resultText = JSON.stringify(await getPageSnapshotViaBridge(tab.id, Number(args.limit) || 80).catch(err => ({ success: false, error: err.message })));
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'click_selector') {
+        const resultText = await executeStructuredDomAction('click_selector', args);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'type_selector') {
+        const resultText = await executeStructuredDomAction('type_selector', args);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'query_selector') {
+        const resultText = await executeStructuredDomAction('query_selector', args);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'wait_for_selector') {
+        const resultText = await executeStructuredDomAction('wait_selector', args);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'evaluate') {
+        const resultText = await executeStructuredDomAction('evaluate', args);
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'screenshot') {
         const resultText = await executeScreenshot(args.format || 'jpeg', args.quality || 70);

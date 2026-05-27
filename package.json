@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test:chrome-bridge": "node sinew-chrome-bridge/e2e-local.mjs",
+    "test:chrome-bridge:structured": "node sinew-chrome-bridge/e2e-structured.mjs",
     "prepare-sidecars": "node scripts/prepare-sidecars.mjs",
     "preview": "vite preview",
     "tauri": "tauri"

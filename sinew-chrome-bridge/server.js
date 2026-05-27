@@ -803,6 +803,40 @@ const server = http.createServer((req, res) => {
     });
     extensionSocket.send(JSON.stringify({ id: requestId, command: 'page_snapshot', params: { tabId, limit } }));
   }
+  else if (pathname === '/api/query_selector' || pathname === '/api/click_selector' || pathname === '/api/type_selector' || pathname === '/api/wait_selector' || pathname === '/api/evaluate') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+
+    const tabId = parseInt(parsedUrl.query.tabId);
+    const timeoutMs = Math.max(1000, Math.min(60000, Number(parsedUrl.query.timeoutMs) || 12000));
+    const requestId = ++messageCounter;
+    const command = pathname.slice('/api/'.length);
+    const params = {
+      tabId,
+      selector: parsedUrl.query.selector || '',
+      text: parsedUrl.query.text || '',
+      expression: parsedUrl.query.expression || '',
+      submit: /^(1|true|yes)$/i.test(String(parsedUrl.query.submit || '')),
+      visible: !/^(0|false|no)$/i.test(String(parsedUrl.query.visible || '')),
+      scroll: !/^(0|false|no)$/i.test(String(parsedUrl.query.scroll || '')),
+      timeoutMs
+    };
+    pendingRequests.set(requestId, {
+      resolve: (data) => { res.writeHead(200); res.end(JSON.stringify(data)); },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: `Timeout waiting for ${command}` }));
+      }, timeoutMs + 1000)
+    });
+    extensionSocket.send(JSON.stringify({ id: requestId, command, params }));
+  }
   else if (pathname === '/api/human_click') {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -2110,7 +2144,8 @@ if (isNativeMode && !runAsBridgeClientOnly) {
     }
   };
 
-  extensionSocket = virtualSocket;
+  // The native virtual socket becomes active only after Chrome actually sends a native message.
+  // This avoids false-positive connectivity when the bridge is launched manually for local HTTP control.
 
   // Stdin parsing
   let inputBuffer = Buffer.alloc(0);
@@ -2132,6 +2167,7 @@ if (isNativeMode && !runAsBridgeClientOnly) {
       try {
         const msgJson = msgBytes.toString('utf8');
         const msg = JSON.parse(msgJson);
+        if (extensionSocket == null) extensionSocket = virtualSocket;
         handleExtensionMessage(msg);
       } catch (e) {
         console.error("ðŸ§¬ [Proxy] Stdin Native decoding error:", e);
@@ -2140,9 +2176,16 @@ if (isNativeMode && !runAsBridgeClientOnly) {
   });
 
   process.stdin.on('end', () => {
-    console.error("🧬 [Proxy] process.stdin closed. Terminating Native Host...");
-    process.exit(0);
+    console.error("🧬 [Proxy] process.stdin closed. Keeping HTTP bridge alive for reconnectable local control.");
+    if (extensionSocket === virtualSocket) extensionSocket = null;
+    updateHeartbeatAfterNativeDisconnect();
   });
+
+  function updateHeartbeatAfterNativeDisconnect() {
+    try {
+      if (lockFd !== null) writeBridgeLock(lockFd);
+    } catch {}
+  }
 
   function sendNativeMessage(msg) {
     const msgJson = JSON.stringify(msg);
@@ -2166,7 +2209,7 @@ wss.on('connection', (ws, req) => {
   // ============================================
   if (pathname === '/extension') {
     const isBridgeClient = parsedUrl.query.nativeBridge === 'true';
-    if (isNativeMode && !isBridgeClient) {
+    if (isNativeMode && !isBridgeClient && extensionSocket?.isNative) {
       console.error("🧬 [Proxy] WebSocket extension connected but Native Messaging is active. Rejecting to avoid collisions.");
       ws.close(1008, "Native Messaging is active");
       return;

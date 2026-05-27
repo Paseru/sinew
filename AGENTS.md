@@ -16,6 +16,10 @@
 ├── package.json
 ├── README-FORK.md
 ├── README.md
+├── .sinew
+│   └── skills
+│       └── browser
+│           └── SKILL.md
 ├── scripts
 │   └── prepare-sidecars.mjs
 ├── tsconfig.json
@@ -284,6 +288,7 @@
     ├── add_to_sinew.py
     ├── background.js
     ├── com.sinew.chrome_bridge.json
+    ├── e2e-structured.mjs
     ├── mcp_server.js
     ├── native-host-wrapper.exe
     ├── native_host.bat

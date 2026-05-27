@@ -144,6 +144,44 @@ function shouldAutoNavigateTask(task) {
   return !!extractTaskUrl(task) && hasNavigationIntent(task);
 }
 
+function waitForTabReady(tabId, timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let pollTimer = null;
+
+    const done = (tab = null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutTimer);
+      if (pollTimer) clearInterval(pollTimer);
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      resolve(tab);
+    };
+
+    const isReady = (tab) => tab && tab.status === 'complete' && !isSystemTab(tab);
+
+    const check = () => {
+      chrome.tabs.get(tabId, (tab) => {
+        if (chrome.runtime.lastError) return;
+        if (isReady(tab)) done(tab);
+      });
+    };
+
+    const onUpdated = (updatedTabId, changeInfo, tab) => {
+      if (Number(updatedTabId) !== Number(tabId)) return;
+      if (changeInfo.status === 'complete' || isReady(tab)) done(tab);
+    };
+
+    const timeoutTimer = setTimeout(() => {
+      chrome.tabs.get(tabId, (tab) => done(chrome.runtime.lastError ? null : tab));
+    }, Math.max(1000, timeoutMs));
+
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    pollTimer = setInterval(check, 150);
+    check();
+  });
+}
+
 function randomStartNearTarget(target) {
   const horizontal = (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 220);
   const vertical = (Math.random() < 0.5 ? -1 : 1) * (90 + Math.random() * 180);
@@ -241,6 +279,30 @@ async function handleMessage(msg) {
         });
         break;
 
+      case "query_selector":
+      case "click_selector":
+      case "type_selector":
+      case "wait_selector":
+      case "evaluate":
+        runLocked(async () => {
+          const tabId = parseInt(params.tabId);
+          const typeByCommand = {
+            query_selector: "AGENT_QUERY_SELECTOR",
+            click_selector: "AGENT_CLICK_SELECTOR",
+            type_selector: "AGENT_TYPE_SELECTOR",
+            wait_selector: "AGENT_WAIT_SELECTOR",
+            evaluate: "AGENT_EVALUATE"
+          };
+          try {
+            await ensureCursorInjected(tabId);
+            const response = await sendTabMessage(tabId, { type: typeByCommand[command], ...params }, Math.max(1000, Number(params.timeoutMs) || 12000));
+            sendResponse(id, response || { success: false, error: "No structured action response" });
+          } catch (err) {
+            sendResponse(id, { success: false, error: err.message });
+          }
+        });
+        break;
+
       case "human_click":
         runLocked(async () => {
           const tabId = parseInt(params.tabId);
@@ -310,11 +372,6 @@ async function handleMessage(msg) {
                   console.log(`🧬 [Bridge] Debugger attached to tab ${attachTabId}`);
                   sendResponse(id, { success: true });
                   chrome.tabs.sendMessage(attachTabId, { type: "AGENT_STATUS_CHANGE", status: "active" }).catch(() => {});
-                }
-                } else {
-                  attachedTabs.add(attachTabId);
-                  console.log(`ðŸ§¬ [Bridge] Debugger attached to tab ${attachTabId}`);
-                  sendResponse(id, { success: true });
                 }
                 updateStorageState();
                 resolve();
@@ -410,8 +467,8 @@ async function handleMessage(msg) {
 
             if (urlToNavigate) {
               console.log(`🧬 [Bridge] Silent navigating tab ${silentTabId} to ${urlToNavigate}`);
-              chrome.tabs.update(silentTabId, { url: urlToNavigate, active: true });
-              await new Promise(r => setTimeout(r, 4500));
+              chrome.tabs.update(silentTabId, { url: urlToNavigate, active: true }, () => {});
+              await waitForTabReady(silentTabId, 8000);
             }
 
             const actionTasks = buildSilentActionTasks(silentTask);
@@ -435,9 +492,12 @@ async function handleMessage(msg) {
             });
 
             const results = [];
-            for (const taskText of actionTasks) {
+            for (let i = 0; i < actionTasks.length; i++) {
+              const taskText = actionTasks[i];
               results.push(await runAction(taskText));
-              await new Promise(r => setTimeout(r, 900));
+              if (i < actionTasks.length - 1) {
+                await new Promise(r => setTimeout(r, /\b(entrée|enter|submit|valide|appuie)\b/i.test(taskText) ? 700 : 250));
+              }
             }
 
             const failed = results.find(r => r && r.success === false);
@@ -488,6 +548,9 @@ function buildSilentActionTasks(task) {
     actions.push('clique la carte Trinity');
   }
 
+  if (actions.length === 0 && shouldAutoNavigateTask(task)) {
+    return [];
+  }
   return actions.length > 0 ? actions : [task];
 }
 
@@ -645,7 +708,7 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CLICK_EVENT", event: { x: end.x, y: end.y, type: "mousePressed", button: "left" } }).catch(() => {});
   const clickResult = await sendTabMessage(tabId, { type: "AGENT_DOM_CLICK", x: end.x, y: end.y }, 12000);
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: cursorOptions.mode !== 'hidden', moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-dom" } }).catch(() => {});
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise(r => setTimeout(r, 250));
 
   if (!clickResult || clickResult.ok === false || clickResult.success === false) {
     throw new Error(clickResult?.error || 'DOM click failed');

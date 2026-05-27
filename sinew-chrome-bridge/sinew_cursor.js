@@ -3,9 +3,10 @@
 
 (function () {
   const OVERLAY_ROOT_ID = "Sinew-agent-overlay-root";
-  if (document.getElementById(OVERLAY_ROOT_ID)) {
+  if (window.__sinewChromeBridgeReady) {
     return; // Already injected
   }
+  window.__sinewChromeBridgeReady = true;
 
   // Create isolated container
   const container = document.createElement("div");
@@ -441,7 +442,12 @@
   // overlay.appendChild(label); // Disabled to match clean minimalist style (no flashing text next to the cursor)
 
   shadow.appendChild(overlay);
-  document.documentElement.appendChild(container);
+  const appendOverlayRoot = () => {
+    const root = document.documentElement || document.body;
+    if (root && !container.isConnected) root.appendChild(container);
+  };
+  if (document.documentElement || document.body) appendOverlayRoot();
+  else document.addEventListener("DOMContentLoaded", appendOverlayRoot, { once: true });
 
   // Masse-Ressort-Amortisseur Spring system
   class Spring {
@@ -741,6 +747,156 @@
       updateControlledTabIndicator(message.status);
       setFaviconBadge(message.status);
       sendResponse({ ok: true });
+    }
+    else if (message.type === "AGENT_QUERY_SELECTOR") {
+      handleActivity();
+      const selector = String(message.selector || "");
+      const el = selector ? document.querySelector(selector) : null;
+      if (!el) {
+        sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
+        return true;
+      }
+      if (message.scroll !== false && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+      }
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      sendResponse({
+        ok: true,
+        success: true,
+        selector,
+        tagName: el.tagName,
+        id: el.id || "",
+        className: typeof el.className === "string" ? el.className : "",
+        text: String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 500),
+        value: "value" in el ? el.value : null,
+        href: el.href || el.getAttribute?.("href") || "",
+        visible: rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0",
+        boundingBox: { x: Math.round(rect.left), y: Math.round(rect.top), width: Math.round(rect.width), height: Math.round(rect.height) },
+        center: { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) }
+      });
+      return true;
+    }
+    else if (message.type === "AGENT_CLICK_SELECTOR") {
+      handleActivity();
+      const selector = String(message.selector || "");
+      const el = selector ? document.querySelector(selector) : null;
+      if (!el) {
+        sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
+        return true;
+      }
+      if (message.scroll !== false && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+      }
+      const rect = el.getBoundingClientRect();
+      const x = Math.round(rect.left + rect.width / 2);
+      const y = Math.round(rect.top + rect.height / 2);
+      const opts = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0, buttons: 1, pointerId: 1, pointerType: "mouse", isPrimary: true };
+      try {
+        el.dispatchEvent(new PointerEvent("pointerover", opts));
+        el.dispatchEvent(new MouseEvent("mouseover", opts));
+        el.dispatchEvent(new PointerEvent("pointerdown", opts));
+        el.dispatchEvent(new MouseEvent("mousedown", opts));
+        el.focus?.({ preventScroll: true });
+        el.dispatchEvent(new PointerEvent("pointerup", { ...opts, buttons: 0 }));
+        el.dispatchEvent(new MouseEvent("mouseup", { ...opts, buttons: 0 }));
+        const wasCanceled = !el.dispatchEvent(new MouseEvent("click", { ...opts, buttons: 0 }));
+        if (!wasCanceled && typeof el.click === "function" && el.tagName !== "A") el.click();
+        sendResponse({ ok: true, success: true, action: "click_selector", selector, tagName: el.tagName, id: el.id || "", href: el.href || el.getAttribute?.("href") || "", center: { x, y } });
+      } catch (err) {
+        sendResponse({ ok: false, success: false, error: err.message });
+      }
+      return true;
+    }
+    else if (message.type === "AGENT_TYPE_SELECTOR") {
+      handleActivity();
+      const selector = String(message.selector || "");
+      const text = String(message.text || "");
+      const el = selector ? document.querySelector(selector) : null;
+      if (!el) {
+        sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
+        return true;
+      }
+      const isEditable = el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable || el.getAttribute("role") === "textbox";
+      if (!isEditable) {
+        sendResponse({ ok: false, success: false, error: `Target is not editable: ${el.tagName}` });
+        return true;
+      }
+      el.scrollIntoView?.({ block: "center", inline: "center", behavior: "auto" });
+      el.focus?.({ preventScroll: true });
+      const setValue = (value) => {
+        if (el.isContentEditable || el.getAttribute("role") === "textbox") el.textContent = value;
+        else el.value = value;
+        el.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText", data: value }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      setValue(text);
+      if (message.submit) {
+        el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+        const form = el.closest && el.closest("form");
+        if (form && typeof form.requestSubmit === "function") form.requestSubmit();
+        else if (form) form.submit();
+        el.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+      }
+      sendResponse({ ok: true, success: true, action: "type_selector", selector, tagName: el.tagName, id: el.id || "", text });
+      return true;
+    }
+    else if (message.type === "AGENT_WAIT_SELECTOR") {
+      handleActivity();
+      const selector = String(message.selector || "");
+      const visibleOnly = message.visible !== false;
+      const timeoutMs = Math.max(0, Number(message.timeoutMs) || 5000);
+      const started = Date.now();
+      const check = () => {
+        const el = selector ? document.querySelector(selector) : null;
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const style = window.getComputedStyle(el);
+          const visible = rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+          if (!visibleOnly || visible) {
+            sendResponse({ ok: true, success: true, selector, visible, elapsedMs: Date.now() - started });
+            return true;
+          }
+        }
+        return false;
+      };
+      if (check()) return true;
+      const timer = setTimeout(() => {
+        observer.disconnect();
+        clearInterval(poll);
+        sendResponse({ ok: false, success: false, error: `Timeout waiting for selector: ${selector}`, elapsedMs: Date.now() - started });
+      }, timeoutMs);
+      const finishIfFound = () => {
+        if (check()) {
+          clearTimeout(timer);
+          clearInterval(poll);
+          observer.disconnect();
+        }
+      };
+      const observer = new MutationObserver(finishIfFound);
+      observer.observe(document.documentElement || document, { childList: true, subtree: true, attributes: true });
+      const poll = setInterval(finishIfFound, 100);
+      return true;
+    }
+    else if (message.type === "AGENT_EVALUATE") {
+      handleActivity();
+      try {
+        const source = String(message.expression || "undefined");
+        let value;
+        try {
+          value = (0, eval)(`(${source})`);
+        } catch {
+          value = (0, eval)(source);
+        }
+        Promise.resolve(value).then((resolved) => {
+          let jsonValue = resolved;
+          try { JSON.stringify(jsonValue); } catch { jsonValue = String(jsonValue); }
+          sendResponse({ ok: true, success: true, value: jsonValue });
+        }).catch((err) => sendResponse({ ok: false, success: false, error: err.message }));
+      } catch (err) {
+        sendResponse({ ok: false, success: false, error: err.message });
+      }
+      return true;
     }
     else if (message.type === "AGENT_DOM_CLICK") {
       handleActivity();
