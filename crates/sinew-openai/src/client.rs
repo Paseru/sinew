@@ -103,10 +103,13 @@ impl OpenAiProvider {
             .header("authorization", format!("Bearer {}", bearer.token));
 
         if bearer.is_oauth {
+            request = request.header("user-agent", "codex-cli");
             request = request.header("openai-beta", "responses=experimental");
             if let Some(account_id) = bearer.account_id {
                 request = request.header("chatgpt-account-id", account_id);
             }
+        } else {
+            request = request.header("user-agent", USER_AGENT);
         }
 
         Ok(request)
@@ -266,10 +269,13 @@ async fn stream_sse_request_with_bearer(
         .header("authorization", format!("Bearer {}", bearer.token));
 
     if bearer.is_oauth {
+        builder = builder.header("user-agent", "codex-cli");
         builder = builder.header("openai-beta", "responses=experimental");
         if let Some(account_id) = bearer.account_id {
             builder = builder.header("chatgpt-account-id", account_id);
         }
+    } else {
+        builder = builder.header("user-agent", USER_AGENT);
     }
 
     let response = builder

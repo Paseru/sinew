@@ -159,7 +159,11 @@ impl ResponsesWebsocketConnection {
             "authorization",
             header_value(&format!("Bearer {}", bearer.token), "authorization")?,
         );
-        headers.insert("user-agent", HeaderValue::from_static(USER_AGENT));
+        if bearer.is_oauth {
+            headers.insert("user-agent", HeaderValue::from_static("codex-cli"));
+        } else {
+            headers.insert("user-agent", HeaderValue::from_static(USER_AGENT));
+        }
         headers.insert("content-type", HeaderValue::from_static("application/json"));
         headers.insert(
             "openai-beta",
