@@ -993,6 +993,7 @@ pub(super) struct OpenAiCodexRateLimitInfo {
     pub(super) key: String,
     pub(super) email: Option<String>,
     pub(super) plan_type: Option<String>,
+    pub(super) workspace_name: Option<String>,
     pub(super) limit_id: Option<String>,
     pub(super) primary: Option<RateLimitWindowInfo>,
     pub(super) secondary: Option<RateLimitWindowInfo>,
@@ -1097,6 +1098,42 @@ pub(super) async fn get_openai_codex_rate_limits(
         .and_then(|value| value.get("secondary_window"))
         .and_then(parse_rate_limit_window);
 
+    // Nom du workspace
+    let mut workspace_name = None;
+    let mut accounts_req = http
+        .get("https://chatgpt.com/backend-api/wham/accounts/check")
+        .header("authorization", format!("Bearer {}", bearer.token))
+        .header("user-agent", "codex-cli")
+        .header("accept", "application/json");
+    if let Some(account_id) = bearer.account_id.as_deref() {
+        accounts_req = accounts_req.header("ChatGPT-Account-Id", account_id);
+    }
+    if let Ok(accounts_resp) = accounts_req.send().await {
+        if accounts_resp.status().is_success() {
+            if let Ok(accounts_raw) = accounts_resp.json::<serde_json::Value>().await {
+                if let Some(accounts_list) = accounts_raw.get("accounts").and_then(|v| v.as_array()) {
+                    let target_id = bearer.account_id.as_deref()
+                        .or_else(|| accounts_raw.get("default_account_id").and_then(|v| v.as_str()));
+                    if let Some(tid) = target_id {
+                        if let Some(matched) = accounts_list.iter().find(|acc| acc.get("id").and_then(|id| id.as_str()) == Some(tid)) {
+                            if let Some(name) = matched.get("name").and_then(|n| n.as_str()) {
+                                workspace_name = Some(name.to_string());
+                            }
+                        }
+                    }
+                    if workspace_name.is_none() {
+                        for acc in accounts_list {
+                            if let Some(name) = acc.get("name").and_then(|n| n.as_str()) {
+                                workspace_name = Some(name.to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok(OpenAiCodexRateLimitInfo {
         key: target_key,
         email: status.email,
@@ -1105,6 +1142,7 @@ pub(super) async fn get_openai_codex_rate_limits(
             .and_then(|value| value.as_str())
             .map(|value| value.to_string())
             .or(status.plan_type),
+        workspace_name,
         limit_id: Some("codex".to_string()),
         primary,
         secondary,

@@ -165,7 +165,7 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
         kind: "rateLimits",
         percentage: primaryPercent !== null ? primaryPercent : minPercent(windows),
         isReal: true,
-        label: quota?.planType ? `Codex ${quota.planType}` : "Codex",
+        label: quota?.workspaceName || (quota?.planType ? `Codex ${quota.planType}` : "Codex"),
         source: "ChatGPT Codex /wham/usage",
         windows,
       };
