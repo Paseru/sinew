@@ -144,14 +144,16 @@ pub fn antigravity_model_and_thinking(
 pub fn capabilities(model: &ModelRef) -> ModelCapabilities {
     let model = canonical_model(model);
     let info = model_info(&model.name);
-    let supports_tools = model.name != "gpt-oss-120b";
+    let is_gpt_oss = model.name == "gpt-oss-120b";
+    let supports_tools = !is_gpt_oss;
+    let supports_thinking = !is_gpt_oss;
     ModelCapabilities {
         model,
         context_window: info.context_window,
         preferred_window: info.preferred_window,
         max_output_tokens: info.max_output_tokens,
-        supports_thinking: true,
-        visible_thinking: true,
+        supports_thinking,
+        visible_thinking: supports_thinking,
         supports_tools,
         supports_images: info.supports_images,
         effort_mode: EffortMode::Tier,

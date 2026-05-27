@@ -158,8 +158,8 @@ export const MODELS: ModelEntry[] = [
     value: "google:gpt-oss-120b",
     provider: "google",
     label: "GPT-OSS 120B",
-    thinking: ["medium"],
-    defaultThinking: "medium",
+    thinking: ["off"],
+    defaultThinking: "off",
   },
   {
     value: "google:gemini-3.1-pro",

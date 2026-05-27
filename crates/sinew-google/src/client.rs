@@ -450,7 +450,7 @@ fn system_instruction(text: Option<&str>) -> Option<wire::Content> {
 
 fn generation_config(
     request: &ProviderRequest,
-    _caps: &ModelCapabilities,
+    caps: &ModelCapabilities,
     thinking_level: Option<&'static str>,
 ) -> wire::GenerationConfig {
     wire::GenerationConfig {
@@ -458,11 +458,15 @@ fn generation_config(
         top_p: Some(0.95),
         top_k: Some(64),
         max_output_tokens: None,
-        thinking_config: thinking_level.map(|level| wire::ThinkingConfig {
-            include_thoughts: Some(true),
-            thinking_budget: None,
-            thinking_level: Some(level),
-        }),
+        thinking_config: if caps.supports_thinking {
+            thinking_level.map(|level| wire::ThinkingConfig {
+                include_thoughts: Some(true),
+                thinking_budget: None,
+                thinking_level: Some(level),
+            })
+        } else {
+            None
+        },
     }
 }
 
