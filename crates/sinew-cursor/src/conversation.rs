@@ -205,12 +205,17 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                         "bubbleId": bubble_id,
                         "type": "MESSAGE_TYPE_AI",
                     }));
-                    messages.push(json!({
+                    let mut entry = json!({
                         "type": "MESSAGE_TYPE_AI",
                         "text": text,
                         "bubbleId": bubble_id,
                         "isAgentic": true,
-                    }));
+                    });
+                    if !tool_calls.is_empty() {
+                        entry["clientSideToolV2Calls"] =
+                            Value::Array(assistant_tool_calls_payload(&tool_calls));
+                    }
+                    messages.push(entry);
                 }
             }
             Role::User => {
@@ -293,6 +298,22 @@ fn resolve_cursor_tool(name: &str, meta: &Option<Value>) -> String {
         .filter(|value| !value.is_empty())
         .map(str::to_string)
         .unwrap_or_else(|| cursor_tool_name(name).to_string())
+}
+
+fn assistant_tool_calls_payload(
+    tool_calls: &[(String, String, String, Value)],
+) -> Vec<Value> {
+    tool_calls
+        .iter()
+        .map(|(id, _name, cursor_tool, input)| {
+            let raw_args = serde_json::to_string(input).unwrap_or_else(|_| "{}".into());
+            json!({
+                "tool": cursor_tool,
+                "toolCallId": id,
+                "rawArgs": raw_args,
+            })
+        })
+        .collect()
 }
 
 fn tool_results_from_message(

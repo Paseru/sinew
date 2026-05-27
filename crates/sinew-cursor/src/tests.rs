@@ -140,4 +140,27 @@ mod tests {
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("sinew-conv-123"));
     }
+
+    #[test]
+    fn assistant_history_includes_tool_calls_in_ai_bubble() {
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2.5-fast"),
+            vec![ChatMessage {
+                role: Role::Assistant,
+                parts: vec![Part::ToolCall {
+                    id: "call_1".into(),
+                    name: "read".into(),
+                    input: serde_json::json!({ "path": "a.rs" }),
+                    meta: Some(serde_json::json!({
+                        "cursor_tool": "CLIENT_SIDE_TOOL_V2_READ_FILE_V2"
+                    })),
+                }],
+            }],
+        );
+        let identity = CursorIdeIdentity::load();
+        let (payload, _) = build_stream_request(&request, "conv", "idem", 0, &identity);
+        let body = String::from_utf8_lossy(&payload);
+        assert!(body.contains("clientSideToolV2Calls"));
+        assert!(body.contains("CLIENT_SIDE_TOOL_V2_READ_FILE_V2"));
+    }
 }

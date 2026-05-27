@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use serde_json::Value;
-use sinew_core::Result;
+use sinew_core::{Result, Usage};
 
 use crate::tools::{parse_tool_call, ParsedToolCall};
 
@@ -38,6 +38,7 @@ pub enum ComposerEvent {
     Text(String),
     Thinking(String),
     ToolCall(ParsedToolCall),
+    Usage(Usage),
 }
 
 pub fn parse_connect_events(payload: &[u8]) -> Result<Vec<ComposerEvent>> {
@@ -130,5 +131,97 @@ fn push_events_from_value(value: &Value, events: &mut Vec<ComposerEvent>) {
             .and_then(Value::as_str)
             .unwrap_or("Composer error");
         events.push(ComposerEvent::Text(format!("[error] {message}")));
+    }
+    if let Some(usage) = parse_usage_value(value) {
+        events.push(ComposerEvent::Usage(usage));
+    }
+}
+
+fn parse_usage_value(value: &Value) -> Option<Usage> {
+    let usage = value
+        .get("usage")
+        .or_else(|| value.get("tokenUsage"))
+        .or_else(|| value.get("token_usage"))
+        .or_else(|| value.get("usageInfo"))
+        .or_else(|| value.get("usage_info"))?;
+    let input_tokens = usage_field_u32(usage, &["inputTokens", "input_tokens", "promptTokens", "prompt_tokens"]);
+    let output_tokens = usage_field_u32(
+        usage,
+        &[
+            "outputTokens",
+            "output_tokens",
+            "completionTokens",
+            "completion_tokens",
+        ],
+    );
+    let total_tokens = usage_field_u32(usage, &["totalTokens", "total_tokens"]).max(input_tokens + output_tokens);
+    let reasoning_tokens = usage_field_u32(
+        usage,
+        &["reasoningTokens", "reasoning_tokens", "thinkingTokens", "thinking_tokens"],
+    );
+    let cache_read_tokens = usage_field_u32(
+        usage,
+        &["cacheReadTokens", "cache_read_tokens", "cachedInputTokens", "cached_input_tokens"],
+    );
+    let cache_creation_tokens = usage_field_u32(
+        usage,
+        &[
+            "cacheCreationTokens",
+            "cache_creation_tokens",
+            "cacheWriteTokens",
+            "cache_write_tokens",
+        ],
+    );
+    if input_tokens == 0
+        && output_tokens == 0
+        && total_tokens == 0
+        && reasoning_tokens == 0
+        && cache_read_tokens == 0
+        && cache_creation_tokens == 0
+    {
+        return None;
+    }
+    Some(Usage {
+        input_tokens,
+        output_tokens,
+        total_tokens,
+        reasoning_tokens,
+        cache_read_tokens,
+        cache_creation_tokens,
+    })
+}
+
+fn usage_field_u32(value: &Value, keys: &[&str]) -> u32 {
+    for key in keys {
+        if let Some(number) = value.get(*key).and_then(Value::as_u64) {
+            return number.min(u32::MAX as u64) as u32;
+        }
+    }
+    0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parses_nested_usage_payload() {
+        let events = collect_events(&json!({
+            "streamUnifiedChatResponse": {
+                "usage": {
+                    "inputTokens": 120,
+                    "outputTokens": 45,
+                    "reasoningTokens": 10
+                }
+            }
+        }));
+        assert!(events.iter().any(|event| matches!(
+            event,
+            ComposerEvent::Usage(usage)
+                if usage.input_tokens == 120
+                    && usage.output_tokens == 45
+                    && usage.reasoning_tokens == 10
+        )));
     }
 }

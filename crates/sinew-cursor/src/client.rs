@@ -205,6 +205,7 @@ async fn stream_composer(
     let mut tool_index = 2usize;
     let mut emitted_tools = std::collections::HashSet::<String>::new();
     let mut saw_tool_call = false;
+    let mut usage = Usage::default();
 
     let events = async_stream::try_stream! {
         while let Some(chunk) = byte_stream.next().await {
@@ -265,6 +266,10 @@ async fn stream_composer(
                             yield StreamEvent::PartStop { index: tool_index };
                             tool_index += 1;
                         }
+                        ComposerEvent::Usage(update) => {
+                            merge_usage(&mut usage, update);
+                            yield StreamEvent::Usage { usage };
+                        }
                     }
                 }
             }
@@ -278,11 +283,34 @@ async fn stream_composer(
             } else {
                 StopReason::EndTurn
             },
-            usage: Usage::default(),
+            usage,
         };
     };
 
     Ok(Box::pin(events))
+}
+
+fn merge_usage(into: &mut Usage, update: Usage) {
+    if update.input_tokens > 0 {
+        into.input_tokens = update.input_tokens;
+    }
+    if update.output_tokens > 0 {
+        into.output_tokens = update.output_tokens;
+    }
+    if update.total_tokens > 0 {
+        into.total_tokens = update.total_tokens;
+    } else if into.input_tokens > 0 || into.output_tokens > 0 {
+        into.total_tokens = into.input_tokens + into.output_tokens;
+    }
+    if update.reasoning_tokens > 0 {
+        into.reasoning_tokens = update.reasoning_tokens;
+    }
+    if update.cache_read_tokens > 0 {
+        into.cache_read_tokens = update.cache_read_tokens;
+    }
+    if update.cache_creation_tokens > 0 {
+        into.cache_creation_tokens = update.cache_creation_tokens;
+    }
 }
 
 fn rough_token_estimate(request: &ProviderRequest) -> u32 {
