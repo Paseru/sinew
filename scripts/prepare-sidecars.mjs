@@ -144,7 +144,12 @@ function sidecarOutputPath(target) {
 }
 
 async function download(url, destination) {
-  const response = await fetch(url, { redirect: "follow" });
+  const response = await fetch(url, {
+    redirect: "follow",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  });
   if (!response.ok) {
     throw new Error(`failed to download ${url}: ${response.status} ${response.statusText}`);
   }

@@ -132,6 +132,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Prepare Tauri sidecars
+        run: npm run prepare-sidecars
+
       # Workaround for the well-known `bundle_dmg.sh` hang on GitHub macOS
       # runners: Finder + DiskImageMounter aren't warmed up in the headless
       # session, so the first AppleScript call inside bundle_dmg.sh races and
