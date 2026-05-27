@@ -77,3 +77,7 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Rendu Markdown allégé* : désactivation de la détection automatique coûteuse de langage pendant le streaming, tout en gardant la coloration des blocs qui déclarent leur langage.
   * *Batch UI par frame* : fusion des micro-fragments (`text_chunk`, `thinking_chunk`, deltas d’outils) et rendu via `requestAnimationFrame`, avec flush immédiat avant les événements structurants pour préserver l’ordre exact.
   * 📂 *Fichiers : `Cargo.toml`, `src/components/chat/Markdown.tsx`, `src/components/chat/ChatPane.tsx`*
+* **🛡️ Sécurisation & Spoofing ChatGPT Codex** :
+  * *Masquage complet de l'identité* : toutes les requêtes (WebSockets, flux HTTP SSE et appels d'API de chat/quotas) utilisant le compte ChatGPT Codex transmettent désormais l'en-tête `user-agent` officiel `"codex-cli"` pour éviter toute détection.
+  * *Génération d'images sous couverture* : correction de l'outil de création d'images par abonnement (DALL-E 3) qui n'envoyait pas le bon User-Agent, désormais aligné sur `"codex-cli"`.
+  * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
