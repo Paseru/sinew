@@ -1,7 +1,6 @@
 use sinew_core::{EffortMode, ModelCapabilities, ModelRef};
 
 pub const PROVIDER_ID: &str = "cursor";
-pub const API_PROVIDER_ID: &str = "cursor:api";
 pub const MODEL_COMPOSER_25: &str = "composer-2.5";
 pub const MODEL_COMPOSER_25_FAST: &str = "composer-2.5-fast";
 

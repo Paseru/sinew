@@ -9,7 +9,6 @@ import type {
   ClipboardImageAttachment,
   ContextEstimate,
   ConversationSummary,
-  CursorApiAuthStatus,
   CursorComposerAuthStatus,
   CursorUsageQuotaInfo,
   StartCursorLoginOutput,
@@ -514,15 +513,6 @@ export const api = {
   },
   disconnectCursorComposer() {
     return invoke<void>("disconnect_cursor_composer");
-  },
-  getCursorApiStatus() {
-    return invoke<CursorApiAuthStatus>("get_cursor_api_status");
-  },
-  saveCursorApiKey(apiKey: string) {
-    return invoke<CursorApiAuthStatus>("save_cursor_api_key", { apiKey });
-  },
-  disconnectCursorApi() {
-    return invoke<void>("disconnect_cursor_api");
   },
   getCursorUsage() {
     return invoke<CursorUsageQuotaInfo>("get_cursor_usage");

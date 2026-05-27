@@ -276,12 +276,6 @@ export type StartCursorLoginOutput = {
   authUrl: string;
 };
 
-export type CursorApiAuthStatus = {
-  connected: boolean;
-  keyPreview?: string | null;
-  lastValidatedMs?: number | null;
-};
-
 export type CursorUsageQuotaInfo = {
   autoPercentUsed: number;
   apiPercentUsed: number;

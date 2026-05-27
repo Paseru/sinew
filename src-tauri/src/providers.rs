@@ -2336,28 +2336,6 @@ pub(super) async fn disconnect_cursor_composer(
     Ok(())
 }
 
-#[tauri::command]
-pub(super) fn get_cursor_api_status() -> std::result::Result<CursorApiAuthStatus, String> {
-    load_default_api_auth_status().map_err(error_to_string)
-}
-
-#[tauri::command]
-pub(super) fn save_cursor_api_key(
-    state: State<'_, DesktopState>,
-    api_key: String,
-) -> std::result::Result<CursorApiAuthStatus, String> {
-    let status = persist_cursor_api_key(&api_key).map_err(error_to_string)?;
-    install_cursor_provider(&state.providers)?;
-    Ok(status)
-}
-
-#[tauri::command]
-pub(super) fn disconnect_cursor_api(state: State<'_, DesktopState>) -> std::result::Result<(), String> {
-    delete_default_api_auth().map_err(error_to_string)?;
-    install_cursor_provider(&state.providers).ok();
-    Ok(())
-}
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct CursorUsageQuotaInfo {

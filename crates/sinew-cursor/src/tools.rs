@@ -195,9 +195,10 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             let params = params(value, "ripgrepRawSearchParams", "ripgrep_raw_search_params")
                 .or_else(|| params(value, "ripgrepSearchParams", "ripgrep_search_params"));
             json!({
-                "pattern": field(params, &["pattern"]),
-                "path": field(params, &["path"]),
-                "include": field(params, &["glob"]),
+                "pattern": field(params, &["pattern", "query", "searchTerm", "search_term"]),
+                "path": field(params, &["path", "targetDirectory", "target_directory"]).unwrap_or(json!(".")),
+                "include": field(params, &["glob", "include"]),
+                "limit": field(params, &["limit"]).unwrap_or(json!(100)),
             })
         }
         "CLIENT_SIDE_TOOL_V2_GLOB_FILE_SEARCH" | "CLIENT_SIDE_TOOL_V2_FILE_SEARCH" => {
@@ -206,6 +207,36 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             json!({
                 "pattern": field(params, &["globPattern", "glob_pattern"]).unwrap_or(json!("**/*")),
                 "path": field(params, &["targetDirectory", "target_directory"]).unwrap_or(json!(".")),
+                "limit": field(params, &["limit"]).unwrap_or(json!(200)),
+            })
+        }
+        "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL" => {
+            let params = params(value, "semanticSearchFullParams", "semantic_search_full_params")
+                .or_else(|| params(value, "semanticSearchParams", "semantic_search_params"));
+            json!({
+                "pattern": field(params, &["query", "searchQuery", "search_query", "pattern"])
+                    .unwrap_or(json!("")),
+                "path": field(params, &["targetDirectory", "target_directory", "path"]).unwrap_or(json!(".")),
+                "include": field(params, &["glob", "include"]),
+                "limit": field(params, &["limit", "maxResults", "max_results"]).unwrap_or(json!(50)),
+            })
+        }
+        "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => {
+            let params = params(value, "deleteFileParams", "delete_file_params")
+                .or_else(|| params(value, "deleteFileV2Params", "delete_file_v2_params"));
+            let path = field(
+                params,
+                &[
+                    "relativeWorkspacePath",
+                    "relative_workspace_path",
+                    "targetFile",
+                    "target_file",
+                ],
+            )
+            .and_then(|value| value.as_str().map(str::to_string))
+            .unwrap_or_default();
+            json!({
+                "command": delete_file_command(&path),
             })
         }
         "CLIENT_SIDE_TOOL_V2_RUN_TERMINAL_COMMAND_V2" => {
@@ -232,8 +263,9 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             let params = params(value, "listDirV2Params", "list_dir_v2_params")
                 .or_else(|| params(value, "listDirParams", "list_dir_params"));
             json!({
-                "pattern": "**/*",
+                "pattern": "*",
                 "path": field(params, &["targetDirectory", "target_directory"]).unwrap_or(json!(".")),
+                "limit": field(params, &["limit"]).unwrap_or(json!(200)),
             })
         }
         _ => flatten_params(value),
@@ -341,6 +373,21 @@ fn map_search_replace_blocks(path: &Value, text: &str) -> Option<Value> {
     Some(json!({ "files": [{ "path": path, "edits": edits }] }))
 }
 
+fn delete_file_command(path: &str) -> String {
+    if path.is_empty() {
+        return String::new();
+    }
+    let escaped = path.replace('\'', "''");
+    #[cfg(windows)]
+    {
+        format!("Remove-Item -LiteralPath '{escaped}' -Force")
+    }
+    #[cfg(not(windows))]
+    {
+        format!("rm -- {escaped}")
+    }
+}
+
 fn params<'a>(value: &'a Value, camel: &str, snake: &str) -> Option<&'a Value> {
     value.get(camel).or_else(|| value.get(snake))
 }
@@ -381,5 +428,54 @@ mod tests {
         let mapped = map_search_replace_blocks(&json!("src/a.rs"), text).expect("mapped");
         assert_eq!(mapped["files"][0]["edits"][0]["oldContent"], "old line");
         assert_eq!(mapped["files"][0]["edits"][0]["newContent"], "new line");
+    }
+
+    #[test]
+    fn maps_list_dir_to_shallow_glob() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_LIST_DIR_V2",
+            "toolCallId": "call_1",
+            "listDirV2Params": {
+                "targetDirectory": "src"
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.input["pattern"], "*");
+        assert_eq!(parsed.input["path"], "src");
+        assert_eq!(parsed.input["limit"], 200);
+    }
+
+    #[test]
+    fn maps_delete_file_to_shell_command() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_DELETE_FILE",
+            "toolCallId": "call_1",
+            "deleteFileParams": {
+                "relativeWorkspacePath": "tmp/old.txt"
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.sinew_name, "bash");
+        assert!(parsed.input["command"]
+            .as_str()
+            .unwrap_or("")
+            .contains("tmp/old.txt"));
+    }
+
+    #[test]
+    fn maps_semantic_search_to_grep_with_limit() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL",
+            "toolCallId": "call_1",
+            "semanticSearchFullParams": {
+                "query": "auth token",
+                "targetDirectory": "src"
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.sinew_name, "grep");
+        assert_eq!(parsed.input["pattern"], "auth token");
+        assert_eq!(parsed.input["path"], "src");
+        assert_eq!(parsed.input["limit"], 50);
     }
 }
