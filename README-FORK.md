@@ -39,8 +39,6 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `src-tauri/src/lib.rs`*
 * **⚡ Diagnostic SOTA** : Un panneau de contrôle en un clic pour tester en temps réel l'état et la version de vos outils (Git, Node, Rust, Python, Ripgrep).
   * 📂 *Fichiers : `crates/sinew-app/src/check_sota.rs`*
-* **📱 Interface Fluide** : Utilisation de *Container Queries* CSS pour que les panneaux d'options s'ajustent parfaitement à 100% de la largeur disponible.
-  * 📂 *Fichiers : `src/styles.css`*
 
 ---
 
