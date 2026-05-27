@@ -62,60 +62,29 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
 
 ## 📅 27/05 — Guidage dynamique & Ajustements Google Antigravity
 
-* **🧭 Guidage dynamique Pending/Steering** : Le bouton « Influencer » ne force plus un arrêt immédiat par défaut. La consigne est envoyée au moteur comme message d’orientation en attente, puis intégrée dès le prochain point de contrôle logique.
-  * *💬 Retour visuel immédiat* : Le message apparaît tout de suite dans le chat avec un badge **Pending**, et le bouton passe aussi en état **Pending** pendant l’attente.
-  * *⚙️ Points de contrôle côté moteur* : L’agent relit les consignes d’orientation avant une nouvelle requête modèle, après une réponse assistant et après l’exécution d’outils.
-  * *🛑 Arrêt fiable en cas de blocage réseau* : Les phases sensibles (chargement du catalogue MCP, connexion au modèle IA et pauses de retry après erreur réseau/503) écoutent maintenant le bouton **Arrêter**. Si un fournisseur rame ou tourne en boucle sur des retries, l'utilisateur peut reprendre la main proprement sans fermer l'application.
-  * *🛡️ Fallback sécurisé* : Si le moteur ne peut pas accepter l’orientation en direct, l’application conserve l’ancien comportement fiable : arrêt propre puis relance avec la consigne.
-  * 📂 *Fichiers : `crates/sinew-app/src/agent/cancel.rs`, `crates/sinew-app/src/agent/turn.rs`, `src-tauri/src/turns.rs`, `src/components/chat/ChatPane.tsx`, `src/components/chat/TodoStrip.tsx`, `src/components/chat/stream.ts`, `src/lib/ipc.ts`, `src/types.ts`, `src/styles.css`*
-* **🤖 Ajustements Google Antigravity & Quotas** :
-  * *Disponibilité vérifiée de tous les modèles* : Validation et prise en charge opérationnelle confirmée de l'ensemble des modèles du catalogue Antigravity, y compris **Claude Opus** (`claude-opus-4-6` mappé sur `claude-opus-4-6-thinking`), Sonnet (`claude-sonnet-4-6`), Gemini (3.1 Pro, 3.5 Flash) et GPT-OSS (120B).
-  * *Détection Dynamique de la Plateforme (OS & Architecture)* : Génération d'un en-tête `user-agent` réaliste simulant précisément l'environnement hôte de l'utilisateur (Windows, macOS, Linux, avec architectures x86_64 ou arm64) pour toutes les requêtes de chat ainsi que l'appel d'API de récupération des quotas (auparavant figé sur `windows/amd64`), éliminant tout risque de mismatch d'empreinte.
-  * *Stabilisation de l'onboarding et du suivi des quotas* : Utilisation par défaut du point de terminaison de production (`cloudcode-pa`), et sécurisation de la récupération des quotas via des en-têtes standardisés (`x-goog-api-client: gl-node/22.21.1` et `user-agent` approprié) pour éviter les blocages.
-  * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `src-tauri/src/providers.rs`*
-* **⚡ Expérience Gemini façon Antigravity** : Optimisation ciblée pour que Gemini 3.5 Flash se sente aussi fluide et puissant dans Sinew que dans Antigravity.
-  * *Transport réseau aligné* : activation explicite de HTTP/2 côté `reqwest` pour rapprocher le backend Rust du comportement bas-latence observé dans le `language_server.exe` d’Antigravity.
-  * *Rendu Markdown allégé* : désactivation de la détection automatique coûteuse de langage pendant le streaming, tout en gardant la coloration des blocs qui déclarent leur langage.
-  * *Batch UI par frame* : fusion des micro-fragments (`text_chunk`, `thinking_chunk`, deltas d’outils) et rendu via `requestAnimationFrame`, avec flush immédiat avant les événements structurants pour préserver l’ordre exact.
-  * 📂 *Fichiers : `Cargo.toml`, `src/components/chat/Markdown.tsx`, `src/components/chat/ChatPane.tsx`*
-* **🛡️ Sécurisation & Spoofing ChatGPT Codex** :
-  * *Masquage complet de l'identité* : toutes les requêtes (WebSockets, flux HTTP SSE et appels d'API de chat/quotas) utilisant le compte ChatGPT Codex transmettent désormais l'en-tête `user-agent` officiel `"codex-cli"` pour éviter toute détection.
-  * *Génération d'images sous couverture* : correction de l'outil de création d'images par abonnement (DALL-E 3) qui n'envoyait pas le bon User-Agent, désormais aligné sur `"codex-cli"`.
-  * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
-* **🤖 Intégration de Cursor & Agent Composer 2.5** :
-  * *Authentification OAuth Sécurisée* : Connexion fluide via OAuth avec renouvellement automatique des jetons de session (remplace la lecture locale SQLite instable de `state.vscdb` pour éviter les soucis de droits d'accès).
-  * *Stealth & Mimétisme IDE* : En-têtes HTTP personnalisés (`x-cursor-client-version` réglable via `SINEW_CURSOR_CLIENT_VERSION`, `user-agent`, `x-cursor-checksum` calculé dynamiquement) simulant un client Cursor légitime pour éviter tout blocage.
-  * *Stealth & Anonymisation (Sanitize)* : Remplacement automatique à la volée de toute mention de 'Sinew' ou 'Hyrak' par 'Cursor' dans les flux sortants (textes et JSON) afin d'éviter la détection de marque par le serveur.
-  * *Support Multi-sessions & Multimodal* : Routage des abonnements prioritaires, gestion de la vision (analyse d'images) et génération d'images via providers locaux ou DALL-E dans l'agent Composer.
-  * *Gestion des dossiers récents* : Possibilité de supprimer des dossiers de l'historique directement depuis l'écran d'accueil.
-  * 📂 *Fichiers : `crates/sinew-cursor/`, `crates/sinew-cursor/src/sanitize.rs`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`, `src/components/Welcome.tsx`, `src/lib/recents.ts`*
-* **🔍 Indexation Sémantique Locale & Codebase Search** :
-  * *Indexation Arrière-plan & Embeddings* : Module `sinew-index` pour analyser le projet localement et générer des embeddings vectoriels des fichiers avec découpage intelligent respectueux de la structure des symboles.
-  * *Badge d'état dans la Sidebar* : Affichage dynamique sous le nom du projet du nombre de fichiers et fragments indexés, ainsi que du moteur actif (sémantique ou classique).
-  * *Context Injection* : Intégration transparente des résultats de recherche sémantique comme contexte explicite injecté directement dans les prompts envoyés à l'agent.
-  * 📂 *Fichiers : `crates/sinew-index/`, `crates/sinew-app/src/codebase_search.rs`, `src/components/chat/ChatPane.tsx`, `src/components/Workspace.tsx`*
-* **🌐 Extension Chrome (Sinew Chrome Bridge) de Pointe** :
-  * *Suppression du Timeout de 20s* : Résolution d'un délai d'attente bloquant lors de la navigation et de la recherche d'onglets cibles via CDP.
-  * *Stealth & Trajectoire Bézier* : Déplacements du curseur simulés via des courbes de Bézier physiques multi-candidates et masquage complet de la barre d'avertissement de débogage Chrome.
-  * *Design Premium de la Popup* : Redesign complet avec thème sombre moderne, lueur néon, états de diagnostic pliables et indicateur d'attachement du debugger en temps réel.
-  * *Exécution depuis l'Explorateur & Chat* : Intégration d'un menu d'ouverture directe et d'exécution dans les liens de fichiers du chat et dans le menu contextuel clic-droit du FileTree.
+* **🧭 Guidage dynamique Pending/Steering** : Le bouton « Influencer » ne force plus un arrêt immédiat par défaut. La consigne est envoyée en arrière-plan (badge `Pending`) et intégrée aux points de contrôle logiques du moteur. Gère l'arrêt réseau propre lors des retry/503.
+  * 📂 *Fichiers : `crates/sinew-app/src/agent/cancel.rs`, `crates/sinew-app/src/agent/turn.rs`, `src-tauri/src/turns.rs`, `src/components/chat/ChatPane.tsx`, `src/components/chat/TodoStrip.tsx`, `src/components/chat/stream.ts`*
+* **🤖 Intégration de Cursor & Agent Composer 2.5** : Connexion via OAuth sécurisée (remplace l'extraction instable de `state.vscdb`) avec mimétisme d'IDE (checksum/client version). Incorpore un filtre furtif anonymisant (`sanitize.rs`) qui remplace les mentions 'Sinew'/'Hyrak' par 'Cursor' pour déjouer le brand fingerprinting. Permet de purger les projets récents de l'accueil.
+  * 📂 *Fichiers : `crates/sinew-cursor/`, `crates/sinew-cursor/src/sanitize.rs`, `src-tauri/src/providers.rs`, `src/components/Welcome.tsx`, `src/lib/recents.ts`*
+* **🔍 Indexation Sémantique Locale & Codebase Search** : Module `sinew-index` pour générer en arrière-plan des embeddings vectoriels locaux. L'IA injecte ces résultats de recherche sémantique comme contexte. Affiche l'état d'indexation (badge) sous le nom du projet dans la barre latérale.
+  * 📂 *Fichiers : `crates/sinew-index/`, `crates/sinew-app/src/codebase_search.rs`, `src/components/Workspace.tsx`*
+* **🌐 Extension Chrome (Sinew Chrome Bridge) de Pointe** : Élimination du timeout de 20s en navigation. Utilise des courbes physiques de Bézier pour simuler des mouvements humains, masque la barre d'avertissement de débogage et ajoute un menu de diagnostic. Menu d'exécution direct clic-droit depuis le chat et l'arbre des fichiers.
   * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`, `sinew-chrome-bridge/popup.js`, `sinew-chrome-bridge/background.js`, `.sinew/skills/browser/SKILL.md`, `src/components/FileTree.tsx`, `src/components/chat/Markdown.tsx`*
-* **⚡ Suppression des Popups de Console sur Windows** :
-  * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP, des commandes Git ou de l'analyse globale SOTA.
-  * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`, `src-tauri/src/git.rs`, `crates/sinew-app/src/check_sota.rs`*
-* **🛠️ Diagnostics Monaco & read_lints en Temps Réel** :
-  * *Collecte Active* : Remontée instantanée en arrière-plan des diagnostics, erreurs et alertes de compilation du composant d'édition Monaco de Sinew (`EditorPane.tsx`).
-  * *Corrélation d'erreurs* : Le nouvel outil `read_lints` permet à l'IA d'interroger directement ces diagnostics locaux (et de lancer des vérifications système via `cargo`, `eslint`, `ruff`) afin de corriger ses erreurs de code de manière proactive.
+* **🛠️ Diagnostics Monaco & read_lints en Temps Réel** : Remontée instantanée des erreurs de compilation de l'éditeur Monaco. L'outil `read_lints` permet à l'IA d'interroger directement ces alertes (et linters `cargo`, `eslint`, `ruff`) pour se corriger.
   * 📂 *Fichiers : `src/components/EditorPane.tsx`, `crates/sinew-app/src/read_lints.rs`, `crates/sinew-app/src/editor_diagnostics.rs`*
-* **🧠 Compaction Avancée des Tools & Logs** :
-  * *Repli Automatique* : En modes `Compact` ou `Très compact`, les cartes d'outils réussis (lecture/écriture de fichiers, exécution bash, listes de tâches, compactage de contexte) masquent leurs détails techniques complexes (diffs, arguments de lecture, etc.) et cachent la flèche de dépliage pour un journal plus propre, ne s'ouvrant automatiquement qu'en cas d'erreur de traitement.
+* **🧠 Compaction Avancée des Tools & Logs** : En modes `Compact` ou `Très compact`, les cartes d'outils réussis (lecture, écriture, bash, todo) replient automatiquement leurs diffs, arguments et détails techniques complexes pour préserver la clarté du chat.
   * 📂 *Fichiers : `src/components/chat/ToolCard.tsx`, `src/components/chat/PlanningNextMoveBlock.tsx`, `src/components/chat/stream.ts`*
-* **🎨 Ajustements UI, Encodage & Mode Très Compact** :
-  * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
-  * *Écran de Démarrage & Splash Logo* : Suppression du flash blanc au lancement et intégration d'une animation d'introduction (boot splash screen) stylisée et instantanée (définie dans `index.html`) complétée par des animations d'apparition des barres du logo sur l'écran d'accueil.
-  * *Mode Ultra Pur* : Amélioration du mode "Très compact" pour masquer les tools réussis et n'afficher que l'animation d'état en cours.
-  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `index.html`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`*
-* **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées de `[Bureau] ` ou `[Perso] ` en fonction du nom d'hôte de la machine (`%COMPUTERNAME%`), facilitant le tri et l'identification lors de la synchronisation Multi-PC.
+* **⚡ Suppression des Popups de Console sur Windows** : Masquage total des clignotements d'invites de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs MCP (Node/Python), des commandes Git ou de l'analyse globale SOTA.
+  * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`, `src-tauri/src/git.rs`, `crates/sinew-app/src/check_sota.rs`*
+* **🤖 Ajustements Google Antigravity & Quotas** : Mappage des modèles réels (Opus/Sonnet/Gemini/GPT-OSS), simulation de l'environnement client réel (OS & Arch) sur les en-têtes User-Agent, et robustesse accrue avec fallbacks asynchrones en cas d'erreur ou surcharge 503.
+  * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `src-tauri/src/providers.rs`*
+* **⚡ Expérience Gemini façon Antigravity** : Fluidification extrême de Gemini 3.5 Flash en activant HTTP/2 côté Rust et en désactivant le linter de coloration syntaxique auto en cours de streaming.
+  * 📂 *Fichiers : `Cargo.toml`, `src/components/chat/Markdown.tsx`*
+* **🛡️ Sécurisation & Spoofing ChatGPT Codex** : Spoofing complet de toutes les requêtes (WebSockets, SSE, et images DALL-E 3) avec le User-Agent officiel `"codex-cli"` pour éliminer les risques de détection/bannissement.
+  * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
+* **🎨 Splash Screen & Correction d'Encodage** : Splash Screen statique instantané (défini dans `index.html`) pour supprimer le flash blanc au démarrage. Remplacement et échappement unicode de tous les points médians (`·`) pour éliminer définitivement les bugs d'affichage Windows.
+  * 📂 *Fichiers : `index.html`, `src/styles.css`, `crates/sinew-app/src/agent/turn.rs`*
+* **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées de `[Bureau] ` ou `[Perso] ` en fonction du nom d'hôte de la machine (`%COMPUTERNAME%`) pour faciliter le tri multi-PC.
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
-* **🛑 Désactivation de la mise à jour automatique** : L'auto-updater officiel est désactivé pour éviter que vos modifications personnelles et les fonctionnalités propres à ce fork ne soient écrasées par les versions amont standard.
+* **🛑 Désactivation de la mise à jour automatique** : L'auto-updater officiel est désactivé pour éviter que vos modifications personnelles et les fonctionnalités propres à ce fork ne soient écrasées.
   * 📂 *Fichiers : `src-tauri/tauri.conf.json`, `src/components/Welcome.tsx`*
