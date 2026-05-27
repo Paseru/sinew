@@ -16,9 +16,19 @@ pub struct CursorUsageInfo {
     pub membership_type: Option<String>,
 }
 
-pub async fn fetch_usage(http: &Client, access_token: &str) -> Result<CursorUsageInfo> {
+pub async fn fetch_usage(
+    http: &Client,
+    identity: &crate::identity::CursorIdeIdentity,
+    access_token: &str,
+) -> Result<CursorUsageInfo> {
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let mut headers = reqwest::header::HeaderMap::new();
+    identity.apply(&mut headers, &session_id, &request_id);
+
     let response = http
         .post(USAGE_URL)
+        .headers(headers)
         .header("authorization", format!("Bearer {access_token}"))
         .header("content-type", "application/json")
         .header("connect-protocol-version", "1")

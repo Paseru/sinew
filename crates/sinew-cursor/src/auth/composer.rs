@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use sinew_core::{AppError, Result};
 
+use crate::identity::CursorIdeIdentity;
+
 const CURSOR_AUTH_CLIENT_ID: &str = "KbZUR41cY7W6zRSdpSUJ7I7mLYBKOCmB";
 const CURSOR_OAUTH_TOKEN_URL: &str = "https://api2.cursor.sh/oauth/token";
 const REFRESH_SKEW_MS: i64 = 120_000;
@@ -230,8 +232,15 @@ pub async fn ensure_fresh_composer_token(
         "client_id": CURSOR_AUTH_CLIENT_ID,
         "refresh_token": refresh,
     });
+    let identity = CursorIdeIdentity::load();
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let mut headers = reqwest::header::HeaderMap::new();
+    identity.apply(&mut headers, &session_id, &request_id);
+
     let response = http
         .post(CURSOR_OAUTH_TOKEN_URL)
+        .headers(headers)
         .header("content-type", "application/json")
         .json(&body)
         .send()

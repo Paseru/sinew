@@ -23,7 +23,6 @@ import {
 } from "../lib/models";
 import type {
   AnthropicProviderStatus,
-  CursorApiAuthStatus,
   CursorComposerAuthStatus,
   GoogleProviderStatus,
   ImageProvider,
@@ -123,7 +122,7 @@ export function SettingsPane({ workspacePath }: Props) {
   const [unconnectedGoogleAccounts, setUnconnectedGoogleAccounts] = useState<string[]>([]);
   const [kimiStatus, setKimiStatus] = useState<KimiProviderStatus | null>(null);
   const [cursorComposerStatus, setCursorComposerStatus] = useState<CursorComposerAuthStatus | null>(null);
-  const [cursorApiStatus, setCursorApiStatus] = useState<CursorApiAuthStatus | null>(null);
+  const cursorOAuthPendingRef = useRef(false);
   const [openRouterStatus, setOpenRouterStatus] = useState<OpenRouterProviderStatus | null>(null);
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
@@ -515,12 +514,24 @@ export function SettingsPane({ workspacePath }: Props) {
   const loadCursorStatus = useCallback(async () => {
     setProvidersLoading(true);
     try {
-      const [composer, cursorApi] = await Promise.all([
-        api.getCursorComposerStatus(),
-        api.getCursorApiStatus(),
-      ]);
+      const composer = await api.getCursorComposerStatus();
+      const wasPending = cursorOAuthPendingRef.current;
       setCursorComposerStatus(composer);
-      setCursorApiStatus(cursorApi);
+      if (
+        wasPending &&
+        composer.connected &&
+        composer.connectionState === "connected"
+      ) {
+        cursorOAuthPendingRef.current = false;
+        setProvidersMessage(
+          "Cursor connecté — vous pouvez fermer l'onglet du navigateur et revenir à Sinew.",
+        );
+        quotaCache.delete("cursor");
+        window.dispatchEvent(new CustomEvent("sinew:quota-updated"));
+      } else if (wasPending && composer.connectionState === "error") {
+        cursorOAuthPendingRef.current = false;
+        setProvidersMessage(composer.error ?? "Connexion Cursor échouée");
+      }
       void loadConfiguredProviders();
       window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
     } catch (err) {
@@ -824,38 +835,23 @@ export function SettingsPane({ workspacePath }: Props) {
     }
   }, [loadConfiguredProviders]);
 
-  const syncCursorComposer = useCallback(async () => {
-    setProvidersBusy(true);
-    setProvidersMessage(null);
-    try {
-      const status = await api.syncCursorComposerAuth();
-      setCursorComposerStatus(status);
-      setProvidersMessage("Cursor Composer session synced from IDE");
-      quotaCache.delete("cursor");
-      window.dispatchEvent(new CustomEvent("sinew:quota-updated"));
-      void loadConfiguredProviders();
-      window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
-    } catch (err) {
-      setProvidersMessage(err instanceof Error ? err.message : String(err));
-      void loadCursorStatus();
-    } finally {
-      setProvidersBusy(false);
-    }
-  }, [loadConfiguredProviders, loadCursorStatus]);
-
   const connectCursor = useCallback(async () => {
     setProvidersBusy(true);
     setProvidersMessage(null);
     try {
       const login = await api.startCursorOAuthLogin();
+      cursorOAuthPendingRef.current = true;
       setCursorComposerStatus({
         connected: false,
         connectionState: "connecting",
         loginId: login.loginId,
       });
       await api.openExternalUrl(login.authUrl);
-      setProvidersMessage("Waiting for browser confirmation...");
+      setProvidersMessage(
+        "Connectez-vous dans le navigateur (Google ou GitHub). La page dira « return to Cursor » — c'est normal : revenez ici, Sinew se connectera automatiquement.",
+      );
     } catch (err) {
+      cursorOAuthPendingRef.current = false;
       setProvidersMessage(err instanceof Error ? err.message : String(err));
       void loadCursorStatus();
     } finally {
@@ -867,6 +863,7 @@ export function SettingsPane({ workspacePath }: Props) {
     setProvidersBusy(true);
     setProvidersMessage(null);
     try {
+      cursorOAuthPendingRef.current = false;
       setCursorComposerStatus(await api.cancelCursorOAuthLogin());
     } catch (err) {
       setProvidersMessage(err instanceof Error ? err.message : String(err));
@@ -881,7 +878,7 @@ export function SettingsPane({ workspacePath }: Props) {
     try {
       await api.disconnectCursorComposer();
       setCursorComposerStatus({ connected: false, connectionState: "disconnected" });
-      setProvidersMessage("Disconnected");
+      setProvidersMessage("Déconnecté");
       void loadConfiguredProviders();
       window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
     } catch (err) {
@@ -1450,7 +1447,6 @@ export function SettingsPane({ workspacePath }: Props) {
             onRemoveUnconnectedGoogleAccount={handleRemoveUnconnectedGoogleAccount}
             onDisconnectGoogleAccount={disconnectGoogleAccount}
             cursorComposerStatus={cursorComposerStatus}
-            cursorApiStatus={cursorApiStatus}
             kimiStatus={kimiStatus}
             openRouterStatus={openRouterStatus}
             openRouterModels={openRouterModels}
@@ -1481,7 +1477,6 @@ export function SettingsPane({ workspacePath }: Props) {
             onDisconnectGoogle={() => void disconnectGoogle()}
             onConnectCursor={() => void connectCursor()}
             onCancelCursorComposer={() => void cancelCursorComposer()}
-            onSyncCursorComposer={() => void syncCursorComposer()}
             onDisconnectCursorComposer={() => void disconnectCursorComposer()}
             onConnectKimi={() => void connectKimi()}
             onCancelKimi={() => void cancelKimi()}
@@ -1997,7 +1992,6 @@ type ProvidersSectionProps = {
   onRemoveUnconnectedGoogleAccount: (key: string) => void;
   onDisconnectGoogleAccount: (key: string) => void;
   cursorComposerStatus: CursorComposerAuthStatus | null;
-  cursorApiStatus: CursorApiAuthStatus | null;
   kimiStatus: KimiProviderStatus | null;
   openRouterStatus: OpenRouterProviderStatus | null;
   openRouterModels: OpenRouterModel[];
@@ -2019,7 +2013,6 @@ type ProvidersSectionProps = {
   onDisconnectGoogle: () => void;
   onConnectCursor: () => void;
   onCancelCursorComposer: () => void;
-  onSyncCursorComposer: () => void;
   onDisconnectCursorComposer: () => void;
   onConnectKimi: () => void;
   onCancelKimi: () => void;
@@ -2051,7 +2044,6 @@ function ProvidersSection({
   onRemoveUnconnectedGoogleAccount,
   onDisconnectGoogleAccount,
   cursorComposerStatus,
-  cursorApiStatus,
   kimiStatus,
   openRouterStatus,
   openRouterModels,
@@ -2073,7 +2065,6 @@ function ProvidersSection({
   onDisconnectGoogle,
   onConnectCursor,
   onCancelCursorComposer,
-  onSyncCursorComposer,
   onDisconnectCursorComposer,
   onConnectKimi,
   onCancelKimi,
@@ -2084,10 +2075,10 @@ function ProvidersSection({
   onOpenRouterChanged,
 }: ProvidersSectionProps) {
   const cursorStatus: CursorComposerAuthStatus = {
-    connected: Boolean(cursorComposerStatus?.connected || cursorApiStatus?.connected),
+    connected: Boolean(cursorComposerStatus?.connected),
     connectionState:
       cursorComposerStatus?.connectionState ??
-      (cursorComposerStatus?.connected || cursorApiStatus?.connected ? "connected" : "disconnected"),
+      (cursorComposerStatus?.connected ? "connected" : "disconnected"),
     email: cursorComposerStatus?.email ?? undefined,
     membershipType: cursorComposerStatus?.membershipType ?? undefined,
     error: cursorComposerStatus?.error ?? undefined,
@@ -2355,12 +2346,11 @@ function ProvidersSection({
         <ProviderCard
           name="Cursor"
           icon="local:cursor"
-          description="Connect your Cursor account (Google/GitHub) for Auto + Composer, then optional API key for the API pool."
+          description="Connectez votre compte Cursor (Google/GitHub) pour utiliser Auto + Composer via votre abonnement."
           status={cursorStatus}
           connectedMeta={[
-            cursorComposerStatus?.email || "Composer session",
+            cursorComposerStatus?.email || "Session Composer",
             cursorComposerStatus?.membershipType ?? null,
-            cursorApiStatus?.connected ? "API key connected" : null,
           ]}
           loading={loading}
           busy={busy}
@@ -2368,98 +2358,9 @@ function ProvidersSection({
           onCancel={onCancelCursorComposer}
           onDisconnect={onDisconnectCursorComposer}
           providerId="cursor"
-          connectLabel="Connect"
-          busyConnectLabel="Opening..."
-        >
-          <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
-            <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Or sync from Cursor IDE (if already signed in there):
-            </span>
-            <button
-              type="button"
-              onClick={onSyncCursorComposer}
-              disabled={loading || busy}
-              style={{
-                background: "transparent",
-                color: "var(--text-1)",
-                border: "1px solid var(--line-2)",
-                borderRadius: "4px",
-                padding: "6px 10px",
-                fontSize: "12px",
-                cursor: "pointer",
-                width: "fit-content",
-              }}
-            >
-              Sync from IDE
-            </button>
-          </div>
-          <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
-            <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              API pool (secondary, after Composer quota):
-            </span>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <input
-                type="password"
-                placeholder="cursor_..."
-                id="token-input-cursor-api"
-                style={{
-                  flex: 1,
-                  background: "var(--bg-3)",
-                  color: "var(--text-1)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: "4px",
-                  padding: "6px 10px",
-                  fontSize: "12px",
-                  outline: "none",
-                }}
-              />
-              <button
-                type="button"
-                onClick={async () => {
-                  const input = document.getElementById("token-input-cursor-api") as HTMLInputElement;
-                  const val = input?.value || "";
-                  if (val.trim()) {
-                    await api.saveCursorApiKey(val.trim());
-                    onRefresh();
-                  }
-                }}
-                style={{
-                  background: "var(--accent-1, #3b82f6)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "4px",
-                  padding: "6px 12px",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                Save API key
-              </button>
-            </div>
-            {cursorApiStatus?.connected && (
-              <button
-                type="button"
-                onClick={async () => {
-                  await api.disconnectCursorApi();
-                  onRefresh();
-                }}
-                style={{
-                  background: "transparent",
-                  color: "var(--text-2)",
-                  border: "1px solid var(--line-2)",
-                  borderRadius: "4px",
-                  padding: "4px 8px",
-                  fontSize: "11px",
-                  cursor: "pointer",
-                  width: "fit-content",
-                }}
-              >
-                Remove API key
-              </button>
-            )}
-          </div>
-        </ProviderCard>
+          connectLabel="Connecter"
+          busyConnectLabel="Ouverture..."
+        />
         <ProviderCard
           name="Google"
           icon="simple-icons:google"

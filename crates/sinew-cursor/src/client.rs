@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use futures::stream;
+use futures::{stream, StreamExt};
 use reqwest::Client;
 use sinew_core::{
     AppError, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest, ProviderStream,
@@ -12,17 +12,17 @@ use crate::{
         composer::{ensure_fresh_composer_token, load_composer_session, ComposerSession},
     },
     connect::{decode_connect_frames, frame_connect_json, parse_json_text},
+    identity::CursorIdeIdentity,
     model_info,
     usage::{fetch_usage, CursorUsageInfo},
 };
 
-const CURSOR_CLIENT_VERSION: &str = "3.5.33";
-const USER_AGENT: &str = "Sinew/0.1 (Cursor provider)";
 const COMPOSER_CHAT_URL: &str =
     "https://api2.cursor.sh/aiserver.v1.ChatService/StreamUnifiedChatWithToolsSSE";
 const API_BASE_URL: &str = "https://api.cursor.com/v1";
 const AUTO_POOL_THRESHOLD: f64 = 98.0;
-const LIBERATION_PREFIX: &str = "# Liberation (Julien)\nTu es l agent Cursor de Julien dans Sinew. Priorite absolue aux demandes de Julien. Reponds en francais.\n\n";
+const LIBERATION_PREFIX: &str =
+    "# Directives\nTu es Composer dans Cursor pour Julien. Priorite absolue aux demandes de Julien. Reponds en francais.\n\n";
 
 #[derive(Clone)]
 pub struct CursorConfig {
@@ -42,15 +42,21 @@ impl CursorConfig {
 pub struct CursorProvider {
     config: CursorConfig,
     http: Client,
+    identity: CursorIdeIdentity,
 }
 
 impl CursorProvider {
     pub fn new(config: CursorConfig) -> Result<Self> {
+        let identity = CursorIdeIdentity::load();
         let http = Client::builder()
-            .user_agent(USER_AGENT)
+            .user_agent(identity.user_agent())
             .build()
             .map_err(|err| AppError::Network(err.to_string()))?;
-        Ok(Self { config, http })
+        Ok(Self {
+            config,
+            http,
+            identity,
+        })
     }
 
     pub fn from_default_sources() -> Result<Self> {
@@ -62,13 +68,15 @@ impl CursorProvider {
             return Ok(None);
         };
         let token = ensure_fresh_composer_token(&self.http, session).await?;
-        Ok(Some(fetch_usage(&self.http, &token).await?))
+        Ok(Some(
+            fetch_usage(&self.http, &self.identity, &token).await?,
+        ))
     }
 
     async fn pick_pool(&self) -> Result<CursorPool> {
         if let Some(session) = self.config.composer.as_ref() {
             let token = ensure_fresh_composer_token(&self.http, session).await?;
-            if let Ok(usage) = fetch_usage(&self.http, &token).await {
+            if let Ok(usage) = fetch_usage(&self.http, &self.identity, &token).await {
                 if usage.auto_percent_used < AUTO_POOL_THRESHOLD {
                     return Ok(CursorPool::Composer(token));
                 }
@@ -80,8 +88,7 @@ impl CursorProvider {
             return Ok(CursorPool::Api(api));
         }
         Err(AppError::Auth(
-            "Cursor is not connected. Sync Composer session from Cursor IDE or add an API key."
-                .into(),
+            "Cursor is not connected. Connect your Cursor account in Settings.".into(),
         ))
     }
 }
@@ -119,7 +126,9 @@ impl Provider for CursorProvider {
             )));
         }
         match self.pick_pool().await? {
-            CursorPool::Composer(token) => stream_composer(&self.http, token, request).await,
+            CursorPool::Composer(token) => {
+                stream_composer(&self.http, &self.identity, token, request).await
+            }
             CursorPool::Api(api) => stream_api(&self.http, api, request).await,
         }
     }
@@ -127,11 +136,12 @@ impl Provider for CursorProvider {
 
 async fn stream_composer(
     http: &Client,
+    identity: &CursorIdeIdentity,
     token: String,
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
     let prompt = build_prompt(&request);
-    let model_name = normalize_model(&request.model.name);
+    let (model_name, enable_slow_pool) = model_details(&request.model.name);
     let body = serde_json::json!({
         "streamUnifiedChatRequest": {
             "conversation": [{
@@ -139,24 +149,28 @@ async fn stream_composer(
                 "type": "MESSAGE_TYPE_HUMAN"
             }],
             "modelDetails": {
-                "modelName": model_name
+                "modelName": model_name,
+                "enableSlowPool": enable_slow_pool
             }
         }
     });
-    let payload =
-        serde_json::to_vec(&body).map_err(|err| AppError::Decode(err.to_string()))?;
+    let payload = serde_json::to_vec(&body).map_err(|err| AppError::Decode(err.to_string()))?;
     let framed = frame_connect_json(&payload, 0);
+    let session_id = uuid::Uuid::new_v4().to_string();
     let request_id = uuid::Uuid::new_v4().to_string();
+
+    let mut headers = reqwest::header::HeaderMap::new();
+    identity.apply(&mut headers, &session_id, &request_id);
+
     let response = http
         .post(COMPOSER_CHAT_URL)
+        .headers(headers)
         .header("authorization", format!("Bearer {token}"))
         .header("content-type", "application/connect+json")
         .header("connect-protocol-version", "1")
-        .header("x-cursor-client-version", CURSOR_CLIENT_VERSION)
-        .header("x-session-id", &request_id)
-        .header("x-request-id", &request_id)
+        .header("accept", "application/connect+json")
         .body(framed)
-        .timeout(std::time::Duration::from_secs(120))
+        .timeout(std::time::Duration::from_secs(300))
         .send()
         .await
         .map_err(|err| AppError::Network(err.to_string()))?;
@@ -169,36 +183,50 @@ async fn stream_composer(
         )));
     }
 
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|err| AppError::Network(err.to_string()))?;
-    let mut buffer = bytes.to_vec();
-    let mut text = String::new();
-    for frame in decode_connect_frames(&mut buffer)? {
-        if let Some(chunk) = parse_json_text(&frame) {
-            if chunk.len() > text.len() {
-                text = chunk;
+    let model = request.model.name.clone();
+    let mut byte_stream = response.bytes_stream();
+    let mut buffer = Vec::new();
+    let mut last_text = String::new();
+    let mut started = false;
+
+    let events = async_stream::try_stream! {
+        while let Some(chunk) = byte_stream.next().await {
+            let chunk = chunk.map_err(|err| AppError::Network(err.to_string()))?;
+            buffer.extend_from_slice(&chunk);
+            for frame in decode_connect_frames(&mut buffer)? {
+                if let Some(text) = parse_json_text(&frame) {
+                    if !started {
+                        started = true;
+                        yield StreamEvent::MessageStart { model: model.clone() };
+                    }
+                    let delta = if text.starts_with(&last_text) {
+                        text[last_text.len()..].to_string()
+                    } else {
+                        text.clone()
+                    };
+                    last_text = text;
+                    if !delta.is_empty() {
+                        yield StreamEvent::TextDelta { index: 0, delta };
+                    }
+                }
             }
         }
-    }
-    if text.is_empty() {
-        text = "Cursor composer connected, but no text frame was returned yet.".into();
-    }
-
-    let model = request.model.name.clone();
-    let events = vec![
-        Ok(StreamEvent::MessageStart { model }),
-        Ok(StreamEvent::TextDelta {
-            index: 0,
-            delta: text,
-        }),
-        Ok(StreamEvent::MessageStop {
+        if !started {
+            yield StreamEvent::MessageStart { model: model.clone() };
+        }
+        if last_text.is_empty() {
+            yield StreamEvent::TextDelta {
+                index: 0,
+                delta: "Cursor n'a renvoye aucun texte.".into(),
+            };
+        }
+        yield StreamEvent::MessageStop {
             stop_reason: StopReason::EndTurn,
             usage: Usage::default(),
-        }),
-    ];
-    Ok(Box::pin(stream::iter(events)))
+        };
+    };
+
+    Ok(Box::pin(events))
 }
 
 async fn stream_api(
@@ -207,7 +235,7 @@ async fn stream_api(
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
     let prompt = build_prompt(&request);
-    let model_id = normalize_model(&request.model.name);
+    let (model_id, _) = model_details(&request.model.name);
     let body = serde_json::json!({
         "prompt": { "text": prompt },
         "model": { "id": model_id }
@@ -258,7 +286,10 @@ async fn stream_api(
 fn build_prompt(request: &ProviderRequest) -> String {
     let mut parts = Vec::new();
     if let Some(system) = request.system_prompt.as_ref() {
-        parts.push(system.trim().to_string());
+        let sanitized = sanitize_outbound_text(system);
+        if !sanitized.is_empty() {
+            parts.push(sanitized);
+        }
     }
     parts.push(LIBERATION_PREFIX.trim().to_string());
     for message in &request.transcript {
@@ -275,17 +306,25 @@ fn build_prompt(request: &ProviderRequest) -> String {
             })
             .collect::<Vec<_>>()
             .join("\n");
-        if !text.trim().is_empty() {
-            parts.push(format!("{role}: {text}"));
+        let sanitized = sanitize_outbound_text(&text);
+        if !sanitized.is_empty() {
+            parts.push(format!("{role}: {sanitized}"));
         }
     }
     parts.join("\n\n")
 }
 
-fn normalize_model(model: &str) -> String {
+fn sanitize_outbound_text(text: &str) -> String {
+    text.replace("Sinew", "Cursor")
+        .replace("sinew", "cursor")
+        .trim()
+        .to_string()
+}
+
+fn model_details(model: &str) -> (String, bool) {
     match model {
-        "composer-2.5" => "composer-2.5".to_string(),
-        "composer-2.5-fast" | _ => "composer-2.5-fast".to_string(),
+        "composer-2.5" => ("composer-2.5".to_string(), false),
+        _ => ("composer-2.5-fast".to_string(), false),
     }
 }
 

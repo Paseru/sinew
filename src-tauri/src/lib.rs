@@ -93,7 +93,7 @@ use sinew_cursor::{
     create_login_challenge, delete_composer_auth, delete_default_api_auth, load_composer_auth_status,
     load_default_api_auth_status, save_default_api_key as persist_cursor_api_key,
     sync_composer_auth_from_ide, wait_for_oauth_login, CursorApiAuthStatus,
-    CursorComposerAuthStatus, CursorLoginChallenge, CursorProvider,
+    CursorComposerAuthStatus, CursorLoginChallenge, CursorProvider, CursorIdeIdentity,
     PROVIDER_ID as CURSOR_PROVIDER_ID,
 };
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};

@@ -9,6 +9,8 @@ use tokio::sync::Notify;
 
 use sinew_core::{AppError, Result};
 
+use crate::identity::CursorIdeIdentity;
+
 use super::composer::{save_oauth_tokens, CursorComposerAuthStatus};
 
 const CURSOR_WEBSITE_URL: &str = "https://cursor.com";
@@ -105,6 +107,12 @@ async fn poll_once(
     http: &Client,
     challenge: &CursorLoginChallenge,
 ) -> Result<Option<(String, String)>> {
+    let identity = CursorIdeIdentity::load();
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let mut headers = reqwest::header::HeaderMap::new();
+    identity.apply(&mut headers, &session_id, &request_id);
+
     let url = format!(
         "{CURSOR_BACKEND_URL}/auth/poll?uuid={}&verifier={}",
         urlencoding(challenge.uuid.as_str()),
@@ -112,9 +120,7 @@ async fn poll_once(
     );
     let response = http
         .get(url)
-        .header("x-ghost-mode", "false")
-        .header("x-new-onboarding-completed", "true")
-        .header("user-agent", "Sinew/0.1 (Cursor provider)")
+        .headers(headers)
         .send()
         .await
         .map_err(|err| AppError::Network(format!("cursor auth poll failed: {err}")))?;
@@ -171,10 +177,17 @@ async fn fetch_profile(http: &Client, access_token: &str) -> Result<OAuthProfile
 }
 
 async fn fetch_email(http: &Client, access_token: &str) -> Result<Option<String>> {
+    let identity = CursorIdeIdentity::load();
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let mut headers = reqwest::header::HeaderMap::new();
+    identity.apply(&mut headers, &session_id, &request_id);
+
     let response = http
         .post(format!(
             "{CURSOR_BACKEND_URL}/aiserver.v1.AuthService/GetEmail"
         ))
+        .headers(headers)
         .header("authorization", format!("Bearer {access_token}"))
         .header("content-type", "application/json")
         .header("connect-protocol-version", "1")
@@ -195,11 +208,16 @@ async fn fetch_email(http: &Client, access_token: &str) -> Result<Option<String>
 }
 
 async fn fetch_stripe_profile(http: &Client, access_token: &str) -> Result<StripeProfileResponse> {
+    let identity = CursorIdeIdentity::load();
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let request_id = uuid::Uuid::new_v4().to_string();
+    let mut headers = reqwest::header::HeaderMap::new();
+    identity.apply(&mut headers, &session_id, &request_id);
+
     let response = http
         .get(format!("{CURSOR_BACKEND_URL}/auth/full_stripe_profile"))
+        .headers(headers)
         .header("authorization", format!("Bearer {access_token}"))
-        .header("x-ghost-mode", "false")
-        .header("x-new-onboarding-completed", "true")
         .send()
         .await
         .map_err(|err| AppError::Network(err.to_string()))?;

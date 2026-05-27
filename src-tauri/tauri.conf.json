@@ -28,6 +28,7 @@
         "minWidth": 1100,
         "minHeight": 720,
         "resizable": true,
+        "theme": "dark",
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "trafficLightPosition": { "x": 14, "y": 18 }

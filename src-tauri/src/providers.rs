@@ -2280,7 +2280,7 @@ pub(super) async fn run_cursor_oauth_login(
     cancel: Arc<Notify>,
 ) -> Result<()> {
     let http = reqwest::Client::builder()
-        .user_agent("Sinew/0.1 (Cursor provider)")
+        .user_agent(CursorIdeIdentity::load().user_agent())
         .build()
         .context("unable to build Cursor OAuth client")?;
 
