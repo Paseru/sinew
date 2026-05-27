@@ -462,6 +462,13 @@ fn grep_path_scope(value: &Value) -> Option<String> {
     }
 }
 
+fn lint_paths_scope(input: &Value) -> Option<String> {
+    input
+        .get("paths")
+        .or_else(|| input.get("path"))
+        .and_then(grep_path_scope)
+}
+
 pub(super) fn display_mcp_server_name(value: &str) -> String {
     let trimmed = value.trim();
     let Some(rest) = trimmed.get(3..) else {

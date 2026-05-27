@@ -179,14 +179,22 @@ export function SettingsPane({ workspacePath }: Props) {
         setLoading(false);
 
         if (normalized.servers.some((server) => server.enabled)) {
-          const nextProbes = await api.probeMcpTools();
-          if (disposed) return;
-          setProbes(nextProbes);
-          const failures = nextProbes.filter(
-            (probe) => probe.enabled && !probe.ok,
-          ).length;
-          if (failures) {
-            setStatus(`${failures} server${failures === 1 ? "" : "s"} failed`);
+          try {
+            const nextProbes = await api.probeMcpTools();
+            if (disposed) return;
+            setProbes(nextProbes);
+            const failures = nextProbes.filter(
+              (probe) => probe.enabled && !probe.ok,
+            ).length;
+            if (failures) {
+              setStatus(`${failures} server${failures === 1 ? "" : "s"} failed`);
+            }
+          } catch (probeErr) {
+            if (!disposed) {
+              setStatus(
+                probeErr instanceof Error ? probeErr.message : String(probeErr),
+              );
+            }
           }
         }
       } catch (err) {
@@ -1064,6 +1072,40 @@ export function SettingsPane({ workspacePath }: Props) {
     [parseError, saving, settings],
   );
 
+  const refreshMcpProbes = useCallback(async () => {
+    if (!settings.servers.some((server) => server.enabled)) {
+      setProbes([]);
+      return;
+    }
+    setProbing(true);
+    try {
+      const nextProbes = await api.probeMcpTools();
+      setProbes(nextProbes);
+      const failures = nextProbes.filter((probe) => probe.enabled && !probe.ok).length;
+      if (failures) {
+        setStatus(`${failures} server${failures === 1 ? "" : "s"} failed`);
+      }
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setProbing(false);
+    }
+  }, [settings.servers]);
+
+  useEffect(() => {
+    if (loading || saving || probing) return;
+    if (!selectedServer?.enabled || selectedProbe) return;
+    void refreshMcpProbes();
+  }, [
+    loading,
+    probing,
+    refreshMcpProbes,
+    saving,
+    selectedProbe,
+    selectedServer?.enabled,
+    selectedServerId,
+  ]);
+
   // ---- Skills load ------------------------------------------------------
   const loadSkills = useCallback(async () => {
     setSkillsLoading(true);
@@ -1568,6 +1610,7 @@ export function SettingsPane({ workspacePath }: Props) {
             knownToolCounts={knownToolCounts}
             onToggleEnabled={toggleEnabled}
             onToggleAutoLoad={toggleAutoLoad}
+            onRefreshProbes={() => void refreshMcpProbes()}
             onMount={handleEditorMount}
           />
         ) : section === "skills" ? (
@@ -3642,6 +3685,7 @@ type McpSectionProps = {
   knownToolCounts: Record<string, number>;
   onToggleEnabled: (id: string) => void;
   onToggleAutoLoad: (id: string) => void;
+  onRefreshProbes: () => void;
   onMount?: (editor: any, monaco: any) => void;
 };
 
@@ -3665,6 +3709,7 @@ function McpSection({
   knownToolCounts,
   onToggleEnabled,
   onToggleAutoLoad,
+  onRefreshProbes,
   onMount,
 }: McpSectionProps) {
   const enabledCount = servers.filter((server) => server.enabled).length;
@@ -3864,6 +3909,7 @@ function McpSection({
               probing={probing}
               knownToolCount={knownToolCounts[selectedServer.id]}
               onToggleAutoLoad={onToggleAutoLoad}
+              onRefreshProbes={onRefreshProbes}
             />
           ) : (
             <div className="settings-pane__empty-state">
@@ -3886,9 +3932,10 @@ type ServerDetailProps = {
   probing: boolean;
   knownToolCount: number | undefined;
   onToggleAutoLoad?: (id: string) => void;
+  onRefreshProbes?: () => void;
 };
 
-function ServerDetail({ server, probe, probing, knownToolCount, onToggleAutoLoad }: ServerDetailProps) {
+function ServerDetail({ server, probe, probing, knownToolCount, onToggleAutoLoad, onRefreshProbes }: ServerDetailProps) {
   const [expandedTools, setExpandedTools] = useState<Set<string>>(
     () => new Set<string>(),
   );
@@ -4024,6 +4071,16 @@ function ServerDetail({ server, probe, probing, knownToolCount, onToggleAutoLoad
               {probing ? "Probing server…" : "No probe data yet."}
             </div>
           )}
+          {!probe && server.enabled && onRefreshProbes && !probing ? (
+            <button
+              type="button"
+              className="settings-pane__btn"
+              onClick={onRefreshProbes}
+            >
+              <Icon icon="solar:refresh-linear" width={13} height={13} />
+              <span>Probe now</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

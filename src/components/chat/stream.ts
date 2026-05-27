@@ -602,6 +602,33 @@ function summaryFromInput(
     const record = input as Record<string, unknown>;
     if (typeof record.path === "string") return `Read ${record.path}`;
   }
+  if (canonicalName === "read_lints" && input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    const scope = lintPathsScope(record.paths ?? record.path);
+    return scope ? `Read lints in ${scope}` : "Read lints";
+  }
+  if (canonicalName === "list_dir" && input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    if (typeof record.path === "string" && record.path.trim() && record.path.trim() !== ".") {
+      return `List ${record.path.trim()}`;
+    }
+    return "List directory";
+  }
+  if (canonicalName === "delete_file" && input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    if (typeof record.path === "string" && record.path.trim()) {
+      return `Delete ${record.path.trim()}`;
+    }
+    return "Delete file";
+  }
+  if (canonicalName === "codebase_search" && input && typeof input === "object") {
+    const record = input as Record<string, unknown>;
+    if (typeof record.query === "string" && record.query.trim()) {
+      const query = record.query.trim();
+      return `Search codebase: ${query.length > 48 ? `${query.slice(0, 45)}...` : query}`;
+    }
+    return "Search codebase";
+  }
   if (canonicalName === "edit_file") {
     return editFileSummary(input);
   }
@@ -902,6 +929,23 @@ function cleanContextIdsFromArgs(argsPretty?: string): Set<string> {
   const values = (input as Record<string, unknown>).tool_call_ids;
   if (!Array.isArray(values)) return new Set();
   return new Set(values.filter((value): value is string => typeof value === "string"));
+}
+
+function lintPathsScope(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  if (Array.isArray(value)) {
+    const paths = value
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    if (paths.length === 0) return undefined;
+    if (paths.length === 1) return paths[0];
+    return `${paths.length} paths`;
+  }
+  return undefined;
 }
 
 function readJsonStringToken(

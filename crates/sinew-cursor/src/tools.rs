@@ -611,6 +611,20 @@ mod tests {
     }
 
     #[test]
+    fn maps_read_lints_to_native_read_lints() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_READ_LINTS",
+            "toolCallId": "call_1",
+            "readLintsParams": {
+                "paths": ["src/main.rs"]
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.sinew_name, "read_lints");
+        assert_eq!(parsed.input["paths"], json!(["src/main.rs"]));
+    }
+
+    #[test]
     fn maps_semantic_search_to_codebase_search() {
         let value = json!({
             "tool": "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL",
