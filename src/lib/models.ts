@@ -275,6 +275,20 @@ export function availableModelsForProviders(
         supportsFast: true,
         defaultFast,
       });
+    } else if (provider.startsWith("google:")) {
+      const suffix = provider.slice("google:".length);
+      const googleModels = MODELS.filter((m) => m.provider === "google");
+      for (const m of googleModels) {
+        const baseModelName = m.value.slice("google:".length);
+        entries.push({
+          value: modelId(provider, baseModelName),
+          provider: provider as any,
+          label: `${m.label} (${suffix})`,
+          thinking: m.thinking,
+          defaultThinking: m.defaultThinking,
+          supportsFast: m.supportsFast,
+        });
+      }
     }
   }
 
@@ -315,7 +329,7 @@ export function modelRefFromId(model: ModelId): ModelRef {
 export function thinkingFromRef(
   model: ModelRef | null | undefined,
 ): ThinkingLevel {
-  if (model?.provider === "google") {
+  if (model?.provider === "google" || model?.provider?.startsWith("google:")) {
     if (model.name.endsWith("-low")) return "low";
     if (model.name.endsWith("-medium")) return "medium";
     if (model.name.endsWith("-high")) return "high";
@@ -413,7 +427,7 @@ function modelId(provider: string, name: string): ModelId {
 }
 
 function normalizedModelName(provider: string, name: string): string {
-  if (provider === "google") return normalizedGoogleModelName(name);
+  if (provider === "google" || provider.startsWith("google:")) return normalizedGoogleModelName(name);
   return name;
 }
 

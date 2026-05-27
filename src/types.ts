@@ -206,6 +206,13 @@ export type OpenAiAccountInfo = {
   planType?: string | null;
 };
 
+export type GoogleAccountInfo = {
+  key: string;
+  email?: string | null;
+  projectId?: string | null;
+  userTier?: string | null;
+};
+
 export type AnthropicProviderStatus = {
   connected: boolean;
   connectionState: ProviderConnectionState;

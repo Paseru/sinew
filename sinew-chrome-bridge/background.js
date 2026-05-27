@@ -9,6 +9,7 @@ let lastConnectedAt = null;
 
 // Registry of active attached debuggers
 const attachedTabs = new Set();
+const ALLOW_DEBUGGER_ATTACH = false;
 let cursorMoveSeq = 0;
 
 function normalizeCursorOptions(options = {}) {
@@ -178,6 +179,10 @@ async function handleMessage(msg) {
         break;
 
       case "attach":
+        if (!ALLOW_DEBUGGER_ATTACH) {
+          sendResponse(id, { success: false, error: "chrome.debugger attach disabled to avoid Chrome debugging banner" });
+          break;
+        }
         const attachTabId = parseInt(params.tabId);
         runLocked(async () => {
           return new Promise((resolve) => {
@@ -249,6 +254,10 @@ async function handleMessage(msg) {
         break;
 
       case "cdp_command":
+        if (!ALLOW_DEBUGGER_ATTACH) {
+          sendResponse(id, { success: false, error: "CDP commands disabled to avoid Chrome debugging banner" });
+          break;
+        }
         const cdpTabId = parseInt(params.tabId);
         const { method, cdpParams } = params;
         
@@ -392,6 +401,7 @@ function cdp(tabId, method, params = {}) {
 }
 
 async function attachDebuggerIfNeeded(tabId) {
+  if (!ALLOW_DEBUGGER_ATTACH) throw new Error('chrome.debugger attach disabled to avoid Chrome debugging banner');
   if (attachedTabs.has(tabId)) return;
   await new Promise((resolve, reject) => {
     chrome.debugger.attach({ tabId }, "1.3", () => {

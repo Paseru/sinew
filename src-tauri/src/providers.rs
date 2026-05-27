@@ -121,11 +121,39 @@ pub(super) fn install_anthropic_provider(
 pub(super) fn install_google_provider(
     providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
 ) -> std::result::Result<(), String> {
-    let provider = GoogleProvider::from_default_sources().map_err(error_to_string)?;
-    providers
-        .lock()
-        .map_err(|_| "provider registry is unavailable".to_string())?
-        .insert("google".into(), Arc::new(provider) as Arc<dyn Provider>);
+    if let Ok(default_path) = sinew_google::auth::default_auth_path() {
+        let dir = default_path.parent().unwrap();
+        let old_first_path = dir.join("google-auth-1.json");
+        if old_first_path.exists() && !default_path.exists() {
+            if let Err(err) = std::fs::rename(&old_first_path, &default_path) {
+                tracing::warn!(
+                    "failed to auto-rename google-auth-1.json back to google-auth.json: {:?}",
+                    err
+                );
+            } else {
+                tracing::info!(
+                    "successfully restored google-auth-1.json as google-auth.json (principal)"
+                );
+            }
+        }
+    }
+
+    if let Ok(files) = sinew_google::auth::all_auth_files() {
+        let mut lock = providers
+            .lock()
+            .map_err(|_| "provider registry is unavailable".to_string())?;
+        for (key, path) in files {
+            if let Ok(provider) = GoogleProvider::from_file(&path) {
+                lock.insert(key, Arc::new(provider) as Arc<dyn Provider>);
+            }
+        }
+    } else {
+        let provider = GoogleProvider::from_default_sources().map_err(error_to_string)?;
+        providers
+            .lock()
+            .map_err(|_| "provider registry is unavailable".to_string())?
+            .insert("google".into(), Arc::new(provider) as Arc<dyn Provider>);
+    }
     Ok(())
 }
 
@@ -592,6 +620,7 @@ pub(super) async fn run_google_oauth_server(
     expected_state: String,
     pkce: GooglePkceCodes,
     cancel: Arc<Notify>,
+    target_key: Option<String>,
 ) -> Result<()> {
     let http = reqwest::Client::builder()
         .user_agent("sinew/0.1")
@@ -611,6 +640,7 @@ pub(super) async fn run_google_oauth_server(
                     &redirect_uri,
                     &expected_state,
                     &pkce,
+                    target_key.as_deref(),
                 ).await? {
                     return result;
                 }
@@ -625,6 +655,7 @@ pub(super) async fn handle_google_oauth_request(
     redirect_uri: &str,
     expected_state: &str,
     pkce: &GooglePkceCodes,
+    target_key: Option<&str>,
 ) -> Result<Option<Result<()>>> {
     let mut buffer = [0u8; 8192];
     let read = stream
@@ -678,7 +709,7 @@ pub(super) async fn handle_google_oauth_request(
                 return Ok(Some(Err(anyhow::anyhow!("Missing authorization code"))));
             };
 
-            match exchange_google_oauth_code(http, code, redirect_uri, pkce).await {
+            match exchange_google_oauth_code(http, code, redirect_uri, pkce, target_key.map(|s| s.to_string())).await {
                 Ok(_) => {
                     write_html_response(stream, 200, google_login_success_html()).await?;
                     Ok(Some(Ok(())))
@@ -1352,6 +1383,57 @@ pub(super) async fn disconnect_openai_account(
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct GoogleAccountInfo {
+    pub(super) key: String,
+    pub(super) email: Option<String>,
+    pub(super) project_id: Option<String>,
+    pub(super) user_tier: Option<String>,
+}
+
+#[tauri::command]
+pub(super) async fn get_all_google_accounts() -> std::result::Result<Vec<GoogleAccountInfo>, String> {
+    let mut accounts = Vec::new();
+    if let Ok(files) = sinew_google::auth::all_auth_files() {
+        for (key, path) in files {
+            if let Ok(status) = sinew_google::auth::load_auth_status(&path) {
+                if status.connected {
+                    accounts.push(GoogleAccountInfo {
+                        key,
+                        email: status.email,
+                        project_id: status.project_id,
+                        user_tier: status.user_tier,
+                    });
+                }
+            }
+        }
+    }
+    accounts.sort_by(|a, b| compare_provider_keys(&a.key, &b.key));
+    Ok(accounts)
+}
+
+#[tauri::command]
+pub(super) async fn disconnect_google_account(
+    state: State<'_, DesktopState>,
+    key: String,
+) -> std::result::Result<(), String> {
+    let mut lock = state
+        .providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?;
+    lock.remove(&key);
+
+    if let Ok(files) = sinew_google::auth::all_auth_files() {
+        for (fkey, path) in files {
+            if fkey == key {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub(super) async fn save_openai_access_token(
     state: State<'_, DesktopState>,
@@ -1577,6 +1659,7 @@ pub(super) async fn get_google_provider_status(
 #[tauri::command]
 pub(super) async fn start_google_oauth_login(
     state: State<'_, DesktopState>,
+    key: Option<String>,
 ) -> std::result::Result<StartGoogleLoginOutput, String> {
     if let Some(existing) = state.google_login.lock().await.take() {
         existing.cancel.notify_one();
@@ -1602,13 +1685,15 @@ pub(super) async fn start_google_oauth_login(
             id: login_id.clone(),
             cancel: cancel.clone(),
             outcome: outcome.clone(),
+            target_key: key.clone(),
         });
     }
 
     let providers = state.providers.clone();
+    let target_key = key.clone();
     tauri::async_runtime::spawn(async move {
         let result =
-            run_google_oauth_server(listener, redirect_uri, oauth_state, pkce, cancel).await;
+            run_google_oauth_server(listener, redirect_uri, oauth_state, pkce, cancel, target_key).await;
         let login_outcome = match result {
             Ok(()) => match install_google_provider(&providers) {
                 Ok(()) => GoogleLoginOutcome {

@@ -121,6 +121,7 @@ pub(super) struct GoogleLoginAttempt {
     pub(super) id: String,
     pub(super) cancel: Arc<Notify>,
     pub(super) outcome: Arc<StdMutex<Option<GoogleLoginOutcome>>>,
+    #[allow(dead_code)]
     pub(super) target_key: Option<String>,
 }
 

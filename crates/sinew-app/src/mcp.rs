@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sinew_core::{ChatMessage, Part, ToolDescriptor};
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::{Child, ChildStdin, ChildStdout, Command},
     sync::RwLock,
     time::timeout,
@@ -831,10 +831,13 @@ impl McpStdioClient {
             .take()
             .ok_or_else(|| anyhow!("MCP server stdout unavailable"))?;
 
-        if let Some(mut stderr) = child.stderr.take() {
+        if let Some(stderr) = child.stderr.take() {
+            let server_name = config.name.clone();
             tokio::spawn(async move {
-                let mut sink = Vec::new();
-                let _ = stderr.read_to_end(&mut sink).await;
+                let mut reader = BufReader::new(stderr).lines();
+                while let Ok(Some(line)) = reader.next_line().await {
+                    tracing::info!(target: "mcp_server", "[{}] {}", server_name, line);
+                }
             });
         }
 

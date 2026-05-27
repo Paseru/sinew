@@ -10,7 +10,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     auth::{
-        generate_state, load_default_user_data, save_default_user_data, Credential, GoogleUserData,
+        generate_state, Credential, GoogleUserData,
         load_user_data, save_user_data, default_auth_path,
     },
     model_info,

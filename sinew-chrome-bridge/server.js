@@ -2,12 +2,6 @@
 // Exposes SOTA Sinew-grade browser-level and page-level CDP multiplexing on port 9002.
 
 const isNativeMode = process.argv.includes('--native');
-if (isNativeMode) {
-  // Chrome Native Messaging stdout must contain only 32-bit length-prefixed JSON.
-  // Redirect every accidental console/info log before any subsystem can emit text.
-  console.log = console.error;
-  console.info = console.error;
-}
 
 const fs = require('fs');
 const http = require('http');
@@ -16,6 +10,54 @@ const { WebSocketServer, WebSocket } = require('ws');
 const os = require('os');
 const path = require('path');
 const homeDir = os.homedir();
+
+// Configure log file redirection (SINEW_CHROME_BRIDGE_DIR or standard localappdata path)
+const STATE_DIR = process.env.SINEW_CHROME_BRIDGE_DIR || path.join(process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'Sinew', 'ChromeBridge');
+let logStream = null;
+try {
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+  logStream = fs.createWriteStream(path.join(STATE_DIR, 'bridge.log'), { flags: 'a' });
+} catch (e) {
+  // Silent fallback if directory creation or stream creation fails
+}
+
+function writeToLogFile(prefix, args) {
+  if (logStream) {
+    const timestamp = new Date().toISOString();
+    const formatted = args.map(arg => {
+      if (arg instanceof Error) return arg.stack || arg.message;
+      return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+    }).join(' ');
+    logStream.write(`[${timestamp}] [${prefix}] ${formatted}\n`);
+  }
+}
+
+const originalConsoleLog = console.log;
+const originalConsoleInfo = console.info;
+const originalConsoleError = console.error;
+
+console.log = function(...args) {
+  writeToLogFile('INFO', args);
+  if (isNativeMode) {
+    originalConsoleError.apply(console, args);
+  } else {
+    originalConsoleLog.apply(console, args);
+  }
+};
+
+console.info = function(...args) {
+  writeToLogFile('INFO', args);
+  if (isNativeMode) {
+    originalConsoleError.apply(console, args);
+  } else {
+    originalConsoleInfo.apply(console, args);
+  }
+};
+
+console.error = function(...args) {
+  writeToLogFile('ERROR', args);
+  originalConsoleError.apply(console, args);
+};
 
 let scanFolder, sortFile, getFileSample;
 try {

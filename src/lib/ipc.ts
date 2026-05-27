@@ -29,6 +29,7 @@ import type {
   ModelRef,
   OpenAiProviderStatus,
   OpenAiAccountInfo,
+  GoogleAccountInfo,
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
@@ -437,17 +438,23 @@ export const api = {
   getGoogleProviderStatus() {
     return invoke<GoogleProviderStatus>("get_google_provider_status");
   },
-  getAntigravityQuota() {
-    return invoke<any>("get_antigravity_quota");
+  getAntigravityQuota(key?: string) {
+    return invoke<any>("get_antigravity_quota", { key: key ?? null });
   },
-  startGoogleOAuthLogin() {
-    return invoke<StartGoogleLoginOutput>("start_google_oauth_login");
+  startGoogleOAuthLogin(key?: string) {
+    return invoke<StartGoogleLoginOutput>("start_google_oauth_login", { key: key ?? null });
   },
   cancelGoogleOAuthLogin() {
     return invoke<GoogleProviderStatus>("cancel_google_oauth_login");
   },
   disconnectGoogleProvider() {
     return invoke<GoogleProviderStatus>("disconnect_google_provider");
+  },
+  getAllGoogleAccounts() {
+    return invoke<GoogleAccountInfo[]>("get_all_google_accounts");
+  },
+  disconnectGoogleAccount(key: string) {
+    return invoke<void>("disconnect_google_account", { key });
   },
   getKimiProviderStatus() {
     return invoke<KimiProviderStatus>("get_kimi_provider_status");

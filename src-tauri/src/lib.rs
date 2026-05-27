@@ -482,7 +482,13 @@ pub fn run() {
             }
         }
     }
-    if let Ok(provider) = GoogleProvider::from_default_sources() {
+    if let Ok(files) = sinew_google::auth::all_auth_files() {
+        for (key, path) in files {
+            if let Ok(provider) = GoogleProvider::from_file(&path) {
+                providers.insert(key, Arc::new(provider) as Arc<dyn Provider>);
+            }
+        }
+    } else if let Ok(provider) = GoogleProvider::from_default_sources() {
         providers.insert("google".into(), Arc::new(provider) as Arc<dyn Provider>);
     }
     if let Ok(provider) = KimiProvider::from_default_sources() {
@@ -667,6 +673,8 @@ pub fn run() {
             providers::start_google_oauth_login,
             providers::cancel_google_oauth_login,
             providers::disconnect_google_provider,
+            providers::get_all_google_accounts,
+            providers::disconnect_google_account,
             providers::get_kimi_provider_status,
             providers::start_kimi_oauth_login,
             providers::cancel_kimi_oauth_login,

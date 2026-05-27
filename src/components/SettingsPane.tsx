@@ -35,6 +35,7 @@ import type {
   McpSettings,
   OpenAiProviderStatus,
   OpenAiAccountInfo,
+  GoogleAccountInfo,
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
@@ -118,6 +119,8 @@ export function SettingsPane({ workspacePath }: Props) {
 
   const [anthropicStatus, setAnthropicStatus] = useState<AnthropicProviderStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleProviderStatus | null>(null);
+  const [googleAccounts, setGoogleAccounts] = useState<GoogleAccountInfo[]>([]);
+  const [unconnectedGoogleAccounts, setUnconnectedGoogleAccounts] = useState<string[]>([]);
   const [kimiStatus, setKimiStatus] = useState<KimiProviderStatus | null>(null);
   const [cursorComposerStatus, setCursorComposerStatus] = useState<CursorComposerAuthStatus | null>(null);
   const [cursorApiStatus, setCursorApiStatus] = useState<CursorApiAuthStatus | null>(null);
@@ -473,6 +476,14 @@ export function SettingsPane({ workspacePath }: Props) {
       const status = await api.getGoogleProviderStatus();
       setGoogleStatus(status);
       setProvidersMessage(status.error ?? null);
+
+      const accounts = await api.getAllGoogleAccounts();
+      setGoogleAccounts(accounts);
+
+      setUnconnectedGoogleAccounts((prev) =>
+        prev.filter((key) => !accounts.some((acc) => acc.key === key))
+      );
+
       if (status.connectionState !== "connecting") {
         void loadConfiguredProviders();
         window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
@@ -730,13 +741,13 @@ export function SettingsPane({ workspacePath }: Props) {
     }
   }, [loadConfiguredProviders]);
 
-  const connectGoogle = useCallback(async () => {
+  const connectGoogle = useCallback(async (key?: string) => {
     setProvidersBusy(true);
     setProvidersMessage(null);
     try {
-      const login = await api.startGoogleOAuthLogin();
+      const login = await api.startGoogleOAuthLogin(key);
       const connecting: GoogleProviderStatus = {
-        connected: false,
+        connected: googleStatus?.connected ?? false,
         connectionState: "connecting",
         loginId: login.loginId,
       };
@@ -749,7 +760,42 @@ export function SettingsPane({ workspacePath }: Props) {
     } finally {
       setProvidersBusy(false);
     }
-  }, [loadGoogleStatus]);
+  }, [googleStatus, loadGoogleStatus]);
+
+  const disconnectGoogleAccount = useCallback(async (key: string) => {
+    setProvidersBusy(true);
+    setProvidersMessage(null);
+    try {
+      await api.disconnectGoogleAccount(key);
+      setProvidersMessage("Account disconnected");
+      void loadGoogleStatus();
+      void loadConfiguredProviders();
+      window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
+    } catch (err) {
+      setProvidersMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setProvidersBusy(false);
+    }
+  }, [loadGoogleStatus, loadConfiguredProviders]);
+
+  const handleAddGoogleAccount = useCallback(() => {
+    let nextIndex = 2;
+    while (true) {
+      const key = `google:${nextIndex}`;
+      const isConnected = googleAccounts.some((acc) => acc.key === key);
+      const isUnconnected = unconnectedGoogleAccounts.includes(key);
+      if (!isConnected && !isUnconnected) {
+        setUnconnectedGoogleAccounts((prev) => [...prev, key]);
+        break;
+      }
+      nextIndex++;
+      if (nextIndex > 100) break;
+    }
+  }, [googleAccounts, unconnectedGoogleAccounts]);
+
+  const handleRemoveUnconnectedGoogleAccount = useCallback((key: string) => {
+    setUnconnectedGoogleAccounts((prev) => prev.filter((k) => k !== key));
+  }, []);
 
   const cancelGoogle = useCallback(async () => {
     setProvidersBusy(true);
@@ -1397,6 +1443,12 @@ export function SettingsPane({ workspacePath }: Props) {
             onDisconnectOpenAiAccount={disconnectOpenAiAccount}
             anthropicStatus={anthropicStatus}
             googleStatus={googleStatus}
+            googleAccounts={googleAccounts}
+            unconnectedGoogleAccounts={unconnectedGoogleAccounts}
+            onConnectGoogleWithKey={connectGoogle}
+            onAddGoogleAccount={handleAddGoogleAccount}
+            onRemoveUnconnectedGoogleAccount={handleRemoveUnconnectedGoogleAccount}
+            onDisconnectGoogleAccount={disconnectGoogleAccount}
             cursorComposerStatus={cursorComposerStatus}
             cursorApiStatus={cursorApiStatus}
             kimiStatus={kimiStatus}
@@ -1938,6 +1990,12 @@ type ProvidersSectionProps = {
   onDisconnectOpenAiAccount: (key: string) => void;
   anthropicStatus: AnthropicProviderStatus | null;
   googleStatus: GoogleProviderStatus | null;
+  googleAccounts: GoogleAccountInfo[];
+  unconnectedGoogleAccounts: string[];
+  onConnectGoogleWithKey: (key: string) => void;
+  onAddGoogleAccount: () => void;
+  onRemoveUnconnectedGoogleAccount: (key: string) => void;
+  onDisconnectGoogleAccount: (key: string) => void;
   cursorComposerStatus: CursorComposerAuthStatus | null;
   cursorApiStatus: CursorApiAuthStatus | null;
   kimiStatus: KimiProviderStatus | null;
@@ -1986,6 +2044,12 @@ function ProvidersSection({
   onDisconnectOpenAiAccount,
   anthropicStatus,
   googleStatus,
+  googleAccounts,
+  unconnectedGoogleAccounts,
+  onConnectGoogleWithKey,
+  onAddGoogleAccount,
+  onRemoveUnconnectedGoogleAccount,
+  onDisconnectGoogleAccount,
   cursorComposerStatus,
   cursorApiStatus,
   kimiStatus,
@@ -2413,8 +2477,80 @@ function ProvidersSection({
           onConnect={onConnectGoogle}
           onCancel={onCancelGoogle}
           onDisconnect={onDisconnectGoogle}
+          showPlus={true}
+          onPlus={onAddGoogleAccount}
           providerId="google"
         />
+        {(googleAccounts.some((account) => account.key.startsWith("google:")) || unconnectedGoogleAccounts.length > 0) && (
+          <div className="settings-pane__secondary-grid">
+            {[...googleAccounts]
+              .filter((account) => account.key.startsWith("google:"))
+              .sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: "base" }))
+              .map((account) => {
+                const suffix = account.key.slice("google:".length);
+                const displayName = `Google ${suffix}`;
+                const accountStatus: ProviderCardStatus = {
+                  connected: true,
+                  connectionState: "connected",
+                  email: account.email,
+                  userTier: account.userTier,
+                  projectId: account.projectId,
+                };
+
+                return (
+                  <ProviderCard
+                    key={account.key}
+                    name={displayName}
+                    icon="simple-icons:google"
+                    description={`Connected Google account ${suffix}.`}
+                    status={accountStatus}
+                    connectedMeta={[
+                      account.email || "Signed in",
+                      account.userTier ?? null,
+                      account.projectId ? `Project ${account.projectId}` : null,
+                    ]}
+                    loading={loading}
+                    busy={busy}
+                    onConnect={() => {}}
+                    onCancel={() => {}}
+                    onDisconnect={() => void onDisconnectGoogleAccount(account.key)}
+                    showMinus={true}
+                    onMinus={() => void onDisconnectGoogleAccount(account.key)}
+                    providerId={account.key}
+                    compact={true}
+                  />
+                );
+              })}
+            {[...unconnectedGoogleAccounts]
+              .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }))
+              .map((key) => {
+                const suffix = key.slice("google:".length);
+                const displayName = `Google ${suffix}`;
+                const accountStatus: ProviderCardStatus = {
+                  connected: false,
+                  connectionState: "disconnected",
+                };
+                return (
+                  <ProviderCard
+                    key={key}
+                    name={displayName}
+                    icon="simple-icons:google"
+                    description={`Connect a secondary Google account.`}
+                    status={accountStatus}
+                    connectedMeta={[]}
+                    loading={loading}
+                    busy={busy}
+                    onConnect={() => onConnectGoogleWithKey(key)}
+                    onCancel={() => {}}
+                    onDisconnect={() => {}}
+                    showMinus={true}
+                    onMinus={() => onRemoveUnconnectedGoogleAccount(key)}
+                    compact={true}
+                  />
+                );
+              })}
+          </div>
+        )}
         <ProviderCard
           name="Kimi"
           icon="local:kimi"
@@ -2542,7 +2678,13 @@ function ProviderCard({
 
   const rawMeta = [...connectedMeta];
   if (connected && quota && quota.label) {
-    if (quota.label.startsWith("Projet ") || !quota.label.includes("Codex")) {
+    if (quota.label.startsWith("Projet ")) {
+      // Check if project is already in connectedMeta to avoid duplicate
+      const alreadyHasProject = connectedMeta.some(m => m && (m.includes("Project ") || m.includes("Projet ")));
+      if (!alreadyHasProject) {
+        rawMeta.push(quota.label);
+      }
+    } else if (!quota.label.includes("Codex")) {
       rawMeta.push(quota.label);
     }
   }

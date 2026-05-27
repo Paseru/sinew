@@ -123,9 +123,9 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
     }
   }
 
-  if (providerId === "google") {
+  if (providerId === "google" || providerId.startsWith("google:")) {
     try {
-      const quota = await api.getAntigravityQuota();
+      const quota = await api.getAntigravityQuota(providerId);
       const groups: QuotaWindow[] = Array.isArray(quota?.groups)
         ? quota.groups.map((group: any) => ({
             label: group.label || group.group,
