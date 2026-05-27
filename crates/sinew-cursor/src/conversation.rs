@@ -24,7 +24,9 @@ pub fn build_stream_request(
     encryption_key: &str,
 ) -> (Vec<u8>, u32) {
     if is_tool_result_continuation(request) {
-        return build_tool_result_frames(request, idempotency_key, seqno);
+        let (mut framed, seqno) = build_tool_result_frames(request, idempotency_key, seqno);
+        crate::connect::append_end_stream_frame(&mut framed);
+        return (framed, seqno);
     }
     let body = build_full_request(request, conversation_id, identity, encryption_key);
     let chunk = json!({
@@ -33,7 +35,9 @@ pub fn build_stream_request(
         "seqno": seqno,
     });
     let payload = serde_json::to_vec(&chunk).unwrap_or_default();
-    (crate::connect::frame_connect_json(&payload, 0), seqno + 1)
+    let mut framed = crate::connect::frame_connect_json(&payload, 0);
+    crate::connect::append_end_stream_frame(&mut framed);
+    (framed, seqno + 1)
 }
 
 fn build_full_request(

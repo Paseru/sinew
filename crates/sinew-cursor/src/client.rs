@@ -221,6 +221,13 @@ async fn stream_composer(
         )));
     }
 
+    #[cfg(test)]
+    eprintln!(
+        "Composer HTTP status={} content-type={:?}",
+        response.status(),
+        response.headers().get("content-type")
+    );
+
     let model = request.model.name.clone();
     let mut byte_stream = response.bytes_stream();
     let mut buffer = Vec::new();

@@ -12,6 +12,10 @@ pub fn frame_connect_json(payload: &[u8], flags: u8) -> Vec<u8> {
     frame
 }
 
+pub fn append_end_stream_frame(buffer: &mut Vec<u8>) {
+    buffer.extend(frame_connect_json(&[], 0x02));
+}
+
 pub fn decode_connect_frames(buffer: &mut Vec<u8>) -> Result<Vec<Bytes>> {
     let mut frames = Vec::new();
     loop {
@@ -204,6 +208,14 @@ fn usage_field_u32(value: &Value, keys: &[&str]) -> u32 {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn end_stream_frame_uses_connect_end_flag() {
+        let mut body = frame_connect_json(b"{}", 0);
+        append_end_stream_frame(&mut body);
+        assert_eq!(body.len(), 10);
+        assert_eq!(body[5], 0x02);
+    }
 
     #[test]
     fn parses_nested_usage_payload() {

@@ -238,7 +238,9 @@ mod tests {
         let request = ProviderRequest::new(
             ModelRef::new("cursor", "composer-2.5"),
             vec![ChatMessage::user_text("Say OK")],
-        );
+        )
+        .with_workspace_root(r"C:\Dev\sinew")
+        .with_cache_key(format!("live-test-{}", uuid::Uuid::new_v4()));
         println!("Sending live Composer request...");
         match provider.stream(request).await {
             Ok(mut stream) => {

@@ -85,7 +85,7 @@ impl CursorIdeIdentity {
         set_header(
             headers,
             "x-cursor-checksum",
-            &self.checksum_for_machine_id(&self.machine_id, self.mac_machine_id.as_deref()),
+            &self.checksum(),
         );
     }
 
