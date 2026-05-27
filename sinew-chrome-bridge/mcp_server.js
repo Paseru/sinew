@@ -513,6 +513,157 @@ async function executeAction(tabId, taskText, timeoutMs = 30000) {
   return lastDetection || { success: false, error: 'No target found before timeout' };
 }
 
+async function getReadyTab(preferredUrl = null) {
+  const targetUrl = normalizeUrl(preferredUrl);
+  if (!targetUrl) {
+    try {
+      await waitForBridge();
+      const existingTabs = await waitForTabs(null);
+      if (Array.isArray(existingTabs) && existingTabs.length > 0) return existingTabs[0];
+    } catch {}
+  }
+
+  const tabs = await ensureChromeReady(targetUrl || 'https://www.google.com');
+  if (!tabs || tabs.length === 0) {
+    throw new Error('No debuggable Chrome tab is available.');
+  }
+  return tabs[0];
+}
+
+function compactTab(tab) {
+  if (!tab) return null;
+  return { id: tab.id, title: tab.title || '', url: tab.url || '', type: tab.type || 'page' };
+}
+
+async function executeOpenBrowser(url = null) {
+  const targetUrl = normalizeUrl(url) || 'https://www.google.com';
+  const tab = await getReadyTab(targetUrl);
+  await navigateTab(tab.id, targetUrl).catch(err => log(`Open browser navigation failed, continuing: ${err.message}`));
+  return JSON.stringify({ success: true, tab: compactTab({ ...tab, url: targetUrl }) });
+}
+
+async function executeNavigate(url) {
+  const targetUrl = normalizeUrl(url);
+  if (!targetUrl) return JSON.stringify({ success: false, error: `Invalid URL: ${url || ''}` });
+  const tab = await getReadyTab(targetUrl);
+  await navigateTab(tab.id, targetUrl);
+  return JSON.stringify({ success: true, tab: compactTab({ ...tab, url: targetUrl }) });
+}
+
+async function executeClickTarget(target, timeoutMs = 20000) {
+  if (!target || !String(target).trim()) {
+    return JSON.stringify({ success: false, error: 'Missing click target' });
+  }
+  const possibleUrl = extractUrl(target);
+  const tab = await getReadyTab(possibleUrl || null);
+  if (possibleUrl) await navigateTab(tab.id, possibleUrl).catch(() => null);
+  const result = await executeAction(tab.id, String(target), timeoutMs);
+  return JSON.stringify({ success: result && result.success !== false, result });
+}
+
+async function executeWaitForText(text, timeoutMs = 15000) {
+  if (!text || !String(text).trim()) {
+    return JSON.stringify({ success: false, error: 'Missing text to wait for' });
+  }
+  const tab = await getReadyTab(null);
+  const cdp = cdpConnect(tab.id);
+  const deadline = Date.now() + timeoutMs;
+  const needle = String(text).toLowerCase();
+  try {
+    while (Date.now() < deadline) {
+      const result = await cdp.send('Runtime.evaluate', {
+        expression: `(() => (document.body?.innerText || document.documentElement?.innerText || '').toLowerCase().includes(${JSON.stringify(needle)}))()`,
+        returnByValue: true,
+      }).catch(() => null);
+      const found = result?.result?.value || result?.value;
+      if (found) return JSON.stringify({ success: true, text, tab: compactTab(tab) });
+      await sleep(300);
+    }
+    return JSON.stringify({ success: false, error: `Text not found before timeout: ${text}`, tab: compactTab(tab) });
+  } finally {
+    cdp.close();
+  }
+}
+
+async function executeGetPageState() {
+  const tab = await getReadyTab(null);
+  const cdp = cdpConnect(tab.id);
+  try {
+    const result = await cdp.send('Runtime.evaluate', {
+      expression: `(() => ({
+        href: location.href,
+        title: document.title,
+        readyState: document.readyState,
+        visibleTextLength: (document.body?.innerText || '').length,
+        interactiveCount: document.querySelectorAll('button, a, input, select, textarea, [role="button"], [onclick], article, section').length,
+        viewport: { width: window.innerWidth, height: window.innerHeight }
+      }))()`,
+      returnByValue: true,
+    });
+    return JSON.stringify({ success: true, tab: compactTab(tab), page: result?.result?.value || result?.value || null });
+  } finally {
+    cdp.close();
+  }
+}
+
+async function executeScreenshot(format = 'jpeg', quality = 70) {
+  const tab = await getReadyTab(null);
+  const cdp = cdpConnect(tab.id);
+  try {
+    await cdp.send('Page.bringToFront').catch(() => null);
+    const result = await cdp.send('Page.captureScreenshot', {
+      format: format === 'png' ? 'png' : 'jpeg',
+      quality: format === 'png' ? undefined : Math.max(1, Math.min(100, Number(quality) || 70)),
+      fromSurface: true,
+    });
+    return JSON.stringify({ success: true, tab: compactTab(tab), mimeType: format === 'png' ? 'image/png' : 'image/jpeg', data: result.data || '' });
+  } finally {
+    cdp.close();
+  }
+}
+
+const MCP_TOOLS = [
+  {
+    name: 'run_browser_agent',
+    description: "Exécute une tâche de navigation ou d'interaction avec Google Chrome localement, sans API cloud, sans Python et sans ouverture manuelle de Chrome.",
+    inputSchema: {
+      type: 'object',
+      properties: { task: { type: 'string', description: "Description de l'action à faire (ex: 'ouvre julienpiron.fr puis clique sur le menu')" } },
+      required: ['task']
+    }
+  },
+  {
+    name: 'open_browser',
+    description: 'Ouvre Google Chrome localement et prépare un onglet contrôlable, sans intervention utilisateur.',
+    inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'URL optionnelle à ouvrir' } } }
+  },
+  {
+    name: 'navigate',
+    description: 'Navigue l’onglet Chrome contrôlé vers une URL.',
+    inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'URL ou domaine à ouvrir' } }, required: ['url'] }
+  },
+  {
+    name: 'click',
+    description: 'Clique une cible visible par texte, aria-label, id, classe ou description locale.',
+    inputSchema: { type: 'object', properties: { target: { type: 'string', description: 'Cible à cliquer' }, timeoutMs: { type: 'number', description: 'Timeout optionnel' } }, required: ['target'] }
+  },
+  {
+    name: 'wait_for_text',
+    description: 'Attend qu’un texte apparaisse sur la page active.',
+    inputSchema: { type: 'object', properties: { text: { type: 'string' }, timeoutMs: { type: 'number' } }, required: ['text'] }
+  },
+  {
+    name: 'get_page_state',
+    description: 'Retourne l’état local de la page Chrome active.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'screenshot',
+    description: 'Capture une image de l’onglet Chrome actif via CDP local.',
+    inputSchema: { type: 'object', properties: { format: { type: 'string', enum: ['jpeg', 'png'] }, quality: { type: 'number' } } }
+  }
+];
+
 // Execute the smart browser automation natively and silently (Codex-style local mode)
 async function executeBrowserTask(task) {
   log(`Executing native Chrome action: "${task}"`);
@@ -569,22 +720,7 @@ rl.on('line', async (line) => {
         jsonrpc: '2.0',
         id,
         result: {
-          tools: [
-            {
-              name: 'run_browser_agent',
-              description: "Exécute une tâche de navigation ou d'interaction avec Google Chrome localement, sans API cloud, sans Python et sans ouverture manuelle de Chrome.",
-              inputSchema: {
-                type: 'object',
-                properties: {
-                  task: {
-                    type: 'string',
-                    description: "Description de l'action à faire (ex: 'ouvre julienpiron.fr puis clique sur le menu')"
-                  }
-                },
-                required: ['task']
-              }
-            }
-          ]
+          tools: MCP_TOOLS
         }
       }));
     } else if (method === 'tools/call') {
@@ -601,6 +737,24 @@ rl.on('line', async (line) => {
             content: [{ type: 'text', text: resultText }]
           }
         }));
+      } else if (toolName === 'open_browser') {
+        const resultText = await executeOpenBrowser(args.url || null);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'navigate') {
+        const resultText = await executeNavigate(args.url || '');
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'click') {
+        const resultText = await executeClickTarget(args.target || '', Number(args.timeoutMs) || 20000);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'wait_for_text') {
+        const resultText = await executeWaitForText(args.text || '', Number(args.timeoutMs) || 15000);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'get_page_state') {
+        const resultText = await executeGetPageState();
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'screenshot') {
+        const resultText = await executeScreenshot(args.format || 'jpeg', args.quality || 70);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else {
         console.log(JSON.stringify({
           jsonrpc: '2.0',

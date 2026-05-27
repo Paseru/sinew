@@ -3469,7 +3469,7 @@ export function ChatPane({
                         : PROVIDERS.find((p) => p.value === m.provider)?.icon;
                       let qPercent: number | null = null;
                       
-                      let baseProviderId = m.provider;
+                      let baseProviderId: string = m.provider;
                       if (m.provider === "openai" && m.value.startsWith("openai:")) {
                         const parts = m.value.split(":");
                         if (/^\d+$/.test(parts[1])) {
