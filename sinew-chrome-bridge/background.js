@@ -67,6 +67,89 @@ function sendResponse(id, data) {
   sendMsg({ type: "response", id, data });
 }
 
+function sendTabMessage(tabId, message, timeoutMs = 12000) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => {
+      done({ success: false, ok: false, error: `Timeout waiting for content script response: ${message?.type || 'unknown'}` });
+    }, Math.max(1000, timeoutMs));
+
+    try {
+      chrome.tabs.sendMessage(tabId, message, (response) => {
+        if (chrome.runtime.lastError) {
+          done({ success: false, ok: false, error: chrome.runtime.lastError.message });
+        } else {
+          done(response || { success: false, ok: false, error: "No target response" });
+        }
+      });
+    } catch (err) {
+      done({ success: false, ok: false, error: err.message });
+    }
+  });
+}
+
+function hasTypingIntent(task) {
+  const text = String(task || '').toLowerCase();
+  return /\b(tape|type|saisis|saisir|ecris|écris|ecrire|écrire|recherche|chercher|search)\b/i.test(text);
+}
+
+function hasNavigationIntent(task) {
+  const text = String(task || '').toLowerCase();
+  return /\b(ouvre|ouvrir|open|navigue|navigate|navigation|visite|visit|rends-toi)\b/i.test(text)
+    || /\b(va|aller|go)\s+(sur|to)\b/i.test(text);
+}
+
+function isGoogleSearchTask(task) {
+  const text = String(task || '').toLowerCase();
+  const mentionsGoogle = /\bgoogle(?:\.[a-z]{2,})?\b/i.test(text);
+  const mentionsSearch = /\b(recherche|chercher|search|champ|requ[êe]te)\b/i.test(text);
+  return mentionsGoogle && (mentionsSearch || hasTypingIntent(task) || /\bjulienpiron(?:\.fr)?\b/i.test(text));
+}
+
+function cleanSearchQuery(value) {
+  return String(value || '')
+    .replace(/^[\s`"'“”‘’]+|[\s`"'“”‘’]+$/g, '')
+    .replace(/^(exactement|exact|precisement|précisément)\s+/i, '')
+    .replace(/[,.!?;:]+$/g, '')
+    .trim();
+}
+
+function extractSearchQuery(task) {
+  const original = String(task || '');
+  const quoted = original.match(/(?:tape|écris|ecris|saisis|type|recherche(?:\s+sur\s+google)?|search)\s+(?:exactement\s+)?[`"“'‘]([^`"”'’]+)[`"”'’]/i);
+  if (quoted && quoted[1]) return cleanSearchQuery(quoted[1]);
+
+  const domain = original.match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s,;)]*)?\b/i);
+  if (domain && /julienpiron|google|recherche|search|tape|écris|ecris|saisis|type/i.test(original)) return cleanSearchQuery(domain[0]);
+
+  const generic = original.match(/(?:tape|écris|ecris|saisis|type|recherche(?:\s+sur\s+google)?|search)\s+(?:exactement\s+)?(.+?)(?:\s+(?:puis|et)\b|[,;]\s*(?:valide|valides|appuie|clique|clic|click)|$)/i);
+  return cleanSearchQuery(generic && generic[1] ? generic[1] : '');
+}
+
+function extractTaskUrl(task) {
+  const explicit = String(task || '').match(/https?:\/\/[^\s)\],.;!?]+/i);
+  if (explicit) return explicit[0];
+  const domain = String(task || '').match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s)\],.;!?]*)?/i);
+  return domain ? `https://${domain[0]}` : null;
+}
+
+function shouldAutoNavigateTask(task) {
+  if (isGoogleSearchTask(task)) return false;
+  return !!extractTaskUrl(task) && hasNavigationIntent(task);
+}
+
+function randomStartNearTarget(target) {
+  const horizontal = (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 220);
+  const vertical = (Math.random() < 0.5 ? -1 : 1) * (90 + Math.random() * 180);
+  return { x: Math.max(24, Math.round(target.x + horizontal)), y: Math.max(24, Math.round(target.y + vertical)) };
+}
+
 function connect() {
   if (nativePort) return;
   try {
@@ -137,10 +220,8 @@ async function handleMessage(msg) {
           const tabId = parseInt(params.tabId);
           try {
             await ensureCursorInjected(tabId);
-            chrome.tabs.sendMessage(tabId, { type: "RUN_SILENT_TASK", task: params.task || "" }, (response) => {
-              if (chrome.runtime.lastError) sendResponse(id, { success: false, error: chrome.runtime.lastError.message });
-              else sendResponse(id, response || { success: false, error: "No target response" });
-            });
+            const response = await sendTabMessage(tabId, { type: "RUN_SILENT_TASK", task: params.task || "" }, 12000);
+            sendResponse(id, response || { success: false, error: "No target response" });
           } catch (err) {
             sendResponse(id, { success: false, error: err.message });
           }
@@ -301,44 +382,32 @@ async function handleMessage(msg) {
         
         runLocked(async () => {
           return new Promise(async (resolve) => {
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            let match = silentTask.match(urlRegex);
-            let urlToNavigate = match ? match[0] : null;
-
-            if (!urlToNavigate) {
-              const domainRegex = /\b([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?:\/[^\s]*)?\b/i;
-              const domainMatch = silentTask.match(domainRegex);
-              if (domainMatch) {
-                urlToNavigate = "https://" + domainMatch[0];
-              }
+            let urlToNavigate = null;
+            if (shouldAutoNavigateTask(silentTask)) {
+              urlToNavigate = extractTaskUrl(silentTask);
             }
 
             if (urlToNavigate) {
               console.log(`🧬 [Bridge] Silent navigating tab ${silentTabId} to ${urlToNavigate}`);
-              chrome.tabs.update(silentTabId, { url: urlToNavigate });
+              chrome.tabs.update(silentTabId, { url: urlToNavigate, active: true });
               await new Promise(r => setTimeout(r, 4500));
             }
 
             const actionTasks = buildSilentActionTasks(silentTask);
 
             const runAction = (taskText) => new Promise((actionResolve) => {
-              ensureCursorInjected(silentTabId).then(() => {
-                chrome.tabs.sendMessage(silentTabId, { type: "RUN_SILENT_TASK", task: taskText }, async (response) => {
-                  if (chrome.runtime.lastError) {
-                    actionResolve({ success: false, error: chrome.runtime.lastError.message, task: taskText });
-                    return;
-                  }
-                  if (!response || response.success === false) {
-                    actionResolve({ ...(response || { success: false, error: 'No target response' }), task: taskText });
-                    return;
-                  }
-                  try {
-                    const performed = await performHumanCdpAction(silentTabId, response, taskText, silentCursorOptions);
-                    actionResolve({ ...performed, task: taskText, target: response.target });
-                  } catch (err) {
-                    actionResolve({ success: false, error: err.message, task: taskText, target: response.target });
-                  }
-                });
+              ensureCursorInjected(silentTabId).then(async () => {
+                const response = await sendTabMessage(silentTabId, { type: "RUN_SILENT_TASK", task: taskText }, 12000);
+                if (!response || response.success === false || response.ok === false) {
+                  actionResolve({ ...(response || { success: false, error: 'No target response' }), task: taskText });
+                  return;
+                }
+                try {
+                  const performed = await performHumanCdpAction(silentTabId, response, taskText, silentCursorOptions);
+                  actionResolve({ ...performed, task: taskText, target: response.target });
+                } catch (err) {
+                  actionResolve({ success: false, error: err.message, task: taskText, target: response.target });
+                }
               }).catch((err) => {
                 actionResolve({ success: false, error: err.message, task: taskText });
               });
@@ -369,11 +438,15 @@ function buildSilentActionTasks(task) {
   const text = String(task || '').toLowerCase();
   const actions = [];
 
-  if (text.includes('google') && (text.includes('julienpiron') || text.includes('recherche') || text.includes('search'))) {
-    actions.push('clique dans le champ de recherche');
-    const queryMatch = String(task || '').match(/(?:tape|écris|ecris|saisis|recherche(?: sur google)?|search)\s+([^,.;]+?)(?:\s+puis|\s+et|$)/i);
-    const query = (queryMatch && queryMatch[1] ? queryMatch[1] : (text.includes('julienpiron') ? 'julienpiron' : '')).trim();
-    if (query) actions.push(`tape ${query} puis appuie sur Entrée`);
+  if (isGoogleSearchTask(task)) {
+    actions.push('clique dans le champ de recherche Google');
+    const query = extractSearchQuery(task);
+    if (query) {
+      actions.push(`tape ${query} puis appuie sur Entrée`);
+      if (/\b(clique|clic|click|ouvrir|ouvre|open)\b/i.test(text) && /\b(lien|résultat|resultat|site)\b/i.test(text)) {
+        actions.push(`clique le résultat ${query}`);
+      }
+    }
   }
 
   if (text.includes('hamburger') || text.includes('menu')) {
@@ -460,14 +533,14 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
     }
     const textToType = detection.text || '';
     const sequence = ++cursorMoveSeq;
-    const start = { x: Math.max(24, target.x - 260), y: Math.max(24, target.y + 160) };
+    const start = randomStartNearTarget(target);
     const end = { x: target.x, y: target.y };
     for (const p of humanPath(start, end, cursorOptions.timing.steps)) {
       await showCursor(tabId, Math.round(p.x), Math.round(p.y), sequence, cursorOptions);
       await new Promise(r => setTimeout(r, cursorOptions.timing.minDelay + Math.random() * cursorOptions.timing.jitter));
     }
-    const typeResult = await chrome.tabs.sendMessage(tabId, { type: 'AGENT_DOM_TYPE', x: end.x, y: end.y, text: textToType, submit: !!detection.submit, delayMs: cursorOptions.speed === 'slow' ? 120 : cursorOptions.speed === 'fast' ? 35 : 70 }).catch(err => ({ ok: false, error: err.message }));
-    if (!typeResult || typeResult.ok === false) throw new Error(typeResult?.error || 'DOM type failed');
+    const typeResult = await sendTabMessage(tabId, { type: 'AGENT_DOM_TYPE', x: end.x, y: end.y, text: textToType, submit: !!detection.submit, delayMs: cursorOptions.speed === 'slow' ? 120 : cursorOptions.speed === 'fast' ? 35 : 70 }, 20000);
+    if (!typeResult || typeResult.ok === false || typeResult.success === false) throw new Error(typeResult?.error || 'DOM type failed');
     return { success: true, action: 'type', element: target.element, message: `Saisie humaine DOM effectuée: ${textToType}` };
   }
 
@@ -478,7 +551,7 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
 
   await ensureCursorInjected(tabId);
 
-  const start = { x: Math.max(24, target.x - 260), y: Math.max(24, target.y + 160) };
+  const start = randomStartNearTarget(target);
   const end = { x: target.x, y: target.y };
   const points = humanPath(start, end, cursorOptions.timing.steps);
   const sequence = ++cursorMoveSeq;
@@ -492,11 +565,17 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
 
   await new Promise(r => setTimeout(r, cursorOptions.timing.pause + Math.random() * 90));
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CLICK_EVENT", event: { x: end.x, y: end.y, type: "mousePressed", button: "left" } }).catch(() => {});
-  const clickResult = await chrome.tabs.sendMessage(tabId, { type: "AGENT_DOM_CLICK", x: end.x, y: end.y }).catch(err => ({ ok: false, error: err.message }));
+  const clickResult = await sendTabMessage(tabId, { type: "AGENT_DOM_CLICK", x: end.x, y: end.y }, 12000);
+  const hrefToNavigate = clickResult?.href || target.element?.href || '';
+  if (hrefToNavigate && /^https?:\/\//i.test(hrefToNavigate)) {
+    await new Promise(resolve => {
+      chrome.tabs.update(tabId, { url: hrefToNavigate, active: true }, () => resolve());
+    });
+  }
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: cursorOptions.mode !== 'hidden', moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-dom" } }).catch(() => {});
-  await new Promise(r => setTimeout(r, 220));
+  await new Promise(r => setTimeout(r, hrefToNavigate ? 1600 : 220));
 
-  if (!clickResult || clickResult.ok === false) {
+  if (!clickResult || clickResult.ok === false || clickResult.success === false) {
     throw new Error(clickResult?.error || 'DOM click failed');
   }
 

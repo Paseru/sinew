@@ -98,6 +98,63 @@ function extractUrl(task) {
   return domain ? normalizeUrl(domain[0]) : null;
 }
 
+function hasTypingIntent(task) {
+  const text = String(task || '').toLowerCase();
+  return /\b(tape|type|saisis|saisir|ecris|écris|ecrire|écrire|recherche|chercher|search)\b/i.test(text);
+}
+
+function hasNavigationIntent(task) {
+  const text = String(task || '').toLowerCase();
+  return /\b(ouvre|ouvrir|open|navigue|navigate|navigation|visite|visit|rends-toi)\b/i.test(text)
+    || /\b(va|aller|go)\s+(sur|to)\b/i.test(text);
+}
+
+function isGoogleSearchTask(task) {
+  const text = String(task || '').toLowerCase();
+  const mentionsGoogle = /\bgoogle(?:\.[a-z]{2,})?\b/i.test(text);
+  const mentionsSearch = /\b(recherche|chercher|search|champ|requ[êe]te)\b/i.test(text);
+  return mentionsGoogle && (mentionsSearch || hasTypingIntent(task) || /\bjulienpiron(?:\.fr)?\b/i.test(text));
+}
+
+function cleanSearchQuery(value) {
+  return String(value || '')
+    .replace(/^[\s`"'“”‘’]+|[\s`"'“”‘’]+$/g, '')
+    .replace(/^(exactement|exact|precisement|précisément)\s+/i, '')
+    .replace(/[,.!?;:]+$/g, '')
+    .trim();
+}
+
+function extractSearchQuery(task) {
+  const original = String(task || '');
+  const quoted = original.match(/(?:tape|écris|ecris|saisis|type|recherche(?:\s+sur\s+google)?|search)\s+(?:exactement\s+)?[`"“'‘]([^`"”'’]+)[`"”'’]/i);
+  if (quoted && quoted[1]) return cleanSearchQuery(quoted[1]);
+
+  const domain = original.match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s,;)]*)?\b/i);
+  if (domain && /julienpiron|google|recherche|search|tape|écris|ecris|saisis|type/i.test(original)) {
+    return cleanSearchQuery(domain[0]);
+  }
+
+  const generic = original.match(/(?:tape|écris|ecris|saisis|type|recherche(?:\s+sur\s+google)?|search)\s+(?:exactement\s+)?(.+?)(?:\s+(?:puis|et)\b|[,;]\s*(?:valide|valides|appuie|clique|clic|click)|$)/i);
+  return cleanSearchQuery(generic && generic[1] ? generic[1] : '');
+}
+
+function extractNavigationUrl(task) {
+  const url = extractUrl(task);
+  if (!url) return null;
+  if (isGoogleSearchTask(task)) return null;
+  if (hasNavigationIntent(task)) return url;
+  if (!hasTypingIntent(task) && /^\s*(https?:\/\/|[a-z0-9-]+(?:\.[a-z0-9-]+)+)/i.test(String(task || ''))) return url;
+  return null;
+}
+
+function shouldUseBridgeDomAction(taskText) {
+  const url = extractUrl(taskText);
+  if (url && !extractNavigationUrl(taskText)) return false;
+  if (hasTypingIntent(taskText)) return false;
+  if (/\b(champ|recherche|search|résultat|resultat|lien)\b/i.test(String(taskText || ''))) return false;
+  return true;
+}
+
 async function requestBridgeLaunch(targetUrl) {
   return requestJSON(`${BRIDGE_ORIGIN}/api/launch_chrome?url=${encodeURIComponent(normalizeUrl(targetUrl) || 'about:blank')}`, 3000).catch(() => null);
 }
@@ -279,11 +336,15 @@ function buildActionTasks(task) {
   const original = String(task || '');
   const text = original.toLowerCase();
   const actions = [];
-  if ((text.includes('google') || text.includes('google.fr') || text.includes('google.com')) && (text.includes('julienpiron') || text.includes('recherche') || text.includes('search') || text.includes('champ'))) {
-    actions.push('clique dans le champ de recherche');
-    const queryMatch = original.match(/(?:tape|écris|ecris|saisis|type|recherche(?: sur google)?|search)\s+(.+?)(?:\s+puis|\s+et|$)/i);
-    const query = (queryMatch && queryMatch[1] ? queryMatch[1] : (text.includes('julienpiron') ? 'julienpiron' : '')).trim();
-    if (query) actions.push(`tape ${query} puis appuie sur Entrée`);
+  if (isGoogleSearchTask(original)) {
+    actions.push('clique dans le champ de recherche Google');
+    const query = extractSearchQuery(original);
+    if (query) {
+      actions.push(`tape ${query} puis appuie sur Entrée`);
+      if (/\b(clique|clic|click|ouvrir|ouvre|open)\b/i.test(text) && /\b(lien|résultat|resultat|site)\b/i.test(text)) {
+        actions.push(`clique le résultat ${query}`);
+      }
+    }
   }
   if (text.includes('hamburger') || text.includes('menu')) {
     actions.push('ouvre le menu hamburger');
@@ -613,7 +674,7 @@ async function getCdpCursorStart(cdp, tabId, target) {
   const expression = `(() => {
     const pos = window.__sinewCdpCursorPosition;
     if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) return pos;
-    return { x: Math.round(window.innerWidth * 0.5), y: Math.round(window.innerHeight * 0.5) };
+    return { x: Math.round(window.innerWidth * (Math.random() < 0.5 ? 0.12 + Math.random() * 0.18 : 0.70 + Math.random() * 0.18)), y: Math.round(window.innerHeight * (0.18 + Math.random() * 0.62)) };
   })()`;
   try {
     const result = await cdp.send('Runtime.evaluate', { expression, returnByValue: true });
@@ -678,11 +739,13 @@ async function executeAction(tabId, taskText, timeoutMs = 30000, cursorOptions =
   let lastDetection = null;
 
   while (Date.now() < deadline) {
-    const domAction = await executeActionViaBridgeDom(tabId, taskText, Math.min(30000, deadline - Date.now()), cursor).catch(err => ({ success: false, error: err.message }));
-    if (domAction && domAction.success !== false) {
-      return { success: true, detection: { success: true, action: domAction.action || 'dom', target: domAction.target }, bridgeDetection: domAction, performed: domAction };
+    if (shouldUseBridgeDomAction(taskText)) {
+      const domAction = await executeActionViaBridgeDom(tabId, taskText, Math.min(30000, deadline - Date.now()), cursor).catch(err => ({ success: false, error: err.message }));
+      if (domAction && domAction.success !== false) {
+        return { success: true, detection: { success: true, action: domAction.action || 'dom', target: domAction.target }, bridgeDetection: domAction, performed: domAction };
+      }
+      lastDetection = domAction;
     }
-    lastDetection = domAction;
 
     const bridgeDetection = await detectTargetViaBridge(tabId, taskText).catch(err => ({ success: false, error: err.message }));
     let detection = bridgeDetection;
@@ -694,6 +757,11 @@ async function executeAction(tabId, taskText, timeoutMs = 30000, cursorOptions =
       let performed = await performHumanBridgeClick(tabId, detection, cursor).catch(err => ({ success: false, error: err.message }));
       if ((!performed || performed.success === false) && ALLOW_CDP_FALLBACK) {
         performed = await performHumanCdpClick(tabId, detection.target, cursor).catch(err => ({ success: false, error: err.message }));
+      }
+      const hrefToNavigate = detection?.target?.element?.href || performed?.href || '';
+      if (performed && performed.success !== false && /^https?:\/\//i.test(hrefToNavigate)) {
+        const navigation = await navigateTab(tabId, hrefToNavigate).catch(err => ({ success: false, error: err.message }));
+        performed = { ...performed, navigation };
       }
       return { success: performed && performed.success !== false, detection, bridgeDetection, performed };
     }
@@ -770,9 +838,14 @@ async function prepareTargetTab(targetUrl) {
   const matching = Array.isArray(existingTabs)
     ? existingTabs.find(tab => sameOriginOrUrl(tab.url || '', normalized))
     : null;
-  if (matching) {
-    rememberControlledTab({ ...matching, url: matching.url || normalized });
-    return { tab: matching, location: { href: matching.url || normalized, title: matching.title || '', readyState: 'complete', tab: matching } };
+
+  const reusable = matching || pickControlledTab(existingTabs) || (Array.isArray(existingTabs) ? existingTabs[0] : null);
+  if (reusable?.id) {
+    const location = await navigateTab(reusable.id, normalized).catch(() => ({ href: reusable.url || '', title: reusable.title || '', readyState: 'unknown', tab: reusable }));
+    const actualUrl = location?.href || reusable.url || normalized;
+    const tab = { ...reusable, url: actualUrl };
+    if (sameOriginOrUrl(actualUrl, normalized)) rememberControlledTab({ ...tab, url: actualUrl });
+    return { tab, location: { ...(location || {}), href: actualUrl, tab } };
   }
 
   const created = await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(normalized)}`, 7000).catch(() => null);
@@ -783,14 +856,7 @@ async function prepareTargetTab(targetUrl) {
     return { tab: { ...tab, url: normalized }, location: { ...location, href: normalized, tab: { ...tab, url: normalized } } };
   }
 
-  const tabs = await ensureChromeReady(normalized);
-  if (!tabs || tabs.length === 0) throw new Error('No debuggable Chrome tab is available.');
-  const tab = tabs[0];
-  const location = await navigateTab(tab.id, normalized);
-  if (location?.href && sameOriginOrUrl(location.href, normalized)) {
-    rememberControlledTab({ ...tab, url: normalized });
-  }
-  return { tab: { ...tab, url: normalized }, location };
+  throw new Error('No debuggable Chrome tab is available.');
 }
 
 function compactTab(tab) {
@@ -995,21 +1061,30 @@ async function executeBrowserTask(task, cursorOptions = {}) {
   const cursor = normalizeCursorOptions(cursorOptions);
 
   try {
-    const preferredUrl = extractUrl(task) || 'https://www.google.com';
-    const { tab, location } = await prepareTargetTab(preferredUrl);
-    if (extractUrl(task)) {
+    const navigationUrl = extractNavigationUrl(task);
+    const preferredUrl = navigationUrl || (isGoogleSearchTask(task) ? 'https://www.google.com' : null);
+    let tab;
+    let location;
+
+    if (preferredUrl) {
+      ({ tab, location } = await prepareTargetTab(preferredUrl));
       if (!location?.href || !sameOriginOrUrl(location.href, preferredUrl)) {
         throw new Error(`Navigation did not reach ${preferredUrl}; current URL is ${location?.href || tab.url || 'unknown'}`);
       }
-      rememberControlledTab({ ...tab, url: preferredUrl });
+      rememberControlledTab({ ...tab, url: location.href || preferredUrl });
+    } else {
+      tab = await getReadyTab(null);
+      location = await currentTabLocation(tab.id).catch(() => ({ href: tab.url || '', title: tab.title || '', readyState: 'unknown', tab }));
+      rememberControlledTab(tab);
     }
     log(`Executing on tab: ${tab.title} (ID: ${tab.id})`);
 
     const results = [];
     for (const actionTask of buildActionTasks(task)) {
       log(`Executing action step: ${actionTask}`);
-      results.push({ task: actionTask, result: await executeAction(tab.id, actionTask, 30000, cursor) });
-      await sleep(900);
+      const result = await executeAction(tab.id, actionTask, 30000, cursor);
+      results.push({ task: actionTask, result });
+      await sleep(/\b(entrée|enter|submit|valide|appuie)\b/i.test(actionTask) ? 1800 : 900);
     }
     return JSON.stringify({ success: results.every(r => r.result && r.result.success !== false), results });
   } catch (err) {

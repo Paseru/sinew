@@ -456,15 +456,23 @@
     }
   }
 
+  const initialCursorPoint = (() => {
+    const edgeX = Math.random() < 0.5 ? 0.10 + Math.random() * 0.20 : 0.70 + Math.random() * 0.20;
+    return {
+      x: Math.round(window.innerWidth * edgeX),
+      y: Math.round(window.innerHeight * (0.18 + Math.random() * 0.64))
+    };
+  })();
+
   // Springs for coordinates, stretching/scooting, and blur
-  const xSpring = new Spring(window.innerWidth / 2);
-  const ySpring = new Spring(window.innerHeight / 2);
+  const xSpring = new Spring(initialCursorPoint.x);
+  const ySpring = new Spring(initialCursorPoint.y);
   const stretchSpring = new Spring(1, 0.85, 0.15); // Velocity-based length stretch
   const blurSpring = new Spring(0, 0.9, 0.12);     // Motion blur
 
   let activeState = {
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
+    x: initialCursorPoint.x,
+    y: initialCursorPoint.y,
     visible: false,
     moveSequence: 0,
     sessionId: null,
@@ -634,6 +642,11 @@
       const el = initialEl && initialEl.closest
         ? (initialEl.closest('button, a, input, textarea, select, [role="button"], [onclick], summary, label') || initialEl)
         : initialEl;
+      const anchorEl = el && el.closest ? el.closest('a[href]') : null;
+      const hrefToNavigate = anchorEl && anchorEl.href && !/^\s*(#|javascript:)/i.test(anchorEl.getAttribute('href') || '')
+        ? anchorEl.href
+        : "";
+      const beforeHref = location.href;
       if (!el) {
         sendResponse({ ok: false, error: "No element at target point" });
         return true;
@@ -650,7 +663,14 @@
       el.dispatchEvent(new MouseEvent("mouseup", { ...opts, buttons: 0 }));
       el.dispatchEvent(new MouseEvent("click", { ...opts, buttons: 0 }));
       if (typeof el.click === "function") el.click();
-      sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "" });
+      if (hrefToNavigate) {
+        setTimeout(() => {
+          try {
+            if (location.href === beforeHref) window.location.assign(hrefToNavigate);
+          } catch {}
+        }, 180);
+      }
+      sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "", href: hrefToNavigate });
       return true;
     }
     else if (message.type === "AGENT_DOM_TYPE") {
@@ -753,9 +773,17 @@
       let typeText = "";
       let typeSubmit = /\b(entrée|entrer|enter|valide|submit|recherche)\b/.test(taskText);
       if (action === "type") {
-        const typeMatch = task.match(/(?:tape|écris|ecris|saisis|type)\s+(.+?)(?:\s+puis|\s+et|$)/i);
-        typeText = (typeMatch && typeMatch[1] ? typeMatch[1] : "").trim();
-        if (!typeText && taskText.includes("julienpiron")) typeText = "julienpiron";
+        const cleanTypeText = (value) => String(value || "")
+          .replace(/^[\s`"'“”‘’]+|[\s`"'“”‘’]+$/g, "")
+          .replace(/^(exactement|exact|precisement|précisément)\s+/i, "")
+          .replace(/[,.!?;:]+$/g, "")
+          .trim();
+        const quotedTypeMatch = task.match(/(?:tape|écris|ecris|saisis|type)\s+(?:exactement\s+)?[`"“'‘]([^`"”'’]+)[`"”'’]/i);
+        const typeMatch = quotedTypeMatch || task.match(/(?:tape|écris|ecris|saisis|type)\s+(?:exactement\s+)?(.+?)(?:\s+puis|\s+et\b|[,;]\s*(?:valide|valides|appuie|clique|clic|click)|$)/i);
+        typeText = cleanTypeText(typeMatch && typeMatch[1] ? typeMatch[1] : "");
+        const domainMatch = task.match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s,;)]*)?\b/i);
+        if ((!typeText || typeText.includes("google") || typeText.includes("exactement")) && domainMatch) typeText = cleanTypeText(domainMatch[0]);
+        if (!typeText && taskText.includes("julienpiron")) typeText = "julienpiron.fr";
       }
 
       const wantsMenu = taskText.includes("hamburger") || taskText.includes("menu") || taskText.includes("burger");
@@ -765,7 +793,66 @@
       let bestEl = null;
       let bestScore = -1;
 
-      if (taskText.includes("trinity")) {
+      const directSearchRequested = (taskText.includes("google") || taskText.includes("recherche") || taskText.includes("search")) && (action === "click" || action === "type");
+      if (directSearchRequested) {
+        const directSearch = document.querySelector('textarea[name="q"], input[name="q"], textarea[aria-label*="search" i], input[aria-label*="search" i], textarea[aria-label*="rechercher" i], input[aria-label*="rechercher" i], [role="combobox"][aria-label*="search" i], [role="combobox"][aria-label*="rechercher" i]');
+        if (directSearch && typeof directSearch.scrollIntoView === "function") {
+          directSearch.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+          bestEl = directSearch;
+          bestScore = 1200;
+        }
+      }
+
+      if (!bestEl && action === "click") {
+        const domainMatch = taskText.match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s,;)]*)?\b/i);
+        if (domainMatch && !directSearchRequested) {
+          const host = domainMatch[0].replace(/^https?:\/\//, "").replace(/^www\./, "").toLowerCase();
+          const linkMatchesHost = (a) => {
+            const rawHref = (a.getAttribute('href') || '').trim();
+            if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return false;
+            const candidates = [rawHref];
+            try {
+              const parsed = new URL(rawHref, location.href);
+              for (const key of ['url', 'q', 'u']) {
+                const value = parsed.searchParams.get(key);
+                if (value) candidates.push(value);
+              }
+            } catch {}
+            return candidates.some(candidate => {
+              try {
+                const parsed = new URL(candidate, location.href);
+                const candidateHost = parsed.hostname.replace(/^www\./, '').toLowerCase();
+                return candidateHost === host || candidateHost.endsWith(`.${host}`);
+              } catch {
+                return false;
+              }
+            });
+          };
+          const directLink = Array.from(document.querySelectorAll('a[href]'))
+            .filter(a => {
+              const rect = a.getBoundingClientRect();
+              if (rect.width <= 0 || rect.height <= 0) return false;
+              if (rect.top < 90 || rect.left > window.innerWidth - 220) return false;
+              const className = (typeof a.className === 'string' ? a.className : '').toLowerCase();
+              const ariaLabel = (a.getAttribute('aria-label') || '').toLowerCase();
+              if (/\bgb_|google apps|compte google|google account/.test(`${className} ${ariaLabel}`)) return false;
+              return linkMatchesHost(a);
+            })
+            .sort((a, b) => {
+              const ah = a.querySelector('h3') ? 1 : 0;
+              const bh = b.querySelector('h3') ? 1 : 0;
+              if (ah !== bh) return bh - ah;
+              return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+            })[0];
+          if (directLink && typeof directLink.scrollIntoView === "function") {
+            directLink.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+            bestEl = directLink;
+            bestScore = 1250;
+          }
+        }
+      }
+
+      if (!bestEl && taskText.includes("trinity")) {
         const directTrinity = document.querySelector('#trinity-card, .trinity-card, article[id*="trinity" i], article[class*="trinity" i], a[href*="trinity" i], [data-project*="trinity" i], [data-id*="trinity" i]');
         if (directTrinity && typeof directTrinity.scrollIntoView === "function") {
           directTrinity.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
@@ -866,7 +953,7 @@
             x,
             y,
             rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-            element: { tagName: bestEl.tagName, id: bestEl.id, className: typeof bestEl.className === 'string' ? bestEl.className : "" },
+             element: { tagName: bestEl.tagName, id: bestEl.id, className: typeof bestEl.className === 'string' ? bestEl.className : "", href: bestEl.href || bestEl.getAttribute?.('href') || "" },
             score: bestScore
           },
           text: action === "type" ? typeText : undefined,
