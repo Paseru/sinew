@@ -88,12 +88,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         mut goal_workflow,
         bash,
         glob,
+        list_dir,
         grep,
         codebase_search,
         check_sota,
         read,
         edit_file,
         write_file,
+        delete_file,
         create_image,
         todo_list_tool,
         question,
@@ -717,12 +719,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                     let result = run_tool(
                         &bash,
                         &glob,
+                        &list_dir,
                         &grep,
                         &codebase_search,
                         &check_sota,
                         &read,
                         &edit_file,
                         &write_file,
+                        &delete_file,
                         &create_image,
                         todo_list_tool.as_deref(),
                         question.as_deref(),
@@ -770,12 +774,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         result = run_tool(
                             &bash,
                             &glob,
+                            &list_dir,
                             &grep,
                             &codebase_search,
                             &check_sota,
                             &read,
                             &edit_file,
                             &write_file,
+                            &delete_file,
                             &create_image,
                             todo_list_tool.as_deref(),
                             question.as_deref(),
@@ -853,7 +859,9 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         .into_iter()
                         .map(|image| ToolResultImage {
                             media_type: image.media_type,
-                            data: if canonical_name == tool_names::CREATE_IMAGE {
+                            data: if canonical_name == tool_names::CREATE_IMAGE
+                                && model.provider != "cursor"
+                            {
                                 String::new()
                             } else {
                                 image.data

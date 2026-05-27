@@ -300,10 +300,17 @@ async function handleMessage(msg) {
                   if (errMsg.includes("already attached") || errMsg.includes("Already attached")) {
                     attachedTabs.add(attachTabId);
                     sendResponse(id, { success: true });
+                    chrome.tabs.sendMessage(attachTabId, { type: "AGENT_STATUS_CHANGE", status: "active" }).catch(() => {});
                   } else {
-                    console.error("âš ï¸ [Bridge] Debugger attachment failed:", errMsg);
+                    console.error("⚠️ [Bridge] Debugger attachment failed:", errMsg);
                     sendResponse(id, { success: false, error: errMsg });
                   }
+                } else {
+                  attachedTabs.add(attachTabId);
+                  console.log(`🧬 [Bridge] Debugger attached to tab ${attachTabId}`);
+                  sendResponse(id, { success: true });
+                  chrome.tabs.sendMessage(attachTabId, { type: "AGENT_STATUS_CHANGE", status: "active" }).catch(() => {});
+                }
                 } else {
                   attachedTabs.add(attachTabId);
                   console.log(`ðŸ§¬ [Bridge] Debugger attached to tab ${attachTabId}`);
@@ -375,6 +382,7 @@ async function handleMessage(msg) {
                   } else {
                     attachedTabs.add(cdpTabId);
                     updateStorageState();
+                    chrome.tabs.sendMessage(cdpTabId, { type: "AGENT_STATUS_CHANGE", status: "active" }).catch(() => {});
                     sendCDPCommand(id, cdpTabId, method, cdpParams);
                     resolve();
                   }

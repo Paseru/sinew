@@ -14,6 +14,8 @@ pub const WRITE_FILE: &str = "write_file";
 pub const WEB_SEARCH: &str = "web_search";
 pub const WEB_FETCH: &str = "web_fetch";
 pub const CREATE_IMAGE: &str = "create_image";
+pub const LIST_DIR: &str = "list_dir";
+pub const DELETE_FILE: &str = "delete_file";
 pub const QUESTION: &str = "question";
 pub const TODO_LIST: &str = "todo_list";
 pub const CLEAN_CONTEXT: &str = "clean_context";
@@ -68,6 +70,8 @@ pub fn is_cursor_compatible_tool(name: &str) -> bool {
         canonical,
         BASH
             | GLOB
+            | LIST_DIR
+            | DELETE_FILE
             | GREP
             | CODEBASE_SEARCH
             | READ

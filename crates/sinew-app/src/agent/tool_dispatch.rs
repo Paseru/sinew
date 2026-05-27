@@ -4,10 +4,10 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::{
-    tool_names, BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, EditFileTool, GlobTool,
-    GrepTool, McpToolRegistry, QuestionTool, ReadFingerprint, ReadTool, SkillTool, SubAgentTool,
-    TeamTool, ToDoListTool, TodoListState, ToolRunResult, ToolSettings, WebFetchTool, WebSearchTool,
-    WriteFileTool,
+    tool_names, BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, DeleteFileTool,
+    EditFileTool, GlobTool, GrepTool, ListDirTool, McpToolRegistry, QuestionTool, ReadFingerprint,
+    ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolRunResult,
+    ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
 };
 
 use super::{cancel::TurnCancel, context::AgentMode, events::AgentEvent};
@@ -29,12 +29,14 @@ pub(super) fn should_wait_for_cooperative_cancel(
 pub(super) async fn run_tool(
     bash: &BashTool,
     glob: &GlobTool,
+    list_dir: &ListDirTool,
     grep: &GrepTool,
     codebase_search: &CodebaseSearchTool,
     check_sota: &CheckSotaTool,
     read: &ReadTool,
     edit_file: &EditFileTool,
     write_file: &WriteFileTool,
+    delete_file: &DeleteFileTool,
     create_image: &CreateImageTool,
     todo_list_tool: Option<&ToDoListTool>,
     question: Option<&QuestionTool>,
@@ -74,6 +76,8 @@ pub(super) async fn run_tool(
         bash.run_input(input).await
     } else if canonical_name == tool_names::GLOB {
         glob.run(input).await
+    } else if canonical_name == tool_names::LIST_DIR {
+        list_dir.run(input).await
     } else if canonical_name == tool_names::GREP {
         grep.run(input).await
     } else if canonical_name == tool_names::CODEBASE_SEARCH {
@@ -92,6 +96,11 @@ pub(super) async fn run_tool(
             return ToolRunResult::err("write_file is unavailable in Plan mode", Vec::new());
         }
         write_file.run(input, read_fingerprints).await
+    } else if canonical_name == tool_names::DELETE_FILE {
+        if mode == AgentMode::Plan {
+            return ToolRunResult::err("delete_file is unavailable in Plan mode", Vec::new());
+        }
+        delete_file.run(input).await
     } else if canonical_name == tool_names::CREATE_IMAGE {
         if mode == AgentMode::Plan {
             return ToolRunResult::err("create_image is unavailable in Plan mode", Vec::new());

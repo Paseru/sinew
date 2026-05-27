@@ -118,7 +118,10 @@ mod tests {
     async fn lists_single_directory_level() {
         let root = std::env::temp_dir().join(format!(
             "sinew-list-dir-{}",
-            uuid::Uuid::new_v4()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         fs::create_dir_all(root.join("src")).unwrap();
         fs::write(root.join("Cargo.toml"), "").unwrap();

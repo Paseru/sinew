@@ -5,9 +5,10 @@ use tokio::sync::mpsc;
 use sinew_core::{ChatMessage, Provider, ServiceTier};
 
 use crate::{
-    BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, EditFileTool, GlobTool,
-    GoalWorkflowState, GrepTool, McpToolRegistry, QuestionTool, ReadTool, SkillTool, SubAgentTool,
-    TeamTool, ToDoListTool, TodoListState, ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
+    BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, DeleteFileTool, EditFileTool,
+    GlobTool, GoalWorkflowState, GrepTool, ListDirTool, McpToolRegistry, QuestionTool, ReadTool,
+    SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolSettings, WebFetchTool,
+    WebSearchTool, WriteFileTool,
 };
 
 use super::{
@@ -39,12 +40,14 @@ pub struct TurnContext {
     pub goal_workflow: GoalWorkflowState,
     pub bash: Arc<BashTool>,
     pub glob: Arc<GlobTool>,
+    pub list_dir: Arc<ListDirTool>,
     pub grep: Arc<GrepTool>,
     pub codebase_search: Arc<CodebaseSearchTool>,
     pub check_sota: Arc<CheckSotaTool>,
     pub read: Arc<ReadTool>,
     pub edit_file: Arc<EditFileTool>,
     pub write_file: Arc<WriteFileTool>,
+    pub delete_file: Arc<DeleteFileTool>,
     pub create_image: Arc<CreateImageTool>,
     pub todo_list_tool: Option<Arc<ToDoListTool>>,
     pub question: Option<Arc<QuestionTool>>,
