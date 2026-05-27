@@ -543,8 +543,16 @@ async function ensureCdpCursor(cdp, cursorOptions = {}) {
       document.querySelectorAll('#sinew-cdp-human-cursor').forEach(node => node.remove());
       root = document.createElement('div');
       root.id = 'sinew-cdp-human-cursor';
-      root.style.cssText = 'position:fixed;left:0;top:0;width:28px;height:28px;z-index:2147483647;pointer-events:none;transform:translate3d(-100px,-100px,0);transition:none;filter:drop-shadow(0 0 6px rgba(255,107,0,.9)) drop-shadow(0 0 14px rgba(255,0,128,.55));will-change:transform,opacity;';
-      root.innerHTML = '<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><path d="M4 2 L22 14 L14 16 L11 25 Z" fill="#fff" stroke="#111827" stroke-width="2"/><path d="M4 2 L22 14 L14 16 L11 25 Z" fill="none" stroke="#ff6b00" stroke-width="1" opacity=".85"/></svg>';
+      root.style.cssText = 'position:fixed;left:0;top:0;width:28px;height:28px;z-index:2147483647;pointer-events:none;transform:translate3d(-100px,-100px,0);transition:none;filter:drop-shadow(0 0 6px #ff6b00) drop-shadow(0 0 14px #ff0080) drop-shadow(0 0 22px #66f7ff);will-change:transform,opacity;animation:sinew-cdp-glow-pulse 2.2s ease-in-out infinite alternate;';
+      
+      if (!document.getElementById('sinew-cdp-glow-style')) {
+        const style = document.createElement('style');
+        style.id = 'sinew-cdp-glow-style';
+        style.textContent = '@keyframes sinew-cdp-glow-pulse{0%{filter:drop-shadow(0 0 4px #ff6b00) drop-shadow(0 0 10px #ff0080) drop-shadow(0 0 16px #66f7ff)}100%{filter:drop-shadow(0 0 8px #ff6b00) drop-shadow(0 0 18px #ff0080) drop-shadow(0 0 28px #66f7ff)}}';
+        document.documentElement.appendChild(style);
+      }
+      
+      root.innerHTML = '<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sinew-cdp-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ff6b00"><animate attributeName="stop-color" values="#ff6b00;#ff0080;#66f7ff;#ff6b00" dur="3s" repeatCount="indefinite" /></stop><stop offset="100%" stop-color="#ff0080"><animate attributeName="stop-color" values="#ff0080;#66f7ff;#ff6b00;#ff0080" dur="3s" repeatCount="indefinite" /></stop></linearGradient></defs><path d="M4.5 3L23.5 11.5L14 14.5L11.5 24L4.5 3Z" fill="url(#sinew-cdp-grad)" stroke="white" stroke-width="1.2" stroke-linejoin="round"/></svg>';
       document.documentElement.appendChild(root);
       window.__sinewCdpCursor = root;
     }

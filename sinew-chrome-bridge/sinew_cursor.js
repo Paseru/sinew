@@ -64,7 +64,17 @@
       height: 28px;
       transform-origin: 4px 3px; /* Align with SVG tip */
       will-change: transform;
-      filter: drop-shadow(0 0 5px #ff6b00) drop-shadow(0 0 12px #ff0080);
+      filter: drop-shadow(0 0 6px #ff6b00) drop-shadow(0 0 14px #ff0080) drop-shadow(0 0 22px #66f7ff);
+      animation: sinew-cursor-glow-pulse 2.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes sinew-cursor-glow-pulse {
+      0% {
+        filter: drop-shadow(0 0 4px #ff6b00) drop-shadow(0 0 10px #ff0080) drop-shadow(0 0 16px #66f7ff);
+      }
+      100% {
+        filter: drop-shadow(0 0 8px #ff6b00) drop-shadow(0 0 18px #ff0080) drop-shadow(0 0 28px #66f7ff);
+      }
     }
 
     .cursor-label {
@@ -411,19 +421,16 @@
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="cyber-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#ff6b00" />
-          <stop offset="100%" stop-color="#ff0080" />
+          <stop offset="0%" stop-color="#ff6b00">
+            <animate attributeName="stop-color" values="#ff6b00;#ff0080;#66f7ff;#ff6b00" dur="3s" repeatCount="indefinite" />
+          </stop>
+          <stop offset="100%" stop-color="#ff0080">
+            <animate attributeName="stop-color" values="#ff0080;#66f7ff;#ff6b00;#ff0080" dur="3s" repeatCount="indefinite" />
+          </stop>
         </linearGradient>
-        <filter id="cyber-glow">
-          <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
       </defs>
       <!-- Premium Cyber-Neon triangle cursor design pointing to (4,3) -->
-      <path d="M4.5 3L23.5 11.5L14 14.5L11.5 24L4.5 3Z" fill="url(#cyber-grad)" filter="url(#cyber-glow)" stroke="white" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M4.5 3L23.5 11.5L14 14.5L11.5 24L4.5 3Z" fill="url(#cyber-grad)" stroke="white" stroke-width="1.2" stroke-linejoin="round" />
     </svg>
   `;
   overlay.appendChild(pointer);
