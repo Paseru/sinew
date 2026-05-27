@@ -496,6 +496,7 @@ impl CreateImageTool {
             .http
             .post(OPENAI_CODEX_RESPONSES_URL)
             .header(AUTHORIZATION, format!("Bearer {access_token}"))
+            .header("user-agent", "codex-cli")
             .header("openai-beta", "responses=experimental")
             .header(CONTENT_TYPE, "application/json")
             .header(ACCEPT, "text/event-stream");
