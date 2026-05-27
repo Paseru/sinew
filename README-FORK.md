@@ -56,3 +56,13 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Haute Priorité & Résilience 503* : Injection de l'en-tête officiel `x-goog-api-client` (simulant l'extension native) pour intégrer la file d'attente à haute priorité et bascule automatique asynchrone sur les serveurs de secours (`sandbox`/`autopush`) si le serveur principal signale une surcharge (erreur 503).
   * *Bypass de Signature* : Ajout automatique du jeton de contournement `skip_thought_signature_validator` pour éviter tout rejet lié aux signatures de réflexion historiques manquantes lors du changement de modèle.
   * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `crates/sinew-google/src/model_info.rs`, `src/lib/models.ts`*
+
+---
+
+## 📅 27/05 — Amélioration du bouton « Influencer / Orienter »
+
+* **🧭 Guidage dynamique Pending/Steering** : Le bouton « Influencer » ne force plus un arrêt immédiat par défaut. La consigne est envoyée au moteur comme message d’orientation en attente, puis intégrée dès le prochain point de contrôle logique.
+* **💬 Retour visuel immédiat** : Le message apparaît tout de suite dans le chat avec un badge **Pending**, et le bouton passe aussi en état **Pending** pendant l’attente.
+* **⚙️ Points de contrôle côté moteur** : L’agent relit les consignes d’orientation avant une nouvelle requête modèle, après une réponse assistant et après l’exécution d’outils.
+* **🛡️ Fallback sécurisé** : Si le moteur ne peut pas accepter l’orientation en direct, l’application conserve l’ancien comportement fiable : arrêt propre puis relance avec la consigne.
+  * 📂 *Fichiers : `crates/sinew-app/src/agent/cancel.rs`, `crates/sinew-app/src/agent/turn.rs`, `src-tauri/src/turns.rs`, `src/components/chat/ChatPane.tsx`, `src/components/chat/TodoStrip.tsx`, `src/components/chat/stream.ts`, `src/lib/ipc.ts`, `src/types.ts`, `src/styles.css`*
