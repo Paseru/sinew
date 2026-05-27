@@ -10,18 +10,23 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateStatus() {
     chrome.runtime.sendMessage({ action: "get_status" }, (response) => {
       if (chrome.runtime.lastError || !response) {
-        // Service worker sleep fallback checks
-        chrome.storage.local.get(['connected', 'attachedCount'], (data) => {
+        const reason = chrome.runtime.lastError?.message || 'service worker sleeping / no response';
+        chrome.storage.local.get(['connected', 'attachedCount', 'lastNativeError', 'lastConnectedAt'], (data) => {
           setConnected(!!data.connected);
           count.textContent = data.attachedCount || 0;
-          diag.textContent = data.lastNativeError ? `Diagnostic: ${data.lastNativeError}` : 'Diagnostic: service worker sleeping / cached state';
+          diag.textContent = data.lastNativeError
+            ? `Diagnostic: ${data.lastNativeError}`
+            : `Diagnostic: ${reason}`;
         });
         return;
       }
 
       setConnected(!!response.connected);
       count.textContent = response.attachedCount || 0;
-      diag.textContent = response.connected ? 'Diagnostic: native host connected' : `Diagnostic: ${response.lastNativeError || 'native host not connected yet'}`;
+      const when = response.lastConnectedAt ? new Date(response.lastConnectedAt).toLocaleTimeString() : 'never';
+      diag.textContent = response.connected
+        ? `Diagnostic: native host connected · tabs ${response.attachedCount || 0} · since ${when}`
+        : `Diagnostic: ${response.lastNativeError || 'native host not connected yet'}`;
     });
   }
 
@@ -41,8 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.style.transform = 'scale(0.95)';
     setTimeout(() => btn.style.transform = 'none', 100);
     
+    btn.disabled = true;
+    btn.querySelector('span').textContent = 'Checking...';
     chrome.runtime.sendMessage({ action: "reconnect" }, () => {
-      setTimeout(updateStatus, 500);
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Reconnect';
+        updateStatus();
+      }, 800);
     });
   });
 

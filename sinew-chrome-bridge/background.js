@@ -5,6 +5,7 @@
 let nativePort = null;
 let reconnectTimer = null;
 let lastNativeError = null;
+let lastConnectedAt = null;
 
 // Registry of active attached debuggers
 const attachedTabs = new Set();
@@ -73,6 +74,7 @@ function connect() {
     });
 
     lastNativeError = null;
+    lastConnectedAt = Date.now();
     // Native connection succeeded: register and sync
     sendMsg({ type: "register", role: "extension" });
     reportOpenTabs();
@@ -616,7 +618,8 @@ function updateStorageState() {
   chrome.storage.local.set({
     connected: isBridgeConnected(),
     attachedCount: attachedTabs.size,
-    lastNativeError
+    lastNativeError,
+    lastConnectedAt
   });
 }
 
@@ -626,7 +629,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({
       connected: isBridgeConnected(),
       attachedCount: attachedTabs.size,
-      lastNativeError
+      lastNativeError,
+      lastConnectedAt
     });
   } else if (request.action === "reconnect") {
     connect();

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "test:chrome-bridge": "node sinew-chrome-bridge/e2e-local.mjs",
     "prepare-sidecars": "node scripts/prepare-sidecars.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
