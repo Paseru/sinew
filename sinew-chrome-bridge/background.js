@@ -644,14 +644,8 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
   await new Promise(r => setTimeout(r, cursorOptions.timing.pause + Math.random() * 90));
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CLICK_EVENT", event: { x: end.x, y: end.y, type: "mousePressed", button: "left" } }).catch(() => {});
   const clickResult = await sendTabMessage(tabId, { type: "AGENT_DOM_CLICK", x: end.x, y: end.y }, 12000);
-  const hrefToNavigate = clickResult?.href || target.element?.href || '';
-  if (hrefToNavigate && /^https?:\/\//i.test(hrefToNavigate)) {
-    await new Promise(resolve => {
-      chrome.tabs.update(tabId, { url: hrefToNavigate, active: true }, () => resolve());
-    });
-  }
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: cursorOptions.mode !== 'hidden', moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-dom" } }).catch(() => {});
-  await new Promise(r => setTimeout(r, hrefToNavigate ? 1600 : 220));
+  await new Promise(r => setTimeout(r, 800));
 
   if (!clickResult || clickResult.ok === false || clickResult.success === false) {
     throw new Error(clickResult?.error || 'DOM click failed');

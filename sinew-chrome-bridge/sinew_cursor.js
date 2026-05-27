@@ -769,14 +769,11 @@
       el.focus?.({ preventScroll: true });
       el.dispatchEvent(new PointerEvent("pointerup", { ...opts, buttons: 0 }));
       el.dispatchEvent(new MouseEvent("mouseup", { ...opts, buttons: 0 }));
-      el.dispatchEvent(new MouseEvent("click", { ...opts, buttons: 0 }));
-      if (typeof el.click === "function") el.click();
-      if (hrefToNavigate) {
-        setTimeout(() => {
-          try {
-            if (location.href === beforeHref) window.location.assign(hrefToNavigate);
-          } catch {}
-        }, 180);
+      
+      const clickEvent = new MouseEvent("click", { ...opts, bubbles: true, cancelable: true, buttons: 0 });
+      const wasCanceled = !el.dispatchEvent(clickEvent);
+      if (!wasCanceled && typeof el.click === "function" && el.tagName !== "A") {
+        el.click();
       }
       sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "", href: hrefToNavigate });
       return true;

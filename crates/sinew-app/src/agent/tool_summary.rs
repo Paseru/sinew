@@ -44,6 +44,44 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             return format!("Read {path}");
         }
     }
+    if name == tool_names::READ_LINTS {
+        if let Some(scope) = lint_paths_scope(input) {
+            return format!("Read lints in {scope}");
+        }
+        return "Read lints".to_string();
+    }
+    if name == tool_names::LIST_DIR {
+        if let Some(path) = input
+            .get("path")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty() && *value != ".")
+        {
+            return format!("List {path}");
+        }
+        return "List directory".to_string();
+    }
+    if name == tool_names::DELETE_FILE {
+        if let Some(path) = input.get("path").and_then(|value| value.as_str()) {
+            return format!("Delete {path}");
+        }
+        return "Delete file".to_string();
+    }
+    if name == tool_names::CODEBASE_SEARCH {
+        if let Some(query) = input
+            .get("query")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            let mut clipped = query.chars().take(48).collect::<String>();
+            if query.chars().count() > 48 {
+                clipped.push_str("...");
+            }
+            return format!("Search codebase: {clipped}");
+        }
+        return "Search codebase".to_string();
+    }
     if name == tool_names::GREP {
         let scope = input
             .get("path")
