@@ -81,7 +81,13 @@ pub fn bytes_to_vector(bytes: &[u8]) -> Vec<f32> {
 
 fn embedder() -> Result<&'static Mutex<Option<TextEmbedding>>> {
     let slot = EMBEDDER.get_or_init(|| {
-        let model = TextEmbedding::try_new(InitOptions::new(EmbeddingModel::BGESmallENV15)).ok();
+        let mut options = InitOptions::new(EmbeddingModel::BGESmallENV15);
+        if let Some(proj_dirs) = directories::ProjectDirs::from("dev", "hyrak", "sinew") {
+            let cache_dir = proj_dirs.cache_dir().join("fastembed_cache");
+            let _ = std::fs::create_dir_all(&cache_dir);
+            options = options.with_cache_dir(cache_dir);
+        }
+        let model = TextEmbedding::try_new(options).ok();
         Mutex::new(model)
     });
     if slot

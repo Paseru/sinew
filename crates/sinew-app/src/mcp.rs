@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
     process::Stdio,
     sync::OnceLock,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -41,7 +41,7 @@ pub struct McpSettings {
     pub servers: Vec<McpServerConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpServerConfig {
     pub id: String,
@@ -59,7 +59,7 @@ pub struct McpServerConfig {
     pub auto_load: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpEnvVar {
     pub key: String,
@@ -107,7 +107,54 @@ pub struct McpToolLabel {
     pub tool_name: String,
 }
 
-#[derive(Debug)]
+use std::sync::Mutex as StdMutex;
+
+#[derive(Debug, Clone)]
+struct McpToolsCacheEntry {
+    tools: Vec<McpServerTool>,
+    fetched_at: Instant,
+    config_hash: u64,
+}
+
+static MCP_TOOLS_CACHE: OnceLock<StdMutex<HashMap<String, McpToolsCacheEntry>>> = OnceLock::new();
+
+fn get_mcp_tools_cache() -> &'static StdMutex<HashMap<String, McpToolsCacheEntry>> {
+    MCP_TOOLS_CACHE.get_or_init(|| StdMutex::new(HashMap::new()))
+}
+
+fn calculate_config_hash(config: &McpServerConfig) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    config.hash(&mut hasher);
+    hasher.finish()
+}
+
+async fn get_cached_mcp_tools(config: &McpServerConfig) -> Option<Vec<McpServerTool>> {
+    let cache = get_mcp_tools_cache();
+    let lock = cache.lock().ok()?;
+    let entry = lock.get(&config.id)?;
+    let hash = calculate_config_hash(config);
+    if entry.config_hash == hash && entry.fetched_at.elapsed() < Duration::from_secs(30) {
+        Some(entry.tools.clone())
+    } else {
+        None
+    }
+}
+
+async fn set_cached_mcp_tools(config: &McpServerConfig, tools: Vec<McpServerTool>) {
+    let cache = get_mcp_tools_cache();
+    if let Ok(mut lock) = cache.lock() {
+        let hash = calculate_config_hash(config);
+        lock.insert(
+            config.id.clone(),
+            McpToolsCacheEntry {
+                tools,
+                fetched_at: Instant::now(),
+                config_hash: hash,
+            },
+        );
+    }
+}
+
 pub struct McpToolRegistry {
     settings: McpSettings,
     bindings: RwLock<HashMap<String, McpToolBinding>>,
@@ -127,19 +174,27 @@ impl McpToolRegistry {
         let mut next_bindings = HashMap::new();
 
         for server in enabled_servers(&self.settings) {
-            let mut client = match McpStdioClient::connect(server).await {
-                Ok(client) => client,
-                Err(err) => {
-                    warn!("unable to connect MCP server {}: {err}", server.name);
-                    continue;
-                }
-            };
+            let tools = match get_cached_mcp_tools(server).await {
+                Some(tools) => tools,
+                None => {
+                    let mut client = match McpStdioClient::connect(server).await {
+                        Ok(client) => client,
+                        Err(err) => {
+                            warn!("unable to connect MCP server {}: {err}", server.name);
+                            continue;
+                        }
+                    };
 
-            let tools = match client.list_tools().await {
-                Ok(tools) => tools,
-                Err(err) => {
-                    warn!("unable to list MCP tools for {}: {err}", server.name);
-                    continue;
+                    match client.list_tools().await {
+                        Ok(tools) => {
+                            set_cached_mcp_tools(server, tools.clone()).await;
+                            tools
+                        }
+                        Err(err) => {
+                            warn!("unable to list MCP tools for {}: {err}", server.name);
+                            continue;
+                        }
+                    }
                 }
             };
 
@@ -463,6 +518,7 @@ pub async fn probe_mcp_servers(settings: &McpSettings) -> Vec<McpServerProbe> {
 
         match client.list_tools().await {
             Ok(tools) => {
+                set_cached_mcp_tools(server, tools.clone()).await;
                 let mut infos = Vec::with_capacity(tools.len());
                 for tool in tools {
                     let tool_name = unique_tool_name(server, &tool.name, &known_names);
@@ -1239,7 +1295,7 @@ struct McpListToolsResult {
     next_cursor: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct McpServerTool {
     name: String,
     #[serde(default)]

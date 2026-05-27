@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Welcome } from "./components/Welcome";
 import { Workspace } from "./components/Workspace";
 import { UpdaterLockScreen } from "./components/UpdaterLockScreen";
+import { SinewMark } from "./components/SinewMark";
 import { loadLastWorkspace, recordRecent, deriveName, clearLastWorkspace } from "./lib/recents";
 import { api } from "./lib/ipc";
 import type { UpdateInfo, WorkspaceBootstrap } from "./types";
@@ -120,10 +121,16 @@ export default function App() {
   }, []);
 
   if (state.kind === "boot") {
-    // Minimal splash while the updater check resolves. Pure canvas — the
-    // real updater UI (or Welcome) takes over within a few hundred ms on
-    // a healthy network, ~4s worst case before the timeout fires.
-    return <div className="app-boot" aria-hidden="true" />;
+    // Splash screen while the updater check resolves. Render the animated logo.
+    return (
+      <div className="app-boot" aria-hidden="true">
+        <span className="welcome__mark-dot">
+          <span className="welcome__mark-inner">
+            <SinewMark size={22} className="welcome__mark-glyph" />
+          </span>
+        </span>
+      </div>
+    );
   }
 
   if (state.kind === "update_required") {

@@ -234,6 +234,8 @@ async fn stream_composer(
     let mut usage = Usage::default();
 
     let events = async_stream::try_stream! {
+        let mut open_part: Option<(usize, PartKind)> = None;
+
         while let Some(chunk) = byte_stream.next().await {
             let chunk = chunk.map_err(|err| AppError::Network(err.to_string()))?;
             buffer.extend_from_slice(&chunk);
@@ -252,6 +254,17 @@ async fn stream_composer(
                             };
                             last_text = text;
                             if !delta.is_empty() {
+                                if open_part.map(|(_, kind)| kind) != Some(PartKind::Text) {
+                                    if let Some((idx, _)) = open_part.take() {
+                                        yield StreamEvent::PartStop { index: idx };
+                                    }
+                                    open_part = Some((text_index, PartKind::Text));
+                                    yield StreamEvent::PartStart {
+                                        index: text_index,
+                                        kind: PartKind::Text,
+                                        tool: None,
+                                    };
+                                }
                                 yield StreamEvent::TextDelta { index: text_index, delta };
                             }
                         }
@@ -263,12 +276,26 @@ async fn stream_composer(
                             };
                             last_thinking = thinking;
                             if !delta.is_empty() {
+                                if open_part.map(|(_, kind)| kind) != Some(PartKind::Thinking) {
+                                    if let Some((idx, _)) = open_part.take() {
+                                        yield StreamEvent::PartStop { index: idx };
+                                    }
+                                    open_part = Some((thinking_index, PartKind::Thinking));
+                                    yield StreamEvent::PartStart {
+                                        index: thinking_index,
+                                        kind: PartKind::Thinking,
+                                        tool: None,
+                                    };
+                                }
                                 yield StreamEvent::ThinkingDelta { index: thinking_index, delta };
                             }
                         }
                         ComposerEvent::ToolCall(call) => {
                             if !emitted_tools.insert(call.id.clone()) {
                                 continue;
+                            }
+                            if let Some((idx, _)) = open_part.take() {
+                                yield StreamEvent::PartStop { index: idx };
                             }
                             saw_tool_call = true;
                             let input_json = serde_json::to_string(&call.input)
@@ -299,6 +326,9 @@ async fn stream_composer(
                     }
                 }
             }
+        }
+        if let Some((idx, _)) = open_part.take() {
+            yield StreamEvent::PartStop { index: idx };
         }
         if !started {
             yield StreamEvent::MessageStart { model: model.clone() };

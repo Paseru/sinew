@@ -621,6 +621,10 @@ textarea {
    so we don't flash Welcome before the gate has had a chance to fire. */
 .app-boot {
   height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-canvas);
 }
 
