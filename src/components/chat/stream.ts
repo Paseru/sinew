@@ -32,6 +32,8 @@ export type ChatBlock =
       text: string;
       historyIndex: number;
       attachments?: UserAttachment[];
+      pendingSteeringId?: string;
+      pendingLabel?: string;
     }
   | {
       kind: "compaction-summary";
@@ -1119,6 +1121,12 @@ function finalizeStreamingThinking(blocks: ChatBlock[]): ChatBlock[] {
   return next;
 }
 
+function dropPendingSteeringBlocks(blocks: ChatBlock[]): ChatBlock[] {
+  return blocks.filter(
+    (block) => !(block.kind === "user-text" && block.pendingSteeringId),
+  );
+}
+
 function withStreamPhase(
   state: ChatViewState,
   streamPhase: StreamPhase,
@@ -1477,8 +1485,35 @@ export function applyEvent(
     case "token_usage":
       return state;
 
+    case "steering_applied": {
+      let matchedPending = false;
+      const next = state.blocks.map((block) => {
+        if (block.kind === "user-text" && block.pendingSteeringId === event.id) {
+          matchedPending = true;
+          return {
+            ...block,
+            pendingSteeringId: undefined,
+            pendingLabel: undefined,
+          };
+        }
+        return block;
+      });
+      if (matchedPending) {
+        return withStreamPhase(state, "waiting", { blocks: next });
+      }
+      const text = textFromChatMessage(event.message);
+      if (!text) return state;
+      return appendUserMessage(
+        { ...state, blocks: next },
+        text,
+        optimisticHistoryIndexForSteering(state),
+        attachmentsFromUserMessage(event.message),
+        { id: `steer-${event.id}` },
+      );
+    }
+
     case "interrupted": {
-      const blocks = state.blocks.map((block) => {
+      const blocks = dropPendingSteeringBlocks(state.blocks).map((block) => {
         if (block.kind === "tool" && block.status === "running") {
           const output =
             block.output && block.output.length > 0
@@ -1504,6 +1539,7 @@ export function applyEvent(
       return withStreamPhase(state, "idle", {
         status: "stopped",
         lastError: event.message,
+        blocks: dropPendingSteeringBlocks(state.blocks),
       });
 
     case "peer_message_received":
@@ -1516,7 +1552,7 @@ export function applyEvent(
       return state;
 
     case "turn_finished": {
-      const blocks = finalizeStreamingThinking(state.blocks);
+      const blocks = dropPendingSteeringBlocks(finalizeStreamingThinking(state.blocks));
       const eventDurationMs =
         typeof event.duration_ms === "number" && Number.isFinite(event.duration_ms)
           ? event.duration_ms
@@ -1538,6 +1574,25 @@ export function applyEvent(
       });
     }
   }
+}
+
+function textFromChatMessage(message: ChatMessage): string {
+  const chunks: string[] = [];
+  for (const part of message.parts) {
+    if (part.type !== "text" || isHiddenUserText(part)) continue;
+    chunks.push(part.text);
+  }
+  return chunks.join("\n\n").trim();
+}
+
+function optimisticHistoryIndexForSteering(state: ChatViewState): number {
+  let next = 0;
+  for (const block of state.blocks) {
+    if ("historyIndex" in block && typeof block.historyIndex === "number") {
+      next = Math.max(next, block.historyIndex + 1);
+    }
+  }
+  return next;
 }
 
 function parsePrettyJson(value: string): unknown {
@@ -1572,6 +1627,11 @@ export function appendUserMessage(
   text: string,
   historyIndex: number,
   attachments?: UserAttachment[],
+  options?: {
+    id?: string;
+    pendingSteeringId?: string;
+    pendingLabel?: string;
+  },
 ): ChatViewState {
   return {
     ...state,
@@ -1579,11 +1639,13 @@ export function appendUserMessage(
       ...state.blocks,
         {
           kind: "user-text",
-          id: `u-${Date.now()}`,
+          id: options?.id ?? `u-${Date.now()}`,
           text,
           historyIndex,
           attachments:
             attachments && attachments.length > 0 ? attachments : undefined,
+          pendingSteeringId: options?.pendingSteeringId,
+          pendingLabel: options?.pendingLabel,
         },
       ],
   };

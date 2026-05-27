@@ -1,9 +1,9 @@
-﻿pub mod agent;
+pub mod agent;
 pub mod bash;
+pub mod check_sota;
 pub mod compact;
 pub mod edit;
 pub mod glob;
-pub mod check_sota;
 pub mod grep;
 pub mod image;
 pub mod mcp;
@@ -28,10 +28,10 @@ pub use agent::{
     ConversationEvent, EngineCommand, QuestionReply, TurnCancel, TurnContext,
 };
 pub use bash::{active_shell_display_name, shell_system_prompt, BashTool};
+pub use check_sota::CheckSotaTool;
 pub use compact::{compact_conversation_history, CompactConversationOutput};
 pub use edit::EditFileTool;
 pub use glob::GlobTool;
-pub use check_sota::CheckSotaTool;
 pub use grep::GrepTool;
 pub use image::CreateImageTool;
 pub use mcp::{probe_mcp_servers, McpServerProbe, McpSettings, McpToolRegistry};
@@ -72,4 +72,3 @@ pub use workspace::{
     WorkspaceSearchMatch, WorkspaceSearchResult,
 };
 pub use write::WriteFileTool;
-

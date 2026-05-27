@@ -6026,6 +6026,29 @@ textarea {
   color: var(--text-0);
 }
 
+.user-text[data-pending-steering="true"] {
+  border: 1px solid var(--accent-soft);
+  background: color-mix(in srgb, var(--accent-soft) 28%, var(--bg-2));
+}
+
+.user-text__pending-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--accent-hi);
+  background: var(--accent-soft);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  line-height: 1.4;
+}
+.user-text__pending-label svg {
+  flex: 0 0 auto;
+}
+
 .compaction-summary__body {
   color: var(--text-0);
 }

@@ -46,6 +46,7 @@ pub(super) struct DesktopState {
     pub(super) system_prompt: String,
     pub(super) max_tool_rounds: usize,
     pub(super) active_turns: Arc<Mutex<HashMap<String, TurnCancel>>>,
+    pub(super) active_turn_inputs: Arc<Mutex<HashMap<String, ActiveTurnInputRecord>>>,
     pub(super) active_turn_details: Arc<StdMutex<HashMap<String, ActiveTurnRecord>>>,
     pub(super) team_runtime: Arc<RwLock<TeamRuntime>>,
     pub(super) file_watchers: Arc<Mutex<HashMap<String, RecommendedWatcher>>>,
@@ -54,6 +55,13 @@ pub(super) struct DesktopState {
     pub(super) anthropic_login: Arc<Mutex<Option<AnthropicLoginAttempt>>>,
     pub(super) google_login: Arc<Mutex<Option<GoogleLoginAttempt>>>,
     pub(super) kimi_login: Arc<Mutex<Option<KimiLoginAttempt>>>,
+}
+
+#[derive(Clone)]
+pub(super) struct ActiveTurnInputRecord {
+    pub(super) workspace_id: String,
+    pub(super) conversation_id: String,
+    pub(super) workspace_root: PathBuf,
 }
 
 #[derive(Clone)]

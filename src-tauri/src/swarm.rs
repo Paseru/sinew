@@ -1,4 +1,4 @@
-﻿use crate::*;
+use crate::*;
 
 pub(super) fn agent_swarm_error_from_event(event: &AgentEvent) -> Option<(String, String)> {
     let AgentEvent::SubAgentEvent {
@@ -400,6 +400,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
         event_tx,
         cancel,
         cmd_rx,
+        steering_rx: None,
     };
 
     let store = state.store.clone();
@@ -701,4 +702,3 @@ pub(super) async fn stop_agent_swarm_command(
         Ok(result.content)
     }
 }
-

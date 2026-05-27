@@ -228,9 +228,9 @@ impl GoogleProvider {
         &self,
         body: &wire::LoadCodeAssistRequest,
     ) -> Result<reqwest::Response> {
-        let bases = [PROD_BASE_URL, BASE_URL, SANDBOX_BASE_URL, AUTOPUSH_BASE_URL];
-        let mut last_error = None;
-        for base_url in bases {
+        let primary_bases = [PROD_BASE_URL, BASE_URL];
+        let mut first_unavailable = None;
+        for base_url in primary_bases {
             let token = self.config.credential.bearer(&self.http).await?;
             let response = self
                 .http
@@ -247,9 +247,41 @@ impl GoogleProvider {
             if response.status().is_success() {
                 return Ok(response);
             }
-            last_error = Some(read_http_error(response).await);
+            let status = response.status();
+            let err = read_http_error(response).await;
+            if status == reqwest::StatusCode::SERVICE_UNAVAILABLE {
+                first_unavailable.get_or_insert(err);
+                continue;
+            }
+            return Err(err);
         }
-        Err(last_error
+
+        for base_url in [SANDBOX_BASE_URL, AUTOPUSH_BASE_URL] {
+            let token = self.config.credential.bearer(&self.http).await?;
+            let response = self
+                .http
+                .post(method_url(base_url, "loadCodeAssist"))
+                .bearer_auth(token)
+                .header("user-agent", antigravity_load_code_assist_user_agent())
+                .header("x-goog-api-client", "gl-node/22.21.1")
+                .header("content-type", "application/json")
+                .header("accept", "application/json")
+                .json(body)
+                .send()
+                .await
+                .map_err(|err| AppError::Network(err.to_string()))?;
+            if response.status().is_success() {
+                return Ok(response);
+            }
+            if response.status() == reqwest::StatusCode::SERVICE_UNAVAILABLE {
+                continue;
+            }
+            tracing::warn!(
+                status = %response.status(),
+                "Antigravity staging loadCodeAssist fallback rejected; preserving primary 503"
+            );
+        }
+        Err(first_unavailable
             .unwrap_or_else(|| AppError::Provider("Antigravity project discovery failed".into())))
     }
 
@@ -358,14 +390,9 @@ impl GoogleProvider {
         &self,
         body: &wire::CodeAssistGenerateRequest,
     ) -> Result<reqwest::Response> {
-        let bases = [
-            self.config.base_url.as_str(),
-            PROD_BASE_URL,
-            SANDBOX_BASE_URL,
-            AUTOPUSH_BASE_URL,
-        ];
-        let mut last_error = None;
-        for base_url in bases {
+        let primary_bases = [self.config.base_url.as_str(), PROD_BASE_URL];
+        let mut first_unavailable = None;
+        for base_url in primary_bases {
             let request = self
                 .post_to(base_url, "streamGenerateContent")
                 .await?
@@ -381,19 +408,37 @@ impl GoogleProvider {
             }
             let status = response.status();
             let err = read_http_error(response).await;
-            if matches!(
-                status,
-                reqwest::StatusCode::FORBIDDEN
-                    | reqwest::StatusCode::NOT_FOUND
-                    | reqwest::StatusCode::SERVICE_UNAVAILABLE
-                    | reqwest::StatusCode::TOO_MANY_REQUESTS
-            ) {
-                last_error = Some(err);
+            if status == reqwest::StatusCode::SERVICE_UNAVAILABLE {
+                first_unavailable.get_or_insert(err);
                 continue;
             }
             return Err(err);
         }
-        Err(last_error.unwrap_or_else(|| AppError::Provider("Antigravity request failed".into())))
+
+        for base_url in [SANDBOX_BASE_URL, AUTOPUSH_BASE_URL] {
+            let request = self
+                .post_to(base_url, "streamGenerateContent")
+                .await?
+                .query(&[("alt", "sse")])
+                .header("accept", "text/event-stream")
+                .json(body);
+            let response = request
+                .send()
+                .await
+                .map_err(|err| AppError::Network(err.to_string()))?;
+            if response.status().is_success() {
+                return Ok(response);
+            }
+            if response.status() == reqwest::StatusCode::SERVICE_UNAVAILABLE {
+                continue;
+            }
+            tracing::warn!(
+                status = %response.status(),
+                "Antigravity staging stream fallback rejected; preserving primary 503"
+            );
+        }
+        Err(first_unavailable
+            .unwrap_or_else(|| AppError::Provider("Antigravity request failed".into())))
     }
 }
 
@@ -408,9 +453,13 @@ fn build_generate_request(
         model: model.clone(),
         project: Some(user_data.project_id.clone()),
         request: wire::VertexGenerateContentRequest {
-            contents: to_contents(&request.transcript, &model)?,
+            contents: to_contents(&request.transcript, &model, caps.supports_tools)?,
             system_instruction: system_instruction(request.system_prompt.as_deref()),
-            tools: to_tools(&request.tools),
+            tools: if caps.supports_tools {
+                to_tools(&request.tools)
+            } else {
+                Vec::new()
+            },
             generation_config: Some(generation_config(request, caps, thinking_level)),
             session_id: request.cache_key.clone(),
         },
@@ -592,7 +641,11 @@ fn unsupported_schema_field(key: &str) -> bool {
     )
 }
 
-fn to_contents(transcript: &[ChatMessage], model: &str) -> Result<Vec<wire::Content>> {
+fn to_contents(
+    transcript: &[ChatMessage],
+    model: &str,
+    supports_tools: bool,
+) -> Result<Vec<wire::Content>> {
     let mut contents = Vec::new();
     for message in transcript {
         let role = match message.role {
@@ -642,6 +695,9 @@ fn to_contents(transcript: &[ChatMessage], model: &str) -> Result<Vec<wire::Cont
                     input,
                     meta,
                 } => {
+                    if !supports_tools {
+                        continue;
+                    }
                     let (_, raw_id) = split_tool_id(name, id);
                     parts.push(wire::Part::FunctionCall {
                         function_call: wire::FunctionCall {
@@ -659,6 +715,9 @@ fn to_contents(transcript: &[ChatMessage], model: &str) -> Result<Vec<wire::Cont
                     is_error,
                     ..
                 } => {
+                    if !supports_tools {
+                        continue;
+                    }
                     let (name, raw_id) = split_prefixed_tool_id(tool_call_id);
                     let mut response = json!({
                         "output": content,

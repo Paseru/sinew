@@ -6,12 +6,16 @@ const path = require('path');
 const WebSocket = require('./node_modules/ws');
 
 const BRIDGE_ORIGIN = process.env.MCP_BROWSER_CDP_URL || 'http://localhost:29002';
-const DIRECT_CDP_ORIGIN = process.env.SINEW_CHROME_CDP_ORIGIN || 'http://127.0.0.1:29222';
-const DIRECT_CDP_PORT = Number(new URL(DIRECT_CDP_ORIGIN).port || 29222);
+const BRIDGE_URL = new URL(BRIDGE_ORIGIN);
+const BRIDGE_WS_ORIGIN = `${BRIDGE_URL.protocol === 'https:' ? 'wss:' : 'ws:'}//${BRIDGE_URL.host}`;
 const CHROME_WAIT_MS = 20000;
 const BRIDGE_WAIT_MS = 20000;
 const cursorStateByTabId = new Map();
 const cdpEndpointByTabId = new Map();
+const DEFAULT_CURSOR_OPTIONS = {
+  mode: process.env.SINEW_CURSOR_MODE || 'visible',
+  speed: process.env.SINEW_CURSOR_SPEED || 'normal',
+};
 
 // Log errors to stderr so they don't corrupt the stdout JSON-RPC stream
 function log(msg) {
@@ -64,6 +68,21 @@ function normalizeUrl(raw) {
   return null;
 }
 
+function normalizeCursorOptions(input = {}) {
+  let options = input;
+  if (typeof input === 'string') {
+    try { options = JSON.parse(input); } catch { options = {}; }
+  }
+  if (!options || typeof options !== 'object') options = {};
+  const mode = ['visible', 'hidden'].includes(String(options.mode || DEFAULT_CURSOR_OPTIONS.mode).toLowerCase())
+    ? String(options.mode || DEFAULT_CURSOR_OPTIONS.mode).toLowerCase()
+    : 'visible';
+  const speed = ['slow', 'normal', 'fast'].includes(String(options.speed || DEFAULT_CURSOR_OPTIONS.speed).toLowerCase())
+    ? String(options.speed || DEFAULT_CURSOR_OPTIONS.speed).toLowerCase()
+    : 'normal';
+  return { mode, speed };
+}
+
 function extractUrl(task) {
   if (!task) return null;
   const explicit = String(task).match(/https?:\/\/[^\s)\],.;!?]+/i);
@@ -73,39 +92,20 @@ function extractUrl(task) {
   return domain ? normalizeUrl(domain[0]) : null;
 }
 
-async function requestBridgeLaunch(_targetUrl) {
-  // Legacy extension-debugger launch path intentionally disabled for MCP actions.
-  // The MCP now controls Chrome through a direct remote-debugging CDP port to avoid
-  // Chrome's "debugging this browser" extension banner and duplicate cursor overlays.
-  return null;
+async function requestBridgeLaunch(targetUrl) {
+  return requestJSON(`${BRIDGE_ORIGIN}/api/launch_chrome?url=${encodeURIComponent(normalizeUrl(targetUrl) || 'about:blank')}`, 3000).catch(() => null);
 }
 
 async function releaseExtensionDebuggers() {
   return requestJSON(`${BRIDGE_ORIGIN}/api/detach_all`, 2000).catch(() => null);
 }
 
-function controlledChromeUserDataDir() {
-  return path.join(process.env.LOCALAPPDATA || process.env.TEMP || '.', 'Sinew', 'ChromeControlProfile');
-}
-
-async function directCdpTabs(timeoutMs = 2500) {
-  const tabs = await requestJSON(`${DIRECT_CDP_ORIGIN}/json`, timeoutMs).catch(() => []);
-  if (!Array.isArray(tabs)) return [];
-  for (const tab of tabs) {
-    if (tab?.id && tab?.webSocketDebuggerUrl) cdpEndpointByTabId.set(String(tab.id), tab.webSocketDebuggerUrl);
-  }
-  return tabs.filter(tab => tab.type === 'page' && !(tab.url || '').startsWith('chrome://') && !(tab.url || '').startsWith('devtools://'));
-}
-
 function launchChrome(targetUrl = 'about:blank') {
   const chromeExe = findChromeExecutable();
   log(`Launching Chrome via ${chromeExe}`);
   const args = [
-    `--remote-debugging-port=${DIRECT_CDP_PORT}`,
-    `--user-data-dir=${controlledChromeUserDataDir()}`,
     '--no-first-run',
     '--no-default-browser-check',
-    '--disable-features=Translate,AutomationControlled',
     normalizeUrl(targetUrl) || 'about:blank',
   ];
 
@@ -127,15 +127,15 @@ async function waitForBridge() {
 
   while (Date.now() < deadline) {
     try {
-      const status = await requestJSON(`${DIRECT_CDP_ORIGIN}/json/version`, 1500);
-      if (status && status.webSocketDebuggerUrl) return status;
+      const status = await requestJSON(`${BRIDGE_ORIGIN}/api/status`, 1500);
+      if (status && (status.extensionConnected || status.hasExtensionSocket)) return status;
     } catch (err) {
       lastError = err;
     }
     await sleep(500);
   }
 
-  throw new Error(`Direct Chrome CDP did not become ready${lastError ? `: ${lastError.message}` : ''}`);
+  throw new Error(`Chrome bridge did not become ready${lastError ? `: ${lastError.message}` : ''}`);
 }
 
 function sameOriginOrUrl(tabUrl, targetUrl) {
@@ -153,7 +153,12 @@ async function waitForTabs(preferredUrl = null) {
   let lastTabs = [];
 
   while (Date.now() < deadline) {
-    let tabs = await directCdpTabs(3000).catch(() => []);
+    let tabs = await requestJSON(`${BRIDGE_ORIGIN}/json`, 3000).catch(() => []);
+    if (Array.isArray(tabs)) {
+      for (const tab of tabs) {
+        if (tab?.id && tab?.webSocketDebuggerUrl) cdpEndpointByTabId.set(String(tab.id), tab.webSocketDebuggerUrl);
+      }
+    }
     if (Array.isArray(tabs) && tabs.length > 0) {
       if (!preferredUrl) return tabs;
       const matching = tabs.find(tab => sameOriginOrUrl(tab.url || '', preferredUrl));
@@ -171,34 +176,25 @@ async function waitForTabs(preferredUrl = null) {
 async function ensureChromeReady(preferredUrl = null) {
   const targetUrl = normalizeUrl(preferredUrl) || 'https://www.google.com';
   await releaseExtensionDebuggers();
-
-  let tabs = await directCdpTabs(1000).catch(() => []);
-  if (!tabs || tabs.length === 0) {
-    launchChrome(targetUrl);
-    await waitForBridge();
-    tabs = await waitForTabs(targetUrl);
-  } else if (targetUrl) {
-    const matching = tabs.find(tab => sameOriginOrUrl(tab.url || '', targetUrl));
-    tabs = [matching || tabs.find(tab => tab.url === 'about:blank') || tabs.find(tab => tab.active) || tabs[0]];
-  }
+  await requestBridgeLaunch(targetUrl);
+  launchChrome(targetUrl);
+  await waitForBridge();
+  const tabs = await waitForTabs(targetUrl);
 
   if (!tabs || tabs.length === 0) {
-    throw new Error('Chrome direct CDP is ready, but no controllable tab could be created.');
+    throw new Error('Chrome bridge is connected, but no controllable normal-profile tab could be found.');
   }
   return tabs;
 }
 
 async function navigateTab(tabId, url) {
   if (!tabId || !url) return;
-  const cdp = cdpConnect(tabId);
-  try {
-    await cdp.send('Page.bringToFront').catch(() => null);
-    await cdp.send('Page.navigate', { url });
-  } finally {
-    cdp.close();
+  const updated = await requestJSON(`${BRIDGE_ORIGIN}/api/navigate_tab?tabId=${encodeURIComponent(tabId)}&url=${encodeURIComponent(url)}`, 7000).catch(() => null);
+  if (!updated || updated.success === false) {
+    await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(url)}`, 7000).catch(() => null);
   }
   cursorStateByTabId.delete(String(tabId));
-  await waitForPageInteractive(tabId, 15000).catch(() => null);
+  await sleep(1800);
 }
 
 function buildActionTasks(task) {
@@ -217,7 +213,7 @@ function buildActionTasks(task) {
 }
 
 function cdpConnect(tabId) {
-  const endpoint = cdpEndpointByTabId.get(String(tabId)) || `ws://127.0.0.1:${DIRECT_CDP_PORT}/devtools/page/${tabId}`;
+  const endpoint = cdpEndpointByTabId.get(String(tabId)) || `${BRIDGE_WS_ORIGIN}/devtools/page/${tabId}`;
   const ws = new WebSocket(endpoint);
   let nextId = 1;
   const pending = new Map();
@@ -522,17 +518,28 @@ async function performHumanCdpClick(tabId, target) {
   }
 }
 
-async function executeAction(tabId, taskText, timeoutMs = 30000) {
+async function detectTargetViaBridge(tabId, taskText) {
+  return requestJSON(`${BRIDGE_ORIGIN}/api/detect_target?tabId=${encodeURIComponent(tabId)}&task=${encodeURIComponent(taskText)}`, 20000);
+}
+
+async function performHumanBridgeClick(tabId, detection, cursorOptions = {}) {
+  const cursor = normalizeCursorOptions(cursorOptions);
+  const result = await requestJSON(`${BRIDGE_ORIGIN}/api/human_click?tabId=${encodeURIComponent(tabId)}&detection=${encodeURIComponent(JSON.stringify(detection))}&cursor=${encodeURIComponent(JSON.stringify(cursor))}`, 20000);
+  return result;
+}
+
+async function executeAction(tabId, taskText, timeoutMs = 30000, cursorOptions = {}) {
   const deadline = Date.now() + timeoutMs;
+  const cursor = normalizeCursorOptions(cursorOptions);
   let lastDetection = null;
 
   await waitForPageInteractive(tabId, Math.min(10000, timeoutMs)).catch(() => null);
 
   while (Date.now() < deadline) {
-    const detection = await detectTargetViaCdp(tabId, taskText);
+    const detection = await detectTargetViaBridge(tabId, taskText).catch(err => ({ success: false, error: err.message }));
     lastDetection = detection;
     if (detection?.target) {
-      const performed = await performHumanCdpClick(tabId, detection.target);
+      const performed = await performHumanBridgeClick(tabId, detection, cursor);
       return { detection, performed };
     }
     await sleep(450);
@@ -578,14 +585,14 @@ async function executeNavigate(url) {
   return JSON.stringify({ success: true, tab: compactTab({ ...tab, url: targetUrl }) });
 }
 
-async function executeClickTarget(target, timeoutMs = 20000) {
+async function executeClickTarget(target, timeoutMs = 20000, cursorOptions = {}) {
   if (!target || !String(target).trim()) {
     return JSON.stringify({ success: false, error: 'Missing click target' });
   }
   const possibleUrl = extractUrl(target);
   const tab = await getReadyTab(possibleUrl || null);
   if (possibleUrl) await navigateTab(tab.id, possibleUrl).catch(() => null);
-  const result = await executeAction(tab.id, String(target), timeoutMs);
+  const result = await executeAction(tab.id, String(target), timeoutMs, cursorOptions);
   return JSON.stringify({ success: result && result.success !== false, result });
 }
 
@@ -656,7 +663,17 @@ const MCP_TOOLS = [
     description: "Exécute une tâche de navigation ou d'interaction avec Google Chrome localement, sans API cloud, sans Python et sans ouverture manuelle de Chrome.",
     inputSchema: {
       type: 'object',
-      properties: { task: { type: 'string', description: "Description de l'action à faire (ex: 'ouvre julienpiron.fr puis clique sur le menu')" } },
+      properties: {
+        task: { type: 'string', description: "Description de l'action à faire (ex: 'ouvre julienpiron.fr puis clique sur le menu')" },
+        cursor: {
+          type: 'object',
+          description: 'Options du curseur humain.',
+          properties: {
+            mode: { type: 'string', enum: ['visible', 'hidden'] },
+            speed: { type: 'string', enum: ['slow', 'normal', 'fast'] }
+          }
+        }
+      },
       required: ['task']
     }
   },
@@ -673,7 +690,22 @@ const MCP_TOOLS = [
   {
     name: 'click',
     description: 'Clique une cible visible par texte, aria-label, id, classe ou description locale.',
-    inputSchema: { type: 'object', properties: { target: { type: 'string', description: 'Cible à cliquer' }, timeoutMs: { type: 'number', description: 'Timeout optionnel' } }, required: ['target'] }
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', description: 'Cible à cliquer' },
+        timeoutMs: { type: 'number', description: 'Timeout optionnel' },
+        cursor: {
+          type: 'object',
+          description: 'Options du curseur humain.',
+          properties: {
+            mode: { type: 'string', enum: ['visible', 'hidden'] },
+            speed: { type: 'string', enum: ['slow', 'normal', 'fast'] }
+          }
+        }
+      },
+      required: ['target']
+    }
   },
   {
     name: 'wait_for_text',
@@ -693,8 +725,9 @@ const MCP_TOOLS = [
 ];
 
 // Execute the smart browser automation natively and silently (Codex-style local mode)
-async function executeBrowserTask(task) {
+async function executeBrowserTask(task, cursorOptions = {}) {
   log(`Executing native Chrome action: "${task}"`);
+  const cursor = normalizeCursorOptions(cursorOptions);
 
   try {
     const preferredUrl = extractUrl(task) || 'https://www.google.com';
@@ -708,7 +741,7 @@ async function executeBrowserTask(task) {
     const results = [];
     for (const actionTask of buildActionTasks(task)) {
       log(`Executing action step: ${actionTask}`);
-      results.push({ task: actionTask, result: await executeAction(tab.id, actionTask) });
+      results.push({ task: actionTask, result: await executeAction(tab.id, actionTask, 30000, cursor) });
       await sleep(900);
     }
     return JSON.stringify({ success: results.every(r => r.result && r.result.success !== false), results });
@@ -757,7 +790,7 @@ rl.on('line', async (line) => {
       log(`Calling tool: ${toolName}`);
 
       if (toolName === 'run_browser_agent') {
-        const resultText = await executeBrowserTask(args.task || '');
+        const resultText = await executeBrowserTask(args.task || '', args.cursor || {});
         console.log(JSON.stringify({
           jsonrpc: '2.0',
           id,
@@ -772,7 +805,7 @@ rl.on('line', async (line) => {
         const resultText = await executeNavigate(args.url || '');
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'click') {
-        const resultText = await executeClickTarget(args.target || '', Number(args.timeoutMs) || 20000);
+        const resultText = await executeClickTarget(args.target || '', Number(args.timeoutMs) || 20000, args.cursor || {});
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'wait_for_text') {
         const resultText = await executeWaitForText(args.text || '', Number(args.timeoutMs) || 15000);

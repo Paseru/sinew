@@ -1,4 +1,4 @@
-﻿/// Canonical tool identifiers exposed to models.
+/// Canonical tool identifiers exposed to models.
 ///
 /// Sinew used to expose a mixed casing surface (`Glob`, `WebSearch`,
 /// `ToDoList`, ...). Keep those legacy spellings accepted at dispatch and
@@ -60,4 +60,3 @@ pub fn canonical_tool_name(name: &str) -> &str {
 pub fn is_tool_name(name: &str, canonical: &str) -> bool {
     canonical_tool_name(name) == canonical
 }
-

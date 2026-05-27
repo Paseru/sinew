@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     collections::{BTreeMap, BTreeSet},
     time::Duration,
 };
@@ -6,6 +6,7 @@
 use futures_util::StreamExt;
 use rand::Rng;
 use serde_json::{json, Map, Value};
+use tokio::sync::mpsc::error::TryRecvError;
 use tokio::{sync::mpsc, task::JoinHandle};
 use uuid::Uuid;
 
@@ -16,7 +17,7 @@ use sinew_core::{
 
 use super::{
     assistant_message::AssistantMessageBuilder,
-    cancel::EngineCommand,
+    cancel::{EngineCommand, SteeringCommand},
     clean_context::{clean_context_descriptor, run_clean_context},
     compaction::{
         can_auto_compact_history, is_context_length_error, maybe_auto_compact_history,
@@ -74,6 +75,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         event_tx,
         cancel,
         mut cmd_rx,
+        mut steering_rx,
     } = ctx;
 
     send_event(&event_tx, event_scope.as_ref(), AgentEvent::TurnStarted);
@@ -82,6 +84,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     repair_missing_tool_results(&mut history);
     mcp.refresh_catalog(&history).await;
 
+    let root_accepts_steering = steering_rx.is_some();
     let mut cancelled = false;
     let mut compacted = false;
     let mut loops = 0usize;
@@ -92,6 +95,12 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     todo_list.normalize();
 
     'conversation: loop {
+        drain_steering_commands(
+            &mut steering_rx,
+            &mut history,
+            &event_tx,
+            event_scope.as_ref(),
+        );
         if let Some(teams) = &teams {
             if let Some(messages_prompt) = teams.drain_current_agent_messages_prompt().await {
                 history.push(ChatMessage {
@@ -190,6 +199,12 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             }
         }
 
+        drain_steering_commands(
+            &mut steering_rx,
+            &mut history,
+            &event_tx,
+            event_scope.as_ref(),
+        );
         let request_history =
             history_with_current_tool_result_ids(&history, &current_turn_tool_result_ids);
         let request = ProviderRequest::new(model.clone(), request_history)
@@ -526,10 +541,24 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             history.push(assistant.clone());
         }
 
+        let steering_after_assistant = if !matches!(stop_reason, StopReason::ToolUse) {
+            drain_steering_commands(
+                &mut steering_rx,
+                &mut history,
+                &event_tx,
+                event_scope.as_ref(),
+            )
+        } else {
+            false
+        };
+
         if !matches!(stop_reason, StopReason::ToolUse) && !eager_tool_results.is_empty() {
             stop_reason = StopReason::ToolUse;
         }
         if !matches!(stop_reason, StopReason::ToolUse) {
+            if steering_after_assistant {
+                continue 'conversation;
+            }
             break;
         }
 
@@ -599,6 +628,13 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                     if matches!(cmd_rx.try_recv(), Ok(EngineCommand::Cancel)) {
                         cancelled = true;
                         abort_eager_tool_results(&mut eager_tool_results);
+                    } else {
+                        drain_steering_commands(
+                            &mut steering_rx,
+                            &mut history,
+                            &event_tx,
+                            event_scope.as_ref(),
+                        );
                     }
                     result
                 } else {
@@ -724,6 +760,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         }
 
         if tool_results.is_empty() {
+            if drain_steering_commands(
+                &mut steering_rx,
+                &mut history,
+                &event_tx,
+                event_scope.as_ref(),
+            ) {
+                continue 'conversation;
+            }
             break;
         }
 
@@ -738,6 +782,12 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             role: Role::User,
             parts: tool_results,
         });
+        let steering_after_tools = drain_steering_commands(
+            &mut steering_rx,
+            &mut history,
+            &event_tx,
+            event_scope.as_ref(),
+        );
         if cancelled {
             break 'conversation;
         }
@@ -752,8 +802,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             });
             continue 'conversation;
         }
+        if steering_after_tools {
+            continue 'conversation;
+        }
     }
 
+    if root_accepts_steering {
+        cancel.close_steering();
+    }
     if cancelled {
         send_event(&event_tx, event_scope.as_ref(), AgentEvent::Interrupted);
     }
@@ -770,6 +826,39 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         interrupted: cancelled,
         compacted,
     }
+}
+
+fn drain_steering_commands(
+    steering_rx: &mut Option<mpsc::UnboundedReceiver<SteeringCommand>>,
+    history: &mut Vec<ChatMessage>,
+    event_tx: &mpsc::UnboundedSender<AgentEvent>,
+    event_scope: Option<&AgentEventScope>,
+) -> bool {
+    let Some(rx) = steering_rx.as_mut() else {
+        return false;
+    };
+    let mut changed = false;
+    loop {
+        match rx.try_recv() {
+            Ok(command) => {
+                let id = command.id;
+                let message = command.message;
+                history.push(message.clone());
+                send_event(
+                    event_tx,
+                    event_scope,
+                    AgentEvent::SteeringApplied { id, message },
+                );
+                changed = true;
+            }
+            Err(TryRecvError::Empty) => break,
+            Err(TryRecvError::Disconnected) => {
+                *steering_rx = None;
+                break;
+            }
+        }
+    }
+    changed
 }
 
 pub(super) fn retain_cancelled_eager_parts(
@@ -902,4 +991,3 @@ fn assistant_has_question_tool(message: &ChatMessage) -> bool {
         )
     })
 }
-

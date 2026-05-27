@@ -113,7 +113,8 @@ pub(super) async fn send_message(
 
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
-    let cancel = TurnCancel::new(cmd_tx);
+    let (steering_tx, steering_rx) = mpsc::unbounded_channel();
+    let cancel = TurnCancel::with_steering(cmd_tx, steering_tx);
     {
         let mut active_turns = state.active_turns.lock().await;
         if active_turns.contains_key(&input.conversation_id) {
@@ -137,11 +138,13 @@ pub(super) async fn send_message(
         .save_conversation(&conversation)
         .map_err(|err| {
             let active_turns = state.active_turns.clone();
+            let active_turn_inputs = state.active_turn_inputs.clone();
             let active_turn_details = state.active_turn_details.clone();
             let app = app.clone();
             let conversation_id = input.conversation_id.clone();
             tauri::async_runtime::spawn(async move {
                 active_turns.lock().await.remove(&conversation_id);
+                active_turn_inputs.lock().await.remove(&conversation_id);
                 active_turn_details
                     .lock()
                     .map(|mut active| active.remove(&conversation_id))
@@ -224,11 +227,21 @@ pub(super) async fn send_message(
         event_tx,
         cancel,
         cmd_rx,
+        steering_rx: Some(steering_rx),
     };
 
     let store = state.store.clone();
     let active_turns = state.active_turns.clone();
+    let active_turn_inputs = state.active_turn_inputs.clone();
     let active_turn_details = state.active_turn_details.clone();
+    state.active_turn_inputs.lock().await.insert(
+        conversation.id.clone(),
+        ActiveTurnInputRecord {
+            workspace_id: workspace_id.clone(),
+            conversation_id: conversation.id.clone(),
+            workspace_root: workspace_root.clone(),
+        },
+    );
     let state_for_wake = state.inner().clone();
     let conversation_id = conversation.id.clone();
     let conversation_title = conversation.title.clone();
@@ -394,6 +407,7 @@ pub(super) async fn send_message(
                                 &turn_finished_event,
                             );
                             active_turns.lock().await.remove(&conversation_id);
+                            active_turn_inputs.lock().await.remove(&conversation_id);
                             active_turn_details
                                 .lock()
                                 .map(|mut active| active.remove(&conversation_id))
@@ -416,6 +430,7 @@ pub(super) async fn send_message(
                                 &AgentEvent::TurnFinished { duration_ms: None },
                             );
                             active_turns.lock().await.remove(&conversation_id);
+                            active_turn_inputs.lock().await.remove(&conversation_id);
                             active_turn_details
                                 .lock()
                                 .map(|mut active| active.remove(&conversation_id))
@@ -682,6 +697,11 @@ pub(super) async fn compact_conversation(
     );
     state.active_turns.lock().await.remove(&conversation_id);
     state
+        .active_turn_inputs
+        .lock()
+        .await
+        .remove(&conversation_id);
+    state
         .active_turn_details
         .lock()
         .map(|mut active| active.remove(&conversation_id))
@@ -689,6 +709,54 @@ pub(super) async fn compact_conversation(
     emit_active_turns_changed(&app, &state.active_turn_details).await;
 
     command_result
+}
+
+#[tauri::command]
+pub(super) async fn steer_turn(
+    state: State<'_, DesktopState>,
+    input: SteeringInput,
+) -> std::result::Result<bool, String> {
+    let workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let workspace_id = workspace_root.display().to_string();
+    let turn_input = state
+        .active_turn_inputs
+        .lock()
+        .await
+        .get(&input.conversation_id)
+        .cloned();
+    let Some(turn_input) = turn_input else {
+        return Ok(false);
+    };
+    if turn_input.workspace_id != workspace_id
+        || turn_input.workspace_root != workspace_root
+        || turn_input.conversation_id != input.conversation_id
+    {
+        return Ok(false);
+    }
+    let sender = state
+        .active_turns
+        .lock()
+        .await
+        .get(&input.conversation_id)
+        .cloned();
+    let Some(sender) = sender else {
+        return Ok(false);
+    };
+    let text = input.text.trim();
+    if text.is_empty() {
+        return Err("steering message cannot be empty".into());
+    }
+    Ok(sender.steer(
+        input.id,
+        build_user_message(
+            text,
+            &input.attachments,
+            &workspace_root,
+            None,
+            MessageVisibilityInput::Normal,
+        ),
+    ))
 }
 
 #[tauri::command]

@@ -40,7 +40,8 @@ pub(super) async fn open_new_window(app: AppHandle) -> std::result::Result<(), S
 
 #[tauri::command]
 pub(super) async fn get_or_create_sandbox_workspace() -> std::result::Result<String, String> {
-    let home = crate::platform::home_dir().ok_or_else(|| "Could not find home directory".to_string())?;
+    let home =
+        crate::platform::home_dir().ok_or_else(|| "Could not find home directory".to_string())?;
     let sandbox_path = home.join(".sinew-sandbox");
     if !sandbox_path.exists() {
         let _ = std::fs::create_dir_all(&sandbox_path);

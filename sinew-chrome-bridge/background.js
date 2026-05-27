@@ -11,6 +11,21 @@ let lastConnectedAt = null;
 const attachedTabs = new Set();
 let cursorMoveSeq = 0;
 
+function normalizeCursorOptions(options = {}) {
+  const mode = ['visible', 'hidden'].includes(String(options.mode || 'visible').toLowerCase())
+    ? String(options.mode || 'visible').toLowerCase()
+    : 'visible';
+  const speed = ['slow', 'normal', 'fast'].includes(String(options.speed || 'normal').toLowerCase())
+    ? String(options.speed || 'normal').toLowerCase()
+    : 'normal';
+  const timing = {
+    slow: { steps: 58, minDelay: 18, jitter: 24, pause: 220 },
+    normal: { steps: 38, minDelay: 12, jitter: 18, pause: 140 },
+    fast: { steps: 22, minDelay: 5, jitter: 10, pause: 60 },
+  }[speed];
+  return { mode, speed, timing };
+}
+
 // Promise-based locking mechanism for race-free sequential execution
 let lifecycleQueue = Promise.resolve();
 
@@ -101,6 +116,46 @@ async function handleMessage(msg) {
     switch (command) {
       case "list_tabs":
         reportOpenTabs(id);
+        break;
+
+      case "navigate_tab":
+        runLocked(async () => {
+          return new Promise((resolve) => {
+            const tabId = parseInt(params.tabId);
+            chrome.tabs.update(tabId, { url: params.url || "about:blank", active: true }, (tab) => {
+              if (chrome.runtime.lastError) sendResponse(id, { success: false, error: chrome.runtime.lastError.message });
+              else sendResponse(id, { success: true, tab: { id: tab.id, title: tab.title, url: tab.url, active: tab.active } });
+              resolve();
+            });
+          });
+        });
+        break;
+
+      case "detect_target":
+        runLocked(async () => {
+          const tabId = parseInt(params.tabId);
+          try {
+            await ensureCursorInjected(tabId);
+            chrome.tabs.sendMessage(tabId, { type: "RUN_SILENT_TASK", task: params.task || "" }, (response) => {
+              if (chrome.runtime.lastError) sendResponse(id, { success: false, error: chrome.runtime.lastError.message });
+              else sendResponse(id, response || { success: false, error: "No target response" });
+            });
+          } catch (err) {
+            sendResponse(id, { success: false, error: err.message });
+          }
+        });
+        break;
+
+      case "human_click":
+        runLocked(async () => {
+          const tabId = parseInt(params.tabId);
+          try {
+            const performed = await performHumanCdpAction(tabId, params.detection || {}, "", normalizeCursorOptions(params.cursor || {}));
+            sendResponse(id, performed);
+          } catch (err) {
+            sendResponse(id, { success: false, error: err.message });
+          }
+        });
         break;
 
       case "create_tab":
@@ -364,18 +419,19 @@ function humanPath(start, end, steps = 34) {
   return points;
 }
 
-async function showCursor(tabId, x, y, moveSequence = ++cursorMoveSeq) {
+async function showCursor(tabId, x, y, moveSequence = ++cursorMoveSeq, cursorOptions = normalizeCursorOptions()) {
   await chrome.tabs.sendMessage(tabId, {
     type: "AGENT_CURSOR_STATE",
-    state: { x, y, visible: true, moveSequence, sessionId: "session-" + tabId, turnId: "turn-human-cdp" }
+    state: { x, y, visible: cursorOptions.mode !== 'hidden', moveSequence, sessionId: "session-" + tabId, turnId: "turn-human-cdp" }
   }).catch(() => {});
 }
 
-async function performHumanCdpAction(tabId, detection, taskText) {
+async function performHumanCdpAction(tabId, detection, taskText, cursorOptions = normalizeCursorOptions()) {
   if (detection.action === 'scroll') {
-    await attachDebuggerIfNeeded(tabId);
-    await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseWheel", x: 500, y: 500, deltaX: 0, deltaY: detection.scrollY || 500 });
-    return { success: true, action: 'scroll', message: 'Scroll CDP humain effectué.' };
+    await ensureCursorInjected(tabId);
+    const amount = detection.scrollY || 500;
+    await chrome.tabs.sendMessage(tabId, { type: "AGENT_DOM_SCROLL", scrollY: amount }).catch(() => {});
+    return { success: true, action: 'scroll', message: 'Scroll humain DOM effectué.' };
   }
 
   const target = detection.target;
@@ -383,35 +439,35 @@ async function performHumanCdpAction(tabId, detection, taskText) {
     throw new Error('Invalid target bounding box');
   }
 
-  await attachDebuggerIfNeeded(tabId);
   await ensureCursorInjected(tabId);
 
   const start = { x: Math.max(24, target.x - 260), y: Math.max(24, target.y + 160) };
   const end = { x: target.x, y: target.y };
-  const points = humanPath(start, end, 38);
+  const points = humanPath(start, end, cursorOptions.timing.steps);
   const sequence = ++cursorMoveSeq;
 
   for (const p of points) {
     const x = Math.round(p.x);
     const y = Math.round(p.y);
-    await showCursor(tabId, x, y, sequence);
-    await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseMoved", x, y, button: "none" });
-    await new Promise(r => setTimeout(r, 12 + Math.random() * 18));
+    await showCursor(tabId, x, y, sequence, cursorOptions);
+    await new Promise(r => setTimeout(r, cursorOptions.timing.minDelay + Math.random() * cursorOptions.timing.jitter));
   }
 
-  await new Promise(r => setTimeout(r, 140 + Math.random() * 90));
+  await new Promise(r => setTimeout(r, cursorOptions.timing.pause + Math.random() * 90));
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CLICK_EVENT", event: { x: end.x, y: end.y, type: "mousePressed", button: "left" } }).catch(() => {});
-  await cdp(tabId, "Input.dispatchMouseEvent", { type: "mousePressed", x: end.x, y: end.y, button: "left", clickCount: 1 });
-  await new Promise(r => setTimeout(r, 55 + Math.random() * 50));
-  await cdp(tabId, "Input.dispatchMouseEvent", { type: "mouseReleased", x: end.x, y: end.y, button: "left", clickCount: 1 });
-  await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: true, moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-cdp" } }).catch(() => {});
+  const clickResult = await chrome.tabs.sendMessage(tabId, { type: "AGENT_DOM_CLICK", x: end.x, y: end.y }).catch(err => ({ ok: false, error: err.message }));
+  await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: cursorOptions.mode !== 'hidden', moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-dom" } }).catch(() => {});
   await new Promise(r => setTimeout(r, 220));
+
+  if (!clickResult || clickResult.ok === false) {
+    throw new Error(clickResult?.error || 'DOM click failed');
+  }
 
   return {
     success: true,
     action: detection.action || 'click',
     element: target.element,
-    message: `Clic humain CDP effectué à (${end.x}, ${end.y}) sur ${target.element?.tagName || 'target'}.`
+    message: `Clic humain DOM effectué à (${end.x}, ${end.y}) sur ${target.element?.tagName || 'target'}.`
   };
 }
 

@@ -576,7 +576,9 @@ export type AgentEvent =
       max_output_tokens: number;
       usage: StreamTokenUsage;
     }
+  | { type: "steering_applied"; id: string; message: ChatMessage }
   | { type: "interrupted" }
+
   | { type: "error"; message: string }
   | {
       type: "peer_message_received";

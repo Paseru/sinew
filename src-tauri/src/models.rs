@@ -166,6 +166,17 @@ pub(super) struct ConversationInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(super) struct SteeringInput {
+    pub(super) workspace_path: String,
+    pub(super) conversation_id: String,
+    pub(super) id: String,
+    pub(super) text: String,
+    #[serde(default)]
+    pub(super) attachments: Vec<AttachmentInput>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct AnswerQuestionInput {
     pub(super) workspace_path: String,
     pub(super) conversation_id: String,

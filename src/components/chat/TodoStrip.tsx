@@ -59,6 +59,7 @@ export type QueuedPromptStripItem = {
   id: string;
   text: string;
   attachments: AttachmentInput[];
+  steering?: boolean;
 };
 
 type ActivePanel = "queue" | "todo" | "team" | "messages";
@@ -886,12 +887,12 @@ function QueuedPromptRow({
             event.stopPropagation();
             onSend?.(prompt.id);
           }}
-          disabled={!onSend}
-          aria-label="Influence conversation now"
-          title="Influencer"
+          disabled={!onSend || prompt.steering}
+          aria-label={prompt.steering ? "Steering pending" : "Influence conversation now"}
+          title={prompt.steering ? "Pending steering" : "Orienter"}
         >
-          <Icon icon="solar:arrow-up-bold" width={11} height={11} />
-          <span>Influencer</span>
+          <Icon icon={prompt.steering ? "solar:hourglass-line-duotone" : "solar:arrow-up-bold"} width={11} height={11} />
+          <span>{prompt.steering ? "Pending" : "Orienter"}</span>
         </button>
         <button
           type="button"

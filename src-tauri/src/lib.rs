@@ -63,8 +63,7 @@ use sinew_google::{
     load_default_auth_status as load_default_google_auth_status,
     oauth_authorize_url as google_oauth_authorize_url,
     purge_legacy_oauth_if_needed as purge_legacy_google_oauth, Credential as GoogleCredential,
-    GoogleAuthStatus, GoogleProvider,
-    PkceCodes as GooglePkceCodes, MODEL_ID as GOOGLE_MODEL_ID,
+    GoogleAuthStatus, GoogleProvider, PkceCodes as GooglePkceCodes, MODEL_ID as GOOGLE_MODEL_ID,
 };
 use sinew_kimi::{
     delete_default_auth as delete_default_kimi_auth, generate_state as generate_kimi_state,
@@ -513,6 +512,7 @@ pub fn run() {
         system_prompt: DEFAULT_SYSTEM_PROMPT.into(),
         max_tool_rounds: 200,
         active_turns: Arc::new(Mutex::new(HashMap::new())),
+        active_turn_inputs: Arc::new(Mutex::new(HashMap::new())),
         active_turn_details: Arc::new(StdMutex::new(HashMap::new())),
         team_runtime: Arc::new(RwLock::new(TeamRuntime::default())),
         file_watchers: Arc::new(Mutex::new(HashMap::new())),
@@ -669,6 +669,7 @@ pub fn run() {
             conversations::list_installed_skills_command,
             conversations::save_skill_settings,
             turns::send_message,
+            turns::steer_turn,
             turns::answer_question,
             turns::reject_question,
             turns::compact_conversation,

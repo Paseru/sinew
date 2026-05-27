@@ -5,9 +5,17 @@ use std::{
 
 use tokio::sync::{mpsc, oneshot};
 
+use sinew_core::ChatMessage;
+
 #[derive(Debug)]
 pub enum EngineCommand {
     Cancel,
+}
+
+#[derive(Debug, Clone)]
+pub struct SteeringCommand {
+    pub id: String,
+    pub message: ChatMessage,
 }
 
 #[derive(Debug)]
@@ -26,6 +34,7 @@ pub struct TurnCancel {
 
 #[derive(Debug, Default)]
 struct TurnCancelState {
+    root_steering: Option<mpsc::UnboundedSender<SteeringCommand>>,
     senders: Vec<mpsc::UnboundedSender<EngineCommand>>,
     questions: HashMap<String, oneshot::Sender<QuestionReply>>,
     cancelled: bool,
@@ -38,8 +47,44 @@ impl TurnCancel {
         group
     }
 
+    pub fn with_steering(
+        root: mpsc::UnboundedSender<EngineCommand>,
+        steering: mpsc::UnboundedSender<SteeringCommand>,
+    ) -> Self {
+        let group = Self::new(root);
+        if let Ok(mut state) = group.state.lock() {
+            state.root_steering = Some(steering);
+        }
+        group
+    }
+
     pub fn empty() -> Self {
         Self::default()
+    }
+
+    pub fn steer(&self, id: impl Into<String>, message: ChatMessage) -> bool {
+        let sender = self
+            .state
+            .lock()
+            .ok()
+            .and_then(|state| (!state.cancelled).then(|| state.root_steering.clone()))
+            .flatten();
+        sender
+            .map(|sender| {
+                sender
+                    .send(SteeringCommand {
+                        id: id.into(),
+                        message,
+                    })
+                    .is_ok()
+            })
+            .unwrap_or(false)
+    }
+
+    pub fn close_steering(&self) {
+        if let Ok(mut state) = self.state.lock() {
+            state.root_steering = None;
+        }
     }
 
     pub fn register(&self, sender: mpsc::UnboundedSender<EngineCommand>) {
@@ -47,6 +92,7 @@ impl TurnCancel {
             if state.cancelled {
                 let _ = sender.send(EngineCommand::Cancel);
             }
+            state.senders.retain(|sender| !sender.is_closed());
             state.senders.push(sender);
         }
     }
@@ -57,6 +103,7 @@ impl TurnCancel {
             .lock()
             .map(|mut state| {
                 state.cancelled = true;
+                state.senders.retain(|sender| !sender.is_closed());
                 let questions = state
                     .questions
                     .drain()

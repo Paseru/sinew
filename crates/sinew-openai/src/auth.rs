@@ -471,12 +471,16 @@ pub async fn exchange_oauth_code(
         .json()
         .await
         .map_err(|err| AppError::Decode(format!("invalid openai oauth body: {err}")))?;
-    
+
     let target_path = if let Some(key) = target_key {
         path_for_auth_key(&key)?
     } else {
         let default_path = default_auth_path()?;
-        if default_path.exists() && load_auth_status(&default_path).map(|s| s.connected).unwrap_or(false) {
+        if default_path.exists()
+            && load_auth_status(&default_path)
+                .map(|s| s.connected)
+                .unwrap_or(false)
+        {
             let dir = default_path.parent().unwrap();
             let mut index = 2;
             loop {
@@ -533,16 +537,13 @@ fn save_oauth_tokens(
     Ok(status_from_auth(&auth))
 }
 
-pub fn save_raw_access_token(
-    path: &Path,
-    access_token: &str,
-) -> Result<OpenAiAuthStatus> {
+pub fn save_raw_access_token(path: &Path, access_token: &str) -> Result<OpenAiAuthStatus> {
     let expires_at_ms = token_expiry_ms(access_token)
         .unwrap_or_else(|| now_ms() + (3600 as i64 * 1000) - REFRESH_SKEW_MS);
     let account_id = token_account_id(access_token);
     let email = token_email(access_token);
     let plan_type = token_plan_type(access_token);
-    
+
     let auth = StoredAuth {
         provider: "openai".into(),
         auth_mode: "oauth".into(),

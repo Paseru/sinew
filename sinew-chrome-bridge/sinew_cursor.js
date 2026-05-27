@@ -626,6 +626,40 @@
       updateControlledTabIndicator(message.status);
       sendResponse({ ok: true });
     }
+    else if (message.type === "AGENT_DOM_CLICK") {
+      handleActivity();
+      const x = Number(message.x);
+      const y = Number(message.y);
+      const initialEl = document.elementFromPoint(x, y);
+      const el = initialEl && initialEl.closest
+        ? (initialEl.closest('button, a, input, textarea, select, [role="button"], [onclick], summary, label') || initialEl)
+        : initialEl;
+      if (!el) {
+        sendResponse({ ok: false, error: "No element at target point" });
+        return true;
+      }
+      const opts = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0, buttons: 1, pointerId: 1, pointerType: "mouse", isPrimary: true };
+      el.dispatchEvent(new PointerEvent("pointerover", opts));
+      el.dispatchEvent(new MouseEvent("mouseover", opts));
+      el.dispatchEvent(new PointerEvent("pointermove", opts));
+      el.dispatchEvent(new MouseEvent("mousemove", opts));
+      el.dispatchEvent(new PointerEvent("pointerdown", opts));
+      el.dispatchEvent(new MouseEvent("mousedown", opts));
+      el.focus?.({ preventScroll: true });
+      el.dispatchEvent(new PointerEvent("pointerup", { ...opts, buttons: 0 }));
+      el.dispatchEvent(new MouseEvent("mouseup", { ...opts, buttons: 0 }));
+      el.dispatchEvent(new MouseEvent("click", { ...opts, buttons: 0 }));
+      if (typeof el.click === "function") el.click();
+      sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "" });
+      return true;
+    }
+    else if (message.type === "AGENT_DOM_SCROLL") {
+      handleActivity();
+      const amount = Number(message.scrollY) || Math.round(window.innerHeight * 0.6);
+      window.scrollBy({ top: amount, left: 0, behavior: "smooth" });
+      sendResponse({ ok: true, scrollY: amount });
+      return true;
+    }
     else if (message.type === "CONTENT_PING") {
       sendResponse({ ok: true });
     }

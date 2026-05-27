@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import time
+import shutil
 
 # Paths
 home_dir = os.path.expanduser("~")
@@ -14,8 +15,8 @@ if not os.path.exists(db_path):
 
 # Configure the Sinew Chrome MCP server dynamically
 script_dir = os.path.dirname(os.path.abspath(__file__))
-node_path = r"C:\Program Files\nodejs\node.exe"
-if not os.path.exists(node_path):
+node_path = os.environ.get("SINEW_NODE_PATH") or shutil.which("node") or r"C:\Program Files\nodejs\node.exe"
+if not (os.path.isabs(node_path) and os.path.exists(node_path)) and not shutil.which(node_path):
     node_path = "node"
 
 new_server = {

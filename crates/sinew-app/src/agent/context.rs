@@ -1,17 +1,17 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
 use sinew_core::{ChatMessage, Provider, ServiceTier};
 
 use crate::{
-    BashTool, CreateImageTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CheckSotaTool,
+    BashTool, CheckSotaTool, CreateImageTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool,
     McpToolRegistry, QuestionTool, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool,
     TodoListState, ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
 };
 
 use super::{
-    cancel::{EngineCommand, TurnCancel},
+    cancel::{EngineCommand, SteeringCommand, TurnCancel},
     events::{AgentEvent, AgentEventScope},
 };
 
@@ -58,6 +58,7 @@ pub struct TurnContext {
     pub event_tx: mpsc::UnboundedSender<AgentEvent>,
     pub cancel: TurnCancel,
     pub cmd_rx: mpsc::UnboundedReceiver<EngineCommand>,
+    pub steering_rx: Option<mpsc::UnboundedReceiver<SteeringCommand>>,
 }
 
 pub struct TurnOutput {
@@ -67,4 +68,3 @@ pub struct TurnOutput {
     pub interrupted: bool,
     pub compacted: bool,
 }
-

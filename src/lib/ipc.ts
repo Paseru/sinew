@@ -613,6 +613,17 @@ export const api = {
       },
     });
   },
+  steerTurn(
+    workspacePath: string,
+    conversationId: string,
+    id: string,
+    text: string,
+    attachments: AttachmentInput[],
+  ) {
+    return invoke<boolean>("steer_turn", {
+      input: { workspacePath, conversationId, id, text, attachments },
+    });
+  },
   cancelTurn(workspacePath: string, conversationId: string) {
     return invoke<boolean>("cancel_turn", {
       input: { workspacePath, conversationId },

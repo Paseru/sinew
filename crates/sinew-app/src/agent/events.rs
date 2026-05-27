@@ -56,6 +56,10 @@ pub enum AgentEvent {
         max_output_tokens: u32,
         usage: Usage,
     },
+    SteeringApplied {
+        id: String,
+        message: ChatMessage,
+    },
     Interrupted,
     Error {
         message: String,

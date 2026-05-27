@@ -144,28 +144,28 @@ export const MODELS: ModelEntry[] = [
     value: "google:claude-opus-4.6",
     provider: "google",
     label: "Claude Opus 4.6",
-    thinking: ["high"],
+    thinking: ["low", "medium", "high"],
     defaultThinking: "high",
   },
   {
     value: "google:claude-sonnet-4.6",
     provider: "google",
     label: "Claude Sonnet 4.6",
-    thinking: ["high"],
+    thinking: ["low", "medium", "high"],
     defaultThinking: "high",
   },
   {
     value: "google:gpt-oss-120b",
     provider: "google",
-    label: "GPT-OSS 120B",
-    thinking: ["off"],
-    defaultThinking: "off",
+    label: "GPT-OSS 120B Medium",
+    thinking: ["medium"],
+    defaultThinking: "medium",
   },
   {
     value: "google:gemini-3.1-pro",
     provider: "google",
     label: "Gemini 3.1 Pro",
-    thinking: ["low", "high"],
+    thinking: ["low", "medium", "high"],
     defaultThinking: "high",
   },
   {
@@ -290,6 +290,7 @@ export function modelRefFromId(model: ModelId): ModelRef {
 export function thinkingFromRef(
   model: ModelRef | null | undefined,
 ): ThinkingLevel {
+  if (model?.provider === "google" && model.name === "gpt-oss-120b") return "medium";
   if (model?.provider === "google") {
     if (model.name.endsWith("-low")) return "low";
     if (model.name.endsWith("-medium")) return "medium";
@@ -346,6 +347,7 @@ export function modelRefWithThinking(
 ): ModelRef {
   if (model.provider === "google") {
     const name = normalizedGoogleModelName(model.name);
+    if (name === "gpt-oss-120b") return { ...model, name, effort: "medium" };
     if (thinking === "off") return { ...model, name, effort: "low" };
     if (thinking === "minimal") {
       // Pro variants reject `minimal` server-side; clamp to low.
@@ -394,6 +396,9 @@ function normalizedModelName(provider: string, name: string): string {
 
 function normalizedGoogleModelName(name: string): string {
   if (name === "gemini-3.1-pro-preview") return "gemini-3.1-pro";
+  if (name === "claude-opus-4-6-thinking") return "claude-opus-4.6";
+  if (name === "claude-sonnet-4-6") return "claude-sonnet-4.6";
+  if (name === "gpt-oss-120b-medium") return "gpt-oss-120b";
   if (name === "gemini-3-flash-preview") return "gemini-3-flash";
   if (name === "gemini-3.1-pro-low" || name === "gemini-3.1-pro-high") {
     return "gemini-3.1-pro";

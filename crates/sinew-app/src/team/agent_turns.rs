@@ -1,4 +1,4 @@
-﻿use super::*;
+use super::*;
 
 impl TeamTool {
     pub(super) async fn run_agent_turn(
@@ -118,6 +118,7 @@ impl TeamTool {
             event_tx: child_event_tx,
             cancel: self.cancel.clone(),
             cmd_rx: child_cmd_rx,
+            steering_rx: None,
         };
 
         let engine = tokio::spawn(async move { run_turn(child_context).await });
@@ -474,4 +475,3 @@ pub(super) fn emit_agent_slept_event(
         event: Box::new(AgentEvent::AgentSlept),
     });
 }
-

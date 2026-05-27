@@ -1,10 +1,10 @@
-﻿{
-    "name":  "com.sinew.chrome_bridge",
-    "description":  "Sinew Chrome Bridge Native Messaging Host",
-    "path":  "C:\\Dev\\sinew\\sinew-chrome-bridge\\native-host-wrapper.exe",
-    "type":  "stdio",
-    "allowed_origins":  [
-                            "chrome-extension://kooobgnecenccliamhjbcncjnjpjoeic/",
-                            "chrome-extension://kedgddpfjpfoghaecofgpmeogiihcgig/"
-                        ]
+{
+  "name": "com.sinew.chrome_bridge",
+  "description": "Sinew Chrome Bridge Native Messaging Host",
+  "path": "native-host-wrapper.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://kooobgnecenccliamhjbcncjnjpjoeic/",
+    "chrome-extension://kedgddpfjpfoghaecofgpmeogiihcgig/"
+  ]
 }

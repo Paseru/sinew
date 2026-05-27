@@ -61,9 +61,14 @@ pub(super) fn install_openai_provider(
         let old_first_path = dir.join("openai-auth-1.json");
         if old_first_path.exists() && !default_path.exists() {
             if let Err(err) = std::fs::rename(&old_first_path, &default_path) {
-                tracing::warn!("failed to auto-rename openai-auth-1.json back to openai-auth.json: {:?}", err);
+                tracing::warn!(
+                    "failed to auto-rename openai-auth-1.json back to openai-auth.json: {:?}",
+                    err
+                );
             } else {
-                tracing::info!("successfully restored openai-auth-1.json as openai-auth.json (principal)");
+                tracing::info!(
+                    "successfully restored openai-auth-1.json as openai-auth.json (principal)"
+                );
             }
         }
     }
@@ -891,8 +896,15 @@ pub(super) async fn start_openai_oauth_login(
     let providers = state.providers.clone();
     let target_key = key.clone();
     tauri::async_runtime::spawn(async move {
-        let result =
-            run_openai_oauth_server(listener, redirect_uri, oauth_state, pkce, cancel, target_key).await;
+        let result = run_openai_oauth_server(
+            listener,
+            redirect_uri,
+            oauth_state,
+            pkce,
+            cancel,
+            target_key,
+        )
+        .await;
         let login_outcome = match result {
             Ok(()) => match install_openai_provider(&providers) {
                 Ok(()) => OpenAiLoginOutcome {
@@ -1044,9 +1056,11 @@ pub(super) async fn get_openai_codex_rate_limits(
         .send()
         .await
         .map_err(|err| format!("Failed to fetch Codex quotas: {err}"))?;
-        
+
     // Fallback suggéré par la communauté si /codex/wham/usage renvoie 403 (Business/Workspace)
-    if response.status() == reqwest::StatusCode::FORBIDDEN || response.status() == reqwest::StatusCode::NOT_FOUND {
+    if response.status() == reqwest::StatusCode::FORBIDDEN
+        || response.status() == reqwest::StatusCode::NOT_FOUND
+    {
         let mut fallback_req = http
             .get("https://chatgpt.com/backend-api/wham/usage")
             .header("authorization", format!("Bearer {}", bearer.token))
@@ -1063,20 +1077,19 @@ pub(super) async fn get_openai_codex_rate_limits(
     }
 
     if !response.status().is_success() {
-        return Err(format!("Codex quota endpoint returned status {}", response.status()));
+        return Err(format!(
+            "Codex quota endpoint returned status {}",
+            response.status()
+        ));
     }
     let raw: serde_json::Value = response
         .json()
         .await
         .map_err(|err| format!("Failed to parse Codex quota response: {err}"))?;
 
-    let rate_limit = raw.get("rate_limit").and_then(|value| {
-        if value.is_null() {
-            None
-        } else {
-            Some(value)
-        }
-    });
+    let rate_limit =
+        raw.get("rate_limit")
+            .and_then(|value| if value.is_null() { None } else { Some(value) });
     let primary = rate_limit
         .and_then(|value| value.get("primary_window"))
         .and_then(parse_rate_limit_window);
@@ -1162,9 +1175,13 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
             let Some(label) = info.get("displayName").and_then(|v| v.as_str()) else {
                 continue;
             };
-            
+
             // On ignore aussi s'il s'agit explicitement de endpoints internes (ex: tab_, chat_)
-            if label.starts_with("tab_") || label.starts_with("chat_") || model_name.starts_with("tab_") || model_name.starts_with("chat_") {
+            if label.starts_with("tab_")
+                || label.starts_with("chat_")
+                || model_name.starts_with("tab_")
+                || model_name.starts_with("chat_")
+            {
                 continue;
             }
 
@@ -1193,22 +1210,29 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
                 .and_then(|value| value.get("resetTime"))
                 .and_then(|value| value.as_str())
                 .map(|value| value.to_string());
-            
+
             // Si pas de quota, on ignore
             if remaining.is_none() && reset_time.is_none() {
                 continue;
             }
 
-            let entry = groups.entry(label.to_string()).or_insert_with(|| AntigravityQuotaGroupInfo {
-                group: label.to_string(),
-                label: label.to_string(),
-                remaining_percent: remaining,
-                reset_time: reset_time.clone(),
-                count: 0,
-            });
+            let entry =
+                groups
+                    .entry(label.to_string())
+                    .or_insert_with(|| AntigravityQuotaGroupInfo {
+                        group: label.to_string(),
+                        label: label.to_string(),
+                        remaining_percent: remaining,
+                        reset_time: reset_time.clone(),
+                        count: 0,
+                    });
             entry.count += 1;
             if let Some(rem) = remaining {
-                entry.remaining_percent = Some(entry.remaining_percent.map_or(rem, |current| current.min(rem)));
+                entry.remaining_percent = Some(
+                    entry
+                        .remaining_percent
+                        .map_or(rem, |current| current.min(rem)),
+                );
             }
         }
     }
@@ -1223,7 +1247,8 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
 }
 
 #[tauri::command]
-pub(super) async fn get_all_openai_accounts() -> std::result::Result<Vec<OpenAiAccountInfo>, String> {
+pub(super) async fn get_all_openai_accounts() -> std::result::Result<Vec<OpenAiAccountInfo>, String>
+{
     let mut accounts = Vec::new();
     if let Ok(files) = all_auth_files() {
         for (key, path) in files {
@@ -1279,7 +1304,10 @@ pub(super) async fn save_openai_access_token(
             default_path
         } else {
             let suffix = k.strip_prefix("openai:").unwrap_or(k);
-            default_path.parent().unwrap().join(format!("openai-auth-{}.json", suffix))
+            default_path
+                .parent()
+                .unwrap()
+                .join(format!("openai-auth-{}.json", suffix))
         }
     } else {
         default_path

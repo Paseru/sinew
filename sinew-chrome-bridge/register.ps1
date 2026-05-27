@@ -2,19 +2,25 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = $PSScriptRoot
 if (!$ScriptDir) { $ScriptDir = $pwd.Path }
 
-$ManifestPath = Join-Path $ScriptDir "com.sinew.chrome_bridge.json"
+$SourceManifestPath = Join-Path $ScriptDir "com.sinew.chrome_bridge.json"
+$InstallDir = Join-Path $env:LOCALAPPDATA "Sinew\ChromeBridge"
+$ManifestPath = Join-Path $InstallDir "com.sinew.chrome_bridge.json"
 $HostScriptPath = Join-Path $ScriptDir "native-host-wrapper.exe"
 
-Write-Host "1/4 Mise a jour du manifest JSON local..."
-if (Test-Path $ManifestPath) {
-    $manifestContent = Get-Content -Raw -Path $ManifestPath
+if (!(Test-Path $InstallDir)) {
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+}
+
+Write-Host "1/4 Creation du manifest Native Host installe localement..."
+if (Test-Path $SourceManifestPath) {
+    $manifestContent = Get-Content -Raw -Path $SourceManifestPath
     $json = ConvertFrom-Json $manifestContent
     $json.path = $HostScriptPath
     $updatedJson = ConvertTo-Json $json -Depth 10
     [System.IO.File]::WriteAllText($ManifestPath, $updatedJson, [System.Text.Encoding]::UTF8)
-    Write-Host "Manifest configure."
+    Write-Host "Manifest installe: $ManifestPath"
 } else {
-    Write-Error "Fichier manifest introuvable."
+    Write-Error "Fichier manifest source introuvable."
     exit 1
 }
 
@@ -24,7 +30,7 @@ if (!(Test-Path $RegPath)) {
     New-Item -Path $RegPath -Force | Out-Null
 }
 Set-ItemProperty -Path $RegPath -Name "(default)" -Value $ManifestPath
-Write-Host "Cle de registre configuree."
+Write-Host "Cle de registre configuree vers le manifest installe."
 
 Write-Host "3/4 Configuration du lanceur MCP Node local run_sinew_bridge.bat..."
 $NodePath = (Get-Command node).Source
@@ -48,5 +54,7 @@ if (Get-Command python -ErrorAction SilentlyContinue) {
 }
 
 Write-Host "SUCCESS: Sinew Chrome Bridge et son serveur MCP sont enregistres et automatises !"
+Write-Host "Manifest Native Host actif :"
+Write-Host $ManifestPath
 Write-Host "Dossier de l'extension a charger dans Chrome :"
 Write-Host $ScriptDir

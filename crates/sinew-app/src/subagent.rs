@@ -1,4 +1,4 @@
-﻿use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -7,10 +7,10 @@ use tokio::sync::mpsc;
 
 use crate::tool_run::FileChange;
 use crate::{
-    run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CreateImageTool, EditFileTool,
-    GlobTool, GoalWorkflowState, GrepTool, CheckSotaTool, McpSettings, McpToolRegistry, QuestionTool, ReadTool,
-    SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult, ToolSettings, TurnCancel,
-    TurnContext, WebFetchTool, WebSearchTool, WriteFileTool,
+    run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CheckSotaTool, CreateImageTool,
+    EditFileTool, GlobTool, GoalWorkflowState, GrepTool, McpSettings, McpToolRegistry,
+    QuestionTool, ReadTool, SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult,
+    ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool, WriteFileTool,
 };
 
 const TOOL_PREFIX: &str = "subagent_";
@@ -252,6 +252,7 @@ impl SubAgentTool {
             event_tx: parent_event_tx,
             cancel: self.cancel.clone(),
             cmd_rx: child_cmd_rx,
+            steering_rx: None,
         };
 
         let output = Box::pin(run_turn(child_context)).await;
@@ -381,4 +382,3 @@ fn escape_attr(value: &str) -> String {
 fn default_enabled() -> bool {
     true
 }
-

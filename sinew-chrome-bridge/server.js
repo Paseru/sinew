@@ -1,6 +1,15 @@
 ﻿// ðŸ§¬ Sinew Chrome Bridge â€” Upgraded WebSocket & HTTP Proxy Server
 // Exposes SOTA Sinew-grade browser-level and page-level CDP multiplexing on port 9002.
 
+const isNativeMode = process.argv.includes('--native');
+if (isNativeMode) {
+  // Chrome Native Messaging stdout must contain only 32-bit length-prefixed JSON.
+  // Redirect every accidental console/info log before any subsystem can emit text.
+  console.log = console.error;
+  console.info = console.error;
+}
+
+const fs = require('fs');
 const http = require('http');
 const url = require('url');
 const { WebSocketServer, WebSocket } = require('ws');
@@ -21,13 +30,99 @@ try {
   getFileSample = () => "";
 }
 
-const PORT = 29002;
-const isNativeMode = process.argv.includes('--native');
+const PORT = Number(process.env.SINEW_CHROME_BRIDGE_PORT || 29002);
 
-if (isNativeMode) {
-  // Redirect all standard console output to stderr to prevent Chrome Native Messaging protocol violations (stdout must only contain 32-bit length-prefixed JSON)
-  console.log = console.error;
-  console.info = console.error;
+const LOCK_DIR = path.join(process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'Sinew');
+const LOCK_PATH = path.join(LOCK_DIR, 'chrome-bridge.lock');
+let lockFd = null;
+let runAsBridgeClientOnly = false;
+
+function isPidRunning(pid) {
+  const n = Number(pid);
+  if (!Number.isInteger(n) || n <= 0) return false;
+  if (n === process.pid) return true;
+  try {
+    process.kill(n, 0);
+    return true;
+  } catch (err) {
+    return err && err.code === 'EPERM';
+  }
+}
+
+function readBridgeLock() {
+  try {
+    return JSON.parse(fs.readFileSync(LOCK_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function writeBridgeLock(fd) {
+  const payload = JSON.stringify({
+    pid: process.pid,
+    port: PORT,
+    native: isNativeMode,
+    startedAt: new Date().toISOString(),
+    heartbeatAt: new Date().toISOString(),
+  }, null, 2);
+  fs.ftruncateSync(fd, 0);
+  fs.writeSync(fd, payload, 0, 'utf8');
+}
+
+function acquireBridgeLock() {
+  fs.mkdirSync(LOCK_DIR, { recursive: true });
+  try {
+    lockFd = fs.openSync(LOCK_PATH, 'wx');
+    writeBridgeLock(lockFd);
+    return { acquired: true };
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err;
+    const current = readBridgeLock();
+    if (current && isPidRunning(current.pid)) {
+      return { acquired: false, active: true, current };
+    }
+    try { fs.unlinkSync(LOCK_PATH); } catch {}
+    lockFd = fs.openSync(LOCK_PATH, 'wx');
+    writeBridgeLock(lockFd);
+    return { acquired: true, reclaimedStale: true, current };
+  }
+}
+
+function releaseBridgeLock() {
+  if (lockFd !== null) {
+    try { fs.closeSync(lockFd); } catch {}
+    lockFd = null;
+  }
+  try {
+    const current = readBridgeLock();
+    if (!current || Number(current.pid) === process.pid) fs.unlinkSync(LOCK_PATH);
+  } catch {}
+}
+
+const lockState = acquireBridgeLock();
+if (!lockState.acquired) {
+  if (isNativeMode) {
+    runAsBridgeClientOnly = true;
+    console.error(`🧬 [Proxy] Active Sinew Chrome Bridge detected via ${LOCK_PATH} (pid=${lockState.current?.pid || 'unknown'}). Starting native tunnel client.`);
+  } else {
+    console.error(`🧬 [Proxy] Active Sinew Chrome Bridge already running (pid=${lockState.current?.pid || 'unknown'}). Exiting.`);
+    process.exit(0);
+  }
+}
+
+if (lockFd !== null) {
+  const heartbeat = setInterval(() => {
+    try { writeBridgeLock(lockFd); } catch {}
+  }, 5000);
+  heartbeat.unref?.();
+}
+
+process.on('exit', releaseBridgeLock);
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(signal, () => {
+    releaseBridgeLock();
+    process.exit(0);
+  });
 }
 
 const { spawn } = require('child_process');
@@ -79,8 +174,200 @@ function isExtensionConnected() {
   return !!(extensionSocket && typeof extensionSocket.send === 'function' && (extensionSocket.readyState === WebSocket.OPEN || extensionSocket.isNative === true));
 }
 
-// Native Messaging host state
-let mcpProcess = null;
+class TabSession {
+  constructor(tabId) {
+    this.tabId = String(tabId);
+    this.createdAt = Date.now();
+    this.lastUsedAt = Date.now();
+    this.lastDetachedAt = null;
+    this.attached = false;
+    this.pageSockets = new Set();
+  }
+
+  touch() { this.lastUsedAt = Date.now(); }
+
+  addSocket(socket) {
+    this.pageSockets.add(socket);
+    this.touch();
+  }
+
+  removeSocket(socket) {
+    this.pageSockets.delete(socket);
+    this.touch();
+  }
+
+  get activeSocketCount() {
+    return Array.from(this.pageSockets).filter(socket => socket.readyState === WebSocket.OPEN).length;
+  }
+
+  snapshot() {
+    return {
+      tabId: this.tabId,
+      attached: this.attached,
+      sockets: this.activeSocketCount,
+      createdAt: this.createdAt,
+      lastUsedAt: this.lastUsedAt,
+      lastDetachedAt: this.lastDetachedAt,
+    };
+  }
+}
+
+class BrowserSessionManager {
+  constructor(cleanupPolicy = {}) {
+    this.cleanupPolicy = {
+      detachIdleAfterMs: 30000,
+      forgetDetachedAfterMs: 120000,
+      ...cleanupPolicy,
+    };
+    this.tabSessions = new Map();
+    this.browserSockets = new Set();
+    const timer = setInterval(() => this.cleanup(), 10000);
+    timer.unref?.();
+  }
+
+  getTabSession(tabId) {
+    const key = String(tabId);
+    let session = this.tabSessions.get(key);
+    if (!session) {
+      session = new TabSession(key);
+      this.tabSessions.set(key, session);
+    }
+    return session;
+  }
+
+  addPageSocket(tabId, socket) { this.getTabSession(tabId).addSocket(socket); }
+
+  removePageSocket(tabId, socket) {
+    const session = this.tabSessions.get(String(tabId));
+    if (session) session.removeSocket(socket);
+  }
+
+  addBrowserSocket(socket) { this.browserSockets.add(socket); }
+
+  removeBrowserSocket(socket) {
+    this.browserSockets.delete(socket);
+    for (const session of this.tabSessions.values()) session.removeSocket(socket);
+  }
+
+  markAttached(tabId) {
+    const session = this.getTabSession(tabId);
+    session.attached = true;
+    session.lastDetachedAt = null;
+    session.touch();
+  }
+
+  markDetached(tabId) {
+    const session = this.tabSessions.get(String(tabId));
+    if (!session) return;
+    session.attached = false;
+    session.lastDetachedAt = Date.now();
+    session.touch();
+  }
+
+  removeTab(tabId) { this.tabSessions.delete(String(tabId)); }
+
+  cleanup() {
+    const now = Date.now();
+    for (const [tabId, session] of this.tabSessions.entries()) {
+      if (session.activeSocketCount === 0 && session.attached && now - session.lastUsedAt > this.cleanupPolicy.detachIdleAfterMs) {
+        if (isExtensionConnected()) {
+          extensionSocket.send(JSON.stringify({ id: ++messageCounter, command: 'detach', params: { tabId } }));
+        }
+        session.attached = false;
+        session.lastDetachedAt = now;
+      }
+      if (session.activeSocketCount === 0 && !session.attached && session.lastDetachedAt && now - session.lastDetachedAt > this.cleanupPolicy.forgetDetachedAfterMs) {
+        this.tabSessions.delete(tabId);
+      }
+    }
+  }
+
+  snapshot() {
+    return {
+      cleanup_policy: this.cleanupPolicy,
+      browserSockets: Array.from(this.browserSockets).filter(socket => socket.readyState === WebSocket.OPEN).length,
+      tabs: Array.from(this.tabSessions.values()).map(session => session.snapshot()),
+    };
+  }
+}
+
+const sessionManager = new BrowserSessionManager();
+
+function buildDiagnostics() {
+  const manifestProbe = probeNativeManifest();
+  const lockInfo = readBridgeLock();
+  const extensionConnected = isExtensionConnected();
+  const nativeVirtual = !!(extensionSocket && extensionSocket.isNative === true);
+  const causes = [];
+
+  if (!manifestProbe.registryPath) causes.push('manifest invalid: Native Messaging registry key missing');
+  else if (!manifestProbe.manifestExists) causes.push('manifest invalid: manifest file missing');
+  else if (!manifestProbe.hostPathExists) causes.push('manifest invalid: native host executable missing');
+  else if (!manifestProbe.allowedOriginLikelyOk) causes.push('extension id refused: current extension id is not in allowed_origins');
+
+  if (!extensionConnected) causes.push('host crashed or disconnected: extension is not connected to the proxy');
+  if (nativeVirtual && !isNativeMode) causes.push('stdout protocol error: native virtual socket present outside native mode');
+
+  return {
+    ok: causes.length === 0 && extensionConnected,
+    causes,
+    checks: {
+      host_crashed: !extensionConnected,
+      manifest_invalid: !!manifestProbe.registryPath && (!manifestProbe.manifestExists || !manifestProbe.hostPathExists),
+      extension_id_refused: !!manifestProbe.registryPath && manifestProbe.manifestExists && manifestProbe.allowedOriginLikelyOk === false,
+      stdout_protocol_error: false,
+    },
+    native: {
+      isNativeMode,
+      virtualSocket: nativeVirtual,
+      registryPath: manifestProbe.registryPath,
+      manifestPath: manifestProbe.manifestPath,
+      hostPath: manifestProbe.hostPath,
+      manifestExists: manifestProbe.manifestExists,
+      hostPathExists: manifestProbe.hostPathExists,
+      allowedOrigins: manifestProbe.allowedOrigins,
+    },
+    lock: {
+      path: LOCK_PATH,
+      owner: lockInfo,
+      thisPid: process.pid,
+    },
+    sessions: sessionManager.snapshot(),
+    chromeExecutable: findChromeExecutable(),
+  };
+}
+
+function probeNativeManifest() {
+  const result = {
+    registryPath: null,
+    manifestPath: null,
+    hostPath: null,
+    manifestExists: false,
+    hostPathExists: false,
+    allowedOrigins: [],
+    allowedOriginLikelyOk: null,
+  };
+
+  if (process.platform !== 'win32') return result;
+  try {
+    const { execFileSync } = require('child_process');
+    const output = execFileSync('reg', ['query', 'HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.sinew.chrome_bridge', '/ve'], { encoding: 'utf8', windowsHide: true });
+    const match = output.match(/REG_SZ\s+(.+)$/m);
+    if (match) {
+      result.registryPath = match[1].trim();
+      result.manifestPath = result.registryPath;
+      result.manifestExists = fs.existsSync(result.manifestPath);
+      if (result.manifestExists) {
+        const manifest = JSON.parse(fs.readFileSync(result.manifestPath, 'utf8').replace(/^\uFEFF/, ''));
+        result.hostPath = manifest.path || null;
+        result.hostPathExists = !!(result.hostPath && fs.existsSync(result.hostPath));
+        result.allowedOrigins = Array.isArray(manifest.allowed_origins) ? manifest.allowed_origins : [];
+        result.allowedOriginLikelyOk = result.allowedOrigins.length > 0;
+      }
+    }
+  } catch {}
+  return result;
+}
 
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -119,6 +406,7 @@ const server = http.createServer((req, res) => {
     }
   }
   else if (pathname === '/api/status') {
+    const diagnostics = buildDiagnostics();
     res.writeHead(200);
     res.end(JSON.stringify({
       isNativeMode,
@@ -127,7 +415,13 @@ const server = http.createServer((req, res) => {
       extensionSocketState: extensionSocket ? extensionSocket.readyState : null,
       extensionSocketIsVirtual: extensionSocket && extensionSocket.isNative === true,
       chromeExecutable: findChromeExecutable(),
+      diagnostics,
+      sessions: sessionManager.snapshot(),
     }));
+  }
+  else if (pathname === '/api/diagnostics') {
+    res.writeHead(200);
+    res.end(JSON.stringify(buildDiagnostics()));
   } 
   else if (pathname === '/json' || pathname === '/json/list') {
     // Return the list of open tabs that can be debugged
@@ -378,6 +672,78 @@ const server = http.createServer((req, res) => {
     });
 
     extensionSocket.send(JSON.stringify({ id: requestId, command: 'detach_all' }));
+  }
+  else if (pathname === '/api/navigate_tab') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+
+    const tabId = parseInt(parsedUrl.query.tabId);
+    const targetUrl = parsedUrl.query.url || 'about:blank';
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => { res.writeHead(200); res.end(JSON.stringify(data)); },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: 'Timeout waiting for navigation' }));
+      }, 7000)
+    });
+    extensionSocket.send(JSON.stringify({ id: requestId, command: 'navigate_tab', params: { tabId, url: targetUrl } }));
+  }
+  else if (pathname === '/api/detect_target') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+
+    const tabId = parseInt(parsedUrl.query.tabId);
+    const task = String(parsedUrl.query.task || '');
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => { res.writeHead(200); res.end(JSON.stringify(data)); },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: 'Timeout waiting for target detection' }));
+      }, 20000)
+    });
+    extensionSocket.send(JSON.stringify({ id: requestId, command: 'detect_target', params: { tabId, task } }));
+  }
+  else if (pathname === '/api/human_click') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+
+    const tabId = parseInt(parsedUrl.query.tabId);
+    let detection = null;
+    let cursor = null;
+    try { detection = JSON.parse(String(parsedUrl.query.detection || '{}')); } catch {}
+    try { cursor = JSON.parse(String(parsedUrl.query.cursor || '{}')); } catch {}
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => { res.writeHead(200); res.end(JSON.stringify(data)); },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: 'Timeout waiting for human click' }));
+      }, 20000)
+    });
+    extensionSocket.send(JSON.stringify({ id: requestId, command: 'human_click', params: { tabId, detection, cursor } }));
   }
   else if (pathname === '/api/create_tab') {
     res.setHeader('Content-Type', 'application/json');
@@ -1590,6 +1956,7 @@ function handleExtensionMessage(msg) {
       }
     }
     else if (msg.type === "target_destroyed") {
+      sessionManager.removeTab(msg.tabId);
       // Broadcast real-time tab deletion events to browser-level Playwright sockets
       if (browserSockets.size > 0) {
         const cdpEvent = JSON.stringify({
@@ -1604,6 +1971,9 @@ function handleExtensionMessage(msg) {
           }
         }
       }
+    }
+    else if (msg.type === "detached") {
+      sessionManager.markDetached(msg.tabId);
     }
     else if (msg.type === "save_macro") {
       console.error("ðŸ§¬ [Proxy] Save macro request received:", msg.macro.name);
@@ -1638,7 +2008,7 @@ function handleExtensionMessage(msg) {
 // ----------------------------------------------------
 // NATIVE MESSAGING STANDARD I/O ENGINES
 // ----------------------------------------------------
-if (isNativeMode) {
+if (isNativeMode && !runAsBridgeClientOnly) {
   console.error("ðŸ§¬ [Proxy] Native Messaging session active. Initializing standard I/O streams...");
 
   const virtualSocket = {
@@ -1747,9 +2117,11 @@ wss.on('connection', (ws, req) => {
       pageSockets.set(tabId, new Set());
     }
     pageSockets.get(tabId).add(ws);
+    sessionManager.addPageSocket(tabId, ws);
 
     // Auto-attach tab in extension immediately on socket open
     if (isExtensionConnected()) {
+      sessionManager.markAttached(tabId);
       extensionSocket.send(JSON.stringify({
         id: ++messageCounter,
         command: "attach",
@@ -1840,12 +2212,14 @@ wss.on('connection', (ws, req) => {
     ws.on('close', () => {
       console.log(`ðŸ§¬ [Proxy] Playwright disconnected from tab ${tabId}`);
       const sockets = pageSockets.get(tabId);
+      sessionManager.removePageSocket(tabId, ws);
       if (sockets) {
         sockets.delete(ws);
         if (sockets.size === 0) {
           pageSockets.delete(tabId);
           // Detach debugger in extension to release resources
           if (isExtensionConnected()) {
+            sessionManager.markDetached(tabId);
             extensionSocket.send(JSON.stringify({
               id: ++messageCounter,
               command: "detach",
@@ -1863,6 +2237,7 @@ wss.on('connection', (ws, req) => {
   else if (pathname === '/devtools/browser') {
     console.log("ðŸ§¬ [Proxy] Playwright browser-level connected!");
     browserSockets.add(ws);
+    sessionManager.addBrowserSocket(ws);
 
     ws.on('message', async (message) => {
       try {
@@ -1956,6 +2331,7 @@ wss.on('connection', (ws, req) => {
           
           // Request debugger attach in the extension
           if (isExtensionConnected()) {
+            sessionManager.markAttached(tabId);
             extensionSocket.send(JSON.stringify({
               id: ++messageCounter,
               command: "attach",
@@ -2027,8 +2403,10 @@ wss.on('connection', (ws, req) => {
                   pageSockets.set(tabIdStr, new Set());
                 }
                 pageSockets.get(tabIdStr).add(ws);
+                sessionManager.addPageSocket(tabIdStr, ws);
 
                 // Auto-attach tab in extension
+                sessionManager.markAttached(tabIdStr);
                 extensionSocket.send(JSON.stringify({
                   id: ++messageCounter,
                   command: "attach",
@@ -2095,6 +2473,7 @@ wss.on('connection', (ws, req) => {
                   pageSockets.set(tabIdStr, new Set());
                 }
                 pageSockets.get(tabIdStr).add(ws);
+                sessionManager.addPageSocket(tabIdStr, ws);
 
                 ws.send(JSON.stringify({
                   id: msg.id,
@@ -2195,6 +2574,7 @@ wss.on('connection', (ws, req) => {
     ws.on('close', () => {
       console.log("ðŸ§¬ [Proxy] Playwright browser-level disconnected.");
       browserSockets.delete(ws);
+      sessionManager.removeBrowserSocket(ws);
     });
   } 
   
@@ -2330,9 +2710,11 @@ function handleListenError(err) {
     if (bridgeClientModeStarted) return;
     bridgeClientModeStarted = true;
     if (isNativeMode) {
+      releaseBridgeLock();
       console.error("🧬 [Proxy] Port 29002 is already occupied. Starting in Bridge Client Mode...");
       startBridgeClientMode();
     } else {
+      releaseBridgeLock();
       console.error("🧬 [Proxy] Port 29002 is already in use. Another instance of Sinew Chrome Bridge is running. Exiting silently.");
       process.exit(0);
     }
@@ -2395,8 +2777,12 @@ function startBridgeClientMode() {
   });
 }
 
-server.listen(PORT, () => {
-  console.log(`ðŸ§¬ [Proxy] UPGRADED Sinew Chrome Bridge listening on http://localhost:${PORT}`);
-  console.log(`ðŸ§¬ [Proxy] Standard CDP browser endpoint: ws://localhost:${PORT}/devtools/browser`);
-  console.log(`ðŸ§¬ [Proxy] Waiting for Chrome Extension to connect on /extension...`);
-});
+if (runAsBridgeClientOnly) {
+  startBridgeClientMode();
+} else {
+  server.listen(PORT, () => {
+    console.log(`ðŸ§¬ [Proxy] UPGRADED Sinew Chrome Bridge listening on http://localhost:${PORT}`);
+    console.log(`ðŸ§¬ [Proxy] Standard CDP browser endpoint: ws://localhost:${PORT}/devtools/browser`);
+    console.log(`ðŸ§¬ [Proxy] Waiting for Chrome Extension to connect on /extension...`);
+  });
+}
