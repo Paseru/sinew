@@ -17,6 +17,31 @@ mod tests {
     }
 
     #[test]
+    fn oauth_only_identity_is_ready() {
+        let identity = CursorIdeIdentity {
+            machine_id: uuid::Uuid::new_v4().to_string(),
+            machine_id_from_ide: false,
+            client_version: crate::identity::CURSOR_CLIENT_VERSION.into(),
+            timezone: "UTC".into(),
+            platform: "windows".into(),
+            arch: "x64".into(),
+            shell: "powershell".into(),
+        };
+        identity
+            .ensure_ready()
+            .expect("oauth-only identity should be ready");
+    }
+
+    #[test]
+    fn loaded_identity_is_ready_without_cursor_ide() {
+        let identity = CursorIdeIdentity::load();
+        identity
+            .ensure_ready()
+            .expect("loaded identity should always have a machine id");
+        assert!(!identity.machine_id.is_empty());
+    }
+
+    #[test]
     fn composer_supports_images() {
         let caps = crate::model_info::capabilities(&ModelRef::new("cursor", "composer-2.5-fast"));
         assert!(caps.supports_images);

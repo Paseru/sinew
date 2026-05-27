@@ -1,17 +1,17 @@
 use std::{
-    path::PathBuf,
-    sync::OnceLock,
+    fs,
+    path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
 use base64::Engine as _;
+use directories::ProjectDirs;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use sinew_core::{AppError, Result};
 
 pub const CURSOR_CLIENT_VERSION: &str = "3.5.33";
-
-static FALLBACK_MACHINE_ID: OnceLock<String> = OnceLock::new();
 
 #[derive(Clone, Debug)]
 pub struct CursorIdeIdentity {
@@ -34,22 +34,21 @@ impl CursorIdeIdentity {
     }
 
     pub fn ensure_ready(&self) -> Result<()> {
-        if !self.machine_id_from_ide {
+        if self.machine_id.trim().is_empty() {
             return Err(AppError::Auth(
-                "Cursor IDE machineId not found. Install Cursor, sign in once, then retry.".into(),
+                "Composer device machineId unavailable.".into(),
             ));
         }
         if self.client_version.trim().is_empty() {
             return Err(AppError::Auth(
-                "Cursor IDE version not found. Install Cursor and retry.".into(),
+                "Cursor client version unavailable.".into(),
             ));
         }
         Ok(())
     }
 
     fn assemble() -> Self {
-        let machine_id_from_ide = read_ide_machine_id().is_some();
-        let machine_id = read_ide_machine_id().unwrap_or_else(fallback_machine_id);
+        let (machine_id, machine_id_from_ide) = resolve_machine_id();
         let client_version =
             read_ide_client_version().unwrap_or_else(|| CURSOR_CLIENT_VERSION.into());
         let (platform, arch) = detect_platform();
@@ -145,10 +144,63 @@ fn set_header(headers: &mut HeaderMap, name: &str, value: &str) {
     }
 }
 
-fn fallback_machine_id() -> String {
-    FALLBACK_MACHINE_ID
-        .get_or_init(|| uuid::Uuid::new_v4().to_string())
-        .clone()
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedDevice {
+    machine_id: String,
+}
+
+fn sinew_device_path() -> Option<PathBuf> {
+    ProjectDirs::from("dev", "hyrak", "sinew")
+        .map(|dirs| dirs.data_local_dir().join("cursor-composer-device.json"))
+}
+
+fn resolve_machine_id() -> (String, bool) {
+    if let Some(ide_id) = read_ide_machine_id() {
+        let trimmed = ide_id.trim();
+        if !trimmed.is_empty() {
+            return (trimmed.to_string(), true);
+        }
+    }
+    (load_or_create_sinew_machine_id(), false)
+}
+
+fn load_or_create_sinew_machine_id() -> String {
+    let Some(path) = sinew_device_path() else {
+        return uuid::Uuid::new_v4().to_string();
+    };
+
+    if let Ok(contents) = fs::read_to_string(&path) {
+        if let Ok(device) = serde_json::from_str::<PersistedDevice>(&contents) {
+            let trimmed = device.machine_id.trim();
+            if is_valid_machine_id(trimmed) {
+                return trimmed.to_string();
+            }
+        }
+    }
+
+    let machine_id = uuid::Uuid::new_v4().to_string();
+    let _ = persist_sinew_machine_id(&path, &machine_id);
+    machine_id
+}
+
+fn persist_sinew_machine_id(path: &Path, machine_id: &str) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|err| AppError::Auth(format!("unable to create device dir: {err}")))?;
+    }
+    let payload = PersistedDevice {
+        machine_id: machine_id.to_string(),
+    };
+    let json = serde_json::to_string_pretty(&payload)
+        .map_err(|err| AppError::Auth(format!("unable to encode device id: {err}")))?;
+    fs::write(path, json)
+        .map_err(|err| AppError::Auth(format!("unable to persist device id: {err}")))?;
+    Ok(())
+}
+
+fn is_valid_machine_id(value: &str) -> bool {
+    !value.is_empty() && uuid::Uuid::parse_str(value).is_ok()
 }
 
 fn default_ide_state_db() -> Option<PathBuf> {
@@ -264,6 +316,34 @@ fn read_sqlite_value(row: &rusqlite::Row<'_>) -> rusqlite::Result<String> {
             "value".into(),
             rusqlite::types::Type::Text,
         )),
+    }
+}
+
+#[cfg(test)]
+mod identity_tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn persisted_device_roundtrip() {
+        let path = std::env::temp_dir().join(format!(
+            "sinew-cursor-device-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+        let id = uuid::Uuid::new_v4().to_string();
+        persist_sinew_machine_id(&path, &id).expect("persist device id");
+        let contents = fs::read_to_string(&path).expect("read device file");
+        let device: PersistedDevice =
+            serde_json::from_str(&contents).expect("parse device file");
+        assert_eq!(device.machine_id, id);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn rejects_invalid_machine_id() {
+        assert!(!is_valid_machine_id(""));
+        assert!(!is_valid_machine_id("not-a-uuid"));
+        assert!(is_valid_machine_id(&uuid::Uuid::new_v4().to_string()));
     }
 }
 

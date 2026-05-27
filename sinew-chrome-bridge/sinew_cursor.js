@@ -589,6 +589,81 @@
   // ==========================================================
   let controlledIndicatorTimer = null;
 
+  // ==========================================================
+  // Favicon Badge Status Indicators (Sinew Style)
+  // ==========================================================
+  const BADGE_CREATED_FLAG = "sinewFaviconBadgeCreated";
+  const ORIGINAL_HREF_KEY = "sinewOriginalFaviconHref";
+
+  function getFaviconLinks() {
+    return Array.from(document.querySelectorAll('link[rel~="icon"], link[rel="shortcut icon"]'));
+  }
+
+  function restoreOriginalFavicon() {
+    const links = getFaviconLinks();
+    for (const link of links) {
+      if (link.dataset[BADGE_CREATED_FLAG] === "true") {
+        link.remove();
+      } else if (link.dataset[ORIGINAL_HREF_KEY]) {
+        link.href = link.dataset[ORIGINAL_HREF_KEY];
+        delete link.dataset[BADGE_CREATED_FLAG];
+        delete link.dataset[ORIGINAL_HREF_KEY];
+        link.removeAttribute("data-sinew-badge");
+      }
+    }
+  }
+
+  function setFaviconBadge(status) {
+    restoreOriginalFavicon();
+    if (status === "detached" || status === "idle" || !status) {
+      return;
+    }
+
+    const links = getFaviconLinks();
+    let targetLink = links[0];
+
+    if (!targetLink) {
+      targetLink = document.createElement("link");
+      targetLink.rel = "icon";
+      targetLink.dataset[BADGE_CREATED_FLAG] = "true";
+      if (document.head) document.head.appendChild(targetLink);
+      else document.documentElement.appendChild(targetLink);
+    }
+
+    if (!targetLink.dataset[ORIGINAL_HREF_KEY]) {
+      targetLink.dataset[ORIGINAL_HREF_KEY] = targetLink.getAttribute("href") || "";
+    }
+
+    const originalHref = targetLink.dataset[ORIGINAL_HREF_KEY];
+    let absoluteOriginalHref = "";
+    if (originalHref && !originalHref.startsWith("data:")) {
+      try {
+        absoluteOriginalHref = new URL(originalHref, window.location.href).href;
+      } catch (e) {
+        absoluteOriginalHref = originalHref;
+      }
+    }
+    
+    let badgeColor = "#ff6b00"; // Active: Neon Orange
+    if (status === "recording") {
+      badgeColor = "#ff0080"; // Recording: Neon Pink
+    } else if (status === "completed") {
+      badgeColor = "#66f7ff"; // Completed: Neon Teal (Teal matches Completed)
+    }
+
+    let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">`;
+    if (absoluteOriginalHref) {
+      const escapedHref = absoluteOriginalHref.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      svgContent += `<image href="${escapedHref}" width="32" height="32" />`;
+    } else {
+      svgContent += `<circle cx="16" cy="16" r="14" fill="none" stroke="#8fa0b0" stroke-width="1.5" /><path d="M16 2a14 14 0 0 1 0 28M2 16a14 14 0 0 1 28 0M16 2v28M2 16h28" stroke="#8fa0b0" stroke-width="1" fill="none" />`;
+    }
+    svgContent += `<circle cx="24" cy="24" r="6" fill="${badgeColor}" stroke="#111827" stroke-width="1.5" /></svg>`;
+
+    targetLink.href = "data:image/svg+xml," + encodeURIComponent(svgContent);
+    targetLink.dataset.sinewBadge = "true";
+  }
+
   function updateControlledTabIndicator(status) {
     if (status === "detached" || status === "idle" || status === false) {
       tabIndicator.classList.remove("active");
@@ -621,6 +696,10 @@
         sessionId: message.state.sessionId,
         turnId: message.state.turnId
       });
+      if (message.state.visible) {
+        updateControlledTabIndicator("active");
+        setFaviconBadge("active");
+      }
       sendResponse({ ok: true });
     }
     else if (message.type === "AGENT_CLICK_EVENT") {
@@ -632,6 +711,7 @@
     }
     else if (message.type === "AGENT_STATUS_CHANGE") {
       updateControlledTabIndicator(message.status);
+      setFaviconBadge(message.status);
       sendResponse({ ok: true });
     }
     else if (message.type === "AGENT_DOM_CLICK") {
@@ -1161,12 +1241,14 @@
     isRecording = true;
     recordedSteps = [];
     recordingStartTime = performance.now();
+    setFaviconBadge("recording");
     renderExpanded();
     triggerClickShockwave(window.innerWidth / 2, window.innerHeight / 2);
   }
 
   function stopRecordingMacro() {
     isRecording = false;
+    setFaviconBadge(activeState.visible ? "active" : "detached");
     renderExpanded();
   }
 

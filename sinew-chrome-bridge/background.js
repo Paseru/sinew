@@ -433,6 +433,12 @@ async function handleMessage(msg) {
             }
 
             const failed = results.find(r => r && r.success === false);
+            if (!failed) {
+              chrome.tabs.sendMessage(silentTabId, { type: "AGENT_STATUS_CHANGE", status: "completed" }).catch(() => {});
+              setTimeout(() => {
+                chrome.tabs.sendMessage(silentTabId, { type: "AGENT_STATUS_CHANGE", status: "detached" }).catch(() => {});
+              }, 4000);
+            }
             sendResponse(id, failed ? { success: false, results, error: failed.error } : { success: true, results });
             resolve();
           });
@@ -502,25 +508,76 @@ async function attachDebuggerIfNeeded(tabId) {
 }
 
 function humanPath(start, end, steps = 34) {
-  const points = [];
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const dist = Math.max(1, Math.hypot(dx, dy));
-  const curve = Math.min(120, Math.max(24, dist * 0.18));
-  const nx = -dy / dist;
-  const ny = dx / dist;
-  const c1 = { x: start.x + dx * 0.35 + nx * curve, y: start.y + dy * 0.35 + ny * curve };
-  const c2 = { x: start.x + dx * 0.72 - nx * curve * 0.55, y: start.y + dy * 0.72 - ny * curve * 0.55 };
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    const u = 1 - ease;
-    points.push({
-      x: u * u * u * start.x + 3 * u * u * ease * c1.x + 3 * u * ease * ease * c2.x + ease * ease * ease * end.x,
-      y: u * u * u * start.y + 3 * u * u * ease * c1.y + 3 * u * ease * ease * c2.y + ease * ease * ease * end.y,
-    });
+  
+  // Generate 6 candidates with varying curve scales and directions
+  const candidates = [];
+  const multipliers = [0.4, 0.8, 1.2, -0.4, -0.8, -1.2];
+  
+  for (const mult of multipliers) {
+    const points = [];
+    const curve = Math.min(130, Math.max(20, dist * 0.20)) * mult;
+    const nx = -dy / dist;
+    const ny = dx / dist;
+    
+    const c1 = { x: start.x + dx * 0.35 + nx * curve, y: start.y + dy * 0.35 + ny * curve };
+    const c2 = { x: start.x + dx * 0.72 - nx * curve * 0.55, y: start.y + dy * 0.72 - ny * curve * 0.55 };
+    
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const u = 1 - ease;
+      points.push({
+        x: u * u * u * start.x + 3 * u * u * ease * c1.x + 3 * u * ease * ease * c2.x + ease * ease * ease * end.x,
+        y: u * u * u * start.y + 3 * u * u * ease * c1.y + 3 * u * ease * ease * c2.y + ease * ease * ease * end.y,
+      });
+    }
+    candidates.push(points);
   }
-  return points;
+  
+  // Score candidates to find the smoothest path that stays in bounds
+  // Default bounds safety margins
+  const width = 1280;
+  const height = 720;
+  
+  let bestPoints = candidates[0];
+  let minScore = Infinity;
+  
+  for (const points of candidates) {
+    let outOfBoundsCount = 0;
+    let totalJerkiness = 0;
+    let prevAngle = null;
+    
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      if (p.x < 10 || p.x > width - 10 || p.y < 10 || p.y > height - 10) {
+        outOfBoundsCount++;
+      }
+      
+      if (i > 0) {
+        const prev = points[i - 1];
+        const angle = Math.atan2(p.y - prev.y, p.x - prev.x);
+        if (prevAngle !== null) {
+          let diff = Math.abs(angle - prevAngle);
+          if (diff > Math.PI) diff = 2 * Math.PI - diff;
+          totalJerkiness += diff;
+        }
+        prevAngle = angle;
+      }
+    }
+    
+    const boundsPenalty = outOfBoundsCount * 10000;
+    const score = boundsPenalty + totalJerkiness * 50;
+    
+    if (score < minScore) {
+      minScore = score;
+      bestPoints = points;
+    }
+  }
+  
+  return bestPoints;
 }
 
 async function showCursor(tabId, x, y, moveSequence = ++cursorMoveSeq, cursorOptions = normalizeCursorOptions()) {
@@ -905,4 +962,22 @@ chrome.runtime.onInstalled?.addListener(() => {
 
 // Auto connect immediately whenever the service worker is loaded
 connect();
+
+// ==========================================================
+// Hot Reload / Auto-Update Lifecycle (Sinew style)
+// ==========================================================
+if (chrome.runtime.onUpdateAvailable) {
+  chrome.runtime.onUpdateAvailable.addListener((details) => {
+    console.log(`🧬 [Bridge] New version available: ${details.version}. Hot-reloading when idle...`);
+    const checkIdleAndReload = () => {
+      if (attachedTabs.size === 0) {
+        console.log("🧬 [Bridge] System idle. Reloading extension now.");
+        chrome.runtime.reload();
+      } else {
+        setTimeout(checkIdleAndReload, 10000);
+      }
+    };
+    checkIdleAndReload();
+  });
+}
 
