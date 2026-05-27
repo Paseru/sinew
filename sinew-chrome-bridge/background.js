@@ -228,6 +228,19 @@ async function handleMessage(msg) {
         });
         break;
 
+      case "page_snapshot":
+        runLocked(async () => {
+          const tabId = parseInt(params.tabId);
+          try {
+            await ensureCursorInjected(tabId);
+            const response = await sendTabMessage(tabId, { type: "AGENT_PAGE_SNAPSHOT", limit: params.limit || 80 }, 12000);
+            sendResponse(id, response || { success: false, error: "No snapshot response" });
+          } catch (err) {
+            sendResponse(id, { success: false, error: err.message });
+          }
+        });
+        break;
+
       case "human_click":
         runLocked(async () => {
           const tabId = parseInt(params.tabId);

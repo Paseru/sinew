@@ -780,6 +780,29 @@ const server = http.createServer((req, res) => {
     });
     extensionSocket.send(JSON.stringify({ id: requestId, command: 'detect_target', params: { tabId, task } }));
   }
+  else if (pathname === '/api/page_snapshot') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: false, error: "Chrome Extension is not connected." }));
+      return;
+    }
+
+    const tabId = parseInt(parsedUrl.query.tabId);
+    const limit = Math.max(1, Math.min(200, Number(parsedUrl.query.limit) || 80));
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => { res.writeHead(200); res.end(JSON.stringify(data)); },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: 'Timeout waiting for page snapshot' }));
+      }, 15000)
+    });
+    extensionSocket.send(JSON.stringify({ id: requestId, command: 'page_snapshot', params: { tabId, limit } }));
+  }
   else if (pathname === '/api/human_click') {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');

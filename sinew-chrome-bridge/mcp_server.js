@@ -722,6 +722,70 @@ async function detectTargetViaBridge(tabId, taskText) {
   return requestJSON(`${BRIDGE_ORIGIN}/api/detect_target?tabId=${encodeURIComponent(tabId)}&task=${encodeURIComponent(taskText)}`, 20000);
 }
 
+async function getPageSnapshotViaBridge(tabId, limit = 80) {
+  return requestJSON(`${BRIDGE_ORIGIN}/api/page_snapshot?tabId=${encodeURIComponent(tabId)}&limit=${encodeURIComponent(limit)}`, 15000);
+}
+
+function scoreSnapshotItem(item, taskText) {
+  const text = String(taskText || '').toLowerCase();
+  const haystack = [item.visibleText, item.ariaName, item.href, item.selector?.primary, ...(item.selector?.candidates || [])]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const words = text
+    .replace(/\b(clique|cliquer|click|ouvre|ouvrir|open|dans|sur|le|la|les|un|une|du|de|des|champ|bouton|lien|résultat|resultat|site|page|tape|type|saisis|ecris|écris)\b/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w.length >= 2);
+  let score = 0;
+  for (const word of words) {
+    if (haystack.includes(word)) score += 80;
+    if ((item.visibleText || '').toLowerCase().includes(word)) score += 40;
+    if ((item.ariaName || '').toLowerCase().includes(word)) score += 50;
+    if ((item.href || '').toLowerCase().includes(word)) score += 35;
+  }
+  if (/\b(recherche|search|google)\b/i.test(text) && item.editable) score += 220;
+  if (/\b(clique|click|lien|résultat|resultat|ouvre|open)\b/i.test(text) && item.clickable) score += 90;
+  if (/\b(tape|type|saisis|ecris|écris|champ)\b/i.test(text) && item.editable) score += 120;
+  if (item.visible) score += 30;
+  if (!item.boundingBox || !item.center) score -= 500;
+  return score;
+}
+
+async function detectTargetViaSnapshot(tabId, taskText) {
+  const snapshot = await getPageSnapshotViaBridge(tabId, 120).catch(err => ({ success: false, error: err.message }));
+  if (!snapshot || snapshot.success === false || !Array.isArray(snapshot.items)) return snapshot;
+  let best = null;
+  let bestScore = -Infinity;
+  for (const item of snapshot.items) {
+    const score = scoreSnapshotItem(item, taskText);
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+  if (!best || bestScore <= 0 || !best.center || !best.boundingBox) {
+    return { success: false, error: 'No snapshot target found', snapshot };
+  }
+  const action = /\b(tape|type|saisis|ecris|écris)\b/i.test(String(taskText || '')) ? 'type' : 'click';
+  const typeMatch = String(taskText || '').match(/(?:tape|type|saisis|ecris|écris)\s+(.+?)(?:\s+puis|\s+et|$)/i);
+  return {
+    success: true,
+    action,
+    target: {
+      x: best.center.x,
+      y: best.center.y,
+      rect: { left: best.boundingBox.x, top: best.boundingBox.y, width: best.boundingBox.width, height: best.boundingBox.height },
+      element: { tagName: best.tagName, id: '', className: '', href: best.href || '', selector: best.selector?.primary || null, role: best.role || null },
+      score: bestScore,
+    },
+    text: action === 'type' && typeMatch ? cleanSearchQuery(typeMatch[1]) : undefined,
+    submit: action === 'type' ? /\b(entrée|enter|valide|submit|recherche)\b/i.test(String(taskText || '')) : undefined,
+    snapshotItem: best,
+    message: `Cible snapshot détectée à (${best.center.x}, ${best.center.y}) pour ${best.tagName}.`
+  };
+}
+
 async function performHumanBridgeClick(tabId, detection, cursorOptions = {}) {
   const cursor = normalizeCursorOptions(cursorOptions);
   const result = await requestJSON(`${BRIDGE_ORIGIN}/api/human_click?tabId=${encodeURIComponent(tabId)}&detection=${encodeURIComponent(JSON.stringify(detection))}&cursor=${encodeURIComponent(JSON.stringify(cursor))}`, 20000);
@@ -749,6 +813,10 @@ async function executeAction(tabId, taskText, timeoutMs = 30000, cursorOptions =
 
     const bridgeDetection = await detectTargetViaBridge(tabId, taskText).catch(err => ({ success: false, error: err.message }));
     let detection = bridgeDetection;
+    if ((!detection?.target || detection.success === false)) {
+      const snapshotDetection = await detectTargetViaSnapshot(tabId, taskText).catch(err => ({ success: false, error: err.message, bridgeDetection }));
+      if (snapshotDetection?.target) detection = snapshotDetection;
+    }
     if ((!detection?.target || detection.success === false) && ALLOW_CDP_FALLBACK) {
       detection = await detectTargetViaCdp(tabId, taskText).catch(err => ({ success: false, error: err.message, bridgeDetection }));
     }
@@ -1049,6 +1117,11 @@ const MCP_TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'page_snapshot',
+    description: 'Retourne une perception DOM structurée de la page active, sans CDP ni barre debug.',
+    inputSchema: { type: 'object', properties: { limit: { type: 'number', description: 'Nombre maximal d’éléments' } } }
+  },
+  {
     name: 'screenshot',
     description: 'Capture une image de l’onglet Chrome actif via CDP local.',
     inputSchema: { type: 'object', properties: { format: { type: 'string', enum: ['jpeg', 'png'] }, quality: { type: 'number' } } }
@@ -1154,6 +1227,10 @@ rl.on('line', async (line) => {
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'get_page_state') {
         const resultText = await executeGetPageState();
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'page_snapshot') {
+        const tab = await getReadyTab(null);
+        const resultText = JSON.stringify(await getPageSnapshotViaBridge(tab.id, Number(args.limit) || 80).catch(err => ({ success: false, error: err.message })));
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'screenshot') {
         const resultText = await executeScreenshot(args.format || 'jpeg', args.quality || 70);

@@ -733,6 +733,92 @@
       sendResponse({ ok: true, scrollY: amount });
       return true;
     }
+    else if (message.type === "AGENT_PAGE_SNAPSHOT") {
+      handleActivity();
+      const limit = Math.max(1, Math.min(200, Number(message.limit) || 80));
+      const clean = (value, max = 160) => String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
+      const roleFor = (el) => {
+        const role = el.getAttribute("role");
+        if (role) return role;
+        if (el.tagName === "A" && el.getAttribute("href")) return "link";
+        if (el.tagName === "BUTTON") return "button";
+        if (el.tagName === "TEXTAREA") return "textbox";
+        if (el.tagName === "INPUT") {
+          const type = (el.getAttribute("type") || "text").toLowerCase();
+          if (["button", "submit", "reset"].includes(type)) return "button";
+          if (["checkbox", "radio", "range"].includes(type)) return type;
+          return "textbox";
+        }
+        if (el.tagName === "SELECT") return "combobox";
+        if (/^H[1-6]$/.test(el.tagName)) return "heading";
+        return null;
+      };
+      const selectorFor = (el) => {
+        const esc = (v) => window.CSS?.escape ? window.CSS.escape(String(v)) : String(v).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+        const candidates = [];
+        if (el.id) candidates.push(`#${esc(el.id)}`);
+        for (const attr of ["data-testid", "data-test", "data-cy", "name", "aria-label"]) {
+          const value = el.getAttribute(attr);
+          if (value) candidates.push(`${el.tagName.toLowerCase()}[${attr}="${esc(value)}"]`);
+        }
+        if (el.tagName === "A" && el.getAttribute("href")) candidates.push(`a[href="${esc(el.getAttribute("href"))}"]`);
+        const path = [];
+        let cur = el;
+        while (cur && cur.nodeType === Node.ELEMENT_NODE && cur !== document.documentElement && path.length < 6) {
+          let part = cur.tagName.toLowerCase();
+          if (cur.id) {
+            part += `#${esc(cur.id)}`;
+            path.unshift(part);
+            break;
+          }
+          let nth = 1;
+          let sib = cur.previousElementSibling;
+          while (sib) {
+            if (sib.tagName === cur.tagName) nth++;
+            sib = sib.previousElementSibling;
+          }
+          if (nth > 1) part += `:nth-of-type(${nth})`;
+          path.unshift(part);
+          cur = cur.parentElement;
+        }
+        if (path.length) candidates.push(path.join(" > "));
+        const unique = Array.from(new Set(candidates)).filter(Boolean).slice(0, 8);
+        return { primary: unique[0] || null, candidates: unique };
+      };
+      const nodes = Array.from(document.querySelectorAll('a[href], button, input, textarea, select, [role], [aria-label], [title], [onclick], [tabindex], [contenteditable="true"], summary, label, h1, h2, h3'));
+      const items = [];
+      for (const el of nodes) {
+        const rect = el.getBoundingClientRect();
+        const style = window.getComputedStyle(el);
+        const visible = rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && rect.bottom >= 0 && rect.right >= 0 && rect.top <= window.innerHeight && rect.left <= window.innerWidth;
+        if (!visible) continue;
+        const editable = el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable || el.getAttribute("role") === "textbox";
+        const clickable = el.tagName === "A" || el.tagName === "BUTTON" || el.getAttribute("role") === "button" || style.cursor === "pointer" || el.hasAttribute("onclick") || el.hasAttribute("tabindex") || el.tagName === "SUMMARY" || el.tagName === "LABEL";
+        const role = roleFor(el);
+        const text = clean(el.innerText || el.textContent || el.getAttribute("value") || "");
+        const ariaName = clean(el.getAttribute("aria-label") || el.getAttribute("title") || el.getAttribute("alt") || el.getAttribute("placeholder") || "");
+        if (!editable && !clickable && !ariaName && !text && !role) continue;
+        const selector = selectorFor(el);
+        items.push({
+          nodeId: items.length + 1,
+          tagName: el.tagName,
+          role,
+          visible,
+          clickable,
+          editable,
+          visibleText: text || null,
+          ariaName: ariaName || null,
+          href: el.getAttribute("href") || null,
+          boundingBox: { x: Math.round(rect.left), y: Math.round(rect.top), width: Math.round(rect.width), height: Math.round(rect.height) },
+          center: { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) },
+          selector,
+          preview: clean([role, ariaName || text, el.getAttribute("href") || ""].filter(Boolean).join(" | "), 220)
+        });
+        if (items.length >= limit) break;
+      }
+      sendResponse({ success: true, href: location.href, title: document.title, viewport: { width: window.innerWidth, height: window.innerHeight }, items });
+      return true;
+    }
     else if (message.type === "CONTENT_PING") {
       sendResponse({ ok: true });
     }
