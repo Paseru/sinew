@@ -665,7 +665,15 @@
     } else {
       svgContent += `<circle cx="16" cy="16" r="14" fill="none" stroke="#8fa0b0" stroke-width="1.5" /><path d="M16 2a14 14 0 0 1 0 28M2 16a14 14 0 0 1 28 0M16 2v28M2 16h28" stroke="#8fa0b0" stroke-width="1" fill="none" />`;
     }
-    svgContent += `<circle cx="24" cy="24" r="6" fill="${badgeColor}" stroke="#111827" stroke-width="1.5" /></svg>`;
+    
+    // Draw high-fidelity neon status badge iconography
+    if (status === "recording") {
+      svgContent += `<circle cx="25" cy="25" r="6" fill="#111827" stroke="#ffffff" stroke-width="1" /><circle cx="25" cy="25" r="3" fill="#ff0080" /></svg>`;
+    } else if (status === "completed") {
+      svgContent += `<circle cx="25" cy="25" r="6" fill="#111827" stroke="#ffffff" stroke-width="1" /><path d="M22 25 l2 2 l4 -4" fill="none" stroke="#66f7ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+    } else { // active
+      svgContent += `<path d="M20 20 l8 3.5 l-3.5 1 l-1 3.5 z" fill="#ff6b00" stroke="#ffffff" stroke-width="1" /></svg>`;
+    }
 
     targetLink.href = "data:image/svg+xml," + encodeURIComponent(svgContent);
     targetLink.dataset.sinewBadge = "true";
@@ -690,6 +698,19 @@
   function handleActivity() {
     markControlledActivity();
   }
+
+  // Keep-alive connection to prevent background service worker suspension
+  function connectKeepAlive() {
+    try {
+      const port = chrome.runtime.connect({ name: "sinew-keep-alive" });
+      port.onDisconnect.addListener(() => {
+        setTimeout(connectKeepAlive, 5000);
+      });
+    } catch (e) {
+      setTimeout(connectKeepAlive, 5000);
+    }
+  }
+  connectKeepAlive();
 
   // Listening to messages from background worker
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

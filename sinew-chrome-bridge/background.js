@@ -981,3 +981,12 @@ if (chrome.runtime.onUpdateAvailable) {
   });
 }
 
+// Keep-alive port listener from content scripts
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === "sinew-keep-alive") {
+    port.onDisconnect.addListener(() => {
+      // Automatic re-connection handled by client tabs
+    });
+  }
+});
+
