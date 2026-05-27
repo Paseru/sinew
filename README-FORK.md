@@ -64,6 +64,7 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
 * **🧭 Guidage dynamique Pending/Steering** : Le bouton « Influencer » ne force plus un arrêt immédiat par défaut. La consigne est envoyée au moteur comme message d’orientation en attente, puis intégrée dès le prochain point de contrôle logique.
 * **💬 Retour visuel immédiat** : Le message apparaît tout de suite dans le chat avec un badge **Pending**, et le bouton passe aussi en état **Pending** pendant l’attente.
 * **⚙️ Points de contrôle côté moteur** : L’agent relit les consignes d’orientation avant une nouvelle requête modèle, après une réponse assistant et après l’exécution d’outils.
+* **🛑 Arrêt fiable en cas de blocage réseau** : Les phases sensibles (chargement du catalogue MCP, connexion au modèle IA et pauses de retry après erreur réseau/503) écoutent maintenant le bouton **Arrêter**. Si un fournisseur rame ou tourne en boucle sur des retries, l'utilisateur peut reprendre la main proprement sans fermer l'application.
 * **🛡️ Fallback sécurisé** : Si le moteur ne peut pas accepter l’orientation en direct, l’application conserve l’ancien comportement fiable : arrêt propre puis relance avec la consigne.
   * 📂 *Fichiers : `crates/sinew-app/src/agent/cancel.rs`, `crates/sinew-app/src/agent/turn.rs`, `src-tauri/src/turns.rs`, `src/components/chat/ChatPane.tsx`, `src/components/chat/TodoStrip.tsx`, `src/components/chat/stream.ts`, `src/lib/ipc.ts`, `src/types.ts`, `src/styles.css`*
 * **🤖 Ajustements Google Antigravity & Quotas** :
