@@ -125,7 +125,7 @@ impl SubAgentTool {
             .agents
             .iter()
             .find(|agent| agent.enabled && tool_name_for_agent(agent) == name)
-            .map(|agent| format!("Sub-agent Â· {}", agent.name))
+            .map(|agent| format!("Sub-agent · {}", agent.name))
     }
 
     pub async fn run(
@@ -346,7 +346,7 @@ pub fn subagent_summary(name: &str, settings: &SubAgentSettings) -> Option<Strin
         .agents
         .iter()
         .find(|agent| tool_name_for_agent(agent) == name)
-        .map(|agent| format!("Sub-agent Â· {}", agent.name))
+        .map(|agent| format!("Sub-agent · {}", agent.name))
 }
 
 fn tool_name_for_agent(agent: &SubAgentConfig) -> String {

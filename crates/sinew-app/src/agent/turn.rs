@@ -472,7 +472,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                                             .as_ref()
                                             .map(|label| {
                                                 format!(
-                                                    "{} Â· {}",
+                                                    "{} · {}",
                                                     display_mcp_server_name(&label.server_name),
                                                     label.tool_name
                                                 )
