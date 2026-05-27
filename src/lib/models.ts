@@ -141,27 +141,6 @@ export const MODELS: ModelEntry[] = [
     supportsFast: true,
   },
   {
-    value: "google:claude-opus-4.6",
-    provider: "google",
-    label: "Claude Opus 4.6",
-    thinking: ["medium", "high"],
-    defaultThinking: "medium",
-  },
-  {
-    value: "google:claude-sonnet-4.6",
-    provider: "google",
-    label: "Claude Sonnet 4.6",
-    thinking: ["medium", "high"],
-    defaultThinking: "medium",
-  },
-  {
-    value: "google:gpt-oss-120b",
-    provider: "google",
-    label: "GPT-OSS 120B",
-    thinking: ["low", "medium", "high"],
-    defaultThinking: "medium",
-  },
-  {
     value: "google:gemini-3.1-pro",
     provider: "google",
     label: "Gemini 3.1 Pro",
