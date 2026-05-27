@@ -3321,7 +3321,7 @@ function ToolsSection({
               </div>
               <p className="settings-pane__tool-group-note">
                 Les images générées passent par ChatGPT (OpenAI) ou Gemini (Google).
-                Non disponible avec le modèle Composer Cursor dans le chat agent.
+                Avec Composer, utilise l&apos;outil natif « generate image » (branché sur ce provider).
               </p>
               <div
                 className="settings-pane__tool-provider-switch"

@@ -44,6 +44,14 @@ pub struct CreateImageTool {
     write_lock: Option<Arc<Semaphore>>,
 }
 
+pub fn composer_mcp_descriptor(base: &ToolDescriptor) -> ToolDescriptor {
+    ToolDescriptor {
+        name: "mcp__sinew__create_image".into(),
+        description: base.description.clone(),
+        input_schema: base.input_schema.clone(),
+    }
+}
+
 impl CreateImageTool {
     pub fn new(workspace_root: impl Into<PathBuf>) -> Self {
         Self::with_api_key(workspace_root, None)

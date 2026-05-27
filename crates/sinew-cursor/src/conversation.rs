@@ -7,6 +7,7 @@ use sinew_core::{Effort, Part, ProviderRequest, Role, ServiceTier, ToolDescripto
 use crate::{
     context_injection::append_local_index_excerpts,
     identity::CursorIdeIdentity,
+    images::message_images,
     sanitize::{sanitize_outbound_json, sanitize_outbound_text},
     tools::{build_client_tool_result, cursor_tool_name, is_mappable_sinew_tool, SUPPORTED_TOOLS},
     workspace::{snapshot, WorkspaceSnapshot},
@@ -227,8 +228,9 @@ fn build_conversation(request: &ProviderRequest, conversation_id: &str) -> (Vec<
             }
             Role::User => {
                 let text = message_text(message);
+                let images = message_images(message);
                 let tool_results = tool_results_from_message(message, &pending_calls);
-                if text.is_empty() && tool_results.is_empty() {
+                if text.is_empty() && tool_results.is_empty() && images.is_empty() {
                     continue;
                 }
                 let bubble_id =
@@ -244,6 +246,9 @@ fn build_conversation(request: &ProviderRequest, conversation_id: &str) -> (Vec<
                     "bubbleId": bubble_id,
                     "requestId": request_id,
                 });
+                if !images.is_empty() {
+                    entry["images"] = Value::Array(images);
+                }
                 if !tool_results.is_empty() {
                     entry["toolResults"] = Value::Array(tool_results);
                 }
@@ -649,7 +654,36 @@ fn message_text(message: &sinew_core::ChatMessage) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sinew_core::{ChatMessage, ModelRef};
+    use sinew_core::{ChatMessage, ModelRef, Part, Role};
+
+    #[test]
+    fn human_message_includes_attached_images() {
+        let png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2.5-fast"),
+            vec![ChatMessage {
+                role: Role::User,
+                parts: vec![
+                    Part::Image {
+                        media_type: "image/png".into(),
+                        data: png.into(),
+                        meta: None,
+                    },
+                    Part::Text {
+                        text: "Describe this screenshot.".into(),
+                        meta: None,
+                    },
+                ],
+            }],
+        )
+        .with_cache_key("conv-image-test");
+        let (messages, _) = build_conversation(&request, "conv-image-test");
+        assert_eq!(messages.len(), 1);
+        let images = messages[0]["images"].as_array().expect("images array");
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0]["data"].as_str(), Some(png));
+        assert_eq!(images[0]["dimension"]["width"], 1);
+    }
 
     #[test]
     fn tool_result_continuation_detected() {

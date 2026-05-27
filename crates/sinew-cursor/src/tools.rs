@@ -22,6 +22,7 @@ pub const SUPPORTED_TOOLS: &[&str] = &[
     "CLIENT_SIDE_TOOL_V2_TODO_WRITE",
     "CLIENT_SIDE_TOOL_V2_ASK_QUESTION",
     "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL",
+    "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE",
     "CLIENT_SIDE_TOOL_V2_DELETE_FILE",
 ];
 
@@ -40,6 +41,7 @@ pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
         "CLIENT_SIDE_TOOL_V2_TODO_READ" | "CLIENT_SIDE_TOOL_V2_TODO_WRITE" => Some("todo_list"),
         "CLIENT_SIDE_TOOL_V2_ASK_QUESTION" => Some("question"),
         "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL" | "CLIENT_SIDE_TOOL_V2_MCP" => Some("load_mcp_tool"),
+        "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE" => Some("create_image"),
         "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL" => Some("codebase_search"),
         "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => Some("bash"),
         _ => None,
@@ -64,6 +66,7 @@ pub fn cursor_tool_name(sinew_tool: &str) -> &'static str {
         "todo_list" => "CLIENT_SIDE_TOOL_V2_TODO_WRITE",
         "question" => "CLIENT_SIDE_TOOL_V2_ASK_QUESTION",
         "load_mcp_tool" => "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL",
+        "create_image" => "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE",
         _ => "CLIENT_SIDE_TOOL_V2_UNSPECIFIED",
     }
 }
@@ -86,7 +89,7 @@ pub fn parse_tool_call(value: &Value) -> Option<ParsedToolCall> {
         .map(str::to_string)
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let input = if let Some(raw) = value
+    let mut input = if let Some(raw) = value
         .get("rawArgs")
         .or_else(|| value.get("raw_args"))
         .and_then(Value::as_str)
@@ -97,6 +100,12 @@ pub fn parse_tool_call(value: &Value) -> Option<ParsedToolCall> {
         map_tool_params(tool, value)
     };
     let mut sinew_name = sinew_name;
+    if sinew_name == "load_mcp_tool" {
+        if let Some((name, mapped_input)) = map_builtin_mcp_call(&input) {
+            sinew_name = name;
+            input = mapped_input;
+        }
+    }
     if sinew_name == "edit_file"
         && input.get("content").is_some()
         && input.get("path").is_some()
@@ -162,6 +171,9 @@ pub fn build_client_tool_result(
         "load_mcp_tool" => {
             result["callMcpToolResult"] = json!({ "result": content });
         }
+        "create_image" => {
+            result["generateImageResult"] = json!({ "resultForModel": content });
+        }
         _ => {
             result["resultForModel"] = json!(content);
         }
@@ -183,6 +195,7 @@ fn tool_name_from_number(value: i64) -> Option<&'static str> {
         35 => Some("CLIENT_SIDE_TOOL_V2_TODO_WRITE"),
         51 => Some("CLIENT_SIDE_TOOL_V2_ASK_QUESTION"),
         49 => Some("CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL"),
+        53 => Some("CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE"),
         _ => None,
     }
 }
@@ -261,6 +274,9 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             let params = params(value, "webFetchParams", "web_fetch_params");
             json!({ "url": field(params, &["url"]) })
         }
+        "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE" => {
+            map_generate_image_params(value)
+        }
         "CLIENT_SIDE_TOOL_V2_EDIT_FILE_V2" | "CLIENT_SIDE_TOOL_V2_EDIT_FILE" => {
             map_edit_params(value)
         }
@@ -275,6 +291,56 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
         }
         _ => flatten_params(value),
     }
+}
+
+fn map_generate_image_params(value: &Value) -> Value {
+    let params = params(value, "generateImageParams", "generate_image_params")
+        .or_else(|| params(value, "generateImageV2Params", "generate_image_v2_params"));
+    let mut mapped = json!({
+        "prompt": field(params, &["prompt", "description", "text", "query"]).unwrap_or(json!("")),
+    });
+    if let Some(size) = field(params, &["size", "imageSize", "image_size"]) {
+        mapped["size"] = size;
+    }
+    if let Some(n) = field(params, &["n", "numImages", "num_images", "count"]) {
+        mapped["n"] = n;
+    }
+    if let Some(format) = field(params, &["outputFormat", "output_format", "format"]) {
+        mapped["output_format"] = format;
+    }
+    if let Some(ratio) = field(params, &["aspectRatio", "aspect_ratio"]) {
+        mapped["aspect_ratio"] = ratio;
+    }
+    if let Some(image_size) = field(params, &["imageSizeTier", "image_size_tier", "resolution"]) {
+        mapped["image_size"] = image_size;
+    }
+    mapped
+}
+
+fn map_builtin_mcp_call(input: &Value) -> Option<(String, Value)> {
+    const MCP_CREATE_IMAGE: &str = "mcp__sinew__create_image";
+    let tool_name = input
+        .get("toolName")
+        .or_else(|| input.get("tool_name"))
+        .or_else(|| input.get("name"))
+        .and_then(Value::as_str)?;
+    if tool_name != MCP_CREATE_IMAGE {
+        return None;
+    }
+    let args = input
+        .get("args")
+        .or_else(|| input.get("arguments"))
+        .or_else(|| input.get("input"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    Some(("create_image".into(), map_create_image_input(&args)))
+}
+
+fn map_create_image_input(value: &Value) -> Value {
+    if value.get("prompt").is_some() {
+        return value.clone();
+    }
+    map_generate_image_params(value)
 }
 
 fn map_edit_params(value: &Value) -> Value {
@@ -482,5 +548,49 @@ mod tests {
         assert_eq!(parsed.input["query"], "auth token");
         assert_eq!(parsed.input["path"], "src");
         assert_eq!(parsed.input["limit"], 20);
+    }
+
+    #[test]
+    fn maps_generate_image_to_create_image() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE",
+            "toolCallId": "call_img",
+            "generateImageParams": {
+                "prompt": "A minimal blue logo"
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.sinew_name, "create_image");
+        assert_eq!(parsed.input["prompt"], "A minimal blue logo");
+    }
+
+    #[test]
+    fn maps_builtin_mcp_create_image_call() {
+        let value = json!({
+            "tool": "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL",
+            "toolCallId": "call_mcp_img",
+            "callMcpToolParams": {
+                "toolName": "mcp__sinew__create_image",
+                "args": { "prompt": "Sunset over mountains" }
+            }
+        });
+        let parsed = parse_tool_call(&value).expect("parsed");
+        assert_eq!(parsed.sinew_name, "create_image");
+        assert_eq!(parsed.input["prompt"], "Sunset over mountains");
+    }
+
+    #[test]
+    fn builds_generate_image_tool_result() {
+        let result = build_client_tool_result(
+            "call_img",
+            "create_image",
+            "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE",
+            "saved: assets/logo.png",
+            false,
+        );
+        assert_eq!(
+            result["generateImageResult"]["resultForModel"],
+            "saved: assets/logo.png"
+        );
     }
 }

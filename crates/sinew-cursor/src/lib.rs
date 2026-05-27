@@ -4,6 +4,7 @@ mod connect;
 mod context_injection;
 mod conversation;
 mod identity;
+mod images;
 mod model_info;
 mod sanitize;
 mod stream_state;

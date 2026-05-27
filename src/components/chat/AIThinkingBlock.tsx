@@ -86,7 +86,29 @@ export function AIThinkingBlock({
   if (!hasContent) return null;
 
   if (compactMode === "very-compact") {
-    return null;
+    if (!isStreaming) {
+      return null;
+    }
+    return (
+      <div className="thinking-block">
+        <button
+          type="button"
+          className="thinking-block__head"
+          data-streaming="true"
+          data-has-content="false"
+          disabled
+        >
+          <DotmSquare2
+            speed={1}
+            animated
+            className="thinking-block__matrix"
+          />
+          <span className="thinking-block__label" data-streaming="true">
+            Thinking
+          </span>
+        </button>
+      </div>
+    );
   }
 
   return (

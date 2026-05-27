@@ -814,9 +814,10 @@ function ReadToolInline({
   isError,
   cleaned,
   onOpenFile,
+  compactMode,
 }: Pick<
   ToolCardProps,
-  "status" | "argsPretty" | "output" | "isError" | "cleaned" | "onOpenFile"
+  "status" | "argsPretty" | "output" | "isError" | "cleaned" | "onOpenFile" | "compactMode"
 >) {
   const args = readArgs(argsPretty);
   const parsed = parseReadOutput(output);
@@ -845,7 +846,7 @@ function ReadToolInline({
         </span>
       )}
       <span className="tool-read-inline__label">Read</span>
-      {openPath ? (
+      {compactMode !== "compact" && openPath ? (
         <span className="tool-read-inline__path" title={path}>
           <button
             type="button"
@@ -856,12 +857,12 @@ function ReadToolInline({
             {path}
           </button>
         </span>
-      ) : (
+      ) : compactMode !== "compact" ? (
         <span className="tool-read-inline__path" title={path}>
           <span className="tool-read-inline__file">{path}</span>
         </span>
-      )}
-      {range && <span className="tool-read-inline__range">{range}</span>}
+      ) : null}
+      {compactMode !== "compact" && range && <span className="tool-read-inline__range">{range}</span>}
     </div>
   );
 }
@@ -1011,6 +1012,7 @@ export function ToolCard({
         isError={isError}
         cleaned={cleaned}
         onOpenFile={onOpenFile}
+        compactMode={compactMode}
       />
     );
   }
@@ -1146,7 +1148,7 @@ export function ToolCard({
   const canExpand =
     !(isContextCompaction && status === "running") &&
     !(isEditFile && status === "running");
-  const showBody = canExpand && open && (!isTeamRunSpawn || !teamRunActive);
+  const showBody = compactMode === "disabled" && canExpand && open && (!isTeamRunSpawn || !teamRunActive);
   const showTeamStop =
     isTeamRunSpawn &&
     !!teamRunActive &&
@@ -1179,8 +1181,9 @@ export function ToolCard({
       <div
         className="tool-card__head"
         data-cleaned={cleaned ? "true" : "false"}
-        data-clickable={canExpand || isSubAgent ? "true" : "false"}
+        data-clickable={compactMode === "disabled" && (canExpand || isSubAgent) ? "true" : "false"}
         onClick={() => {
+          if (compactMode !== "disabled") return;
           if (isSubAgent && onOpenSubAgent) {
             onOpenSubAgent();
             return;
@@ -1277,7 +1280,7 @@ export function ToolCard({
             </span>
           </button>
         )}
-        {canExpand || isSubAgent ? (
+        {compactMode === "disabled" && (canExpand || isSubAgent) ? (
           <span
             className="tool-card__caret"
             data-open={isSubAgent ? "false" : showBody ? "true" : "false"}

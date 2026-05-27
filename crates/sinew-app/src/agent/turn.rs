@@ -47,7 +47,9 @@ fn cursor_system_prompt(
 ) -> String {
     let base = base.trim();
     match mode {
-        AgentMode::Act => base.to_string(),
+        AgentMode::Act => format!(
+            "{base}\n\nWhen the user asks to generate or create an image, use the generate image tool."
+        ),
         AgentMode::Plan => {
             let plan = plan_mode_prompt.trim();
             if plan.is_empty() {
@@ -210,10 +212,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             tool_descriptors.extend(teams.descriptors());
         }
         let tool_descriptors = if model.provider == "cursor" {
-            tool_descriptors
+            let mut filtered = tool_descriptors
                 .into_iter()
                 .filter(|tool| tool_names::is_cursor_compatible_tool(&tool.name))
-                .collect()
+                .collect::<Vec<_>>();
+            if mode != AgentMode::Plan && tool_settings.is_enabled(tool_names::CREATE_IMAGE) {
+                filtered.push(crate::composer_mcp_descriptor(&create_image.descriptor()));
+            }
+            filtered
         } else {
             tool_descriptors
         };

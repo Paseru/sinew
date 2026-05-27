@@ -6,7 +6,7 @@ mod tests {
         conversation::build_stream_request,
         identity::CursorIdeIdentity,
         sanitize::sanitize_outbound_text,
-        tools::{build_client_tool_result, parse_tool_call},
+        tools::{build_client_tool_result, parse_tool_call, SUPPORTED_TOOLS},
     };
 
     #[test]
@@ -14,6 +14,19 @@ mod tests {
         let text = sanitize_outbound_text("You are Sinew from Hyrak");
         assert!(!text.contains("Sinew"));
         assert!(text.contains("Cursor"));
+    }
+
+    #[test]
+    fn composer_supports_images() {
+        let caps = crate::model_info::capabilities(&ModelRef::new("cursor", "composer-2.5-fast"));
+        assert!(caps.supports_images);
+    }
+
+    #[test]
+    fn supported_tools_include_generate_image() {
+        assert!(SUPPORTED_TOOLS
+            .iter()
+            .any(|tool| *tool == "CLIENT_SIDE_TOOL_V2_GENERATE_IMAGE"));
     }
 
     #[test]

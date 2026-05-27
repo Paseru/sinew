@@ -3022,9 +3022,7 @@ export function ChatPane({
     }
   }, [activeStickyQuestionId]);
 
-  const showPlanningNextMove = compactMode === "very-compact"
-    ? false
-    : shouldShowPlanningNextMove(displayView);
+  const showPlanningNextMove = shouldShowPlanningNextMove(displayView);
   const teamAgentRoster = useMemo(
     () => buildTeamAgentRoster(view.blocks, subAgentViews),
     [view.blocks, subAgentViews],
@@ -6162,6 +6160,7 @@ function BlockView({
         </div>
       );
     case "compaction-marker":
+      if (compactMode === "very-compact") return null;
       return (
         <div className="msg" data-role="assistant">
           <div className="compaction-marker">
@@ -6176,6 +6175,7 @@ function BlockView({
         </div>
       );
     case "plan":
+      if (compactMode === "very-compact") return null;
       return (
         <div className="msg" data-role="assistant">
           <PlanCard
@@ -6192,6 +6192,13 @@ function BlockView({
         </div>
       );
     case "plan-writing":
+      if (compactMode === "very-compact") {
+        return (
+          <div className="msg" data-role="assistant">
+            <AIThinkingBlock content={block.label} isStreaming />
+          </div>
+        );
+      }
       return (
         <div className="msg" data-role="assistant">
           <div className="plan-writing-card">
@@ -6230,8 +6237,7 @@ function BlockView({
       if (
         compactMode === "very-compact" &&
         !block.isError &&
-        !isToolName(block.name, "question") &&
-        !isToolName(block.name, "send_message")
+        !isToolName(block.name, "question")
       ) {
         return null;
       }
@@ -6241,7 +6247,7 @@ function BlockView({
         block,
         activeAgentName,
       );
-      if (sentTeamMessage && !block.isError && block.status !== "running") {
+      if (sentTeamMessage && !block.isError && block.status !== "running" && compactMode !== "very-compact") {
         return (
           <div className="msg" data-role="assistant">
             <div className="msg__body user-text">
@@ -6296,6 +6302,7 @@ function BlockView({
         </div>
       );
     case "agent-status":
+      if (compactMode === "very-compact") return null;
       return (
         <div className="msg" data-role="assistant">
           <div className="agent-status-line">

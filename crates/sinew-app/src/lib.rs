@@ -35,7 +35,7 @@ pub use compact::{compact_conversation_history, CompactConversationOutput};
 pub use edit::EditFileTool;
 pub use glob::GlobTool;
 pub use grep::GrepTool;
-pub use image::CreateImageTool;
+pub use image::{composer_mcp_descriptor, CreateImageTool};
 pub use mcp::{probe_mcp_servers, McpServerProbe, McpSettings, McpToolRegistry};
 pub use question::QuestionTool;
 pub use read::{ReadFingerprint, ReadTool};
