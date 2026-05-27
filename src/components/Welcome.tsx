@@ -123,7 +123,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
         <header className="welcome__head">
           <span className="welcome__mark-dot" aria-hidden="true">
             <span className="welcome__mark-inner">
-              <SinewMark size={22} className="welcome__mark-glyph" />
+              <SinewMark size={64} className="welcome__mark-glyph" />
             </span>
           </span>
           <h1 className="welcome__title">
