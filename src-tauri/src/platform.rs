@@ -7,7 +7,7 @@ use tauri::{
 };
 
 pub(super) fn error_to_string(error: impl std::fmt::Display) -> String {
-    error.to_string()
+    format!("{error:#}")
 }
 
 #[cfg(not(target_os = "windows"))]
