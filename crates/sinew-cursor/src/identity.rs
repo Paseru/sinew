@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sinew_core::{AppError, Result};
 
 pub const CURSOR_CLIENT_VERSION: &str = "3.5.33";
-// Keep aligned with a recent Cursor IDE release when bumping Sinew.
+// Last verified against Cursor IDE 3.5.33 (May 2026). Override with SINEW_CURSOR_CLIENT_VERSION.
 
 static EPHEMERAL_MACHINE_ID: OnceLock<String> = OnceLock::new();
 
@@ -51,7 +51,7 @@ impl CursorIdeIdentity {
 
     fn assemble() -> Self {
         let machine_id = load_or_create_sinew_machine_id();
-        let client_version = CURSOR_CLIENT_VERSION.into();
+        let client_version = Self::resolve_client_version();
         let (platform, arch) = detect_platform();
         Self {
             client_version,
@@ -65,6 +65,16 @@ impl CursorIdeIdentity {
 
     pub fn user_agent(&self) -> String {
         format!("Cursor/{}", self.client_version)
+    }
+
+    pub fn resolve_client_version() -> String {
+        if let Ok(version) = std::env::var("SINEW_CURSOR_CLIENT_VERSION") {
+            let trimmed = version.trim();
+            if !trimmed.is_empty() {
+                return trimmed.to_string();
+            }
+        }
+        CURSOR_CLIENT_VERSION.to_string()
     }
 
     pub fn apply(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
@@ -244,6 +254,14 @@ mod identity_tests {
         assert!(!is_valid_machine_id(""));
         assert!(!is_valid_machine_id("not-a-uuid"));
         assert!(is_valid_machine_id(&uuid::Uuid::new_v4().to_string()));
+    }
+
+    #[test]
+    fn client_version_defaults_to_constant() {
+        assert_eq!(
+            CursorIdeIdentity::resolve_client_version(),
+            CURSOR_CLIENT_VERSION
+        );
     }
 }
 

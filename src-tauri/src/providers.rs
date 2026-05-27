@@ -2316,12 +2316,32 @@ pub(super) async fn cancel_cursor_oauth_login(
 }
 
 #[tauri::command]
-pub(super) fn sync_cursor_composer_auth(
+pub(super) async fn sync_cursor_composer_auth(
     state: State<'_, DesktopState>,
 ) -> std::result::Result<CursorComposerAuthStatus, String> {
-    let status = sync_composer_auth_from_ide().map_err(error_to_string)?;
+    if let Ok(Some(session)) = load_composer_session() {
+        let http = reqwest::Client::builder()
+            .user_agent(CursorIdeIdentity::load().user_agent())
+            .build()
+            .map_err(error_to_string)?;
+        if let Err(err) = ensure_fresh_composer_token(&http, &session).await {
+            tracing::warn!("cursor composer token refresh during sync failed: {err}");
+        }
+    }
+
+    let auth = load_composer_auth_status().map_err(error_to_string)?;
     install_cursor_provider(&state.providers)?;
-    Ok(status)
+    let connection_state = if auth.connected {
+        "connected"
+    } else {
+        "disconnected"
+    };
+    Ok(cursor_composer_status_from_auth(
+        auth,
+        connection_state,
+        None,
+        None,
+    ))
 }
 
 #[tauri::command]

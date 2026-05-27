@@ -90,9 +90,9 @@ use sinew_openrouter::{
     OpenRouterCatalogModel, OpenRouterProvider, PROVIDER_ID as OPENROUTER_PROVIDER_ID,
 };
 use sinew_cursor::{
-    create_login_challenge, delete_composer_auth, load_composer_auth_status,
-    sync_composer_auth_from_ide, wait_for_oauth_login, CursorComposerAuthStatus,
-    CursorLoginChallenge, CursorProvider, CursorIdeIdentity, PROVIDER_ID as CURSOR_PROVIDER_ID,
+    create_login_challenge, delete_composer_auth, ensure_fresh_composer_token,
+    load_composer_auth_status, load_composer_session, wait_for_oauth_login, CursorComposerAuthStatus, CursorLoginChallenge, CursorIdeIdentity,
+    CursorProvider, PROVIDER_ID as CURSOR_PROVIDER_ID,
 };
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::{
