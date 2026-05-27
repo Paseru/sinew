@@ -2027,6 +2027,25 @@ function ProvidersSection({
               planType: account.planType,
             };
             const currentModel = secondaryModels[account.key] || "gpt-5.5";
+            const currentThinking = secondaryThinking[account.key] || "medium";
+            const currentFast = secondaryFast[account.key] || "true";
+            
+            const selectStyle = {
+              background: "var(--bg-3)",
+              color: "var(--text-1)",
+              border: "1px solid var(--line-2)",
+              borderRadius: "4px",
+              padding: "2px 6px",
+              fontSize: "11px",
+              cursor: "pointer",
+              outline: "none",
+              flex: "1 1 auto",
+              minWidth: 0,
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+              whiteSpace: "nowrap" as const
+            };
+            
             return (
               <ProviderCard
                 key={account.key}
@@ -2048,34 +2067,49 @@ function ProvidersSection({
                 providerId={account.key}
                 compact={true}
               >
-                <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "4px", minWidth: 0 }}>
-                  <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto" }}>Model:</span>
-                  <select
-                    value={currentModel}
-                    onChange={(e) => onUpdateSecondaryModel(account.key, e.target.value)}
-                    style={{
-                      background: "var(--bg-3)",
-                      color: "var(--text-1)",
-                      border: "1px solid var(--line-2)",
-                      borderRadius: "4px",
-                      padding: "2px 6px",
-                      fontSize: "11px",
-                      cursor: "pointer",
-                      outline: "none",
-                      flex: "1 1 auto",
-                      minWidth: 0,
-                      textOverflow: "ellipsis",
-                      overflow: "hidden",
-                      whiteSpace: "nowrap"
-                    }}
-                  >
-                    <option value="gpt-5.5">GPT-5.5 (Maximum / Ultra Fast)</option>
-                    <option value="gpt-5.4">GPT-5.4 (High / Balanced)</option>
-                    <option value="gpt-5.4-mini">GPT-5.4 Mini (Lightweight / Extra Fast)</option>
-                    <option value="gpt-5.3-codex">GPT-5.3 Codex (Specialized Coding)</option>
-                    <option value="gpt-5.3-codex-spark">GPT-5.3 Codex Spark (Extra High Coding Speed)</option>
-                    <option value="gpt-5.2">GPT-5.2 (Classic Balanced)</option>
-                  </select>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px", minWidth: 0 }}>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
+                    <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto", width: "55px" }}>Model:</span>
+                    <select
+                      value={currentModel}
+                      onChange={(e) => onUpdateSecondaryModel(account.key, e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="gpt-5.5">GPT-5.5</option>
+                      <option value="gpt-5.4">GPT-5.4</option>
+                      <option value="gpt-5.4-mini">GPT-5.4 Mini</option>
+                      <option value="gpt-5.3-codex">GPT-5.3 Codex</option>
+                      <option value="gpt-5.3-codex-spark">GPT-5.3 Codex Spark</option>
+                      <option value="gpt-5.2">GPT-5.2</option>
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
+                    <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto", width: "55px" }}>Thinking:</span>
+                    <select
+                      value={currentThinking}
+                      onChange={(e) => onUpdateSecondaryThinking(account.key, e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="xhigh">XHigh</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                      <option value="off">Off</option>
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
+                    <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto", width: "55px" }}>Speed:</span>
+                    <select
+                      value={currentFast}
+                      onChange={(e) => onUpdateSecondaryFast(account.key, e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="true">Fast (on)</option>
+                      <option value="false">Fast (off)</option>
+                    </select>
+                  </div>
                 </div>
               </ProviderCard>
             );
@@ -2305,13 +2339,11 @@ function ProviderCard({
             </span>
           </div>
           {!compact && <p>{description}</p>}
-          {connected && meta.length > 0 && (
-            <div className="settings-pane__provider-meta">
-              {meta.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-          )}
+          <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "4px" : "8px" }}>
+            {connected && meta.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {children}
           {connected && quota && <QuotaInlinePanel quota={quota} compact={compact} />}
@@ -2419,14 +2451,36 @@ function formatWindowLabel(window: { label: string; windowMinutes?: number | nul
   return `${window.label} (${window.windowMinutes}m)`;
 }
 
-function QuotaBar({ item }: { item: { label: string; remainingPercent: number | null; windowMinutes?: number | null; resetAt?: number | null; resetTime?: string | null } }) {
+function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: number | null; windowMinutes?: number | null; resetAt?: number | null; resetTime?: string | null }; inline?: boolean }) {
   const percent = item.remainingPercent;
   const reset = formatResetLabel(item.resetAt ?? item.resetTime ?? null);
+  
+  if (inline) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "3px 7px", borderRadius: "var(--r-med)", color: "var(--text-2)", fontSize: "10px", border: "1px solid var(--line-1)" }}>
+        <span style={{ whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
+        <div style={{ width: "30px", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden", flexShrink: 0 }}>
+          <div
+            style={{
+              width: `${percent ?? 0}%`,
+              height: "100%",
+              background: quotaColor(percent),
+              borderRadius: "2px",
+            }}
+          />
+        </div>
+        <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` · ${reset}` : ""}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "11px" }}>
-        <span style={{ color: "var(--text-3)" }}>{formatWindowLabel(item)}</span>
-        <span style={{ color: "var(--text-2)", fontWeight: 600 }}>
+        <span style={{ color: "var(--text-3)", whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
+        <span style={{ color: "var(--text-2)", fontWeight: 600, whiteSpace: "nowrap" }}>
           {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` · ${reset}` : ""}
         </span>
       </div>
@@ -2448,7 +2502,7 @@ function QuotaBar({ item }: { item: { label: string; remainingPercent: number | 
 function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: boolean }) {
   if (quota.kind === "unavailable") {
     return (
-      <div style={{ marginTop: compact ? "4px" : "12px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: compact ? 0.7 : 1 }}>
+      <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: compact ? 0.7 : 1 }}>
         {quota.label ?? "Quota non disponible"}
       </div>
     );
@@ -2461,28 +2515,60 @@ function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: bool
   return (
     <div
       style={{
-        marginTop: compact ? "6px" : "12px",
-        padding: compact ? "6px" : "10px",
+        marginTop: "12px",
+        padding: "10px",
         background: "var(--bg-1)",
         border: "1px solid var(--border-3, var(--line-1))",
         borderRadius: "6px",
         display: "flex",
         flexDirection: "column",
-        gap: compact ? "6px" : "9px",
+        gap: "9px",
+        width: "100%",
       }}
     >
-      {quota.label && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
+      {quota.label && !quota.label.startsWith("Projet") && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
       {quota.kind === "credits" ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
           <QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: windows.length > 1 ? "1fr 1fr" : "1fr", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: windows.length > 1 ? "repeat(auto-fit, minmax(180px, 1fr))" : "1fr", gap: "16px" }}>
           {windows.map((item) => (
             <QuotaBar key={item.label} item={item} />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function OpenRouterQuotaPanel({ quota, compact }: { quota: QuotaInfo; compact?: boolean }) {
+  if (quota.kind === "unavailable") {
+    return (
+      <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: compact ? 0.7 : 1 }}>
+        {quota.label ?? "Quota non disponible"}
+      </div>
+    );
+  }
+
+  const creditLimit = quota.creditLimit;
+  const creditRemaining = quota.creditRemaining;
+  const windows = quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? [];
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "center", marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--line-1)" }}>
+      {quota.kind === "credits" ? (
+        <>
+          <div style={{ width: "160px" }}><QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} /></div>
+          <div style={{ width: "160px" }}><QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} /></div>
+        </>
+      ) : (
+        <>
+          {windows.map((item) => (
+            <div key={item.label} style={{ width: "160px" }}><QuotaBar item={item} /></div>
+          ))}
+        </>
       )}
     </div>
   );
@@ -2707,7 +2793,7 @@ function OpenRouterProviderCard({
           </div>
           <p>Use any OpenRouter model with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
-          {connected && quota && <QuotaInlinePanel quota={quota} />}
+          {connected && quota && <OpenRouterQuotaPanel quota={quota} />}
         </div>
       </div>
 

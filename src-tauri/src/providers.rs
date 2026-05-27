@@ -1140,10 +1140,10 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
     let mut groups: HashMap<String, AntigravityQuotaGroupInfo> = HashMap::new();
     if let Some(models) = raw.get("models").and_then(|value| value.as_object()) {
         for (model_name, info) in models {
-            let lower = model_name.to_ascii_lowercase();
-            let Some((group, label)) = antigravity_quota_group(&lower) else {
-                continue;
-            };
+            let label = info.get("displayName")
+                .and_then(|v| v.as_str())
+                .unwrap_or(model_name)
+                .to_string();
             let quota = info.get("quotaInfo");
             let remaining = quota
                 .and_then(|value| value.get("remainingFraction"))
@@ -1153,50 +1153,29 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
                 .and_then(|value| value.get("resetTime"))
                 .and_then(|value| value.as_str())
                 .map(|value| value.to_string());
-            let entry = groups.entry(group.to_string()).or_insert_with(|| AntigravityQuotaGroupInfo {
-                group: group.to_string(),
-                label: label.to_string(),
+            
+            // Si pas de quota, on ignore
+            if remaining.is_none() && reset_time.is_none() {
+                continue;
+            }
+
+            groups.insert(model_name.clone(), AntigravityQuotaGroupInfo {
+                group: model_name.clone(),
+                label,
                 remaining_percent: remaining,
-                reset_time: reset_time.clone(),
-                count: 0,
+                reset_time,
+                count: 1,
             });
-            entry.count += 1;
-            if let Some(remaining) = remaining {
-                entry.remaining_percent = Some(entry.remaining_percent.map_or(remaining, |current| current.min(remaining)));
-            }
-            if entry.reset_time.is_none() {
-                entry.reset_time = reset_time;
-            }
         }
     }
     let mut groups = groups.into_values().collect::<Vec<_>>();
-    groups.sort_by(|a, b| a.group.cmp(&b.group));
+    groups.sort_by(|a, b| a.label.cmp(&b.label));
 
     Ok(AntigravityQuotaInfo {
         project_id: project,
         groups,
         raw,
     })
-}
-
-fn antigravity_quota_group(model_name: &str) -> Option<(String, String)> {
-    if model_name.contains("claude") {
-        return Some(("claude".to_string(), "Claude".to_string()));
-    }
-    if !model_name.contains("gemini-") {
-        return None;
-    }
-    
-    if model_name.contains("gemini-3.5") && model_name.contains("flash") {
-        return Some(("gemini-3.5-flash".to_string(), "Gemini 3.5 Flash".to_string()));
-    }
-    if model_name.contains("gemini-3.1") && model_name.contains("pro") {
-        return Some(("gemini-3.1-pro".to_string(), "Gemini 3.1 Pro".to_string()));
-    }
-    if model_name.contains("flash") {
-        return Some(("gemini-flash".to_string(), "Gemini 3 Flash".to_string()));
-    }
-    Some(("gemini-pro".to_string(), "Gemini 3 Pro".to_string()))
 }
 
 #[tauri::command]

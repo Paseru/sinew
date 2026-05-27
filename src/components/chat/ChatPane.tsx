@@ -331,14 +331,15 @@ function serviceTierForSelection(
   fastEnabled: boolean,
 ): ServiceTier | null {
   const entry = availableModels.find((model) => model.value === selection.model);
-  const isOpenAi = entry?.provider.startsWith("openai:") || entry?.provider === "openai";
+  if (!entry) return null;
+  const isOpenAi = entry.provider.startsWith("openai:") || entry.provider === "openai";
   if (isOpenAi) {
     // If the entry has a defaultFast preference, use it unless overridden by fastEnabled.
     // Wait, actually if fastEnabled is toggled, it should override. But we can also just respect entry?.defaultFast.
     const isFast = entry.defaultFast !== undefined ? entry.defaultFast : fastEnabled;
-    return isFast ? "fast" : "default";
+    return isFast ? "fast" : null;
   }
-  return fastEnabled && entry?.supportsFast ? "fast" : null;
+  return fastEnabled && entry.supportsFast ? "fast" : null;
 }
 
 function mergeModeSelections(
@@ -3466,8 +3467,10 @@ export function ChatPane({
                       const providerIcon = m.provider.startsWith("openai:")
                         ? "simple-icons:openai"
                         : PROVIDERS.find((p) => p.value === m.provider)?.icon;
-                      const providerHasRealQuota = m.provider === "openrouter";
-                      const qPercent = providerHasRealQuota && quota?.kind === "credits" ? quota.percentage : null;
+                      // Le quota en mémoire ne correspond qu'au modèle ACTUELLEMENT sélectionné.
+                      // Pour les autres de la liste, on les force à `null` (gris) car on ne veut pas afficher
+                      // le quota du modèle actif pour tous les autres modèles !
+                      const qPercent = selected ? (quota?.percentage ?? null) : null;
 
                       return (
                         <button
@@ -3483,21 +3486,20 @@ export function ChatPane({
                             {providerIcon && (
                               <Icon icon={providerIcon} width={13} height={13} />
                             )}
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: qPercent != null ? quotaColor(qPercent) : "var(--text-3)",
+                                opacity: 0.8,
+                                marginLeft: "2px",
+                                marginRight: "2px",
+                              }}
+                              title={qPercent != null ? `Quota restant: ${qPercent.toFixed(0)}%` : "Sélectionnez ce modèle pour voir son quota"}
+                            />
                             <span>{m.label}</span>
-                            {qPercent != null && (
-                              <span
-                                style={{
-                                  display: "inline-block",
-                                  width: "6px",
-                                  height: "6px",
-                                  borderRadius: "50%",
-                                  backgroundColor: quotaColor(qPercent),
-                                  opacity: 0.8,
-                                  marginLeft: "6px",
-                                }}
-                                title={`Quota réel restant: ${qPercent.toFixed(0)}%`}
-                              />
-                            )}
                           </span>
                           {selected && (
                             <Icon
