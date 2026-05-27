@@ -257,10 +257,22 @@ fn read_item(connection: &Connection, key: &str) -> Result<String> {
         .query_row(
             "SELECT value FROM ItemTable WHERE key = ?1",
             [key],
-            |row| row.get::<_, Vec<u8>>(0),
+            |row| read_item_value(row),
         )
-        .map(|bytes| String::from_utf8_lossy(&bytes).trim().to_string())
         .map_err(|err| AppError::Auth(format!("missing Cursor key `{key}`: {err}")))
+}
+
+fn read_item_value(row: &rusqlite::Row<'_>) -> rusqlite::Result<String> {
+    use rusqlite::types::ValueRef;
+    match row.get_ref(0)? {
+        ValueRef::Text(text) => Ok(String::from_utf8_lossy(text).trim().to_string()),
+        ValueRef::Blob(blob) => Ok(String::from_utf8_lossy(blob).trim().to_string()),
+        _ => Err(rusqlite::Error::InvalidColumnType(
+            0,
+            "value".into(),
+            rusqlite::types::Type::Text,
+        )),
+    }
 }
 
 fn status_from_auth(auth: &StoredAuth) -> CursorComposerAuthStatus {
