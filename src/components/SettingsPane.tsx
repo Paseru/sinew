@@ -2301,8 +2301,6 @@ function ProviderCard({
       : state === "error"
         ? "error"
         : "off";
-  const meta = connectedMeta.filter((item): item is string => Boolean(item));
-
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
 
   useEffect(() => {
@@ -2330,6 +2328,14 @@ function ProviderCard({
       window.removeEventListener("sinew:quota-updated", handleUpdate);
     };
   }, [connected, providerId]);
+
+  const rawMeta = [...connectedMeta];
+  if (connected && quota && quota.label) {
+    if (quota.label.startsWith("Projet ") || !quota.label.includes("Codex")) {
+      rawMeta.push(quota.label);
+    }
+  }
+  const meta = rawMeta.filter((item): item is string => Boolean(item));
 
   return (
     <section className={`settings-pane__provider-card ${compact ? 'settings-pane__provider-card--compact' : ''}`}>
