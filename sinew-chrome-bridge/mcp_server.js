@@ -964,7 +964,8 @@ async function prepareTargetTab(targetUrl) {
   const normalized = normalizeUrl(targetUrl) || targetUrl;
   await waitForBridge();
 
-  const existingTabs = await waitForTabs(normalized).catch(() => []);
+  // Fetch open tabs instantly to avoid the 20-second timeout
+  const existingTabs = await requestJSON(`${BRIDGE_ORIGIN}/json`, 1500).catch(() => []);
   const matching = Array.isArray(existingTabs)
     ? existingTabs.find(tab => sameOriginOrUrl(tab.url || '', normalized))
     : null;
