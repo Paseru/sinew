@@ -2533,7 +2533,7 @@ function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: bool
         width: "100%",
       }}
     >
-      {quota.label && !quota.label.startsWith("Projet") && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
+      {quota.label && !quota.label.startsWith("Projet") && !quota.label.includes("Codex") && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
       {quota.kind === "credits" ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
