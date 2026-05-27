@@ -42,6 +42,16 @@ export function unavailableQuota(label = "Quota non disponible"): QuotaInfo {
   };
 }
 
+export const quotaCache = new Map<string, { data: QuotaInfo; timestamp: number }>();
+
+export function getCachedQuota(providerId: string): QuotaInfo | null {
+  const cached = quotaCache.get(providerId);
+  if (cached && Date.now() - cached.timestamp < 1000 * 60 * 5) {
+    return cached.data;
+  }
+  return null;
+}
+
 function minPercent(items: QuotaWindow[]) {
   const values = items
     .map((item) => item.remainingPercent)
@@ -62,6 +72,12 @@ function codexWindow(label: string, input: any): QuotaWindow | null {
 }
 
 export async function fetchProviderQuota(providerId: string): Promise<QuotaInfo> {
+  const result = await doFetchProviderQuota(providerId);
+  quotaCache.set(providerId, { data: result, timestamp: Date.now() });
+  return result;
+}
+
+async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
   if (providerId === "openrouter") {
     try {
       const details = await api.getOpenRouterKeyDetails();

@@ -27,7 +27,7 @@ import {
 import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
 import { api } from "../../lib/ipc";
-import { fetchProviderQuota, deductLocalQuota, quotaColor, type QuotaInfo } from "../../lib/quotas";
+import { fetchProviderQuota, deductLocalQuota, quotaColor, getCachedQuota, type QuotaInfo } from "../../lib/quotas";
 import { canonicalToolName, isToolName } from "../../lib/tools";
 import {
   MODELS,
@@ -3467,10 +3467,21 @@ export function ChatPane({
                       const providerIcon = m.provider.startsWith("openai:")
                         ? "simple-icons:openai"
                         : PROVIDERS.find((p) => p.value === m.provider)?.icon;
-                      // Le quota en mémoire ne correspond qu'au modèle ACTUELLEMENT sélectionné.
-                      // Pour les autres de la liste, on les force à `null` (gris) car on ne veut pas afficher
-                      // le quota du modèle actif pour tous les autres modèles !
-                      const qPercent = selected ? (quota?.percentage ?? null) : null;
+                      let qPercent: number | null = null;
+                      
+                      let baseProviderId = m.provider;
+                      if (m.provider === "openai" && m.value.startsWith("openai:")) {
+                        // Le modèle secondaire openai:10 a son propre providerId "openai:10"
+                        const parts = m.value.split(":");
+                        baseProviderId = parts[0] + ":" + parts[1];
+                      }
+                      
+                      const cached = getCachedQuota(baseProviderId);
+                      if (cached && cached.percentage != null) {
+                        qPercent = cached.percentage;
+                      } else if (selected) {
+                        qPercent = quota?.percentage ?? null;
+                      }
 
                       return (
                         <button
