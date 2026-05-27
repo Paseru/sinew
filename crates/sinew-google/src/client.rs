@@ -915,7 +915,7 @@ fn method_url(base_url: &str, method: &str) -> String {
     format!("{}:{method}", base_url.trim_end_matches('/'))
 }
 
-fn antigravity_user_agent() -> String {
+pub fn antigravity_user_agent() -> String {
     let platform = if cfg!(target_os = "windows") {
         "windows/amd64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
@@ -939,7 +939,7 @@ fn antigravity_version() -> String {
     version
 }
 
-fn antigravity_load_code_assist_user_agent() -> String {
+pub fn antigravity_load_code_assist_user_agent() -> String {
     format!(
         "{} google-api-nodejs-client/10.3.0",
         antigravity_user_agent()

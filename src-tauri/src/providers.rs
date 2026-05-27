@@ -1214,7 +1214,7 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
         .header("accept", "application/json")
         .header(
             "user-agent",
-            "antigravity/2.0.1 windows/amd64 google-api-nodejs-client/10.3.0",
+            sinew_google::antigravity_load_code_assist_user_agent(),
         )
         .header("x-goog-api-client", "gl-node/22.21.1")
         .json(&body)
