@@ -309,11 +309,20 @@ function TodoListCard({
   argsPretty,
   output,
   isError,
+  compactMode,
 }: Pick<
   ToolCardProps,
-  "status" | "summary" | "argsPretty" | "output" | "isError"
+  "status" | "summary" | "argsPretty" | "output" | "isError" | "compactMode"
 >) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => compactMode === "disabled" || !compactMode || isError);
+
+  useEffect(() => {
+    if (compactMode === "compact" || compactMode === "very-compact") {
+      setOpen(isError);
+    } else {
+      setOpen(true);
+    }
+  }, [compactMode, isError]);
   const parsed = useMemo(() => parseTodoOutput(output), [output]);
   const taskCount = parsed?.tasks.length ?? 0;
   const title =
@@ -327,7 +336,14 @@ function TodoListCard({
 
   return (
     <div className="tool-card tool-card--todo">
-      <div className="tool-card__head" onClick={() => setOpen((v) => !v)}>
+      <div
+        className="tool-card__head"
+        style={{ cursor: (compactMode === "disabled" || isError) ? "pointer" : "default" }}
+        onClick={() => {
+          if (compactMode !== "disabled" && !isError) return;
+          setOpen((v) => !v);
+        }}
+      >
         {status === "running" ? (
           <span className="tool-card__spinner" />
         ) : status === "error" ? (
@@ -338,17 +354,19 @@ function TodoListCard({
           </span>
         )}
         <span className="tool-card__title">{title}</span>
-        <span className="tool-card__caret" data-open={open ? "true" : "false"}>
-          <Icon
-            icon={
-              open
-                ? "solar:alt-arrow-down-linear"
-                : "solar:alt-arrow-right-linear"
-            }
-            width={12}
-            height={12}
-          />
-        </span>
+        {(compactMode === "disabled" || isError) && (
+          <span className="tool-card__caret" data-open={open ? "true" : "false"}>
+            <Icon
+              icon={
+                open
+                  ? "solar:alt-arrow-down-linear"
+                  : "solar:alt-arrow-right-linear"
+              }
+              width={12}
+              height={12}
+            />
+          </span>
+        )}
       </div>
 
       {!isError && parsed && parsed.tasks.length > 0 && (
@@ -391,8 +409,17 @@ function CleanContextCard({
   argsPretty,
   output,
   isError,
-}: Pick<ToolCardProps, "status" | "argsPretty" | "output" | "isError">) {
-  const [open, setOpen] = useState(false);
+  compactMode,
+}: Pick<ToolCardProps, "status" | "argsPretty" | "output" | "isError" | "compactMode">) {
+  const [open, setOpen] = useState(() => compactMode === "disabled" || !compactMode || isError);
+
+  useEffect(() => {
+    if (compactMode === "compact" || compactMode === "very-compact") {
+      setOpen(isError);
+    } else {
+      setOpen(true);
+    }
+  }, [compactMode, isError]);
   const cleaned = parseCleanContextOutput(output) ?? 0;
   const noun = cleaned === 1 ? "tool result" : "tool results";
   const title =
@@ -404,7 +431,14 @@ function CleanContextCard({
 
   return (
     <div className="tool-card tool-card--clean-context">
-      <div className="tool-card__head" onClick={() => setOpen((v) => !v)}>
+      <div
+        className="tool-card__head"
+        style={{ cursor: (compactMode === "disabled" || isError) ? "pointer" : "default" }}
+        onClick={() => {
+          if (compactMode !== "disabled" && !isError) return;
+          setOpen((v) => !v);
+        }}
+      >
         {status === "running" ? (
           <span className="tool-card__spinner" />
         ) : isError ? (
@@ -418,17 +452,19 @@ function CleanContextCard({
           </span>
         )}
         <span className="tool-card__title">{title}</span>
-        <span className="tool-card__caret" data-open={open ? "true" : "false"}>
-          <Icon
-            icon={
-              open
-                ? "solar:alt-arrow-down-linear"
-                : "solar:alt-arrow-right-linear"
-            }
-            width={12}
-            height={12}
-          />
-        </span>
+        {(compactMode === "disabled" || isError) && (
+          <span className="tool-card__caret" data-open={open ? "true" : "false"}>
+            <Icon
+              icon={
+                open
+                  ? "solar:alt-arrow-down-linear"
+                  : "solar:alt-arrow-right-linear"
+              }
+              width={12}
+              height={12}
+            />
+          </span>
+        )}
       </div>
       {open && (
         <div className="tool-card__body">
@@ -936,7 +972,7 @@ export function ToolCard({
   const canonicalName = canonicalToolName(name);
   const isCreateImage = canonicalName === "create_image";
   const isTeamRunTool = canonicalName === "team_run";
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => compactMode === "disabled" || !compactMode || isError);
   const [teamStopState, setTeamStopState] = useState<
     "idle" | "stopping" | "stopped" | "error"
   >("idle");
@@ -999,9 +1035,11 @@ export function ToolCard({
 
   useEffect(() => {
     if (compactMode === "compact" || compactMode === "very-compact") {
-      setOpen(false);
+      setOpen(isError);
+    } else {
+      setOpen(true);
     }
-  }, [compactMode]);
+  }, [compactMode, isError]);
 
   if (canonicalName === "read") {
     return (
@@ -1058,6 +1096,7 @@ export function ToolCard({
         argsPretty={argsPretty}
         output={output}
         isError={isError}
+        compactMode={compactMode}
       />
     );
   }
@@ -1069,6 +1108,7 @@ export function ToolCard({
         argsPretty={argsPretty}
         output={output}
         isError={isError}
+        compactMode={compactMode}
       />
     );
   }
@@ -1148,7 +1188,7 @@ export function ToolCard({
   const canExpand =
     !(isContextCompaction && status === "running") &&
     !(isEditFile && status === "running");
-  const showBody = compactMode === "disabled" && canExpand && open && (!isTeamRunSpawn || !teamRunActive);
+  const showBody = (compactMode === "disabled" || isError) && canExpand && open && (!isTeamRunSpawn || !teamRunActive);
   const showTeamStop =
     isTeamRunSpawn &&
     !!teamRunActive &&
@@ -1181,9 +1221,9 @@ export function ToolCard({
       <div
         className="tool-card__head"
         data-cleaned={cleaned ? "true" : "false"}
-        data-clickable={compactMode === "disabled" && (canExpand || isSubAgent) ? "true" : "false"}
+        data-clickable={(compactMode === "disabled" || isError) && (canExpand || isSubAgent) ? "true" : "false"}
         onClick={() => {
-          if (compactMode !== "disabled") return;
+          if (compactMode !== "disabled" && !isError) return;
           if (isSubAgent && onOpenSubAgent) {
             onOpenSubAgent();
             return;
@@ -1280,7 +1320,7 @@ export function ToolCard({
             </span>
           </button>
         )}
-        {compactMode === "disabled" && (canExpand || isSubAgent) ? (
+        {(compactMode === "disabled" || isError) && (canExpand || isSubAgent) ? (
           <span
             className="tool-card__caret"
             data-open={isSubAgent ? "false" : showBody ? "true" : "false"}

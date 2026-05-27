@@ -35,7 +35,7 @@ export function AIThinkingBlock({
   });
   const [isOpen, setIsOpen] = useState(() => {
     if (compactMode === "compact" || compactMode === "very-compact") return false;
-    return isStreaming && content.trim().length > 0;
+    return true;
   });
   const prevStreamingRef = useRef(isStreaming);
   const prevHasContentRef = useRef(false);
@@ -48,10 +48,12 @@ export function AIThinkingBlock({
 
   useEffect(() => {
     if (prevStreamingRef.current && !isStreaming) {
-      setIsOpen(false);
+      if (compactMode !== "disabled") {
+        setIsOpen(false);
+      }
     }
     prevStreamingRef.current = isStreaming;
-  }, [isStreaming]);
+  }, [isStreaming, compactMode]);
 
   useEffect(() => {
     if (compactMode === "compact" || compactMode === "very-compact") return;
@@ -67,6 +69,8 @@ export function AIThinkingBlock({
       setCompactMode(mode);
       if (mode === "compact" || mode === "very-compact") {
         setIsOpen(false);
+      } else {
+        setIsOpen(true);
       }
     };
     window.addEventListener("sinew:compact-reasoning-changed", handler as any);
@@ -90,23 +94,12 @@ export function AIThinkingBlock({
       return null;
     }
     return (
-      <div className="thinking-block">
-        <button
-          type="button"
-          className="thinking-block__head"
-          data-streaming="true"
-          data-has-content="false"
-          disabled
-        >
-          <DotmSquare2
-            speed={1}
-            animated
-            className="thinking-block__matrix"
-          />
-          <span className="thinking-block__label" data-streaming="true">
-            Thinking
-          </span>
-        </button>
+      <div className="thinking-block" style={{ paddingLeft: "10px", paddingTop: "4px" }}>
+        <DotmSquare2
+          speed={1}
+          animated
+          className="thinking-block__matrix"
+        />
       </div>
     );
   }
