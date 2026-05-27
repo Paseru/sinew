@@ -8,6 +8,7 @@ pub const BASH_INPUT: &str = "bash_input";
 pub const READ: &str = "read";
 pub const GLOB: &str = "glob";
 pub const GREP: &str = "grep";
+pub const CODEBASE_SEARCH: &str = "codebase_search";
 pub const EDIT_FILE: &str = "edit_file";
 pub const WRITE_FILE: &str = "write_file";
 pub const WEB_SEARCH: &str = "web_search";
@@ -68,6 +69,7 @@ pub fn is_cursor_compatible_tool(name: &str) -> bool {
         BASH
             | GLOB
             | GREP
+            | CODEBASE_SEARCH
             | READ
             | EDIT_FILE
             | WRITE_FILE

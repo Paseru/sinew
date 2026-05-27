@@ -40,7 +40,7 @@ pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
         "CLIENT_SIDE_TOOL_V2_TODO_READ" | "CLIENT_SIDE_TOOL_V2_TODO_WRITE" => Some("todo_list"),
         "CLIENT_SIDE_TOOL_V2_ASK_QUESTION" => Some("question"),
         "CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL" | "CLIENT_SIDE_TOOL_V2_MCP" => Some("load_mcp_tool"),
-        "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL" => Some("grep"),
+        "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL" => Some("codebase_search"),
         "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => Some("bash"),
         _ => None,
     }
@@ -57,6 +57,7 @@ pub fn cursor_tool_name(sinew_tool: &str) -> &'static str {
         "write_file" => "CLIENT_SIDE_TOOL_V2_EDIT_FILE_V2",
         "glob" => "CLIENT_SIDE_TOOL_V2_GLOB_FILE_SEARCH",
         "grep" => "CLIENT_SIDE_TOOL_V2_RIPGREP_RAW_SEARCH",
+        "codebase_search" => "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL",
         "bash" => "CLIENT_SIDE_TOOL_V2_RUN_TERMINAL_COMMAND_V2",
         "web_search" => "CLIENT_SIDE_TOOL_V2_WEB_SEARCH",
         "web_fetch" => "CLIENT_SIDE_TOOL_V2_WEB_FETCH",
@@ -219,11 +220,10 @@ fn map_tool_params(tool: &str, value: &Value) -> Value {
             let params = params(value, "semanticSearchFullParams", "semantic_search_full_params")
                 .or_else(|| params(value, "semanticSearchParams", "semantic_search_params"));
             json!({
-                "pattern": field(params, &["query", "searchQuery", "search_query", "pattern"])
+                "query": field(params, &["query", "searchQuery", "search_query", "pattern"])
                     .unwrap_or(json!("")),
                 "path": field(params, &["targetDirectory", "target_directory", "path"]).unwrap_or(json!(".")),
-                "include": field(params, &["glob", "include"]),
-                "limit": field(params, &["limit", "maxResults", "max_results"]).unwrap_or(json!(50)),
+                "limit": field(params, &["limit", "maxResults", "max_results"]).unwrap_or(json!(20)),
             })
         }
         "CLIENT_SIDE_TOOL_V2_DELETE_FILE" => {
@@ -468,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn maps_semantic_search_to_grep_with_limit() {
+    fn maps_semantic_search_to_codebase_search() {
         let value = json!({
             "tool": "CLIENT_SIDE_TOOL_V2_SEMANTIC_SEARCH_FULL",
             "toolCallId": "call_1",
@@ -478,9 +478,9 @@ mod tests {
             }
         });
         let parsed = parse_tool_call(&value).expect("parsed");
-        assert_eq!(parsed.sinew_name, "grep");
-        assert_eq!(parsed.input["pattern"], "auth token");
+        assert_eq!(parsed.sinew_name, "codebase_search");
+        assert_eq!(parsed.input["query"], "auth token");
         assert_eq!(parsed.input["path"], "src");
-        assert_eq!(parsed.input["limit"], 50);
+        assert_eq!(parsed.input["limit"], 20);
     }
 }

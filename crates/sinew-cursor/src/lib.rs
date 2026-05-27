@@ -5,6 +5,7 @@ mod conversation;
 mod identity;
 mod model_info;
 mod sanitize;
+mod stream_state;
 mod tools;
 mod usage;
 mod workspace;

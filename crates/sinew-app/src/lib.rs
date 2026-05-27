@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod bash;
 pub mod check_sota;
+pub mod codebase_search;
 pub mod compact;
 pub mod edit;
 pub mod glob;
@@ -28,6 +29,7 @@ pub use agent::{
     ConversationEvent, EngineCommand, QuestionReply, TurnCancel, TurnContext,
 };
 pub use bash::{active_shell_display_name, shell_system_prompt, BashTool};
+pub use codebase_search::CodebaseSearchTool;
 pub use check_sota::CheckSotaTool;
 pub use compact::{compact_conversation_history, CompactConversationOutput};
 pub use edit::EditFileTool;

@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 use crate::tool_run::FileChange;
 use crate::{
     run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CheckSotaTool, CreateImageTool,
-    EditFileTool, GlobTool, GoalWorkflowState, GrepTool, McpSettings, McpToolRegistry,
+    EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CodebaseSearchTool, McpSettings, McpToolRegistry,
     QuestionTool, ReadTool, SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult,
     ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool, WriteFileTool,
 };
@@ -215,6 +215,7 @@ impl SubAgentTool {
             bash: Arc::new(BashTool::new(self.workspace_root.clone())),
             glob: Arc::new(GlobTool::new(self.workspace_root.clone())),
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
+            codebase_search: Arc::new(CodebaseSearchTool::new(self.workspace_root.clone())),
             check_sota: Arc::new(CheckSotaTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(EditFileTool::new(self.workspace_root.clone())),

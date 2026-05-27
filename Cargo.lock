@@ -3996,6 +3996,7 @@ dependencies = [
  "sha2",
  "similar",
  "sinew-core",
+ "sinew-index",
  "sinew-openai",
  "tokio",
  "tracing",
@@ -4018,6 +4019,7 @@ dependencies = [
 name = "sinew-cursor"
 version = "0.1.25"
 dependencies = [
+ "anyhow",
  "async-stream",
  "async-trait",
  "base64 0.22.1",
@@ -4031,6 +4033,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sinew-core",
+ "sinew-index",
  "tokio",
  "tracing",
  "url",
@@ -4057,6 +4060,17 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "sinew-index"
+version = "0.1.25"
+dependencies = [
+ "anyhow",
+ "directories",
+ "rusqlite",
+ "sha2",
+ "walkdir",
 ]
 
 [[package]]

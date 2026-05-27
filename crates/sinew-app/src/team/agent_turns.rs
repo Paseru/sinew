@@ -72,6 +72,7 @@ impl TeamTool {
             bash: Arc::new(BashTool::new(self.workspace_root.clone())),
             glob: Arc::new(GlobTool::new(self.workspace_root.clone())),
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
+            codebase_search: Arc::new(CodebaseSearchTool::new(self.workspace_root.clone())),
             check_sota: Arc::new(CheckSotaTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(

@@ -1,0 +1,17 @@
+[package]
+name = "sinew-index"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Local codebase index for Sinew (FTS chunks, incremental sync)"
+
+[dependencies]
+anyhow = { workspace = true }
+directories = { workspace = true }
+rusqlite = { workspace = true }
+sha2 = { workspace = true }
+walkdir = { workspace = true }
+
+[lints]
+workspace = true

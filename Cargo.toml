@@ -8,6 +8,7 @@ members = [
     "crates/sinew-openai",
     "crates/sinew-openrouter",
     "crates/sinew-cursor",
+    "crates/sinew-index",
     "crates/sinew-app",
     "src-tauri", "sinew-chrome-bridge/native-host-wrapper",
 ]
@@ -29,6 +30,7 @@ sinew-kimi = { path = "crates/sinew-kimi" }
 sinew-openai = { path = "crates/sinew-openai" }
 sinew-openrouter = { path = "crates/sinew-openrouter" }
 sinew-cursor = { path = "crates/sinew-cursor" }
+sinew-index = { path = "crates/sinew-index" }
 sinew-app = { path = "crates/sinew-app" }
 
 tokio = { version = "1.40", features = ["full"] }

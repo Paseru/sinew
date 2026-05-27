@@ -8,6 +8,7 @@ description = "Headless desktop runtime for sinew"
 
 [dependencies]
 sinew-core = { workspace = true }
+sinew-index = { workspace = true }
 sinew-openai = { workspace = true }
 
 anyhow = { workspace = true }

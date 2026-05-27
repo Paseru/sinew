@@ -4,6 +4,7 @@ use std::{
 };
 
 use serde_json::{json, Value};
+use sinew_index::IndexStats;
 
 const SKIP_DIRS: &[&str] = &[
     ".git",
@@ -34,12 +35,28 @@ pub fn snapshot(workspace_root: &str) -> Option<WorkspaceSnapshot> {
         .and_then(|value| value.to_str())
         .unwrap_or("workspace")
         .to_string();
+    let index_stats = sinew_index::index_stats(&path).unwrap_or_else(|_| IndexStats {
+        files_indexed: 0,
+        chunks_indexed: 0,
+        files_updated: 0,
+    });
+    let mut project_layout = build_project_layout(&path, 3, 120);
+    if let Some(object) = project_layout.as_object_mut() {
+        object.insert(
+            "localIndex".into(),
+            json!({
+                "filesIndexed": index_stats.files_indexed,
+                "chunksIndexed": index_stats.chunks_indexed,
+                "engine": "sinew-fts5"
+            }),
+        );
+    }
     Some(WorkspaceSnapshot {
         uri: path_to_file_uri(&path),
         name,
         branch: git_branch(&path),
         git_status: git_status_porcelain(&path),
-        project_layout: build_project_layout(&path, 3, 120),
+        project_layout,
     })
 }
 

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
 
@@ -17,6 +16,7 @@ use crate::{
     conversation::build_stream_request,
     identity::{CachedUsage, CursorIdeIdentity, USAGE_CACHE_TTL},
     model_info,
+    stream_state::StreamStateStore,
     usage::{fetch_usage, CursorUsageInfo},
 };
 
@@ -37,15 +37,11 @@ impl CursorConfig {
     }
 }
 
-struct ConversationStreamState {
-    idempotency_key: String,
-    seqno: u32,
-}
 pub struct CursorProvider {
     config: CursorConfig,
     http: Client,
     identity: CursorIdeIdentity,
-    stream_state: Mutex<HashMap<String, ConversationStreamState>>,
+    stream_state: Mutex<StreamStateStore>,
     usage_cache: Mutex<Option<CachedUsage>>,
 }
 
@@ -60,7 +56,7 @@ impl CursorProvider {
             config,
             http,
             identity,
-            stream_state: Mutex::new(HashMap::new()),
+            stream_state: Mutex::new(StreamStateStore::load()),
             usage_cache: Mutex::new(None),
         })
     }
@@ -168,12 +164,7 @@ async fn stream_composer(
         let mut guard = provider.stream_state.lock().map_err(|_| {
             AppError::Provider("cursor stream state lock poisoned".into())
         })?;
-        let state = guard.entry(session_key.clone()).or_insert_with(|| {
-            ConversationStreamState {
-                idempotency_key: uuid::Uuid::new_v4().to_string(),
-                seqno: 0,
-            }
-        });
+        let state = guard.conversation_state(&session_key);
         (
             session_key.clone(),
             state.idempotency_key.clone(),
@@ -188,9 +179,7 @@ async fn stream_composer(
         &identity,
     );
     if let Ok(mut guard) = provider.stream_state.lock() {
-        if let Some(state) = guard.get_mut(&session_key) {
-            state.seqno = next_seqno;
-        }
+        guard.update_seqno(&session_key, next_seqno);
     }
 
     let session_id = uuid::Uuid::new_v4().to_string();
