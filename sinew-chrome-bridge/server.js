@@ -354,6 +354,31 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ success: false, error: e.message }));
     }
   }
+  else if (pathname === '/api/detach_all') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (!isExtensionConnected()) {
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: true, detached: 0, message: 'Extension not connected' }));
+      return;
+    }
+
+    const requestId = ++messageCounter;
+    pendingRequests.set(requestId, {
+      resolve: (data) => {
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: true, ...(data || {}) }));
+      },
+      timeout: setTimeout(() => {
+        pendingRequests.delete(requestId);
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: false, error: 'Timeout waiting for detach_all' }));
+      }, 5000)
+    });
+
+    extensionSocket.send(JSON.stringify({ id: requestId, command: 'detach_all' }));
+  }
   else if (pathname === '/api/create_tab') {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');

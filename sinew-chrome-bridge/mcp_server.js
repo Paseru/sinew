@@ -6,9 +6,12 @@ const path = require('path');
 const WebSocket = require('./node_modules/ws');
 
 const BRIDGE_ORIGIN = process.env.MCP_BROWSER_CDP_URL || 'http://localhost:29002';
+const DIRECT_CDP_ORIGIN = process.env.SINEW_CHROME_CDP_ORIGIN || 'http://127.0.0.1:29222';
+const DIRECT_CDP_PORT = Number(new URL(DIRECT_CDP_ORIGIN).port || 29222);
 const CHROME_WAIT_MS = 20000;
 const BRIDGE_WAIT_MS = 20000;
 const cursorStateByTabId = new Map();
+const cdpEndpointByTabId = new Map();
 
 // Log errors to stderr so they don't corrupt the stdout JSON-RPC stream
 function log(msg) {
@@ -70,17 +73,39 @@ function extractUrl(task) {
   return domain ? normalizeUrl(domain[0]) : null;
 }
 
-async function requestBridgeLaunch(targetUrl) {
-  return requestJSON(`${BRIDGE_ORIGIN}/api/launch_chrome?url=${encodeURIComponent(normalizeUrl(targetUrl) || 'about:blank')}`, 3000).catch(() => null);
+async function requestBridgeLaunch(_targetUrl) {
+  // Legacy extension-debugger launch path intentionally disabled for MCP actions.
+  // The MCP now controls Chrome through a direct remote-debugging CDP port to avoid
+  // Chrome's "debugging this browser" extension banner and duplicate cursor overlays.
+  return null;
+}
+
+async function releaseExtensionDebuggers() {
+  return requestJSON(`${BRIDGE_ORIGIN}/api/detach_all`, 2000).catch(() => null);
+}
+
+function controlledChromeUserDataDir() {
+  return path.join(process.env.LOCALAPPDATA || process.env.TEMP || '.', 'Sinew', 'ChromeControlProfile');
+}
+
+async function directCdpTabs(timeoutMs = 2500) {
+  const tabs = await requestJSON(`${DIRECT_CDP_ORIGIN}/json`, timeoutMs).catch(() => []);
+  if (!Array.isArray(tabs)) return [];
+  for (const tab of tabs) {
+    if (tab?.id && tab?.webSocketDebuggerUrl) cdpEndpointByTabId.set(String(tab.id), tab.webSocketDebuggerUrl);
+  }
+  return tabs.filter(tab => tab.type === 'page' && !(tab.url || '').startsWith('chrome://') && !(tab.url || '').startsWith('devtools://'));
 }
 
 function launchChrome(targetUrl = 'about:blank') {
   const chromeExe = findChromeExecutable();
   log(`Launching Chrome via ${chromeExe}`);
   const args = [
-    '--silent-debugger-extension-api',
+    `--remote-debugging-port=${DIRECT_CDP_PORT}`,
+    `--user-data-dir=${controlledChromeUserDataDir()}`,
     '--no-first-run',
     '--no-default-browser-check',
+    '--disable-features=Translate,AutomationControlled',
     normalizeUrl(targetUrl) || 'about:blank',
   ];
 
@@ -102,15 +127,15 @@ async function waitForBridge() {
 
   while (Date.now() < deadline) {
     try {
-      const status = await requestJSON(`${BRIDGE_ORIGIN}/api/status`, 1500);
-      if (status && (status.extensionConnected || status.hasExtensionSocket)) return status;
+      const status = await requestJSON(`${DIRECT_CDP_ORIGIN}/json/version`, 1500);
+      if (status && status.webSocketDebuggerUrl) return status;
     } catch (err) {
       lastError = err;
     }
     await sleep(500);
   }
 
-  throw new Error(`Chrome bridge did not become ready${lastError ? `: ${lastError.message}` : ''}`);
+  throw new Error(`Direct Chrome CDP did not become ready${lastError ? `: ${lastError.message}` : ''}`);
 }
 
 function sameOriginOrUrl(tabUrl, targetUrl) {
@@ -128,22 +153,16 @@ async function waitForTabs(preferredUrl = null) {
   let lastTabs = [];
 
   while (Date.now() < deadline) {
-    let tabs = await requestJSON(`${BRIDGE_ORIGIN}/json`, 3000).catch(() => []);
+    let tabs = await directCdpTabs(3000).catch(() => []);
     if (Array.isArray(tabs) && tabs.length > 0) {
       if (!preferredUrl) return tabs;
       const matching = tabs.find(tab => sameOriginOrUrl(tab.url || '', preferredUrl));
       if (matching) return [matching];
-    }
-
-    if (preferredUrl) {
-      const created = await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(preferredUrl)}`, 7000).catch(() => null);
-      if (created && created.success && created.tab) {
-        return [created.tab];
-      }
+      return [tabs.find(tab => tab.url === 'about:blank') || tabs.find(tab => tab.active) || tabs[0]];
     }
 
     if (Array.isArray(tabs)) lastTabs = tabs;
-    await sleep(700);
+    await sleep(500);
   }
 
   return lastTabs;
@@ -151,12 +170,20 @@ async function waitForTabs(preferredUrl = null) {
 
 async function ensureChromeReady(preferredUrl = null) {
   const targetUrl = normalizeUrl(preferredUrl) || 'https://www.google.com';
-  await requestBridgeLaunch(targetUrl);
-  launchChrome(targetUrl);
-  await waitForBridge();
-  const tabs = await waitForTabs(targetUrl);
+  await releaseExtensionDebuggers();
+
+  let tabs = await directCdpTabs(1000).catch(() => []);
   if (!tabs || tabs.length === 0) {
-    throw new Error('Chrome bridge is connected, but no debuggable tab could be created.');
+    launchChrome(targetUrl);
+    await waitForBridge();
+    tabs = await waitForTabs(targetUrl);
+  } else if (targetUrl) {
+    const matching = tabs.find(tab => sameOriginOrUrl(tab.url || '', targetUrl));
+    tabs = [matching || tabs.find(tab => tab.url === 'about:blank') || tabs.find(tab => tab.active) || tabs[0]];
+  }
+
+  if (!tabs || tabs.length === 0) {
+    throw new Error('Chrome direct CDP is ready, but no controllable tab could be created.');
   }
   return tabs;
 }
@@ -190,7 +217,8 @@ function buildActionTasks(task) {
 }
 
 function cdpConnect(tabId) {
-  const ws = new WebSocket(`ws://localhost:29002/devtools/page/${tabId}`);
+  const endpoint = cdpEndpointByTabId.get(String(tabId)) || `ws://127.0.0.1:${DIRECT_CDP_PORT}/devtools/page/${tabId}`;
+  const ws = new WebSocket(endpoint);
   let nextId = 1;
   const pending = new Map();
   ws.on('message', raw => {

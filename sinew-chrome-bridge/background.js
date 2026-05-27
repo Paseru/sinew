@@ -146,9 +146,6 @@ async function handleMessage(msg) {
                   if (errMsg.includes("already attached") || errMsg.includes("Already attached")) {
                     attachedTabs.add(attachTabId);
                     sendResponse(id, { success: true });
-                    ensureCursorInjected(attachTabId).then(() => {
-                      chrome.tabs.sendMessage(attachTabId, { type: "AGENT_STATUS_CHANGE", status: "active" }).catch(() => {});
-                    });
                   } else {
                     console.error("âš ï¸ [Bridge] Debugger attachment failed:", errMsg);
                     sendResponse(id, { success: false, error: errMsg });
@@ -157,9 +154,6 @@ async function handleMessage(msg) {
                   attachedTabs.add(attachTabId);
                   console.log(`ðŸ§¬ [Bridge] Debugger attached to tab ${attachTabId}`);
                   sendResponse(id, { success: true });
-                  ensureCursorInjected(attachTabId).then(() => {
-                    chrome.tabs.sendMessage(attachTabId, { type: "AGENT_STATUS_CHANGE", status: "active" }).catch(() => {});
-                  });
                 }
                 updateStorageState();
                 resolve();
@@ -181,6 +175,21 @@ async function handleMessage(msg) {
               resolve();
             });
           });
+        });
+        break;
+
+      case "detach_all":
+        runLocked(async () => {
+          const ids = Array.from(attachedTabs);
+          await Promise.all(ids.map(tabId => new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { type: "AGENT_STATUS_CHANGE", status: "detached" }).catch(() => {});
+            chrome.debugger.detach({ tabId }, () => {
+              attachedTabs.delete(tabId);
+              resolve();
+            });
+          })));
+          updateStorageState();
+          sendResponse(id, { success: true, detached: ids.length });
         });
         break;
 
@@ -208,10 +217,8 @@ async function handleMessage(msg) {
                   } else {
                     attachedTabs.add(cdpTabId);
                     updateStorageState();
-                    ensureCursorInjected(cdpTabId).then(() => {
-                      sendCDPCommand(id, cdpTabId, method, cdpParams);
-                      resolve();
-                    });
+                    sendCDPCommand(id, cdpTabId, method, cdpParams);
+                    resolve();
                   }
                 });
               } else {
