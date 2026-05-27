@@ -3642,7 +3642,7 @@ type McpSectionProps = {
   knownToolCounts: Record<string, number>;
   onToggleEnabled: (id: string) => void;
   onToggleAutoLoad: (id: string) => void;
-  onMount?: (editor: any) => void;
+  onMount?: (editor: any, monaco: any) => void;
 };
 
 function McpSection({
