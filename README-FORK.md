@@ -82,3 +82,34 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Masquage complet de l'identité* : toutes les requêtes (WebSockets, flux HTTP SSE et appels d'API de chat/quotas) utilisant le compte ChatGPT Codex transmettent désormais l'en-tête `user-agent` officiel `"codex-cli"` pour éviter toute détection.
   * *Génération d'images sous couverture* : correction de l'outil de création d'images par abonnement (DALL-E 3) qui n'envoyait pas le bon User-Agent, désormais aligné sur `"codex-cli"`.
   * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
+
+---
+
+## 📅 28/05 — Intégration Cursor (Composer), Indexation Sémantique & Optimisations Système
+
+* **🤖 Intégration de Cursor & Agent Composer 2.5** :
+  * *Authentification OAuth Sécurisée* : Connexion fluide via OAuth avec renouvellement automatique des jetons de session (remplace la lecture locale SQLite instable de `state.vscdb` pour éviter les soucis de droits d'accès).
+  * *Stealth & Mimétisme IDE* : En-têtes HTTP personnalisés (`x-cursor-client-version` réglable via `SINEW_CURSOR_CLIENT_VERSION`, `user-agent`, `x-cursor-checksum` calculé dynamiquement) simulant un client Cursor légitime pour éviter tout blocage.
+  * *Support Multi-sessions & Multimodal* : Routage des abonnements prioritaires, gestion de la vision (analyse d'images) et génération d'images via providers locaux ou DALL-E dans l'agent Composer.
+  * 📂 *Fichiers : `crates/sinew-cursor/`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`*
+
+* **🔍 Indexation Sémantique Locale & Codebase Search** :
+  * *Indexation Arrière-plan & Embeddings* : Module `sinew-index` pour analyser le projet localement et générer des embeddings vectoriels des fichiers avec découpage intelligent respectueux de la structure des symboles.
+  * *Context Injection* : Intégration transparente des résultats de recherche sémantique comme contexte explicite injecté directement dans les prompts envoyés à l'agent.
+  * 📂 *Fichiers : `crates/sinew-index/`, `crates/sinew-app/src/codebase_search.rs`, `src/components/chat/ChatPane.tsx`*
+
+* **🌐 Extension Chrome (Sinew Chrome Bridge) de Pointe** :
+  * *Suppression du Timeout de 20s* : Résolution d'un délai d'attente bloquant lors de la navigation et de la recherche d'onglets cibles via CDP.
+  * *Stealth & Trajectoire Bézier* : Déplacements du curseur simulés via des courbes de Bézier physiques multi-candidates et masquage complet de la barre d'avertissement de débogage Chrome.
+  * *Design Premium de la Popup* : Redesign complet avec thème sombre moderne, lueur néon, états de diagnostic pliables et indicateur d'attachement du debugger en temps réel.
+  * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`, `sinew-chrome-bridge/popup.js`, `sinew-chrome-bridge/background.js`, `.sinew/skills/browser/SKILL.md`*
+
+* **⚡ Suppression des Popups de Console sur Windows** :
+  * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP ou des sidecars d'arrière-plan.
+  * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`*
+
+* **🎨 Ajustements UI, Encodage & Mode Très Compact** :
+  * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
+  * *Rendu Grand Écran & Démarrage* : Fixation de la largeur `#root` à 100% sur écran large et animations d'introduction stylisées de l'icône de boot.
+  * *Mode Ultra Pur* : Amélioration du mode "Très compact" pour masquer les tools réussis et n'afficher que l'animation d'état en cours.
+  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`*
