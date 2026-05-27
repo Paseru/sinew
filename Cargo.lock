@@ -5025,7 +5025,6 @@ dependencies = [
  "futures",
  "rand 0.9.4",
  "reqwest 0.12.28",
- "rusqlite",
  "serde",
  "serde_json",
  "sha2",

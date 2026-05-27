@@ -20,7 +20,6 @@ mod tests {
     fn oauth_only_identity_is_ready() {
         let identity = CursorIdeIdentity {
             machine_id: uuid::Uuid::new_v4().to_string(),
-            machine_id_from_ide: false,
             client_version: crate::identity::CURSOR_CLIENT_VERSION.into(),
             timezone: "UTC".into(),
             platform: "windows".into(),

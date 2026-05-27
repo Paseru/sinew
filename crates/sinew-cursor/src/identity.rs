@@ -7,7 +7,6 @@ use std::{
 use base64::Engine as _;
 use directories::ProjectDirs;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use sinew_core::{AppError, Result};
 
@@ -21,7 +20,6 @@ pub struct CursorIdeIdentity {
     pub platform: String,
     pub arch: String,
     pub shell: String,
-    pub machine_id_from_ide: bool,
 }
 
 impl CursorIdeIdentity {
@@ -48,9 +46,8 @@ impl CursorIdeIdentity {
     }
 
     fn assemble() -> Self {
-        let (machine_id, machine_id_from_ide) = resolve_machine_id();
-        let client_version =
-            read_ide_client_version().unwrap_or_else(|| CURSOR_CLIENT_VERSION.into());
+        let machine_id = load_or_create_sinew_machine_id();
+        let client_version = CURSOR_CLIENT_VERSION.into();
         let (platform, arch) = detect_platform();
         Self {
             client_version,
@@ -59,7 +56,6 @@ impl CursorIdeIdentity {
             platform,
             arch,
             shell: detect_shell(),
-            machine_id_from_ide,
         }
     }
 
@@ -155,16 +151,6 @@ fn sinew_device_path() -> Option<PathBuf> {
         .map(|dirs| dirs.data_local_dir().join("cursor-composer-device.json"))
 }
 
-fn resolve_machine_id() -> (String, bool) {
-    if let Some(ide_id) = read_ide_machine_id() {
-        let trimmed = ide_id.trim();
-        if !trimmed.is_empty() {
-            return (trimmed.to_string(), true);
-        }
-    }
-    (load_or_create_sinew_machine_id(), false)
-}
-
 fn load_or_create_sinew_machine_id() -> String {
     let Some(path) = sinew_device_path() else {
         return uuid::Uuid::new_v4().to_string();
@@ -203,36 +189,6 @@ fn is_valid_machine_id(value: &str) -> bool {
     !value.is_empty() && uuid::Uuid::parse_str(value).is_ok()
 }
 
-fn default_ide_state_db() -> Option<PathBuf> {
-    std::env::var_os("APPDATA").map(|base| {
-        PathBuf::from(base)
-            .join("Cursor")
-            .join("User")
-            .join("globalStorage")
-            .join("state.vscdb")
-    })
-}
-
-fn read_ide_machine_id() -> Option<String> {
-    let path = default_ide_state_db()?;
-    read_ide_item(&path, "storage.serviceMachineId").ok()
-}
-
-fn read_ide_client_version() -> Option<String> {
-    let path = default_cursor_product_json()?;
-    if !path.exists() {
-        return None;
-    }
-    let contents = std::fs::read_to_string(path).ok()?;
-    let payload: serde_json::Value = serde_json::from_str(&contents).ok()?;
-    payload
-        .get("version")
-        .and_then(|value| value.as_str())
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-}
-
 fn read_local_timezone() -> String {
     if let Ok(tz) = std::env::var("TZ") {
         if !tz.trim().is_empty() {
@@ -252,71 +208,6 @@ fn read_local_timezone() -> String {
         }
     }
     "UTC".into()
-}
-
-fn default_cursor_product_json() -> Option<PathBuf> {
-    if let Some(base) = std::env::var_os("LOCALAPPDATA") {
-        let path = PathBuf::from(base)
-            .join("Programs")
-            .join("cursor")
-            .join("resources")
-            .join("app")
-            .join("product.json");
-        if path.exists() {
-            return Some(path);
-        }
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app/product.json");
-        if path.exists() {
-            return Some(path);
-        }
-    }
-    #[cfg(target_os = "linux")]
-    {
-        for candidate in [
-            "/usr/share/cursor/resources/app/product.json",
-            "/opt/Cursor/resources/app/product.json",
-        ] {
-            let path = PathBuf::from(candidate);
-            if path.exists() {
-                return Some(path);
-            }
-        }
-    }
-    None
-}
-
-fn read_ide_item(path: &PathBuf, key: &str) -> Result<String> {
-    if !path.exists() {
-        return Err(AppError::Auth("Cursor IDE state db not found".into()));
-    }
-    let connection = Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .map_err(|err| AppError::Auth(format!("unable to open Cursor state db: {err}")))?;
-    connection
-        .query_row(
-            "SELECT value FROM ItemTable WHERE key = ?1",
-            [key],
-            |row| read_sqlite_value(row),
-        )
-        .map_err(|err| AppError::Auth(format!("missing Cursor key `{key}`: {err}")))
-}
-
-fn read_sqlite_value(row: &rusqlite::Row<'_>) -> rusqlite::Result<String> {
-    use rusqlite::types::ValueRef;
-    match row.get_ref(0)? {
-        ValueRef::Text(text) => Ok(String::from_utf8_lossy(text).trim().to_string()),
-        ValueRef::Blob(blob) => Ok(String::from_utf8_lossy(blob).trim().to_string()),
-        _ => Err(rusqlite::Error::InvalidColumnType(
-            0,
-            "value".into(),
-            rusqlite::types::Type::Text,
-        )),
-    }
 }
 
 #[cfg(test)]
