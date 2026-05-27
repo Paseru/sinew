@@ -1,9 +1,15 @@
 mod auth;
 mod client;
 mod connect;
+mod conversation;
 mod identity;
 mod model_info;
+mod tools;
 mod usage;
+mod workspace;
+
+#[cfg(test)]
+mod tests;
 
 pub use auth::api::{
     delete_default_api_auth, load_default_api_auth_status, save_default_api_key, ApiCredential,

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use tokio::sync::mpsc;
 
@@ -25,6 +25,7 @@ pub enum AgentMode {
 
 pub struct TurnContext {
     pub provider: Arc<dyn Provider>,
+    pub workspace_root: PathBuf,
     pub model: sinew_core::ModelRef,
     pub cache_key: Option<String>,
     pub cache_stable_message_count: usize,

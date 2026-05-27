@@ -109,6 +109,7 @@ pub(super) async fn estimate_context(
         cache_stable_message_count,
         breakdown_weights,
         !has_pending_user_input,
+        Some(workspace_root.display().to_string()),
     )
     .await
 }
@@ -195,6 +196,7 @@ pub(super) async fn estimate_sub_agent_context(
         input.history.len(),
         breakdown_weights,
         true,
+        Some(workspace_root.display().to_string()),
     )
     .await
 }
@@ -251,6 +253,7 @@ pub(super) async fn estimate_model_context(
     cache_stable_message_count: usize,
     breakdown_weights: Vec<ContextBreakdownWeight>,
     prefer_latest_stream_usage: bool,
+    workspace_root: Option<String>,
 ) -> std::result::Result<ContextEstimateOutput, String> {
     let caps = provider
         .capabilities(&model)
@@ -267,6 +270,9 @@ pub(super) async fn estimate_model_context(
                 .with_cache_stable_message_count(cache_stable_message_count);
             if let Some(cache_key) = cache_key {
                 request = request.with_cache_key(cache_key);
+            }
+            if let Some(workspace_root) = workspace_root {
+                request = request.with_workspace_root(workspace_root);
             }
 
             match provider.estimate_tokens(request).await {

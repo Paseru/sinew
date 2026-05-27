@@ -26,6 +26,7 @@ pub struct ProviderRequest {
     pub cache_key: Option<String>,
     pub cache_stable_message_count: Option<usize>,
     pub service_tier: Option<ServiceTier>,
+    pub workspace_root: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -47,6 +48,7 @@ impl ProviderRequest {
             cache_key: None,
             cache_stable_message_count: None,
             service_tier: None,
+            workspace_root: None,
         }
     }
 
@@ -80,6 +82,14 @@ impl ProviderRequest {
 
     pub fn with_service_tier(mut self, value: ServiceTier) -> Self {
         self.service_tier = Some(value);
+        self
+    }
+
+    pub fn with_workspace_root(mut self, value: impl Into<String>) -> Self {
+        let value = value.into();
+        if !value.trim().is_empty() {
+            self.workspace_root = Some(value);
+        }
         self
     }
 

@@ -17,17 +17,31 @@ pub struct CursorIdeIdentity {
     pub client_version: String,
     pub machine_id: String,
     pub timezone: String,
+    pub platform: String,
+    pub arch: String,
+    pub shell: String,
 }
 
 impl CursorIdeIdentity {
     pub fn load() -> Self {
+        Self::assemble()
+    }
+
+    pub fn refresh(&mut self) {
+        *self = Self::assemble();
+    }
+
+    fn assemble() -> Self {
         let machine_id = read_ide_machine_id().unwrap_or_else(fallback_machine_id);
         let client_version = read_ide_client_version().unwrap_or_else(|| CURSOR_CLIENT_VERSION.into());
-        let timezone = read_local_timezone();
+        let (platform, arch) = detect_platform();
         Self {
             client_version,
             machine_id,
-            timezone,
+            timezone: read_local_timezone(),
+            platform,
+            arch,
+            shell: detect_shell(),
         }
     }
 
@@ -40,8 +54,8 @@ impl CursorIdeIdentity {
         set_header(headers, "x-cursor-client-version", &self.client_version);
         set_header(headers, "x-cursor-client-type", "ide");
         set_header(headers, "x-cursor-client-device-type", "desktop");
-        set_header(headers, "x-cursor-client-os", "windows");
-        set_header(headers, "x-cursor-client-arch", "x64");
+        set_header(headers, "x-cursor-client-os", &self.platform);
+        set_header(headers, "x-cursor-client-arch", &self.arch);
         set_header(headers, "x-ghost-mode", "false");
         set_header(headers, "x-new-onboarding-completed", "true");
         set_header(headers, "x-cursor-timezone", &self.timezone);
@@ -71,6 +85,26 @@ impl CursorIdeIdentity {
         }
         let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
         format!("{encoded}{}", self.machine_id)
+    }
+}
+
+fn detect_platform() -> (String, String) {
+    if cfg!(windows) {
+        ("windows".into(), "x64".into())
+    } else if cfg!(target_os = "macos") {
+        ("darwin".into(), "arm64".into())
+    } else {
+        ("linux".into(), "x64".into())
+    }
+}
+
+fn detect_shell() -> String {
+    if std::env::var("PSModulePath").is_ok() {
+        "powershell".into()
+    } else if cfg!(windows) {
+        "cmd".into()
+    } else {
+        std::env::var("SHELL").unwrap_or_else(|_| "bash".into())
     }
 }
 
@@ -120,13 +154,28 @@ fn read_ide_client_version() -> Option<String> {
 }
 
 fn read_local_timezone() -> String {
-    std::env::var("TZ").unwrap_or_else(|_| {
-        if cfg!(windows) {
-            "Europe/Paris".into()
-        } else {
-            "UTC".into()
+    if let Ok(tz) = std::env::var("TZ") {
+        if !tz.trim().is_empty() {
+            return tz;
         }
-    })
+    }
+    #[cfg(windows)]
+    {
+        if let Ok(output) = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", "(Get-TimeZone).Id"])
+            .output()
+        {
+            let tz = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !tz.is_empty() {
+                return tz;
+            }
+        }
+    }
+    if cfg!(windows) {
+        "Europe/Paris".into()
+    } else {
+        "UTC".into()
+    }
 }
 
 fn default_cursor_product_json() -> PathBuf {

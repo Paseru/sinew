@@ -157,6 +157,7 @@ pub(super) async fn send_message(
     let providers = provider_registry_snapshot(&state)?;
     let context = TurnContext {
         provider,
+        workspace_root: workspace_root.clone(),
         model: conversation.model.clone(),
         cache_key: Some(conversation.id.clone()),
         cache_stable_message_count: turn_user_history_index,

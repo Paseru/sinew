@@ -42,6 +42,7 @@ const SAFE_STREAM_MAX_RETRIES: usize = 5;
 pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     let TurnContext {
         provider,
+        workspace_root,
         model,
         cache_key,
         mut cache_stable_message_count,
@@ -238,7 +239,8 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         let request = ProviderRequest::new(model.clone(), request_history)
             .with_system(current_system_prompt.clone())
             .with_tools(tool_descriptors.clone())
-            .with_cache_stable_message_count(cache_stable_message_count);
+            .with_cache_stable_message_count(cache_stable_message_count)
+            .with_workspace_root(workspace_root.display().to_string());
         let request = match &cache_key {
             Some(cache_key) => request.with_cache_key(cache_key.clone()),
             None => request,

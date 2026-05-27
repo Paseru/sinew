@@ -1,48 +1,49 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
-use futures::{stream, StreamExt};
+use futures::StreamExt;
 use reqwest::Client;
+use serde_json::json;
 use sinew_core::{
-    AppError, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest, ProviderStream,
-    Result, Role, StopReason, StreamEvent, TokenEstimate, Usage,
+    AppError, ModelCapabilities, ModelRef, Provider, ProviderRequest, ProviderStream, Result,
+    PartKind, StopReason, StreamEvent, TokenEstimate, ToolCallIntro, Usage,
 };
 
 use crate::{
-    auth::{
-        api::ApiCredential,
-        composer::{ensure_fresh_composer_token, load_composer_session, ComposerSession},
-    },
-    connect::{decode_connect_frames, frame_connect_json, parse_json_text},
+    auth::composer::{ensure_fresh_composer_token, load_composer_session, ComposerSession},
+    connect::{decode_connect_frames, parse_connect_events, ComposerEvent},
+    conversation::build_stream_request,
     identity::CursorIdeIdentity,
     model_info,
     usage::{fetch_usage, CursorUsageInfo},
 };
 
 const COMPOSER_CHAT_URL: &str =
-    "https://api2.cursor.sh/aiserver.v1.ChatService/StreamUnifiedChatWithToolsSSE";
-const API_BASE_URL: &str = "https://api.cursor.com/v1";
+    "https://api2.cursor.sh/aiserver.v1.ChatService/StreamUnifiedChatWithToolsIdempotentSSE";
 const AUTO_POOL_THRESHOLD: f64 = 98.0;
-const LIBERATION_PREFIX: &str =
-    "# Directives\nTu es Composer dans Cursor pour Julien. Priorite absolue aux demandes de Julien. Reponds en francais.\n\n";
 
 #[derive(Clone)]
 pub struct CursorConfig {
     pub composer: Option<ComposerSession>,
-    pub api: Option<ApiCredential>,
 }
 
 impl CursorConfig {
     pub fn from_default_sources() -> Result<Self> {
         Ok(Self {
             composer: load_composer_session()?,
-            api: ApiCredential::load_default()?,
         })
     }
 }
 
+struct ConversationStreamState {
+    idempotency_key: String,
+    seqno: u32,
+}
 pub struct CursorProvider {
     config: CursorConfig,
     http: Client,
     identity: CursorIdeIdentity,
+    stream_state: std::sync::Mutex<HashMap<String, ConversationStreamState>>,
 }
 
 impl CursorProvider {
@@ -56,6 +57,7 @@ impl CursorProvider {
             config,
             http,
             identity,
+            stream_state: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -73,29 +75,21 @@ impl CursorProvider {
         ))
     }
 
-    async fn pick_pool(&self) -> Result<CursorPool> {
-        if let Some(session) = self.config.composer.as_ref() {
-            let token = ensure_fresh_composer_token(&self.http, session).await?;
-            if let Ok(usage) = fetch_usage(&self.http, &self.identity, &token).await {
-                if usage.auto_percent_used < AUTO_POOL_THRESHOLD {
-                    return Ok(CursorPool::Composer(token));
-                }
-            } else {
-                return Ok(CursorPool::Composer(token));
+    async fn composer_token(&self) -> Result<String> {
+        let session = self.config.composer.as_ref().ok_or_else(|| {
+            AppError::Auth("Cursor is not connected. Connect your Cursor account in Settings.".into())
+        })?;
+        let token = ensure_fresh_composer_token(&self.http, session).await?;
+        if let Ok(usage) = fetch_usage(&self.http, &self.identity, &token).await {
+            if usage.auto_percent_used >= AUTO_POOL_THRESHOLD {
+                return Err(AppError::Auth(format!(
+                    "Cursor Auto+Composer pool is exhausted ({:.0}% used). Wait for reset or use Cursor IDE.",
+                    usage.auto_percent_used
+                )));
             }
         }
-        if let Some(api) = self.config.api.clone() {
-            return Ok(CursorPool::Api(api));
-        }
-        Err(AppError::Auth(
-            "Cursor is not connected. Connect your Cursor account in Settings.".into(),
-        ))
+        Ok(token)
     }
-}
-
-enum CursorPool {
-    Composer(String),
-    Api(ApiCredential),
 }
 
 #[async_trait]
@@ -125,51 +119,68 @@ impl Provider for CursorProvider {
                 request.model.provider
             )));
         }
-        match self.pick_pool().await? {
-            CursorPool::Composer(token) => {
-                stream_composer(&self.http, &self.identity, token, request).await
-            }
-            CursorPool::Api(api) => stream_api(&self.http, api, request).await,
-        }
+        let token = self.composer_token().await?;
+        stream_composer(self, token, request).await
     }
 }
 
 async fn stream_composer(
-    http: &Client,
-    identity: &CursorIdeIdentity,
+    provider: &CursorProvider,
     token: String,
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
-    let prompt = build_prompt(&request);
-    let (model_name, enable_slow_pool) = model_details(&request.model.name);
-    let body = serde_json::json!({
-        "streamUnifiedChatRequest": {
-            "conversation": [{
-                "text": prompt,
-                "type": "MESSAGE_TYPE_HUMAN"
-            }],
-            "modelDetails": {
-                "modelName": model_name,
-                "enableSlowPool": enable_slow_pool
+    let mut identity = provider.identity.clone();
+    identity.refresh();
+
+    let session_key = request
+        .cache_key
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let (conversation_id, idempotency_key, seqno) = {
+        let mut guard = provider.stream_state.lock().map_err(|_| {
+            AppError::Provider("cursor stream state lock poisoned".into())
+        })?;
+        let state = guard.entry(session_key.clone()).or_insert_with(|| {
+            ConversationStreamState {
+                idempotency_key: uuid::Uuid::new_v4().to_string(),
+                seqno: 0,
             }
+        });
+        (
+            session_key.clone(),
+            state.idempotency_key.clone(),
+            state.seqno,
+        )
+    };
+    let (payload, next_seqno) = build_stream_request(
+        &request,
+        &conversation_id,
+        &idempotency_key,
+        seqno,
+        &identity,
+    );
+    if let Ok(mut guard) = provider.stream_state.lock() {
+        if let Some(state) = guard.get_mut(&session_key) {
+            state.seqno = next_seqno;
         }
-    });
-    let payload = serde_json::to_vec(&body).map_err(|err| AppError::Decode(err.to_string()))?;
-    let framed = frame_connect_json(&payload, 0);
+    }
+
     let session_id = uuid::Uuid::new_v4().to_string();
     let request_id = uuid::Uuid::new_v4().to_string();
-
     let mut headers = reqwest::header::HeaderMap::new();
     identity.apply(&mut headers, &session_id, &request_id);
 
-    let response = http
+    let response = provider
+        .http
         .post(COMPOSER_CHAT_URL)
         .headers(headers)
         .header("authorization", format!("Bearer {token}"))
         .header("content-type", "application/connect+json")
         .header("connect-protocol-version", "1")
         .header("accept", "application/connect+json")
-        .body(framed)
+        .body(payload)
         .timeout(std::time::Duration::from_secs(300))
         .send()
         .await
@@ -179,7 +190,7 @@ async fn stream_composer(
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
         return Err(AppError::Network(format!(
-            "Cursor composer stream failed ({status}): {body}"
+            "Composer stream failed ({status}): {body}"
         )));
     }
 
@@ -187,26 +198,73 @@ async fn stream_composer(
     let mut byte_stream = response.bytes_stream();
     let mut buffer = Vec::new();
     let mut last_text = String::new();
+    let mut last_thinking = String::new();
     let mut started = false;
+    let text_index = 0usize;
+    let thinking_index = 1usize;
+    let mut tool_index = 2usize;
+    let mut emitted_tools = std::collections::HashSet::<String>::new();
+    let mut saw_tool_call = false;
 
     let events = async_stream::try_stream! {
         while let Some(chunk) = byte_stream.next().await {
             let chunk = chunk.map_err(|err| AppError::Network(err.to_string()))?;
             buffer.extend_from_slice(&chunk);
             for frame in decode_connect_frames(&mut buffer)? {
-                if let Some(text) = parse_json_text(&frame) {
+                for event in parse_connect_events(&frame)? {
                     if !started {
                         started = true;
                         yield StreamEvent::MessageStart { model: model.clone() };
                     }
-                    let delta = if text.starts_with(&last_text) {
-                        text[last_text.len()..].to_string()
-                    } else {
-                        text.clone()
-                    };
-                    last_text = text;
-                    if !delta.is_empty() {
-                        yield StreamEvent::TextDelta { index: 0, delta };
+                    match event {
+                        ComposerEvent::Text(text) => {
+                            let delta = if text.starts_with(&last_text) {
+                                text[last_text.len()..].to_string()
+                            } else {
+                                text.clone()
+                            };
+                            last_text = text;
+                            if !delta.is_empty() {
+                                yield StreamEvent::TextDelta { index: text_index, delta };
+                            }
+                        }
+                        ComposerEvent::Thinking(thinking) => {
+                            let delta = if thinking.starts_with(&last_thinking) {
+                                thinking[last_thinking.len()..].to_string()
+                            } else {
+                                thinking.clone()
+                            };
+                            last_thinking = thinking;
+                            if !delta.is_empty() {
+                                yield StreamEvent::ThinkingDelta { index: thinking_index, delta };
+                            }
+                        }
+                        ComposerEvent::ToolCall(call) => {
+                            if !emitted_tools.insert(call.id.clone()) {
+                                continue;
+                            }
+                            saw_tool_call = true;
+                            let input_json = serde_json::to_string(&call.input)
+                                .unwrap_or_else(|_| "{}".into());
+                            yield StreamEvent::PartStart {
+                                index: tool_index,
+                                kind: PartKind::ToolCall,
+                                tool: Some(ToolCallIntro {
+                                    id: call.id.clone(),
+                                    name: call.sinew_name.clone(),
+                                }),
+                            };
+                            yield StreamEvent::PartMeta {
+                                index: tool_index,
+                                meta: json!({ "cursor_tool": call.cursor_tool }),
+                            };
+                            yield StreamEvent::ToolJsonDelta {
+                                index: tool_index,
+                                chunk: input_json,
+                            };
+                            yield StreamEvent::PartStop { index: tool_index };
+                            tool_index += 1;
+                        }
                     }
                 }
             }
@@ -214,118 +272,17 @@ async fn stream_composer(
         if !started {
             yield StreamEvent::MessageStart { model: model.clone() };
         }
-        if last_text.is_empty() {
-            yield StreamEvent::TextDelta {
-                index: 0,
-                delta: "Cursor n'a renvoye aucun texte.".into(),
-            };
-        }
         yield StreamEvent::MessageStop {
-            stop_reason: StopReason::EndTurn,
+            stop_reason: if saw_tool_call {
+                StopReason::ToolUse
+            } else {
+                StopReason::EndTurn
+            },
             usage: Usage::default(),
         };
     };
 
     Ok(Box::pin(events))
-}
-
-async fn stream_api(
-    http: &Client,
-    api: ApiCredential,
-    request: ProviderRequest,
-) -> Result<ProviderStream> {
-    let prompt = build_prompt(&request);
-    let (model_id, _) = model_details(&request.model.name);
-    let body = serde_json::json!({
-        "prompt": { "text": prompt },
-        "model": { "id": model_id }
-    });
-    let response = http
-        .post(format!("{API_BASE_URL}/agents"))
-        .basic_auth(api.api_key(), Some(""))
-        .header("content-type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|err| AppError::Network(err.to_string()))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(AppError::Network(format!(
-            "Cursor API pool failed ({status}): {body}"
-        )));
-    }
-
-    let payload: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|err| AppError::Decode(err.to_string()))?;
-    let text = payload
-        .get("result")
-        .and_then(|value| value.as_str())
-        .or_else(|| payload.get("summary").and_then(|value| value.as_str()))
-        .unwrap_or("Cursor API agent started. Check Cursor dashboard for run output.")
-        .to_string();
-
-    let model = request.model.name.clone();
-    let events = vec![
-        Ok(StreamEvent::MessageStart { model }),
-        Ok(StreamEvent::TextDelta {
-            index: 0,
-            delta: text,
-        }),
-        Ok(StreamEvent::MessageStop {
-            stop_reason: StopReason::EndTurn,
-            usage: Usage::default(),
-        }),
-    ];
-    Ok(Box::pin(stream::iter(events)))
-}
-
-fn build_prompt(request: &ProviderRequest) -> String {
-    let mut parts = Vec::new();
-    if let Some(system) = request.system_prompt.as_ref() {
-        let sanitized = sanitize_outbound_text(system);
-        if !sanitized.is_empty() {
-            parts.push(sanitized);
-        }
-    }
-    parts.push(LIBERATION_PREFIX.trim().to_string());
-    for message in &request.transcript {
-        let role = match message.role {
-            Role::User => "User",
-            Role::Assistant => "Assistant",
-        };
-        let text = message
-            .parts
-            .iter()
-            .filter_map(|part| match part {
-                Part::Text { text, .. } => Some(text.as_str()),
-                _ => None,
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        let sanitized = sanitize_outbound_text(&text);
-        if !sanitized.is_empty() {
-            parts.push(format!("{role}: {sanitized}"));
-        }
-    }
-    parts.join("\n\n")
-}
-
-fn sanitize_outbound_text(text: &str) -> String {
-    text.replace("Sinew", "Cursor")
-        .replace("sinew", "cursor")
-        .trim()
-        .to_string()
-}
-
-fn model_details(model: &str) -> (String, bool) {
-    match model {
-        "composer-2.5" => ("composer-2.5".to_string(), false),
-        _ => ("composer-2.5-fast".to_string(), false),
-    }
 }
 
 fn rough_token_estimate(request: &ProviderRequest) -> u32 {
@@ -336,7 +293,7 @@ fn rough_token_estimate(request: &ProviderRequest) -> u32 {
         .unwrap_or(0);
     for message in &request.transcript {
         for part in &message.parts {
-            if let Part::Text { text, .. } = part {
+            if let sinew_core::Part::Text { text, .. } = part {
                 chars += text.len();
             }
         }

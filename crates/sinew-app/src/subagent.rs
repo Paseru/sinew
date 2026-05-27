@@ -194,6 +194,7 @@ impl SubAgentTool {
         };
         let child_context = TurnContext {
             provider,
+            workspace_root: self.workspace_root.clone(),
             model: agent.model.clone(),
             cache_key: Some(format!("subagent:{}:{}", agent.id, tool_call_id)),
             cache_stable_message_count: 0,

@@ -52,6 +52,7 @@ impl TeamTool {
         };
         let child_context = TurnContext {
             provider,
+            workspace_root: self.workspace_root.clone(),
             model: agent.model.clone(),
             cache_key: Some(format!(
                 "team:{}:{}:{}",
