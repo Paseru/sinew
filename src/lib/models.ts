@@ -188,20 +188,13 @@ export const MODELS: ModelEntry[] = [
     defaultThinking: "high",
   },
   {
-    value: "cursor:composer-2.5-fast",
-    provider: "cursor",
-    label: "Composer 2.5 Fast",
-    thinking: ["off", "low", "medium", "high", "xhigh"],
-    defaultThinking: "medium",
-    supportsFast: true,
-    defaultFast: true,
-  },
-  {
     value: "cursor:composer-2.5",
     provider: "cursor",
     label: "Composer 2.5",
-    thinking: ["off", "low", "medium", "high", "xhigh"],
-    defaultThinking: "medium",
+    thinking: [],
+    defaultThinking: "off",
+    supportsFast: true,
+    defaultFast: true,
   },
 ];
 

@@ -484,19 +484,25 @@ fn model_details(
     effort: Option<Effort>,
     service_tier: Option<ServiceTier>,
 ) -> (String, bool, bool, Option<&'static str>) {
-    let (model_name, default_slow_pool, max_mode, default_thinking) = match model {
-        "composer-2.5" => (
-            "composer-2.5".into(),
-            false,
-            true,
-            Some("THINKING_LEVEL_HIGH"),
-        ),
-        _ => (
+    let is_fast = match service_tier {
+        Some(ServiceTier::Fast) => true,
+        _ => model == "composer-2.5-fast",
+    };
+
+    let (model_name, default_slow_pool, max_mode, default_thinking) = if is_fast {
+        (
             "composer-2.5-fast".into(),
             false,
             false,
             Some("THINKING_LEVEL_MEDIUM"),
-        ),
+        )
+    } else {
+        (
+            "composer-2.5".into(),
+            false,
+            true,
+            Some("THINKING_LEVEL_HIGH"),
+        )
     };
     let enable_slow_pool = match service_tier {
         Some(ServiceTier::Flex) => true,

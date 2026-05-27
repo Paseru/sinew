@@ -3778,65 +3778,67 @@ export function ChatPane({
                   </div>
                 )}
               </div>
-              <div className="composer__picker" data-kind="thinking" ref={thinkingRef}>
-                <button
-                  type="button"
-                  className="composer__picker-btn"
-                  data-open={thinkingOpen ? "true" : "false"}
-                  data-locked={selectorLocked ? "true" : "false"}
-                  disabled={
-                    selectorLocked ||
-                    availableModels.length === 0 ||
-                    availableThinking.length === 0
-                  }
-                  onClick={() => {
-                    if (selectorLocked) return;
-                    setThinkingOpen((o) => !o);
-                    setModelOpen(false);
-                    setModeOpen(false);
-                  }}
-                  title={selectorLocked ? "Thinking locked while streaming" : "Thinking"}
-                >
-                  <span className="composer__picker-label">{thinkingLabel}</span>
-                  <Icon
-                    icon="solar:alt-arrow-down-linear"
-                    width={11}
-                    height={11}
-                  />
-                </button>
-                {thinkingOpen && !selectorLocked && (
-                  <div
-                    className="composer__popover"
-                    role="menu"
-                    aria-label="Thinking"
+              {availableThinking.length > 0 && (
+                <div className="composer__picker" data-kind="thinking" ref={thinkingRef}>
+                  <button
+                    type="button"
+                    className="composer__picker-btn"
+                    data-open={thinkingOpen ? "true" : "false"}
+                    data-locked={selectorLocked ? "true" : "false"}
+                    disabled={
+                      selectorLocked ||
+                      availableModels.length === 0 ||
+                      availableThinking.length === 0
+                    }
+                    onClick={() => {
+                      if (selectorLocked) return;
+                      setThinkingOpen((o) => !o);
+                      setModelOpen(false);
+                      setModeOpen(false);
+                    }}
+                    title={selectorLocked ? "Thinking locked while streaming" : "Thinking"}
                   >
-                    {availableThinking.map((level) => {
-                      const selected = level.value === thinking;
-                      return (
-                        <button
-                          key={level.value}
-                          type="button"
-                          className="composer__popover-row"
-                          data-selected={selected ? "true" : "false"}
-                          onClick={() => {
-                            handleThinkingSelect(level.value);
-                          }}
-                        >
-                          <span>{thinkingLevelLabel(level, modelEntry)}</span>
-                          {selected && (
-                            <Icon
-                              icon="solar:check-read-linear"
-                              width={13}
-                              height={13}
-                              className="composer__popover-check"
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                    <span className="composer__picker-label">{thinkingLabel}</span>
+                    <Icon
+                      icon="solar:alt-arrow-down-linear"
+                      width={11}
+                      height={11}
+                    />
+                  </button>
+                  {thinkingOpen && !selectorLocked && (
+                    <div
+                      className="composer__popover"
+                      role="menu"
+                      aria-label="Thinking"
+                    >
+                      {availableThinking.map((level) => {
+                        const selected = level.value === thinking;
+                        return (
+                          <button
+                            key={level.value}
+                            type="button"
+                            className="composer__popover-row"
+                            data-selected={selected ? "true" : "false"}
+                            onClick={() => {
+                              handleThinkingSelect(level.value);
+                            }}
+                          >
+                            <span>{thinkingLevelLabel(level, modelEntry)}</span>
+                            {selected && (
+                              <Icon
+                                icon="solar:check-read-linear"
+                                width={13}
+                                height={13}
+                                className="composer__popover-check"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
               {fastSupported && (
                 <button
                   type="button"

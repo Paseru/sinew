@@ -47,9 +47,23 @@ export default function App() {
   // still handles mid-session checks via its own 30 min interval.
   useEffect(() => {
     let cancelled = false;
+    const startTime = Date.now();
+    const MIN_BOOT_TIME_MS = 1500;
+
+    const transitionTo = async (nextState: AppState) => {
+      const elapsed = Date.now() - startTime;
+      const remaining = MIN_BOOT_TIME_MS - elapsed;
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      if (!cancelled) {
+        setState(nextState);
+      }
+    };
 
     (async () => {
       // 1. Updater gate.
+      let updateInfo: UpdateInfo | null = null;
       try {
         const info = await Promise.race<UpdateInfo | null>([
           api.checkForUpdate(),
@@ -57,10 +71,8 @@ export default function App() {
             window.setTimeout(() => resolve(null), BOOT_CHECK_TIMEOUT_MS),
           ),
         ]);
-        if (cancelled) return;
         if (info && info.available && info.version) {
-          setState({ kind: "update_required", info, autoInstall: false });
-          return;
+          updateInfo = info;
         }
       } catch {
         // Silent: a failed check (offline, server down, manifest 5xx)
@@ -68,25 +80,30 @@ export default function App() {
         // will retry later, and the next launch will re-gate cleanly.
       }
 
-      // 2. Auto-open last workspace, falling back to Welcome.
       if (cancelled) return;
+
+      if (updateInfo) {
+        await transitionTo({ kind: "update_required", info: updateInfo, autoInstall: false });
+        return;
+      }
+
+      // 2. Auto-open last workspace, falling back to Welcome.
       if (startsEmpty) {
-        setState({ kind: "welcome" });
+        await transitionTo({ kind: "welcome" });
         return;
       }
       const last = loadLastWorkspace();
       if (!last) {
-        setState({ kind: "welcome" });
+        await transitionTo({ kind: "welcome" });
         return;
       }
       try {
         const bootstrap = await api.openWorkspace(last);
-        if (cancelled) return;
         const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name;
         recordRecent(bootstrap.workspace.path, displayName);
-        setState({ kind: "workspace", bootstrap });
+        await transitionTo({ kind: "workspace", bootstrap });
       } catch {
-        if (!cancelled) setState({ kind: "welcome" });
+        await transitionTo({ kind: "welcome" });
       }
     })();
 
@@ -121,14 +138,15 @@ export default function App() {
   }, []);
 
   if (state.kind === "boot") {
-    // Splash screen while the updater check resolves. Render the animated logo.
+    // Splash screen while the updater check resolves. Render the animated logo and text.
     return (
       <div className="app-boot" aria-hidden="true">
-        <span className="welcome__mark-dot">
-          <span className="welcome__mark-inner">
-            <SinewMark size={22} className="welcome__mark-glyph" />
-          </span>
-        </span>
+        <div className="boot-logo-container">
+          <SinewMark size={140} className="boot-logo-svg" />
+          <h1 className="boot-logo-text">
+            Sinew<span className="boot-logo-text-dot">.</span>
+          </h1>
+        </div>
       </div>
     );
   }
