@@ -2016,7 +2016,7 @@ function ProvidersSection({
           )}
         </ProviderCard>
         {(openAiAccounts.some((account) => account.key.startsWith("openai:")) || unconnectedAccounts.length > 0) && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "10px", marginLeft: "14px", borderLeft: "2px solid var(--line-2)", paddingLeft: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "10px", marginLeft: "14px", borderLeft: "2px solid var(--line-2)", paddingLeft: "20px", maxWidth: "100%", minWidth: 0 }}>
             {openAiAccounts
               .filter((account) => account.key.startsWith("openai:"))
               .map((account) => {
