@@ -86,5 +86,3 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `index.html`, `src/styles.css`, `crates/sinew-app/src/agent/turn.rs`*
 * **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées de `[Bureau] ` ou `[Perso] ` en fonction du nom d'hôte de la machine (`%COMPUTERNAME%`) pour faciliter le tri multi-PC.
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
-* **🛑 Désactivation de la mise à jour automatique** : L'auto-updater officiel est désactivé pour éviter que vos modifications personnelles et les fonctionnalités propres à ce fork ne soient écrasées.
-  * 📂 *Fichiers : `src-tauri/tauri.conf.json`, `src/components/Welcome.tsx`*
