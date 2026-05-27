@@ -72,3 +72,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Détection Dynamique de la Plateforme (OS & Architecture)* : Génération d'un en-tête `user-agent` réaliste simulant précisément l'environnement hôte de l'utilisateur (Windows, macOS, Linux, avec architectures x86_64 ou arm64) pour toutes les requêtes API de l'assistant de code.
   * *Stabilisation de l'onboarding et du suivi des quotas* : Utilisation par défaut du point de terminaison de production (`cloudcode-pa`), et sécurisation de la récupération des quotas via des en-têtes standardisés (`x-goog-api-client: gl-node/22.21.1` et `user-agent` approprié) pour éviter les blocages.
   * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `src-tauri/src/providers.rs`*
+* **⚡ Expérience Gemini façon Antigravity** : Optimisation ciblée pour que Gemini 3.5 Flash se sente aussi fluide et puissant dans Sinew que dans Antigravity.
+  * *Transport réseau aligné* : activation explicite de HTTP/2 côté `reqwest` pour rapprocher le backend Rust du comportement bas-latence observé dans le `language_server.exe` d’Antigravity.
+  * *Rendu Markdown allégé* : désactivation de la détection automatique coûteuse de langage pendant le streaming, tout en gardant la coloration des blocs qui déclarent leur langage.
+  * *Batch UI par frame* : fusion des micro-fragments (`text_chunk`, `thinking_chunk`, deltas d’outils) et rendu via `requestAnimationFrame`, avec flush immédiat avant les événements structurants pour préserver l’ordre exact.
+  * 📂 *Fichiers : `Cargo.toml`, `src/components/chat/Markdown.tsx`, `src/components/chat/ChatPane.tsx`*
