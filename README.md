@@ -27,6 +27,7 @@
 - [The three modes](#the-three-modes) — Act, Goal, Plan
 - [`AGENTS.md` & `DESIGN.md`](#agentsmd--designmd) — system prompt injection
 - [Multi-provider, one harness](#multi-provider-one-harness) — Anthropic, OpenAI, Google, Kimi, OpenRouter
+- [Real-time Quota Monitoring](#real-time-quota-monitoring) — OpenAI Codex, Antigravity, OpenRouter
 - [Tools](#tools) — the agent's toolset
   - [`clean_context`](#clean_context) — the model cleans its own context
   - [`bash` / `bash_input`](#bash--bash_input) — PTY-backed shell sessions
@@ -112,6 +113,25 @@ Model selection happens at three levels:
 - **Per mode.** Act, Plan and Goal can each have their own dedicated model in Settings. Typically: a large model for Plan (reasoning), a solid one for Act (execution), a fast one for Goal (long loop).
 - **Per sub-agent.** Each configured sub-agent has its own model (see the sub-agents section).
 - **Per teammate** in an Agent Team, through sub-agent profiles.
+
+---
+
+## Real-time Quota Monitoring
+
+Sinew is equipped with a built-in real-time quota tracking engine, letting you monitor your usage and limits directly inside the Settings and connection panels without leaving the harness.
+
+Depending on the provider, three distinct tracking systems are implemented:
+
+- **OpenAI Codex Quotas (ChatGPT Subscription)**: When connected via OpenAI OAuth, Sinew automatically pulls your active ChatGPT Plus/Pro rate limits directly from the official backend APIs. It tracks remaining requests in your primary (short) and secondary (long) windows, complete with exact reset timelines.
+- **Antigravity Quotas (Google Cloud Code / Gemini)**: When authenticated via Google OAuth, Sinew interfaces with Gemini's active developer platform quotas, mapping active rate-limit groups and returning precise remaining request/token percentages and reset times.
+- **OpenRouter Credits**: For API-key-based OpenRouter connections, the harness queries the `/auth/key` endpoint to extract your total credit limit, credits used, and exact remaining USD balance (or indicators for unlimited keys).
+
+### Dynamic Visual Cues
+To ensure you are never surprised by rate-limiting, progress bars in the Settings panel are dynamically color-coded based on your remaining percentage:
+- **Green (>80% remaining):** Comfortable headroom.
+- **Blue (>50% remaining):** Stable usage.
+- **Pink (>20% remaining):** Reaching limits soon.
+- **Red (<20% remaining):** Critically low; throttle imminent.
 
 ---
 

@@ -3471,9 +3471,10 @@ export function ChatPane({
                       
                       let baseProviderId = m.provider;
                       if (m.provider === "openai" && m.value.startsWith("openai:")) {
-                        // Le modèle secondaire openai:10 a son propre providerId "openai:10"
                         const parts = m.value.split(":");
-                        baseProviderId = parts[0] + ":" + parts[1];
+                        if (/^\d+$/.test(parts[1])) {
+                          baseProviderId = m.value;
+                        }
                       }
                       
                       const cached = getCachedQuota(baseProviderId);
