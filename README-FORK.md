@@ -8,6 +8,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
 
 * **📦 Mode Sandbox (Sans dossier)** : Lancez Sinew en un clic sans ouvrir de projet. Idéal pour tester l'IA ou utiliser les outils MCP de manière isolée.
   * 📂 *Fichiers : `src/components/Welcome.tsx`, `src-tauri/src/workspace.rs`*
+* **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées de `[Bureau] ` ou `[Perso] ` en fonction du nom d'hôte de la machine (`%COMPUTERNAME%`), facilitant le tri et l'identification lors de la synchronisation Multi-PC.
+  * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
 
 ---
 
@@ -110,6 +112,15 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
 * **⚡ Suppression des Popups de Console sur Windows** :
   * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP, des commandes Git ou de l'analyse globale SOTA.
   * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`, `src-tauri/src/git.rs`, `crates/sinew-app/src/check_sota.rs`*
+
+* **🛠️ Diagnostics Monaco & read_lints en Temps Réel** :
+  * *Collecte Active* : Remontée instantanée en arrière-plan des diagnostics, erreurs et alertes de compilation du composant d'édition Monaco de Sinew (`EditorPane.tsx`).
+  * *Corrélation d'erreurs* : Le nouvel outil `read_lints` permet à l'IA d'interroger directement ces diagnostics locaux (et de lancer des vérifications système via `cargo`, `eslint`, `ruff`) afin de corriger ses erreurs de code de manière proactive.
+  * 📂 *Fichiers : `src/components/EditorPane.tsx`, `crates/sinew-app/src/read_lints.rs`, `crates/sinew-app/src/editor_diagnostics.rs`*
+
+* **🧠 Compaction Avancée des Tools & Logs** :
+  * *Repli Automatique* : En modes `Compact` ou `Très compact`, les cartes d'outils réussis (lecture/écriture de fichiers, exécution bash, listes de tâches, compactage de contexte) masquent leurs détails techniques complexes (diffs, arguments de lecture, etc.) et cachent la flèche de dépliage pour un journal plus propre, ne s'ouvrant automatiquement qu'en cas d'erreur de traitement.
+  * 📂 *Fichiers : `src/components/chat/ToolCard.tsx`, `src/components/chat/PlanningNextMoveBlock.tsx`, `src/components/chat/stream.ts`*
 
 * **🎨 Ajustements UI, Encodage & Mode Très Compact** :
   * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
