@@ -144,28 +144,28 @@ export const MODELS: ModelEntry[] = [
     value: "google:claude-opus-4.6",
     provider: "google",
     label: "Claude Opus 4.6",
-    thinking: ["low", "medium", "high"],
+    thinking: ["high"],
     defaultThinking: "high",
   },
   {
     value: "google:claude-sonnet-4.6",
     provider: "google",
     label: "Claude Sonnet 4.6",
-    thinking: ["low", "medium", "high"],
+    thinking: ["high"],
     defaultThinking: "high",
   },
   {
     value: "google:gpt-oss-120b",
     provider: "google",
-    label: "GPT-OSS 120B Medium",
-    thinking: ["medium"],
-    defaultThinking: "medium",
+    label: "GPT-OSS 120B",
+    thinking: ["off"],
+    defaultThinking: "off",
   },
   {
     value: "google:gemini-3.1-pro",
     provider: "google",
     label: "Gemini 3.1 Pro",
-    thinking: ["low", "medium", "high"],
+    thinking: ["low", "high"],
     defaultThinking: "high",
   },
   {
@@ -290,7 +290,6 @@ export function modelRefFromId(model: ModelId): ModelRef {
 export function thinkingFromRef(
   model: ModelRef | null | undefined,
 ): ThinkingLevel {
-  if (model?.provider === "google" && model.name === "gpt-oss-120b") return "medium";
   if (model?.provider === "google") {
     if (model.name.endsWith("-low")) return "low";
     if (model.name.endsWith("-medium")) return "medium";
@@ -347,7 +346,6 @@ export function modelRefWithThinking(
 ): ModelRef {
   if (model.provider === "google") {
     const name = normalizedGoogleModelName(model.name);
-    if (name === "gpt-oss-120b") return { ...model, name, effort: "medium" };
     if (thinking === "off") return { ...model, name, effort: "low" };
     if (thinking === "minimal") {
       // Pro variants reject `minimal` server-side; clamp to low.

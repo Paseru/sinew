@@ -156,9 +156,14 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
         codexWindow("Fenetre longue", quota?.secondary),
       ].filter((value): value is QuotaWindow => Boolean(value));
       if (!windows.length) return unavailableQuota("Codex n'a pas renvoye de fenetre de quota");
+      
+      const primaryPercent = quota?.primary && typeof quota.primary.remainingPercent === "number"
+        ? quota.primary.remainingPercent
+        : null;
+
       return {
         kind: "rateLimits",
-        percentage: minPercent(windows),
+        percentage: primaryPercent !== null ? primaryPercent : minPercent(windows),
         isReal: true,
         label: quota?.planType ? `Codex ${quota.planType}` : "Codex",
         source: "ChatGPT Codex /wham/usage",
