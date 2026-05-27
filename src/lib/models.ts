@@ -248,7 +248,7 @@ export function availableModelsForProviders(
       entries.push({
         value: modelId(provider, modelName),
         provider: provider as any,
-        label: `OpenAI ${suffix} (${label})`,
+        label: `OpenAI ${suffix}`,
         thinking,
         defaultThinking,
         supportsFast: true,
