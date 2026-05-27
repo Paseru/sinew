@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::env;
 use std::path::PathBuf;
 use std::process::{exit, Command, Stdio};
@@ -38,13 +40,20 @@ fn main() {
     let server_path = exe_dir.join("server.js");
     let node_path = find_node_path();
 
-    let mut child = match Command::new(node_path)
-        .arg(server_path)
+    let mut cmd = Command::new(node_path);
+    cmd.arg(server_path)
         .arg("--native")
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
+        .stderr(Stdio::inherit());
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+
+    let mut child = match cmd.spawn()
     {
         Ok(child) => child,
         Err(err) => {

@@ -70,10 +70,14 @@ pub fn path_to_file_uri(path: &Path) -> String {
 }
 
 fn git_branch(root: &Path) -> Option<String> {
-    let output = Command::new("git")
-        .args(["-C", &root.display().to_string(), "branch", "--show-current"])
-        .output()
-        .ok()?;
+    let mut cmd = Command::new("git");
+    cmd.args(["-C", &root.display().to_string(), "branch", "--show-current"]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+    let output = cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -82,10 +86,14 @@ fn git_branch(root: &Path) -> Option<String> {
 }
 
 fn git_status_porcelain(root: &Path) -> Option<String> {
-    let output = Command::new("git")
-        .args(["-C", &root.display().to_string(), "status", "--porcelain"])
-        .output()
-        .ok()?;
+    let mut cmd = Command::new("git");
+    cmd.args(["-C", &root.display().to_string(), "status", "--porcelain"]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+    let output = cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }

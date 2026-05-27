@@ -216,8 +216,10 @@ fn read_local_timezone() -> String {
     }
     #[cfg(windows)]
     {
+        use std::os::windows::process::CommandExt;
         if let Ok(output) = std::process::Command::new("powershell")
             .args(["-NoProfile", "-Command", "(Get-TimeZone).Id"])
+            .creation_flags(0x08000000)
             .output()
         {
             let tz = String::from_utf8_lossy(&output.stdout).trim().to_string();

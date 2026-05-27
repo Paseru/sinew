@@ -835,12 +835,17 @@ fn executable_works(path: &Path) -> bool {
     if !path.exists() {
         return false;
     }
-    Command::new(path)
-        .arg("--version")
+    let mut cmd = Command::new(path);
+    cmd.arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+    cmd.status()
         .map(|status| status.success())
         .unwrap_or(false)
 }
@@ -1409,6 +1414,11 @@ fn run_output_with_program(
         command.arg(OsStr::new(arg));
     }
     command.stdin(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
     let output = command
         .output()
         .with_context(|| format!("unable to launch {program_label}"))?;

@@ -487,10 +487,12 @@ pub(super) fn open_with_default_app(path: &Path) -> Result<()> {
     #[cfg(target_os = "windows")]
     {
         // `start` is a cmd builtin; the second argument is the window title.
-        let status = Command::new("cmd")
-            .args(["/C", "start", ""])
-            .arg(path)
-            .status()
+        let mut cmd = Command::new("cmd");
+        cmd.args(["/C", "start", ""])
+            .arg(path);
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+        let status = cmd.status()
             .context("unable to open file with default application")?;
         if !status.success() {
             anyhow::bail!("default application open failed");
@@ -641,6 +643,8 @@ pub(super) fn clipboard_text_command() -> Option<Command> {
     {
         let mut command = Command::new("powershell");
         command.args(["-NoProfile", "-Command", "Get-Clipboard"]);
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
         return Some(command);
     }
     #[cfg(all(unix, not(target_os = "macos")))]
