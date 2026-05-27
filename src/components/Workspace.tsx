@@ -1851,8 +1851,8 @@ export function Workspace({
                 <span className="sidebar__head-title-stack">
                   <span>{bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name}</span>
                   <span className="sidebar__index-status" title={`Moteur ${codebaseIndex.engine}`}>
-                    Index local · {codebaseIndex.filesIndexed} fichiers · {codebaseIndex.chunksIndexed} chunks
-                    {codebaseIndex.semanticEnabled ? " · sémantique" : ""}
+                    Index local \u00b7 {codebaseIndex.filesIndexed} fichiers \u00b7 {codebaseIndex.chunksIndexed} chunks
+                    {codebaseIndex.semanticEnabled ? " \u00b7 sémantique" : ""}
                   </span>
                 </span>
               </span>

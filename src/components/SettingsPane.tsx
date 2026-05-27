@@ -2778,7 +2778,7 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
           />
         </div>
         <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` · ${reset}` : ""}
+          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` \u00b7 ${reset}` : ""}
         </span>
       </span>
     );
@@ -2788,8 +2788,8 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
     <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "11px", minWidth: 0 }}>
         <span style={{ color: "var(--text-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{formatWindowLabel(item)}</span>
-        <span style={{ color: "var(--text-2)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }} title={percent == null ? "—" : `${percent.toFixed(0)}%${reset ? ` · ${reset}` : ""}`}>
-          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` · ${reset}` : ""}
+        <span style={{ color: "var(--text-2)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }} title={percent == null ? "—" : `${percent.toFixed(0)}%${reset ? ` \u00b7 ${reset}` : ""}`}>
+          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` \u00b7 ${reset}` : ""}
         </span>
       </div>
       <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
@@ -3680,7 +3680,7 @@ function McpSection({
               ? "Loading servers…"
               : servers.length === 0
                 ? "Add servers in advanced config, then turn them on here."
-                : `${enabledCount}/${servers.length} enabled${failedCount ? ` · ${failedCount} need attention` : ""}`}
+                : `${enabledCount}/${servers.length} enabled${failedCount ? ` \u00b7 ${failedCount} need attention` : ""}`}
           </p>
         </div>
         <div className="settings-pane__actions">

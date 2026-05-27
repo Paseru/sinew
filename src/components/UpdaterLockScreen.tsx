@@ -244,7 +244,7 @@ export function UpdaterLockScreen({ info, autoInstall = false }: Props) {
                 {phase.kind === "installing"
                   ? "Finalizing installation…"
                   : percent !== null
-                    ? `Downloading · ${percent}%`
+                    ? `Downloading \u00b7 ${percent}%`
                     : "Downloading…"}
               </span>
               {phase.kind === "downloading" && phase.total !== null && (
@@ -358,7 +358,7 @@ function titleFor(phase: Phase): string {
 function subFor(phase: Phase, info: UpdateInfo, countdown: number): string {
   switch (phase.kind) {
     case "prompt":
-      return `Sinew ${info.version ?? ""} · you're on ${info.currentVersion}`;
+      return `Sinew ${info.version ?? ""} \u00b7 you're on ${info.currentVersion}`;
     case "downloading":
       return `${info.currentVersion} → ${info.version ?? ""}`;
     case "installing":
