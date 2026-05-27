@@ -39,6 +39,36 @@ use crate::{system_prompt_with_todo, tool_names, ReadFingerprint, ToolRunResult}
 
 const SAFE_STREAM_MAX_RETRIES: usize = 5;
 
+fn cursor_system_prompt(
+    base: &str,
+    mode: AgentMode,
+    goal_workflow: &crate::GoalWorkflowState,
+    plan_mode_prompt: &str,
+) -> String {
+    let base = base.trim();
+    match mode {
+        AgentMode::Act => base.to_string(),
+        AgentMode::Plan => {
+            let plan = plan_mode_prompt.trim();
+            if plan.is_empty() {
+                format!("{base}\n\nYou are in planning mode. Explore the codebase and propose a plan before making changes.")
+            } else {
+                format!("{base}\n\nYou are in planning mode.\n{plan}")
+            }
+        }
+        AgentMode::Goal => {
+            let mut prompt = format!(
+                "{base}\n\nWork autonomously toward the objective across multiple turns."
+            );
+            if let Some(objective) = super::mode::goal_objective(goal_workflow) {
+                prompt.push_str("\n\nCurrent objective:\n");
+                prompt.push_str(objective);
+            }
+            prompt
+        }
+    }
+}
+
 pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     let TurnContext {
         provider,
@@ -177,6 +207,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         if let Some(teams) = &teams {
             tool_descriptors.extend(teams.descriptors());
         }
+        let tool_descriptors = if model.provider == "cursor" {
+            tool_descriptors
+                .into_iter()
+                .filter(|tool| tool_names::is_cursor_compatible_tool(&tool.name))
+                .collect()
+        } else {
+            tool_descriptors
+        };
         let tool_descriptors = tool_settings.apply_to_descriptors(tool_descriptors);
         let question_enabled = question.is_some() && tool_settings.is_enabled(tool_names::QUESTION);
 
@@ -187,12 +225,21 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 current_system_prompt.push_str(&team_reminder);
             }
         }
-        let current_system_prompt = system_prompt_for_turn(
-            &current_system_prompt,
-            mode,
-            &goal_workflow,
-            tool_settings.plan_mode_prompt(),
-        );
+        let current_system_prompt = if model.provider == "cursor" {
+            cursor_system_prompt(
+                &current_system_prompt,
+                mode,
+                &goal_workflow,
+                tool_settings.plan_mode_prompt(),
+            )
+        } else {
+            system_prompt_for_turn(
+                &current_system_prompt,
+                mode,
+                &goal_workflow,
+                tool_settings.plan_mode_prompt(),
+            )
+        };
 
         if auto_compact {
             match maybe_auto_compact_history(

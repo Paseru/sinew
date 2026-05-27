@@ -40,7 +40,7 @@ pub fn capabilities(model: &ModelRef) -> ModelCapabilities {
         supports_thinking: true,
         visible_thinking: true,
         supports_tools: true,
-        supports_images: true,
+        supports_images: false,
         effort_mode: EffortMode::Tier,
     }
 }

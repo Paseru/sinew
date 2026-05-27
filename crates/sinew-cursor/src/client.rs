@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::Instant;
 
 use async_trait::async_trait;
 use futures::StreamExt;
@@ -13,7 +15,7 @@ use crate::{
     auth::composer::{ensure_fresh_composer_token, load_composer_session, ComposerSession},
     connect::{decode_connect_frames, parse_connect_events, ComposerEvent},
     conversation::build_stream_request,
-    identity::CursorIdeIdentity,
+    identity::{CachedUsage, CursorIdeIdentity, USAGE_CACHE_TTL},
     model_info,
     usage::{fetch_usage, CursorUsageInfo},
 };
@@ -43,7 +45,8 @@ pub struct CursorProvider {
     config: CursorConfig,
     http: Client,
     identity: CursorIdeIdentity,
-    stream_state: std::sync::Mutex<HashMap<String, ConversationStreamState>>,
+    stream_state: Mutex<HashMap<String, ConversationStreamState>>,
+    usage_cache: Mutex<Option<CachedUsage>>,
 }
 
 impl CursorProvider {
@@ -57,7 +60,8 @@ impl CursorProvider {
             config,
             http,
             identity,
-            stream_state: std::sync::Mutex::new(HashMap::new()),
+            stream_state: Mutex::new(HashMap::new()),
+            usage_cache: Mutex::new(None),
         })
     }
 
@@ -80,15 +84,36 @@ impl CursorProvider {
             AppError::Auth("Cursor is not connected. Connect your Cursor account in Settings.".into())
         })?;
         let token = ensure_fresh_composer_token(&self.http, session).await?;
-        if let Ok(usage) = fetch_usage(&self.http, &self.identity, &token).await {
-            if usage.auto_percent_used >= AUTO_POOL_THRESHOLD {
-                return Err(AppError::Auth(format!(
-                    "Cursor Auto+Composer pool is exhausted ({:.0}% used). Wait for reset or use Cursor IDE.",
-                    usage.auto_percent_used
-                )));
-            }
+        if self.should_block_for_pool_exhaustion(&token).await? {
+            return Err(AppError::Auth(format!(
+                "Cursor Auto+Composer pool is exhausted ({:.0}% used). Wait for reset or use Cursor IDE.",
+                self.cached_usage(&token).await?.auto_percent_used
+            )));
         }
         Ok(token)
+    }
+
+    async fn cached_usage(&self, token: &str) -> Result<CursorUsageInfo> {
+        if let Ok(guard) = self.usage_cache.lock() {
+            if let Some(cached) = guard.as_ref() {
+                if cached.fetched_at.elapsed() < USAGE_CACHE_TTL {
+                    return Ok(cached.info.clone());
+                }
+            }
+        }
+        let usage = fetch_usage(&self.http, &self.identity, token).await?;
+        if let Ok(mut guard) = self.usage_cache.lock() {
+            *guard = Some(CachedUsage {
+                fetched_at: Instant::now(),
+                info: usage.clone(),
+            });
+        }
+        Ok(usage)
+    }
+
+    async fn should_block_for_pool_exhaustion(&self, token: &str) -> Result<bool> {
+        let usage = self.cached_usage(token).await?;
+        Ok(usage.auto_percent_used >= AUTO_POOL_THRESHOLD)
     }
 }
 
@@ -131,6 +156,7 @@ async fn stream_composer(
 ) -> Result<ProviderStream> {
     let mut identity = provider.identity.clone();
     identity.refresh();
+    identity.ensure_ready()?;
 
     let session_key = request
         .cache_key

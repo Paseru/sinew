@@ -4,7 +4,6 @@ use std::{
 };
 
 use directories::ProjectDirs;
-use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 use sinew_core::{AppError, Result};
@@ -14,17 +13,6 @@ use crate::identity::CursorIdeIdentity;
 const CURSOR_AUTH_CLIENT_ID: &str = "KbZUR41cY7W6zRSdpSUJ7I7mLYBKOCmB";
 const CURSOR_OAUTH_TOKEN_URL: &str = "https://api2.cursor.sh/oauth/token";
 const REFRESH_SKEW_MS: i64 = 120_000;
-
-fn default_ide_state_db() -> PathBuf {
-    if let Some(base) = std::env::var_os("APPDATA") {
-        return PathBuf::from(base)
-            .join("Cursor")
-            .join("User")
-            .join("globalStorage")
-            .join("state.vscdb");
-    }
-    PathBuf::from(r"C:\Users\julie\AppData\Roaming\Cursor\User\globalStorage\state.vscdb")
-}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -170,25 +158,9 @@ pub fn save_oauth_tokens(
 }
 
 pub fn sync_composer_auth_from_ide() -> Result<CursorComposerAuthStatus> {
-    let session = read_ide_session(&default_ide_state_db())?;
-    let path = default_composer_auth_path()?;
-    let auth = StoredAuth {
-        provider: PROVIDER_ID.into(),
-        auth_mode: "ide_session".into(),
-        tokens: StoredTokens {
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            expires_at_ms: session.expires_at_ms,
-        },
-        profile: StoredProfile {
-            email: session.email,
-            membership_type: session.membership_type,
-            subscription_status: session.subscription_status,
-        },
-        last_sync_ms: Some(now_ms()),
-    };
-    write_auth_file(&path, &auth)?;
-    Ok(status_from_auth(&auth))
+    Err(AppError::Auth(
+        "Direct IDE session sync is disabled. Connect Cursor from Sinew Settings using OAuth.".into(),
+    ))
 }
 
 pub fn load_composer_session() -> Result<Option<ComposerSession>> {
@@ -203,7 +175,7 @@ pub fn load_composer_session() -> Result<Option<ComposerSession>> {
     if auth.provider != PROVIDER_ID || auth.tokens.access_token.trim().is_empty() {
         return Ok(None);
     }
-    if auth.auth_mode != "oauth" && auth.auth_mode != "ide_session" {
+    if auth.auth_mode != "oauth" {
         return Ok(None);
     }
     Ok(Some(ComposerSession {
@@ -284,59 +256,6 @@ pub fn delete_composer_auth() -> Result<()> {
 }
 
 const PROVIDER_ID: &str = "cursor";
-
-fn read_ide_session(path: &Path) -> Result<ComposerSession> {
-    let connection = Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .map_err(|err| AppError::Auth(format!("unable to open Cursor state db: {err}")))?;
-    let access_token = read_item(&connection, "cursorAuth/accessToken")?;
-    let refresh_token = read_item(&connection, "cursorAuth/refreshToken").ok();
-    let email = read_item(&connection, "cursorAuth/cachedEmail").ok();
-    let membership_type = read_item(&connection, "cursorAuth/stripeMembershipType").ok();
-    let subscription_status = read_item(&connection, "cursorAuth/stripeSubscriptionStatus").ok();
-    if access_token.trim().is_empty() {
-        return Err(AppError::Auth(
-            "Cursor IDE session not found. Open Cursor and sign in first.".into(),
-        ));
-    }
-    Ok(ComposerSession {
-        access_token,
-        refresh_token,
-        email,
-        membership_type,
-        subscription_status,
-        expires_at_ms: jwt_exp_ms(&read_item(
-            &connection,
-            "cursorAuth/accessToken",
-        )?),
-        source_path: default_composer_auth_path()?,
-    })
-}
-
-fn read_item(connection: &Connection, key: &str) -> Result<String> {
-    connection
-        .query_row(
-            "SELECT value FROM ItemTable WHERE key = ?1",
-            [key],
-            |row| read_item_value(row),
-        )
-        .map_err(|err| AppError::Auth(format!("missing Cursor key `{key}`: {err}")))
-}
-
-fn read_item_value(row: &rusqlite::Row<'_>) -> rusqlite::Result<String> {
-    use rusqlite::types::ValueRef;
-    match row.get_ref(0)? {
-        ValueRef::Text(text) => Ok(String::from_utf8_lossy(text).trim().to_string()),
-        ValueRef::Blob(blob) => Ok(String::from_utf8_lossy(blob).trim().to_string()),
-        _ => Err(rusqlite::Error::InvalidColumnType(
-            0,
-            "value".into(),
-            rusqlite::types::Type::Text,
-        )),
-    }
-}
 
 fn status_from_auth(auth: &StoredAuth) -> CursorComposerAuthStatus {
     let mut status = CursorComposerAuthStatus {

@@ -5,7 +5,8 @@ use sinew_core::{Effort, Part, ProviderRequest, Role, ServiceTier, ToolDescripto
 
 use crate::{
     identity::CursorIdeIdentity,
-    tools::{build_client_tool_result, cursor_tool_name, SUPPORTED_TOOLS},
+    sanitize::{sanitize_outbound_json, sanitize_outbound_text},
+    tools::{build_client_tool_result, cursor_tool_name, is_mappable_sinew_tool, SUPPORTED_TOOLS},
     workspace::{snapshot, WorkspaceSnapshot},
 };
 
@@ -57,7 +58,7 @@ fn build_full_request(
             "isChat": false,
             "unifiedMode": "UNIFIED_MODE_AGENT",
             "useUnifiedChatPrompt": true,
-            "enableYoloMode": true,
+            "enableYoloMode": false,
             "supportedTools": SUPPORTED_TOOLS,
             "conversationId": conversation_id,
             "environmentInfo": build_environment_info(identity, workspace.as_ref()),
@@ -148,11 +149,11 @@ fn build_mcp_tools(tools: &[ToolDescriptor]) -> Vec<Value> {
         .filter(|tool| tool.name.starts_with("mcp__"))
         .map(|tool| {
             json!({
-                "name": tool.name,
+                "name": sanitize_outbound_text(&tool.name),
                 "providerIdentifier": "cursor-mcp",
-                "toolName": tool.name,
+                "toolName": sanitize_outbound_text(&tool.name),
                 "description": sanitize_outbound_text(&tool.description),
-                "inputSchema": tool.input_schema,
+                "inputSchema": sanitize_outbound_json(tool.input_schema.clone()),
             })
         })
         .collect()
@@ -244,7 +245,7 @@ fn build_conversation(request: &ProviderRequest) -> (Vec<Value>, Vec<Value>) {
                     .and_then(snapshot)
                     .and_then(|snapshot| snapshot.git_status)
                 {
-                    entry["gitStatusRaw"] = json!(status);
+                    entry["gitStatusRaw"] = json!(sanitize_outbound_text(&status));
                 }
                 messages.push(entry);
             }
@@ -280,24 +281,36 @@ fn tool_calls_from_message(
                 name,
                 input,
                 meta,
-            } => Some((
-                id.clone(),
-                name.clone(),
-                resolve_cursor_tool(name, meta),
-                input.clone(),
-            )),
+            } => {
+                let cursor_tool = resolve_cursor_tool(name, meta)?;
+                Some((
+                    id.clone(),
+                    name.clone(),
+                    cursor_tool,
+                    sanitize_outbound_json(input.clone()),
+                ))
+            }
             _ => None,
         })
         .collect()
 }
 
-fn resolve_cursor_tool(name: &str, meta: &Option<Value>) -> String {
+fn resolve_cursor_tool(name: &str, meta: &Option<Value>) -> Option<String> {
+    if name.starts_with("mcp__") {
+        return Some("CLIENT_SIDE_TOOL_V2_CALL_MCP_TOOL".into());
+    }
+    if !is_mappable_sinew_tool(name) {
+        return None;
+    }
     meta.as_ref()
         .and_then(|value| value.get("cursor_tool"))
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
         .map(str::to_string)
-        .unwrap_or_else(|| cursor_tool_name(name).to_string())
+        .or_else(|| {
+            let mapped = cursor_tool_name(name);
+            (mapped != "CLIENT_SIDE_TOOL_V2_UNSPECIFIED").then(|| mapped.to_string())
+        })
 }
 
 fn assistant_tool_calls_payload(
@@ -306,11 +319,11 @@ fn assistant_tool_calls_payload(
     tool_calls
         .iter()
         .map(|(id, _name, cursor_tool, input)| {
-            let raw_args = serde_json::to_string(input).unwrap_or_else(|_| "{}".into());
+            let raw_args = serde_json::to_string(&input).unwrap_or_else(|_| "{}".into());
             json!({
                 "tool": cursor_tool,
                 "toolCallId": id,
-                "rawArgs": raw_args,
+                "rawArgs": sanitize_outbound_text(&raw_args),
             })
         })
         .collect()
@@ -345,8 +358,8 @@ fn tool_results_from_message(
                     "toolName": cursor_tool,
                     "toolIndex": 0,
                     "content": sanitize_outbound_text(content),
-                    "args": args.to_string(),
-                    "rawArgs": args.to_string(),
+                    "args": sanitize_outbound_text(&args.to_string()),
+                    "rawArgs": sanitize_outbound_text(&args.to_string()),
                     "error": if *is_error {
                         json!({ "message": sanitize_outbound_text(content) })
                     } else {
@@ -481,16 +494,6 @@ fn message_text(message: &sinew_core::ChatMessage) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-pub fn sanitize_outbound_text(text: &str) -> String {
-    text.replace("Sinew", "Cursor")
-        .replace("sinew", "cursor")
-        .replace("HYRAK", "Cursor")
-        .replace("Hyrak", "Cursor")
-        .replace("hyrak", "cursor")
-        .trim()
-        .to_string()
 }
 
 #[cfg(test)]

@@ -60,3 +60,21 @@ pub fn canonical_tool_name(name: &str) -> &str {
 pub fn is_tool_name(name: &str, canonical: &str) -> bool {
     canonical_tool_name(name) == canonical
 }
+
+pub fn is_cursor_compatible_tool(name: &str) -> bool {
+    let canonical = canonical_tool_name(name);
+    matches!(
+        canonical,
+        BASH
+            | GLOB
+            | GREP
+            | READ
+            | EDIT_FILE
+            | WRITE_FILE
+            | WEB_SEARCH
+            | WEB_FETCH
+            | TODO_LIST
+            | QUESTION
+            | LOAD_MCP_TOOL
+    ) || name.starts_with("mcp__")
+}

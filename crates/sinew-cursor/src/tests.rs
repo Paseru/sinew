@@ -3,8 +3,9 @@ mod tests {
     use sinew_core::{ChatMessage, ModelRef, Part, ProviderRequest, Role};
 
     use crate::{
-        conversation::{build_stream_request, sanitize_outbound_text},
+        conversation::build_stream_request,
         identity::CursorIdeIdentity,
+        sanitize::sanitize_outbound_text,
         tools::{build_client_tool_result, parse_tool_call},
     };
 

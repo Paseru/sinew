@@ -1,6 +1,7 @@
 use std::{
     path::PathBuf,
     sync::OnceLock,
+    time::{Duration, Instant},
 };
 
 use base64::Engine as _;
@@ -20,6 +21,7 @@ pub struct CursorIdeIdentity {
     pub platform: String,
     pub arch: String,
     pub shell: String,
+    pub machine_id_from_ide: bool,
 }
 
 impl CursorIdeIdentity {
@@ -31,9 +33,25 @@ impl CursorIdeIdentity {
         *self = Self::assemble();
     }
 
+    pub fn ensure_ready(&self) -> Result<()> {
+        if !self.machine_id_from_ide {
+            return Err(AppError::Auth(
+                "Cursor IDE machineId not found. Install Cursor, sign in once, then retry.".into(),
+            ));
+        }
+        if self.client_version.trim().is_empty() {
+            return Err(AppError::Auth(
+                "Cursor IDE version not found. Install Cursor and retry.".into(),
+            ));
+        }
+        Ok(())
+    }
+
     fn assemble() -> Self {
+        let machine_id_from_ide = read_ide_machine_id().is_some();
         let machine_id = read_ide_machine_id().unwrap_or_else(fallback_machine_id);
-        let client_version = read_ide_client_version().unwrap_or_else(|| CURSOR_CLIENT_VERSION.into());
+        let client_version =
+            read_ide_client_version().unwrap_or_else(|| CURSOR_CLIENT_VERSION.into());
         let (platform, arch) = detect_platform();
         Self {
             client_version,
@@ -42,6 +60,7 @@ impl CursorIdeIdentity {
             platform,
             arch,
             shell: detect_shell(),
+            machine_id_from_ide,
         }
     }
 
@@ -89,12 +108,21 @@ impl CursorIdeIdentity {
 }
 
 fn detect_platform() -> (String, String) {
+    let arch = normalize_arch(std::env::consts::ARCH);
     if cfg!(windows) {
-        ("windows".into(), "x64".into())
+        ("windows".into(), arch)
     } else if cfg!(target_os = "macos") {
-        ("darwin".into(), "arm64".into())
+        ("darwin".into(), arch)
     } else {
-        ("linux".into(), "x64".into())
+        ("linux".into(), arch)
+    }
+}
+
+fn normalize_arch(arch: &str) -> String {
+    match arch {
+        "x86_64" | "x86" => "x64".into(),
+        "aarch64" | "arm64" => "arm64".into(),
+        other => other.to_string(),
     }
 }
 
@@ -123,23 +151,23 @@ fn fallback_machine_id() -> String {
         .clone()
 }
 
-fn default_ide_state_db() -> PathBuf {
-    if let Some(base) = std::env::var_os("APPDATA") {
-        return PathBuf::from(base)
+fn default_ide_state_db() -> Option<PathBuf> {
+    std::env::var_os("APPDATA").map(|base| {
+        PathBuf::from(base)
             .join("Cursor")
             .join("User")
             .join("globalStorage")
-            .join("state.vscdb");
-    }
-    PathBuf::from(r"C:\Users\julie\AppData\Roaming\Cursor\User\globalStorage\state.vscdb")
+            .join("state.vscdb")
+    })
 }
 
 fn read_ide_machine_id() -> Option<String> {
-    read_ide_item("storage.serviceMachineId").ok()
+    let path = default_ide_state_db()?;
+    read_ide_item(&path, "storage.serviceMachineId").ok()
 }
 
 fn read_ide_client_version() -> Option<String> {
-    let path = default_cursor_product_json();
+    let path = default_cursor_product_json()?;
     if !path.exists() {
         return None;
     }
@@ -171,14 +199,10 @@ fn read_local_timezone() -> String {
             }
         }
     }
-    if cfg!(windows) {
-        "Europe/Paris".into()
-    } else {
-        "UTC".into()
-    }
+    "UTC".into()
 }
 
-fn default_cursor_product_json() -> PathBuf {
+fn default_cursor_product_json() -> Option<PathBuf> {
     if let Some(base) = std::env::var_os("LOCALAPPDATA") {
         let path = PathBuf::from(base)
             .join("Programs")
@@ -187,16 +211,32 @@ fn default_cursor_product_json() -> PathBuf {
             .join("app")
             .join("product.json");
         if path.exists() {
-            return path;
+            return Some(path);
         }
     }
-    PathBuf::from(
-        r"C:\Users\julie\AppData\Local\Programs\cursor\resources\app\product.json",
-    )
+    #[cfg(target_os = "macos")]
+    {
+        let path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app/product.json");
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        for candidate in [
+            "/usr/share/cursor/resources/app/product.json",
+            "/opt/Cursor/resources/app/product.json",
+        ] {
+            let path = PathBuf::from(candidate);
+            if path.exists() {
+                return Some(path);
+            }
+        }
+    }
+    None
 }
 
-fn read_ide_item(key: &str) -> Result<String> {
-    let path = default_ide_state_db();
+fn read_ide_item(path: &PathBuf, key: &str) -> Result<String> {
     if !path.exists() {
         return Err(AppError::Auth("Cursor IDE state db not found".into()));
     }
@@ -225,4 +265,11 @@ fn read_sqlite_value(row: &rusqlite::Row<'_>) -> rusqlite::Result<String> {
             rusqlite::types::Type::Text,
         )),
     }
+}
+
+pub(crate) const USAGE_CACHE_TTL: Duration = Duration::from_secs(300);
+
+pub(crate) struct CachedUsage {
+    pub fetched_at: Instant,
+    pub info: crate::usage::CursorUsageInfo,
 }

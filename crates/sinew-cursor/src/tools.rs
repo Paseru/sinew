@@ -46,6 +46,10 @@ pub fn sinew_tool_name(cursor_tool: &str) -> Option<&'static str> {
     }
 }
 
+pub fn is_mappable_sinew_tool(name: &str) -> bool {
+    cursor_tool_name(name) != "CLIENT_SIDE_TOOL_V2_UNSPECIFIED"
+}
+
 pub fn cursor_tool_name(sinew_tool: &str) -> &'static str {
     match sinew_tool {
         "read" => "CLIENT_SIDE_TOOL_V2_READ_FILE_V2",
@@ -119,9 +123,10 @@ pub fn build_client_tool_result(
         "tool": cursor_tool,
     });
     if is_error {
-        result["error"] = json!({ "message": content });
+        result["error"] = json!({ "message": crate::sanitize::sanitize_outbound_text(content) });
         return result;
     }
+    let content = crate::sanitize::sanitize_outbound_text(content);
     match sinew_name {
         "read" => {
             result["readFileV2Result"] = json!({ "contents": content });
@@ -160,7 +165,7 @@ pub fn build_client_tool_result(
             result["resultForModel"] = json!(content);
         }
     }
-    result
+    crate::sanitize::sanitize_outbound_json(result)
 }
 
 fn tool_name_from_number(value: i64) -> Option<&'static str> {
