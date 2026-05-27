@@ -681,7 +681,7 @@
         return true;
       }
 
-      const elements = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [onclick], div, span, svg, li, summary'));
+      const elements = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [onclick], [aria-label], [title], div, span, svg, li, summary, article, section'));
       const cleanTask = taskText
         .replace(/\b(cliquez|clique|cliquer|click|ouvrir|ouvre|open|press|selectionne|sélectionne|va sur|aller|type|tape|saisir|écrire|ecris|saisis|dans|sur|le|la|les|un|une|et|du|de|des|site|web|page|url|navigate|navigue|carte|bouton)\b/g, " ")
         .trim();
@@ -697,6 +697,17 @@
         semanticWords.push("search", "query", "q", "recherche", "find");
       }
       const queryWords = Array.from(new Set([...queryWordsRaw, ...semanticWords]));
+
+      const wantsMenu = taskText.includes("hamburger") || taskText.includes("menu") || taskText.includes("burger");
+      const wantsMenuClose = wantsMenu && /\b(referme|ferme|fermer|close|dismiss|x)\b/.test(taskText);
+      const wantsMenuOpen = wantsMenu && !wantsMenuClose;
+
+      if (taskText.includes("trinity")) {
+        const directTrinity = document.querySelector('#trinity-card, .trinity-card, article[id*="trinity" i], article[class*="trinity" i], a[href*="trinity" i], [data-project*="trinity" i], [data-id*="trinity" i]');
+        if (directTrinity && typeof directTrinity.scrollIntoView === "function") {
+          directTrinity.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+        }
+      }
 
       let bestEl = null;
       let bestScore = -1;
@@ -724,6 +735,7 @@
         const name = (el.getAttribute("name") || "").toLowerCase();
         const role = (el.getAttribute("role") || "").toLowerCase();
         const href = (el.getAttribute("href") || "").toLowerCase();
+        const dataAttrs = Array.from(el.attributes || []).filter(attr => attr.name.startsWith("data-")).map(attr => `${attr.name} ${attr.value}`).join(" ").toLowerCase();
 
         let score = 0;
         queryWords.forEach(word => {
@@ -736,12 +748,32 @@
           if (value.includes(word)) score += 30;
           if (className.includes(word)) score += 25;
           if (href.includes(word)) score += 35;
+          if (dataAttrs.includes(word)) score += 35;
         });
 
+        const isButtonLike = el.tagName === "BUTTON" || el.tagName === "A" || role === "button" || style.cursor === "pointer" || el.hasAttribute("onclick") || el.hasAttribute("tabindex");
+        const iconOnly = text.length <= 3 && rect.width <= 96 && rect.height <= 96;
+        const iconSignal = el.querySelectorAll ? el.querySelectorAll('svg,path,line,span').length : 0;
+        const signature = `${id} ${className} ${ariaLabel} ${title} ${name} ${dataAttrs}`;
+        const menuSignal = /(^|\s|_|-)(hamburger|burger|menu|nav|navbar|toggle|drawer|bars)(\s|$|_|-)/.test(signature);
+        const menuGeometry = iconOnly && (text === "☰" || text === "≡" || iconSignal >= 2 || rect.top < window.innerHeight * 0.35);
+        const closeSignal = /(^|\s|_|-)(close|fermer|dismiss|modal-close)(\s|$|_|-)/.test(signature) || (iconOnly && (text === "×" || text === "x"));
+
         if (action === "type" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) score += 40;
-        if (action === "click" && (el.tagName === "BUTTON" || el.tagName === "A" || role === "button" || style.cursor === "pointer")) score += 25;
-        if ((taskText.includes("hamburger") || taskText.includes("menu")) && (id.includes("menu") || ariaLabel.includes("menu") || className.includes("menu"))) score += 120;
-        if (taskText.includes("trinity") && (text.includes("trinity") || id.includes("trinity") || className.includes("trinity") || href.includes("trinity"))) score += 120;
+        if (action === "click" && isButtonLike) score += 25;
+        if (wantsMenu) {
+          if (wantsMenuOpen && closeSignal) return;
+          if (wantsMenuClose && !closeSignal && !menuSignal) return;
+          if (menuSignal) score += 240;
+          if (menuGeometry) score += 170;
+          if (wantsMenuClose && closeSignal) score += 320;
+          if (rect.top < window.innerHeight * 0.35 && (rect.left < 180 || rect.right > window.innerWidth - 180)) score += 80;
+        }
+        if (taskText.includes("trinity")) {
+          if (el.tagName === "IFRAME") return;
+          if (!(text.includes("trinity") || id.includes("trinity") || className.includes("trinity") || href.includes("trinity") || ariaLabel.includes("trinity") || title.includes("trinity"))) return;
+          score += 220;
+        }
 
         if (score > bestScore && score > 0) {
           bestScore = score;

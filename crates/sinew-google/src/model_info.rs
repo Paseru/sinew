@@ -97,24 +97,24 @@ pub fn antigravity_model_and_thinking(
     let base = canonical_model(model).name;
     let requested = effort.or(model.effort).unwrap_or(Effort::High);
     let is_pro = is_gemini_pro_model(&base);
-    let thinking_level = match requested {
+    let (thinking_level, model_suffix) = match requested {
         // Antigravity's pro models do not accept `minimal`; clamp them to low.
         Effort::None => {
             if is_pro {
-                "low"
+                ("LOW", "low")
             } else {
-                "minimal"
+                ("MINIMAL", "minimal")
             }
         }
-        Effort::Low => "low",
-        Effort::Medium => "medium",
-        Effort::High | Effort::Xhigh | Effort::Max => "high",
+        Effort::Low => ("LOW", "low"),
+        Effort::Medium => ("MEDIUM", "medium"),
+        Effort::High | Effort::Xhigh | Effort::Max => ("HIGH", "high"),
     };
 
-    // Antigravity exposes 3.5-flash uniquement sous l'ID `gemini-3.5-flash-low`.
-    // Le thinkingLevel reste libre, mais l'ID modèle est figé.
+    // Gemini 3.5 Flash on Antigravity is routed through the agent variant.
+    // The `thinkingLevel` still carries LOW/MEDIUM/HIGH quota intent.
     if base == "gemini-3.5-flash" {
-        return ("gemini-3.5-flash-low".into(), Some(thinking_level));
+        return ("gemini-3-flash-agent".into(), Some(thinking_level));
     }
     // Gemini 3.1 Pro on Antigravity is always routed to the agentic variant
     // (`gemini-pro-agent`), which is the fine-tuned artefact for tool use and
@@ -135,7 +135,7 @@ pub fn antigravity_model_and_thinking(
         return ("gpt-oss-120b-medium".into(), Some(thinking_level));
     }
     if is_pro {
-        (format!("{base}-{thinking_level}"), Some(thinking_level))
+        (format!("{base}-{model_suffix}"), Some(thinking_level))
     } else {
         (base, Some(thinking_level))
     }

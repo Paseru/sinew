@@ -43,12 +43,17 @@ child.stdout.on('data', chunk => {
         process.exit(1);
       }
       const serialized = JSON.stringify(payload);
-      for (const expected of ['menu-button', 'trinity-card', 'human_cdp_click']) {
+      for (const expected of ['menu-button', 'trinity-card']) {
         if (!serialized.includes(expected)) {
           console.error(`E2E failed: expected ${expected} in result`);
           console.error(serialized);
           process.exit(1);
         }
+      }
+      if (serialized.includes('human_cdp_click')) {
+        console.error('E2E failed: CDP click path was used; expected DOM/content-script path to avoid Chrome debugging banner');
+        console.error(serialized);
+        process.exit(1);
       }
       console.log('E2E OK: Sinew Chrome local MCP controlled Chrome successfully.');
       console.log(text);

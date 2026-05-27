@@ -35,6 +35,7 @@ const PORT = Number(process.env.SINEW_CHROME_BRIDGE_PORT || 29002);
 const LOCK_DIR = path.join(process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'Sinew');
 const LOCK_PATH = path.join(LOCK_DIR, 'chrome-bridge.lock');
 let lockFd = null;
+let lockPayloadBase = null;
 let runAsBridgeClientOnly = false;
 
 function isPidRunning(pid) {
@@ -45,7 +46,7 @@ function isPidRunning(pid) {
     process.kill(n, 0);
     return true;
   } catch (err) {
-    return err && err.code === 'EPERM';
+    return err && (err.code === 'EPERM' || err.code === 'EACCES');
   }
 }
 
@@ -58,34 +59,50 @@ function readBridgeLock() {
 }
 
 function writeBridgeLock(fd) {
-  const payload = JSON.stringify({
-    pid: process.pid,
-    port: PORT,
-    native: isNativeMode,
-    startedAt: new Date().toISOString(),
+  if (!lockPayloadBase) {
+    lockPayloadBase = {
+      pid: process.pid,
+      port: PORT,
+      native: isNativeMode,
+      startedAt: new Date().toISOString(),
+      exe: process.execPath,
+      argv: process.argv.slice(1),
+    };
+  }
+  const lockPayload = {
+    ...lockPayloadBase,
     heartbeatAt: new Date().toISOString(),
-  }, null, 2);
+  };
+  const payload = JSON.stringify(lockPayload, null, 2);
   fs.ftruncateSync(fd, 0);
   fs.writeSync(fd, payload, 0, 'utf8');
 }
 
 function acquireBridgeLock() {
   fs.mkdirSync(LOCK_DIR, { recursive: true });
-  try {
-    lockFd = fs.openSync(LOCK_PATH, 'wx');
-    writeBridgeLock(lockFd);
-    return { acquired: true };
-  } catch (err) {
-    if (err.code !== 'EEXIST') throw err;
-    const current = readBridgeLock();
-    if (current && isPidRunning(current.pid)) {
-      return { acquired: false, active: true, current };
+  const openedAt = Date.now();
+  while (Date.now() - openedAt < 1500) {
+    try {
+      lockFd = fs.openSync(LOCK_PATH, 'wx');
+      writeBridgeLock(lockFd);
+      return { acquired: true };
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+      const current = readBridgeLock();
+      const heartbeatMs = current?.heartbeatAt ? Date.parse(current.heartbeatAt) : 0;
+      const freshHeartbeat = Number.isFinite(heartbeatMs) && Date.now() - heartbeatMs < 20000;
+      if (current && (isPidRunning(current.pid) || freshHeartbeat)) {
+        return { acquired: false, active: true, current };
+      }
+      try { fs.unlinkSync(LOCK_PATH); } catch (unlinkErr) {
+        if (unlinkErr.code !== 'ENOENT') {
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 75);
+        }
+      }
     }
-    try { fs.unlinkSync(LOCK_PATH); } catch {}
-    lockFd = fs.openSync(LOCK_PATH, 'wx');
-    writeBridgeLock(lockFd);
-    return { acquired: true, reclaimedStale: true, current };
   }
+  const current = readBridgeLock();
+  return { acquired: false, active: !!current, current };
 }
 
 function releaseBridgeLock() {
@@ -467,6 +484,7 @@ const server = http.createServer((req, res) => {
           "title": t.title || "Chrome Tab",
           "type": "page",
           "url": t.url || "about:blank",
+          "active": !!t.active,
           "webSocketDebuggerUrl": `ws://localhost:${PORT}/devtools/page/${t.id}`
         }));
         res.writeHead(200);
@@ -781,6 +799,8 @@ const server = http.createServer((req, res) => {
     
     const tabId = parsedUrl.query.tabId;
     const task = parsedUrl.query.task;
+    let cursor = null;
+    try { cursor = parsedUrl.query.cursor ? JSON.parse(String(parsedUrl.query.cursor)) : null; } catch {}
     
     if (!tabId || !task) {
       res.writeHead(400);
@@ -810,7 +830,7 @@ const server = http.createServer((req, res) => {
     extensionSocket.send(JSON.stringify({
       id: requestId,
       command: "execute_silent_task",
-      params: { tabId: parseInt(tabId), task }
+      params: { tabId: parseInt(tabId), task, cursor }
     }));
   }
   else if (pathname === '/cowork') {

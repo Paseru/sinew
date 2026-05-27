@@ -89,7 +89,8 @@ impl GoogleUserData {
     }
 
     pub fn is_stale_antigravity_default(&self) -> bool {
-        self.project_id == "default" && self.user_tier.as_deref() == Some("free-tier")
+        (self.project_id == "default" && self.user_tier.as_deref() == Some("free-tier"))
+            || self.project_id == "rising-fact-p41fc"
     }
 }
 
@@ -239,7 +240,7 @@ fn now_ms() -> i64 {
 }
 
 fn expires_at(expires_in_seconds: u64) -> i64 {
-    now_ms() + (expires_in_seconds as i64 * 1000) - REFRESH_SKEW_MS
+    now_ms() + (expires_in_seconds as i64 * 1000)
 }
 
 #[derive(Debug, Deserialize)]

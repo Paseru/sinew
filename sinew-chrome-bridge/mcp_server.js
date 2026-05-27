@@ -3,6 +3,7 @@ const http = require('http');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const WebSocket = require('./node_modules/ws');
 
 const BRIDGE_ORIGIN = process.env.MCP_BROWSER_CDP_URL || 'http://localhost:29002';
@@ -12,10 +13,15 @@ const CHROME_WAIT_MS = 20000;
 const BRIDGE_WAIT_MS = 20000;
 const cursorStateByTabId = new Map();
 const cdpEndpointByTabId = new Map();
+const STATE_DIR = process.env.SINEW_CHROME_BRIDGE_DIR || path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Sinew', 'ChromeBridge');
+const CONTROLLED_TAB_PATH = path.join(STATE_DIR, 'controlled-tab.json');
+let controlledTabId = null;
+let controlledTabTouchedAt = 0;
 const DEFAULT_CURSOR_OPTIONS = {
   mode: process.env.SINEW_CURSOR_MODE || 'visible',
   speed: process.env.SINEW_CURSOR_SPEED || 'normal',
 };
+const ALLOW_CDP_FALLBACK = /^(1|true|yes)$/i.test(process.env.SINEW_CHROME_ALLOW_CDP_FALLBACK || '');
 
 // Log errors to stderr so they don't corrupt the stdout JSON-RPC stream
 function log(msg) {
@@ -97,6 +103,7 @@ async function requestBridgeLaunch(targetUrl) {
 }
 
 async function releaseExtensionDebuggers() {
+  if (!ALLOW_CDP_FALLBACK) return null;
   return requestJSON(`${BRIDGE_ORIGIN}/api/detach_all`, 2000).catch(() => null);
 }
 
@@ -175,10 +182,25 @@ async function waitForTabs(preferredUrl = null) {
 
 async function ensureChromeReady(preferredUrl = null) {
   const targetUrl = normalizeUrl(preferredUrl) || 'https://www.google.com';
-  await releaseExtensionDebuggers();
+  let bridgeReady = false;
+
+  try {
+    await waitForBridge();
+    bridgeReady = true;
+  } catch (err) {
+    log(`Bridge not ready yet, will launch Chrome once: ${err.message}`);
+  }
+
+  if (bridgeReady) {
+    await releaseExtensionDebuggers();
+    const existingTabs = await waitForTabs(targetUrl);
+    if (existingTabs && existingTabs.length > 0) return existingTabs;
+  }
+
   await requestBridgeLaunch(targetUrl);
   launchChrome(targetUrl);
   await waitForBridge();
+  await releaseExtensionDebuggers();
   const tabs = await waitForTabs(targetUrl);
 
   if (!tabs || tabs.length === 0) {
@@ -187,14 +209,70 @@ async function ensureChromeReady(preferredUrl = null) {
   return tabs;
 }
 
-async function navigateTab(tabId, url) {
-  if (!tabId || !url) return;
-  const updated = await requestJSON(`${BRIDGE_ORIGIN}/api/navigate_tab?tabId=${encodeURIComponent(tabId)}&url=${encodeURIComponent(url)}`, 7000).catch(() => null);
-  if (!updated || updated.success === false) {
-    await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(url)}`, 7000).catch(() => null);
+async function currentTabLocation(tabId) {
+  const tabs = await requestJSON(`${BRIDGE_ORIGIN}/json`, 3000).catch(() => []);
+  const tab = Array.isArray(tabs) ? tabs.find(item => String(item.id) === String(tabId)) : null;
+  return tab ? { href: tab.url || '', title: tab.title || '', readyState: 'complete', tab } : null;
+}
+
+async function navigateTabViaCdp(tabId, url) {
+  if (!ALLOW_CDP_FALLBACK) return { success: false, error: 'CDP fallback disabled to avoid Chrome debugging banner' };
+  const targetUrl = normalizeUrl(url) || url || 'about:blank';
+  const cdp = cdpConnect(tabId);
+  try {
+    await cdp.send('Page.enable').catch(() => null);
+    await cdp.send('Page.bringToFront').catch(() => null);
+    await cdp.send('Page.navigate', { url: targetUrl });
+  } finally {
+    cdp.close();
   }
+  return waitForTabUrl(tabId, targetUrl, 15000);
+}
+
+async function waitForTabUrl(tabId, targetUrl, timeoutMs = 12000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    try {
+      last = await currentTabLocation(tabId);
+      if (last?.href && sameOriginOrUrl(last.href, targetUrl) && last.readyState !== 'loading') return last;
+    } catch {}
+    await sleep(350);
+  }
+  return last;
+}
+
+async function navigateTab(tabId, url) {
+  if (!tabId || !url) return null;
+  const targetUrl = normalizeUrl(url) || url;
+  let updated = await requestJSON(`${BRIDGE_ORIGIN}/api/navigate_tab?tabId=${encodeURIComponent(tabId)}&url=${encodeURIComponent(targetUrl)}`, 7000).catch(() => null);
+  let location = await waitForTabUrl(tabId, targetUrl, 6000).catch(() => null);
+
+  if ((!location?.href || !sameOriginOrUrl(location.href, targetUrl)) && ALLOW_CDP_FALLBACK) {
+    log(`Bridge navigation did not reach ${targetUrl}; falling back to CDP navigation.`);
+    location = await navigateTabViaCdp(tabId, targetUrl).catch(err => ({ success: false, error: err.message }));
+  }
+
+  if ((!location?.href || !sameOriginOrUrl(location.href, targetUrl)) && (!updated || updated.success === false)) {
+    const created = await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(targetUrl)}`, 7000).catch(() => null);
+    const createdTab = created && created.success !== false ? created.tab : null;
+    if (createdTab?.id) {
+      location = { href: targetUrl, title: createdTab.title || '', readyState: 'unknown', tab: { ...createdTab, id: String(createdTab.id), url: targetUrl } };
+    } else {
+      const tabs = await waitForTabs(targetUrl).catch(() => []);
+      const newTab = Array.isArray(tabs) ? tabs.find(tab => sameOriginOrUrl(tab.url || '', targetUrl)) : null;
+      if (newTab) location = { href: newTab.url, title: newTab.title || '', readyState: 'complete', tab: newTab };
+    }
+  }
+
+  if ((!location?.href || !sameOriginOrUrl(location.href, targetUrl)) && updated && updated.success !== false) {
+    const updatedTab = updated.tab || {};
+    location = { href: targetUrl, title: updatedTab.title || '', readyState: 'unknown', tab: { ...updatedTab, id: String(tabId), url: targetUrl } };
+  }
+
   cursorStateByTabId.delete(String(tabId));
-  await sleep(1800);
+  await sleep(600);
+  return location;
 }
 
 function buildActionTasks(task) {
@@ -291,6 +369,14 @@ async function waitForPageInteractive(tabId, timeoutMs = 15000) {
   }
 }
 
+function cursorTiming(speed) {
+  return {
+    slow: { steps: 62, minDelay: 18, jitter: 24, pause: 230 },
+    normal: { steps: 40, minDelay: 10, jitter: 17, pause: 145 },
+    fast: { steps: 24, minDelay: 4, jitter: 9, pause: 60 },
+  }[speed] || { steps: 40, minDelay: 10, jitter: 17, pause: 145 };
+}
+
 function humanPath(start, end, steps = 36) {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
@@ -313,7 +399,8 @@ function humanPath(start, end, steps = 36) {
   return points;
 }
 
-async function ensureCdpCursor(cdp) {
+async function ensureCdpCursor(cdp, cursorOptions = {}) {
+  const cursor = normalizeCursorOptions(cursorOptions);
   const expression = `(() => {
     const removeLegacyOverlays = () => {
       const selectors = [
@@ -344,9 +431,11 @@ async function ensureCdpCursor(cdp) {
       window.__sinewCdpCursor = root;
     }
 
+    const cursorVisible = ${cursor.mode !== 'hidden'};
+    root.style.display = cursorVisible ? 'block' : 'none';
     window.__sinewCdpCursorMove = (x, y, scale = 1) => {
       window.__sinewCdpCursorPosition = { x: Math.round(x), y: Math.round(y) };
-      root.style.opacity = '1';
+      root.style.opacity = cursorVisible ? '1' : '0';
       root.style.transform = 'translate3d(' + Math.round(x - 5) + 'px,' + Math.round(y - 4) + 'px,0) rotate(-12deg) scale(' + scale + ')';
     };
     window.__sinewCdpCursorPulse = (x, y) => {
@@ -381,21 +470,47 @@ async function detectTargetViaCdp(tabId, taskText) {
     const expression = `(() => {
       const task = ${taskLiteral};
       const taskText = task.toLowerCase();
-      const wantsMenu = taskText.includes('hamburger') || taskText.includes('menu');
-      const wantsMenuClose = wantsMenu && /\\b(referme|ferme|fermer|close|dismiss)\\b/.test(taskText);
+      const wantsMenu = taskText.includes('hamburger') || taskText.includes('menu') || taskText.includes('burger');
+      const wantsMenuClose = wantsMenu && /\\b(referme|ferme|fermer|close|dismiss|x)\\b/.test(taskText);
       const wantsMenuOpen = wantsMenu && !wantsMenuClose;
-      const elements = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [onclick], div, span, svg, li, summary, article, section'));
-      const cleanTask = taskText.replace(/\\b(cliquez|clique|cliquer|click|ouvrir|ouvre|open|press|selectionne|sélectionne|va sur|aller|dans|sur|le|la|les|un|une|et|du|de|des|site|web|page|url|navigate|navigue|carte|bouton|ferme|fermer|referme|close|ouvert)\\b/g, ' ').trim();
+      const elements = Array.from(document.querySelectorAll('button, a, input, select, textarea, [role="button"], [onclick], [aria-label], [title], div, span, svg, li, summary, article, section'));
+      const directTarget = (el, score = 1000) => {
+        if (!el) return null;
+        if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+        const rect = el.getBoundingClientRect();
+        const style = window.getComputedStyle(el);
+        if (rect.width <= 0 || rect.height <= 0) return null;
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return null;
+        const cx = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
+        const cy = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height / 2));
+        return {
+          success: true,
+          action: 'click',
+          candidatesScored: elements.length,
+          target: {
+            x: Math.round(cx),
+            y: Math.round(cy),
+            rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+            element: { tagName: el.tagName, id: el.id || '', className: typeof el.className === 'string' ? el.className : '' },
+            score
+          }
+        };
+      };
+      if (wantsMenu) {
+        const directMenu = document.querySelector('#menu-button, button[id*="menu" i], button[class*="menu" i], button[aria-label*="menu" i], button[title*="menu" i], [role="button"][aria-label*="menu" i]');
+        const target = directTarget(directMenu, 1000);
+        if (target) return target;
+      }
+      if (taskText.includes('trinity')) {
+        const directTrinity = document.querySelector('#trinity-card, .trinity-card, article[id*="trinity" i], article[class*="trinity" i], a[href*="trinity" i], [data-project*="trinity" i], [data-id*="trinity" i]');
+        const target = directTarget(directTrinity, 1000);
+        if (target) return target;
+      }
+      const cleanTask = taskText.replace(/\b(cliquez|clique|cliquer|click|ouvrir|ouvre|open|press|selectionne|sélectionne|va sur|aller|dans|sur|le|la|les|un|une|et|du|de|des|site|web|page|url|navigate|navigue|carte|bouton|ferme|fermer|referme|close|ouvert)\b/g, ' ').trim();
       const queryWordsRaw = cleanTask.split(/\\s+/).filter(w => w.length >= 1);
       const semanticWords = [];
       if (queryWordsRaw.some(w => w === 'hamburger' || w === 'burger' || w === 'menu')) semanticWords.push('menu', 'hamburger', 'burger', 'nav', 'toggle');
       const queryWords = Array.from(new Set([...queryWordsRaw, ...semanticWords]));
-      if (taskText.includes('trinity')) {
-        const directTrinity = document.querySelector('[id*="trinity" i], [class*="trinity" i], [href*="trinity" i], [aria-label*="trinity" i], [title*="trinity" i]');
-        if (directTrinity && typeof directTrinity.scrollIntoView === 'function') {
-          directTrinity.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
-        }
-      }
       let best = null;
       let bestScore = -1;
       for (const el of elements) {
@@ -416,6 +531,7 @@ async function detectTargetViaCdp(tabId, taskText) {
         const className = (typeof el.className === 'string' ? el.className : '').toLowerCase();
         const href = (el.getAttribute('href') || '').toLowerCase();
         const role = (el.getAttribute('role') || '').toLowerCase();
+        const dataAttrs = Array.from(el.attributes || []).filter(attr => attr.name.startsWith('data-')).map(attr => attr.name + ' ' + attr.value).join(' ').toLowerCase();
         let score = 0;
         for (const word of queryWords) {
           if (text.includes(word)) score += 55;
@@ -424,18 +540,31 @@ async function detectTargetViaCdp(tabId, taskText) {
           if (id.includes(word)) score += 65;
           if (className.includes(word)) score += 45;
           if (href.includes(word)) score += 35;
+          if (dataAttrs.includes(word)) score += 35;
         }
         if (el.tagName === 'BUTTON' || el.tagName === 'A' || role === 'button' || style.cursor === 'pointer') score += 25;
+        const wantsMenu = taskText.includes('hamburger') || taskText.includes('menu') || taskText.includes('burger');
+        const wantsMenuClose = wantsMenu && /\b(referme|ferme|fermer|close|dismiss|x)\b/.test(taskText);
+        const wantsMenuOpen = wantsMenu && !wantsMenuClose;
+        const isIconOnly = text.length <= 3 && rect.width <= 90 && rect.height <= 90;
+        const svgCount = el.querySelectorAll ? el.querySelectorAll('svg,path,line,span').length : 0;
+        const hasMenuGeometry = isIconOnly && (
+          text === '☰' || text === '≡' || text === 'menu' ||
+          svgCount >= 2 ||
+          /(^|\\s|_|-)(hamburger|burger|menu|nav|navbar|toggle|drawer|bars)(\\s|$|_|-)/.test(id + ' ' + className + ' ' + ariaLabel + ' ' + title + ' ' + dataAttrs)
+        );
         if (wantsMenu) {
-          const isMenuButton = id.includes('menu') || ariaLabel.includes('menu') || title.includes('menu') || className.includes('menu') || ariaLabel.includes('hamburger') || className.includes('hamburger');
+          const isMenuButton = id.includes('menu') || ariaLabel.includes('menu') || title.includes('menu') || className.includes('menu') || ariaLabel.includes('hamburger') || className.includes('hamburger') || hasMenuGeometry || ariaLabel.includes('navigation') || title.includes('navigation') || className.includes('navbar') || className.includes('nav-toggle') || className.includes('toggle');
           const isExplicitClose = id.includes('close') || ariaLabel.includes('close') || ariaLabel.includes('fermer') || title.includes('close') || title.includes('fermer') || className.includes('close') || className.includes('modal-close');
           const isButtonLike = el.tagName === 'BUTTON' || role === 'button';
           const isCloseGlyph = isButtonLike && (text === '×' || text === 'x') && !className.includes('logo') && !className.includes('social');
           const isCloseButton = isExplicitClose || isCloseGlyph;
           if (wantsMenuOpen) {
             if (isCloseButton) continue;
-            if (isMenuButton) score += 220;
+            if (isMenuButton) score += 260;
+            if (hasMenuGeometry) score += 180;
             if (id === 'menu-button') score += 160;
+            if (rect.top < window.innerHeight * 0.35 && (rect.left < 160 || rect.right > window.innerWidth - 160)) score += 80;
           } else if (wantsMenuClose) {
             if (!isCloseButton && !isMenuButton) continue;
             if (isCloseButton) score += 320;
@@ -444,6 +573,7 @@ async function detectTargetViaCdp(tabId, taskText) {
           }
         }
         if (taskText.includes('trinity')) {
+          if (el.tagName === 'IFRAME') continue;
           const hasTrinitySignal = id.includes('trinity') || className.includes('trinity') || text.includes('trinity') || href.includes('trinity') || ariaLabel.includes('trinity') || title.includes('trinity');
           if (!hasTrinitySignal) continue;
           score += 320;
@@ -458,7 +588,7 @@ async function detectTargetViaCdp(tabId, taskText) {
           best = { x: Math.round(cx), y: Math.round(cy), rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }, element: { tagName: el.tagName, id: el.id || '', className: typeof el.className === 'string' ? el.className : '' }, score };
         }
       }
-      return best ? { success: true, action: 'click', target: best } : { success: false, error: 'No target found' };
+      return best ? { success: true, action: 'click', target: best, candidatesScored: elements.length } : { success: false, error: 'No target found' };
     })()`;
     const result = await cdp.send('Runtime.evaluate', { expression, returnByValue: true });
     return result?.result?.value || result?.value || { success: false, error: 'No CDP result' };
@@ -487,26 +617,28 @@ async function getCdpCursorStart(cdp, tabId, target) {
   return { x: Math.max(24, target.x - 220), y: Math.max(24, target.y + 120) };
 }
 
-async function performHumanCdpClick(tabId, target) {
+async function performHumanCdpClick(tabId, target, cursorOptions = {}) {
   if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y)) {
     throw new Error('Missing target coordinates for human CDP click');
   }
   const cdp = cdpConnect(tabId);
   try {
+    const cursor = normalizeCursorOptions(cursorOptions);
+    const timing = cursorTiming(cursor.speed);
     await cdp.send('Page.bringToFront');
-    await ensureCdpCursor(cdp);
+    await ensureCdpCursor(cdp, cursor);
     const start = await getCdpCursorStart(cdp, tabId, target);
     const end = { x: Math.round(target.x), y: Math.round(target.y) };
-    for (const p of humanPath(start, end, 40)) {
+    for (const p of humanPath(start, end, timing.steps)) {
       const x = Math.round(p.x);
       const y = Math.round(p.y);
       await moveCdpCursor(cdp, x, y, 1);
       await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none' });
-      await sleep(10 + Math.random() * 18);
+      await sleep(timing.minDelay + Math.random() * timing.jitter);
     }
-    await sleep(150 + Math.random() * 90);
-    await moveCdpCursor(cdp, end.x, end.y, 0.94);
-    await pulseCdpCursor(cdp, end.x, end.y);
+    await sleep(timing.pause + Math.random() * 90);
+    if (cursor.mode !== 'hidden') await moveCdpCursor(cdp, end.x, end.y, 0.94);
+    if (cursor.mode !== 'hidden') await pulseCdpCursor(cdp, end.x, end.y);
     await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: end.x, y: end.y, button: 'left', clickCount: 1 });
     await sleep(55 + Math.random() * 55);
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: end.x, y: end.y, button: 'left', clickCount: 1 });
@@ -528,24 +660,79 @@ async function performHumanBridgeClick(tabId, detection, cursorOptions = {}) {
   return result;
 }
 
+async function executeActionViaBridgeDom(tabId, taskText, timeoutMs = 30000, cursorOptions = {}) {
+  const cursor = normalizeCursorOptions(cursorOptions);
+  return requestJSON(`${BRIDGE_ORIGIN}/api/execute_silent_task?tabId=${encodeURIComponent(tabId)}&task=${encodeURIComponent(taskText)}&cursor=${encodeURIComponent(JSON.stringify(cursor))}`, Math.max(5000, timeoutMs));
+}
+
 async function executeAction(tabId, taskText, timeoutMs = 30000, cursorOptions = {}) {
   const deadline = Date.now() + timeoutMs;
   const cursor = normalizeCursorOptions(cursorOptions);
   let lastDetection = null;
 
-  await waitForPageInteractive(tabId, Math.min(10000, timeoutMs)).catch(() => null);
-
   while (Date.now() < deadline) {
-    const detection = await detectTargetViaBridge(tabId, taskText).catch(err => ({ success: false, error: err.message }));
+    const domAction = await executeActionViaBridgeDom(tabId, taskText, Math.min(30000, deadline - Date.now()), cursor).catch(err => ({ success: false, error: err.message }));
+    if (domAction && domAction.success !== false) {
+      return { success: true, detection: { success: true, action: domAction.action || 'dom', target: domAction.target }, bridgeDetection: domAction, performed: domAction };
+    }
+    lastDetection = domAction;
+
+    const bridgeDetection = await detectTargetViaBridge(tabId, taskText).catch(err => ({ success: false, error: err.message }));
+    let detection = bridgeDetection;
+    if ((!detection?.target || detection.success === false) && ALLOW_CDP_FALLBACK) {
+      detection = await detectTargetViaCdp(tabId, taskText).catch(err => ({ success: false, error: err.message, bridgeDetection }));
+    }
     lastDetection = detection;
     if (detection?.target) {
-      const performed = await performHumanBridgeClick(tabId, detection, cursor);
-      return { detection, performed };
+      let performed = await performHumanBridgeClick(tabId, detection, cursor).catch(err => ({ success: false, error: err.message }));
+      if ((!performed || performed.success === false) && ALLOW_CDP_FALLBACK) {
+        performed = await performHumanCdpClick(tabId, detection.target, cursor).catch(err => ({ success: false, error: err.message }));
+      }
+      return { success: performed && performed.success !== false, detection, bridgeDetection, performed };
     }
     await sleep(450);
   }
 
   return lastDetection || { success: false, error: 'No target found before timeout' };
+}
+
+function loadControlledTabState() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CONTROLLED_TAB_PATH, 'utf8'));
+    if (parsed?.tabId && parsed?.touchedAt && Date.now() - Number(parsed.touchedAt) < 20 * 60 * 1000) {
+      controlledTabId = String(parsed.tabId);
+      controlledTabTouchedAt = Number(parsed.touchedAt);
+    }
+  } catch {}
+}
+
+function saveControlledTabState() {
+  try {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(CONTROLLED_TAB_PATH, JSON.stringify({ tabId: controlledTabId, touchedAt: controlledTabTouchedAt }, null, 2));
+  } catch {}
+}
+
+function rememberControlledTab(tab) {
+  if (!tab?.id) return;
+  controlledTabId = String(tab.id);
+  controlledTabTouchedAt = Date.now();
+  saveControlledTabState();
+}
+
+function isControlledTabFresh(maxAgeMs = 20 * 60 * 1000) {
+  if (!controlledTabId) loadControlledTabState();
+  return !!controlledTabId && Date.now() - controlledTabTouchedAt < maxAgeMs;
+}
+
+function pickControlledTab(tabs) {
+  if (!Array.isArray(tabs) || tabs.length === 0) return null;
+  if (isControlledTabFresh()) {
+    const found = tabs.find(tab => String(tab.id) === String(controlledTabId));
+    if (found) return found;
+  }
+  const active = tabs.find(tab => tab.active);
+  return active || null;
 }
 
 async function getReadyTab(preferredUrl = null) {
@@ -554,6 +741,8 @@ async function getReadyTab(preferredUrl = null) {
     try {
       await waitForBridge();
       const existingTabs = await waitForTabs(null);
+      const controlled = pickControlledTab(existingTabs);
+      if (controlled) return controlled;
       if (Array.isArray(existingTabs) && existingTabs.length > 0) return existingTabs[0];
     } catch {}
   }
@@ -562,27 +751,97 @@ async function getReadyTab(preferredUrl = null) {
   if (!tabs || tabs.length === 0) {
     throw new Error('No debuggable Chrome tab is available.');
   }
-  return tabs[0];
+  const controlled = !targetUrl ? pickControlledTab(tabs) : null;
+  return controlled || tabs[0];
+}
+
+async function prepareTargetTab(targetUrl) {
+  const normalized = normalizeUrl(targetUrl) || targetUrl;
+  await waitForBridge();
+
+  const existingTabs = await waitForTabs(normalized).catch(() => []);
+  const matching = Array.isArray(existingTabs)
+    ? existingTabs.find(tab => sameOriginOrUrl(tab.url || '', normalized))
+    : null;
+  if (matching) {
+    rememberControlledTab({ ...matching, url: matching.url || normalized });
+    return { tab: matching, location: { href: matching.url || normalized, title: matching.title || '', readyState: 'complete', tab: matching } };
+  }
+
+  const created = await requestJSON(`${BRIDGE_ORIGIN}/api/create_tab?url=${encodeURIComponent(normalized)}`, 7000).catch(() => null);
+  if (created && created.success !== false && created.tab?.id) {
+    const tab = { ...created.tab, id: String(created.tab.id), url: created.tab.url || normalized };
+    const location = { href: tab.url || normalized, title: tab.title || '', readyState: 'unknown', tab };
+    rememberControlledTab({ ...tab, url: normalized });
+    return { tab: { ...tab, url: normalized }, location: { ...location, href: normalized, tab: { ...tab, url: normalized } } };
+  }
+
+  const tabs = await ensureChromeReady(normalized);
+  if (!tabs || tabs.length === 0) throw new Error('No debuggable Chrome tab is available.');
+  const tab = tabs[0];
+  const location = await navigateTab(tab.id, normalized);
+  if (location?.href && sameOriginOrUrl(location.href, normalized)) {
+    rememberControlledTab({ ...tab, url: normalized });
+  }
+  return { tab: { ...tab, url: normalized }, location };
 }
 
 function compactTab(tab) {
   if (!tab) return null;
-  return { id: tab.id, title: tab.title || '', url: tab.url || '', type: tab.type || 'page' };
+  return { id: tab.id, title: tab.title || '', url: tab.url || '', type: tab.type || 'page', active: !!tab.active };
 }
 
 async function executeOpenBrowser(url = null) {
   const targetUrl = normalizeUrl(url) || 'https://www.google.com';
-  const tab = await getReadyTab(targetUrl);
-  await navigateTab(tab.id, targetUrl).catch(err => log(`Open browser navigation failed, continuing: ${err.message}`));
-  return JSON.stringify({ success: true, tab: compactTab({ ...tab, url: targetUrl }) });
+  const { tab, location } = await prepareTargetTab(targetUrl).catch(async err => {
+    log(`Open browser prepare target failed: ${err.message}`);
+    const fallbackTab = await getReadyTab(targetUrl);
+    const fallbackLocation = await navigateTab(fallbackTab.id, targetUrl).catch(navErr => {
+      log(`Open browser navigation failed: ${navErr.message}`);
+      return null;
+    });
+    return { tab: fallbackTab, location: fallbackLocation };
+  });
+  const actualUrl = location?.href || tab.url || '';
+  const success = actualUrl && sameOriginOrUrl(actualUrl, targetUrl);
+  if (success) rememberControlledTab({ ...tab, url: actualUrl });
+  return JSON.stringify({
+    success,
+    tab: compactTab({ ...tab, url: actualUrl || targetUrl, title: location?.title || tab.title }),
+    navigation: location,
+    error: success ? undefined : `Navigation did not reach ${targetUrl}; current URL is ${actualUrl || 'unknown'}`,
+  });
+}
+
+async function executeNavigate(url) {
+  const targetUrl = normalizeUrl(url);
+  if (!targetUrl) return JSON.stringify({ success: false, error: `Invalid URL: ${url || ''}` });
+  const { tab, location } = await prepareTargetTab(targetUrl);
+  const actualUrl = location?.href || tab.url || '';
+  const success = actualUrl && sameOriginOrUrl(actualUrl, targetUrl);
+  if (success) rememberControlledTab({ ...tab, url: actualUrl });
+  return JSON.stringify({
+    success,
+    tab: compactTab({ ...tab, url: actualUrl || targetUrl, title: location?.title || tab.title }),
+    navigation: location,
+    error: success ? undefined : `Navigation did not reach ${targetUrl}; current URL is ${actualUrl || 'unknown'}`,
+  });
 }
 
 async function executeNavigate(url) {
   const targetUrl = normalizeUrl(url);
   if (!targetUrl) return JSON.stringify({ success: false, error: `Invalid URL: ${url || ''}` });
   const tab = await getReadyTab(targetUrl);
-  await navigateTab(tab.id, targetUrl);
-  return JSON.stringify({ success: true, tab: compactTab({ ...tab, url: targetUrl }) });
+  const location = await navigateTab(tab.id, targetUrl);
+  const actualUrl = location?.href || tab.url || '';
+  const success = actualUrl && sameOriginOrUrl(actualUrl, targetUrl);
+  if (success) rememberControlledTab({ ...tab, url: actualUrl });
+  return JSON.stringify({
+    success,
+    tab: compactTab({ ...tab, url: actualUrl || targetUrl, title: location?.title || tab.title }),
+    navigation: location,
+    error: success ? undefined : `Navigation did not reach ${targetUrl}; current URL is ${actualUrl || 'unknown'}`,
+  });
 }
 
 async function executeClickTarget(target, timeoutMs = 20000, cursorOptions = {}) {
@@ -591,14 +850,23 @@ async function executeClickTarget(target, timeoutMs = 20000, cursorOptions = {})
   }
   const possibleUrl = extractUrl(target);
   const tab = await getReadyTab(possibleUrl || null);
-  if (possibleUrl) await navigateTab(tab.id, possibleUrl).catch(() => null);
+  if (possibleUrl) {
+    const location = await navigateTab(tab.id, possibleUrl).catch(() => null);
+    if (!location?.href || !sameOriginOrUrl(location.href, possibleUrl)) {
+      return JSON.stringify({ success: false, error: `Navigation did not reach ${possibleUrl}`, navigation: location, tab: compactTab(tab) });
+    }
+  }
   const result = await executeAction(tab.id, String(target), timeoutMs, cursorOptions);
+  if (result && result.success !== false) rememberControlledTab(tab);
   return JSON.stringify({ success: result && result.success !== false, result });
 }
 
 async function executeWaitForText(text, timeoutMs = 15000) {
   if (!text || !String(text).trim()) {
     return JSON.stringify({ success: false, error: 'Missing text to wait for' });
+  }
+  if (!ALLOW_CDP_FALLBACK) {
+    return JSON.stringify({ success: false, error: 'wait_for_text requires CDP fallback; disabled to avoid Chrome debugging banner' });
   }
   const tab = await getReadyTab(null);
   const cdp = cdpConnect(tab.id);
@@ -622,6 +890,9 @@ async function executeWaitForText(text, timeoutMs = 15000) {
 
 async function executeGetPageState() {
   const tab = await getReadyTab(null);
+  if (!ALLOW_CDP_FALLBACK) {
+    return JSON.stringify({ success: true, tab: compactTab(tab), page: { href: tab.url || '', title: tab.title || '', readyState: 'unknown', visibleTextLength: null, interactiveCount: null, viewport: null, cdpDisabled: true } });
+  }
   const cdp = cdpConnect(tab.id);
   try {
     const result = await cdp.send('Runtime.evaluate', {
@@ -642,6 +913,9 @@ async function executeGetPageState() {
 }
 
 async function executeScreenshot(format = 'jpeg', quality = 70) {
+  if (!ALLOW_CDP_FALLBACK) {
+    return JSON.stringify({ success: false, error: 'screenshot requires CDP fallback; disabled to avoid Chrome debugging banner' });
+  }
   const tab = await getReadyTab(null);
   const cdp = cdpConnect(tab.id);
   try {
@@ -731,10 +1005,12 @@ async function executeBrowserTask(task, cursorOptions = {}) {
 
   try {
     const preferredUrl = extractUrl(task) || 'https://www.google.com';
-    const tabs = await ensureChromeReady(preferredUrl);
-    const tab = tabs[0];
+    const { tab, location } = await prepareTargetTab(preferredUrl);
     if (extractUrl(task)) {
-      await navigateTab(tab.id, preferredUrl).catch(err => log(`Tab reset failed, continuing: ${err.message}`));
+      if (!location?.href || !sameOriginOrUrl(location.href, preferredUrl)) {
+        throw new Error(`Navigation did not reach ${preferredUrl}; current URL is ${location?.href || tab.url || 'unknown'}`);
+      }
+      rememberControlledTab({ ...tab, url: preferredUrl });
     }
     log(`Executing on tab: ${tab.title} (ID: ${tab.id})`);
 

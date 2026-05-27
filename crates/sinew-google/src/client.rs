@@ -17,12 +17,12 @@ use crate::{
     wire,
 };
 
-const BASE_URL: &str = "https://daily-cloudcode-pa.googleapis.com/v1internal";
-const PROD_BASE_URL: &str = "https://cloudcode-pa.googleapis.com/v1internal";
+const BASE_URL: &str = "https://cloudcode-pa.googleapis.com/v1internal";
+const DAILY_BASE_URL: &str = "https://daily-cloudcode-pa.googleapis.com/v1internal";
 const SANDBOX_BASE_URL: &str = "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal";
 const AUTOPUSH_BASE_URL: &str = "https://autopush-cloudcode-pa.sandbox.googleapis.com/v1internal";
 const USER_AGENT: &str = "sinew/0.1";
-const DEFAULT_ANTIGRAVITY_VERSION: &str = "2.0.0";
+const DEFAULT_ANTIGRAVITY_VERSION: &str = "2.0.1";
 const ANTIGRAVITY_SYSTEM_INSTRUCTION: &str = "You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.**Absolute paths only****Proactiveness**";
 const FALLBACK_PROJECT_ID: &str = "rising-fact-p41fc";
 
@@ -111,8 +111,10 @@ impl GoogleProvider {
         }
 
         let user_data = self.setup_user().await?;
-        if let Err(err) = save_default_user_data(&user_data) {
-            tracing::warn!(error = %err, "failed to persist Antigravity user data");
+        if user_data.project_id != FALLBACK_PROJECT_ID {
+            if let Err(err) = save_default_user_data(&user_data) {
+                tracing::warn!(error = %err, "failed to persist Antigravity user data");
+            }
         }
         *self.user_data.lock().await = Some(user_data.clone());
         Ok(user_data)
@@ -228,11 +230,11 @@ impl GoogleProvider {
         &self,
         body: &wire::LoadCodeAssistRequest,
     ) -> Result<reqwest::Response> {
-        let primary_bases = [PROD_BASE_URL, BASE_URL];
+        let primary_bases = [BASE_URL, DAILY_BASE_URL];
         let mut first_unavailable = None;
         for base_url in primary_bases {
             let token = self.config.credential.bearer(&self.http).await?;
-            let response = self
+            let request = self
                 .http
                 .post(method_url(base_url, "loadCodeAssist"))
                 .bearer_auth(token)
@@ -240,7 +242,8 @@ impl GoogleProvider {
                 .header("x-goog-api-client", "gl-node/22.21.1")
                 .header("content-type", "application/json")
                 .header("accept", "application/json")
-                .json(body)
+                .json(body);
+            let response = request
                 .send()
                 .await
                 .map_err(|err| AppError::Network(err.to_string()))?;
@@ -258,7 +261,7 @@ impl GoogleProvider {
 
         for base_url in [SANDBOX_BASE_URL, AUTOPUSH_BASE_URL] {
             let token = self.config.credential.bearer(&self.http).await?;
-            let response = self
+            let request = self
                 .http
                 .post(method_url(base_url, "loadCodeAssist"))
                 .bearer_auth(token)
@@ -266,7 +269,8 @@ impl GoogleProvider {
                 .header("x-goog-api-client", "gl-node/22.21.1")
                 .header("content-type", "application/json")
                 .header("accept", "application/json")
-                .json(body)
+                .json(body);
+            let response = request
                 .send()
                 .await
                 .map_err(|err| AppError::Network(err.to_string()))?;
@@ -295,10 +299,8 @@ impl GoogleProvider {
             cloudaicompanion_project: project_id.clone(),
             metadata: client_metadata(project_id),
         };
-        let response = self
-            .post("onboardUser")
-            .await?
-            .json(&body)
+        let request = self.post("onboardUser").await?.json(&body);
+        let response = request
             .send()
             .await
             .map_err(|err| AppError::Network(err.to_string()))?;
@@ -390,7 +392,7 @@ impl GoogleProvider {
         &self,
         body: &wire::CodeAssistGenerateRequest,
     ) -> Result<reqwest::Response> {
-        let primary_bases = [self.config.base_url.as_str(), PROD_BASE_URL];
+        let primary_bases = [self.config.base_url.as_str(), DAILY_BASE_URL];
         let mut first_unavailable = None;
         for base_url in primary_bases {
             let request = self
@@ -899,7 +901,7 @@ async fn read_http_error(response: reqwest::Response) -> AppError {
     } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
         AppError::RateLimit(message)
     } else if status.is_client_error() {
-        if message.contains("context") || message.contains("token") && message.contains("limit") {
+        if (message.contains("context") || message.contains("token")) && message.contains("limit") {
             AppError::ContextLength(message)
         } else {
             AppError::InvalidRequest(message)
@@ -914,7 +916,18 @@ fn method_url(base_url: &str, method: &str) -> String {
 }
 
 fn antigravity_user_agent() -> String {
-    format!("antigravity/{} darwin/arm64", antigravity_version())
+    let platform = if cfg!(target_os = "windows") {
+        "windows/amd64"
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "darwin/arm64"
+    } else if cfg!(target_os = "macos") {
+        "darwin/amd64"
+    } else if cfg!(target_arch = "aarch64") {
+        "linux/arm64"
+    } else {
+        "linux/amd64"
+    };
+    format!("antigravity/{} {platform}", antigravity_version())
 }
 
 fn antigravity_version() -> String {

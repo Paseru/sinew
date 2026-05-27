@@ -134,6 +134,13 @@
       cursor: wait;
     }
 
+    .btn-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
     .diagnostic {
       width: 100%;
       margin-top: 10px;
@@ -177,12 +184,21 @@
     <span class="stats-value" id="attached-count">0</span>
   </div>
 
-  <button class="btn-refresh" id="btn-refresh">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-    </svg>
-    <span>Reconnect</span>
-  </button>
+  <div class="btn-row">
+    <button class="btn-refresh" id="btn-refresh">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+      </svg>
+      <span>Reconnect</span>
+    </button>
+
+    <button class="btn-refresh" id="btn-restart">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"/>
+      </svg>
+      <span>Restart bridge</span>
+    </button>
+  </div>
 
   <div class="diagnostic" id="diagnostic">Diagnostic: starting...</div>
 

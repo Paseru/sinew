@@ -1,20 +1,33 @@
-﻿import sqlite3
+import sqlite3
 import json
 import os
 import sys
 import time
 import shutil
+from pathlib import Path
 
 # Paths
 home_dir = os.path.expanduser("~")
-db_path = os.path.join(home_dir, "AppData", "Local", "hyrak", "sinew", "data", "desktop-state.sqlite3")
+db_path = os.environ.get(
+    "SINEW_DESKTOP_DB",
+    os.path.join(home_dir, "AppData", "Local", "hyrak", "sinew", "data", "desktop-state.sqlite3"),
+)
 
 if not os.path.exists(db_path):
     print(f"ERROR: Database not found at {db_path}")
     sys.exit(1)
 
-# Configure the Sinew Chrome MCP server dynamically
-script_dir = os.path.dirname(os.path.abspath(__file__))
+# Configure the Sinew Chrome MCP server dynamically.
+# Prefer the installed runtime copied by register.ps1 so Sinew never depends on a dev path.
+source_dir = Path(__file__).resolve().parent
+installed_dir = Path(
+    os.environ.get(
+        "SINEW_CHROME_BRIDGE_DIR",
+        os.path.join(os.environ.get("LOCALAPPDATA", os.path.join(home_dir, "AppData", "Local")), "Sinew", "ChromeBridge"),
+    )
+)
+script_dir = installed_dir if (installed_dir / "mcp_server.js").exists() else source_dir
+
 node_path = os.environ.get("SINEW_NODE_PATH") or shutil.which("node") or r"C:\Program Files\nodejs\node.exe"
 if not (os.path.isabs(node_path) and os.path.exists(node_path)) and not shutil.which(node_path):
     node_path = "node"
@@ -23,12 +36,13 @@ new_server = {
     "id": "sinew-chrome",
     "name": "Sinew Chrome",
     "command": node_path,
-    "args": [os.path.join(script_dir, "mcp_server.js")],
+    "args": [str(script_dir / "mcp_server.js")],
     "env": [
-        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"}
+        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"},
+        {"key": "SINEW_CHROME_BRIDGE_DIR", "value": str(script_dir)},
     ],
-    "cwd": script_dir,
-    "enabled": True
+    "cwd": str(script_dir),
+    "enabled": True,
 }
 
 try:
@@ -45,7 +59,7 @@ try:
         servers = settings.get("servers", [])
         updated = False
         for i, s in enumerate(servers):
-            if s.get("id") in ("sinew-chrome", "browser-use"):
+            if s.get("id") in ("sinew-chrome", "browser-use") or s.get("name") == "Sinew Chrome":
                 servers[i] = new_server
                 updated = True
                 break
@@ -73,7 +87,7 @@ try:
     
     conn.commit()
     conn.close()
-    print("SUCCESS: MCP server 'Sinew Chrome' registered successfully in Sinew's database!")
+    print(f"SUCCESS: MCP server 'Sinew Chrome' registered at {script_dir}!")
 except Exception as e:
     print("ERROR: Error updating database:", e)
     sys.exit(1)

@@ -287,7 +287,8 @@ async function handleMessage(msg) {
 
       case "execute_silent_task":
         const silentTabId = parseInt(params.tabId);
-        const { task: silentTask } = params;
+        const { task: silentTask, cursor: silentCursor } = params;
+        const silentCursorOptions = normalizeCursorOptions(silentCursor || {});
         
         runLocked(async () => {
           return new Promise(async (resolve) => {
@@ -323,7 +324,7 @@ async function handleMessage(msg) {
                     return;
                   }
                   try {
-                    const performed = await performHumanCdpAction(silentTabId, response, taskText);
+                    const performed = await performHumanCdpAction(silentTabId, response, taskText, silentCursorOptions);
                     actionResolve({ ...performed, task: taskText, target: response.target });
                   } catch (err) {
                     actionResolve({ success: false, error: err.message, task: taskText, target: response.target });
@@ -678,26 +679,77 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 function updateStorageState() {
-  chrome.storage.local.set({
-    connected: isBridgeConnected(),
-    attachedCount: attachedTabs.size,
-    lastNativeError,
-    lastConnectedAt
+  getDiagnosticsViaProxy().then((diagnostics) => {
+    chrome.storage.local.set({
+      connected: isBridgeConnected(),
+      attachedCount: attachedTabs.size,
+      lastNativeError,
+      lastConnectedAt,
+      diagnostics
+    });
   });
+}
+
+function getDiagnosticsViaProxy() {
+  return new Promise((resolve) => {
+    try {
+      fetch('http://localhost:29002/api/diagnostics', { cache: 'no-store' })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => resolve(data || null))
+        .catch(() => resolve(null));
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function restartNativeBridge() {
+  lastNativeError = null;
+  try {
+    if (nativePort) {
+      try { nativePort.disconnect(); } catch {}
+      nativePort = null;
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+    connect();
+    await new Promise(resolve => setTimeout(resolve, 750));
+    updateStorageState();
+    return { success: true };
+  } catch (err) {
+    lastNativeError = err.message;
+    updateStorageState();
+    return { success: false, error: err.message };
+  }
 }
 
 // Keep connection state fresh for popup UI
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "get_status") {
-    sendResponse({
-      connected: isBridgeConnected(),
-      attachedCount: attachedTabs.size,
-      lastNativeError,
-      lastConnectedAt
+    getDiagnosticsViaProxy().then((diagnostics) => {
+      sendResponse({
+        connected: isBridgeConnected(),
+        attachedCount: attachedTabs.size,
+        lastNativeError,
+        lastConnectedAt,
+        diagnostics
+      });
     });
   } else if (request.action === "reconnect") {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     connect();
-    sendResponse({ success: true });
+    setTimeout(() => {
+      updateStorageState();
+      sendResponse({ success: true, connected: isBridgeConnected() });
+    }, 250);
+  } else if (request.action === "restart_bridge") {
+    restartNativeBridge().then(sendResponse);
   }
   return true;
 });

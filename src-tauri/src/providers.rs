@@ -1111,11 +1111,18 @@ pub(super) async fn get_openai_codex_rate_limits(
     if let Ok(accounts_resp) = accounts_req.send().await {
         if accounts_resp.status().is_success() {
             if let Ok(accounts_raw) = accounts_resp.json::<serde_json::Value>().await {
-                if let Some(accounts_list) = accounts_raw.get("accounts").and_then(|v| v.as_array()) {
-                    let target_id = bearer.account_id.as_deref()
-                        .or_else(|| accounts_raw.get("default_account_id").and_then(|v| v.as_str()));
+                if let Some(accounts_list) = accounts_raw.get("accounts").and_then(|v| v.as_array())
+                {
+                    let target_id = bearer.account_id.as_deref().or_else(|| {
+                        accounts_raw
+                            .get("default_account_id")
+                            .and_then(|v| v.as_str())
+                    });
                     if let Some(tid) = target_id {
-                        if let Some(matched) = accounts_list.iter().find(|acc| acc.get("id").and_then(|id| id.as_str()) == Some(tid)) {
+                        if let Some(matched) = accounts_list
+                            .iter()
+                            .find(|acc| acc.get("id").and_then(|id| id.as_str()) == Some(tid))
+                        {
                             if let Some(name) = matched.get("name").and_then(|n| n.as_str()) {
                                 workspace_name = Some(name.to_string());
                             }
@@ -1190,7 +1197,11 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
         .bearer_auth(token)
         .header("content-type", "application/json")
         .header("accept", "application/json")
-        .header("user-agent", "antigravity/windows/amd64")
+        .header(
+            "user-agent",
+            "antigravity/2.0.1 windows/amd64 google-api-nodejs-client/10.3.0",
+        )
+        .header("x-goog-api-client", "gl-node/22.21.1")
         .json(&body)
         .send()
         .await
