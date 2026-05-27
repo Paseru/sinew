@@ -19,8 +19,6 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `src/components/chat/Markdown.tsx`*
 * **📌 Question Collante (Sticky)** : La dernière question posée reste fixée en haut lors du défilement. Cliquez dessus pour y remonter instantanément.
   * 📂 *Fichiers : `src/components/chat/ChatPane.tsx`*
-* **🟢 Pastille de Quota dans le Chat** : Un indicateur coloré dynamique s'affiche à côté du sélecteur de modèle dans le chat composer pour refléter votre quota en temps réel. Un clic sur la pastille ouvre directement la page de configuration du fournisseur. Le popover de sélection affiche également des pastilles de couleur individuelles pour chaque modèle.
-  * 📂 *Fichiers : `src/components/chat/ChatPane.tsx`*
 * **📋 Copie libre** : La sélection de texte est entièrement débloquée dans les bulles de chat pour copier facilement n'importe quel extrait.
   * 📂 *Fichiers : `src/styles.css`*
 
@@ -50,9 +48,5 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`*
 * **👥 Multi-comptes OpenAI** : Enregistrez plusieurs clés API distinctes via le bouton `[ + ]` et basculez instantanément de l'une à l'autre.
   * 📂 *Fichiers : `src/components/SettingsPane.tsx`*
-* **📊 API & Suivi en temps réel des Quotas** : Ajout de fonctions et d'interfaces pour lire les quotas réels et les limites actives des abonnements :
-  * `get_antigravity_quota` (Google OAuth / Cloud Code) : interroge l'API `fetchAvailableModels` pour mapper les fenêtres de quotas de Gemini.
-  * `get_openai_codex_rate_limits` (OpenAI OAuth / ChatGPT) : interroge l'API `/wham/usage` (et son fallback `/backend-api/wham/usage` pour les comptes Business) afin de suivre les fenêtres d'utilisation courte/longue.
-  * `getOpenRouterKeyDetails` (OpenRouter API) : interroge `/auth/key` pour extraire la limite de crédit et le solde restant en USD.
-  * *Rendu visuel* : Barres de progression dynamique à couleur adaptative (Vert >80%, Bleu >50%, Rose >20%, Rouge <20%).
-  * 📂 *Fichiers : `src/lib/quotas.ts`, `src-tauri/src/providers.rs`, `src/components/SettingsPane.tsx`*
+* **📊 Suivi en temps réel des Quotas** : Ajout de fonctions natives (`get_antigravity_quota` pour Gemini, `get_openai_codex_rate_limits` pour ChatGPT Plus/Pro, et `getOpenRouterKeyDetails` pour OpenRouter) pour suivre vos limites réelles d'utilisation. Les quotas s'affichent sous forme de barres colorées adaptatives (Vert/Bleu/Rose/Rouge) dans les options, et via une pastille de statut dynamique directement intégrée dans le champ de saisie du chat.
+  * 📂 *Fichiers : `src/lib/quotas.ts`, `src-tauri/src/providers.rs`, `src/components/SettingsPane.tsx`, `src/components/chat/ChatPane.tsx`*
