@@ -618,7 +618,8 @@ fn to_contents(transcript: &[ChatMessage], model: &str) -> Result<Vec<wire::Cont
                         parts.push(wire::Part::Text {
                             text: text.clone(),
                             thought: Some(true),
-                            thought_signature: thought_signature(meta),
+                            thought_signature: thought_signature(meta)
+                                .or_else(|| Some("skip_thought_signature_validator".into())),
                         });
                     }
                 }
@@ -725,10 +726,8 @@ fn thought_signature(meta: &Option<Value>) -> Option<String> {
         .map(str::to_string)
 }
 
-fn thought_signature_for_tool_call(meta: &Option<Value>, model: &str) -> Option<String> {
-    thought_signature(meta).or_else(|| {
-        model_info::is_gemini3_model(model).then(|| "skip_thought_signature_validator".into())
-    })
+fn thought_signature_for_tool_call(meta: &Option<Value>, _model: &str) -> Option<String> {
+    thought_signature(meta).or_else(|| Some("skip_thought_signature_validator".into()))
 }
 
 fn model_supports_multimodal_function_response(model: &str) -> bool {
