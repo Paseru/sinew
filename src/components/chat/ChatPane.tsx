@@ -98,6 +98,73 @@ type QueuedPrompt = QueuedPromptStripItem & {
   steering?: boolean;
 };
 
+type BatchedConversationEvent = {
+  conversationId: string;
+  event: AgentEvent;
+};
+
+function isUiStreamDelta(event: AgentEvent): boolean {
+  if (
+    event.type === "text_chunk" ||
+    event.type === "thinking_chunk" ||
+    event.type === "tool_args_delta" ||
+    event.type === "tool_output_delta"
+  ) {
+    return true;
+  }
+  return event.type === "sub_agent_event" && isUiStreamDelta(event.event);
+}
+
+function mergeUiStreamDelta(previous: AgentEvent, next: AgentEvent): AgentEvent | null {
+  if (previous.type === "text_chunk" && next.type === "text_chunk") {
+    return { type: "text_chunk", delta: previous.delta + next.delta };
+  }
+  if (previous.type === "thinking_chunk" && next.type === "thinking_chunk") {
+    return { type: "thinking_chunk", delta: previous.delta + next.delta };
+  }
+  if (
+    previous.type === "tool_args_delta" &&
+    next.type === "tool_args_delta" &&
+    previous.id === next.id
+  ) {
+    return { type: "tool_args_delta", id: previous.id, delta: previous.delta + next.delta };
+  }
+  if (
+    previous.type === "tool_output_delta" &&
+    next.type === "tool_output_delta" &&
+    previous.id === next.id
+  ) {
+    return { type: "tool_output_delta", id: previous.id, delta: previous.delta + next.delta };
+  }
+  if (
+    previous.type === "sub_agent_event" &&
+    next.type === "sub_agent_event" &&
+    previous.id === next.id &&
+    previous.agent_id === next.agent_id &&
+    previous.agent_name === next.agent_name &&
+    previous.team_name === next.team_name
+  ) {
+    const mergedInner = mergeUiStreamDelta(previous.event, next.event);
+    if (mergedInner) return { ...previous, event: mergedInner };
+  }
+  return null;
+}
+
+function pushBatchedConversationEvent(
+  queue: BatchedConversationEvent[],
+  incoming: BatchedConversationEvent,
+) {
+  const last = queue[queue.length - 1];
+  if (last && last.conversationId === incoming.conversationId) {
+    const merged = mergeUiStreamDelta(last.event, incoming.event);
+    if (merged) {
+      queue[queue.length - 1] = { ...last, event: merged };
+      return;
+    }
+  }
+  queue.push(incoming);
+}
+
 type EditingQueuedPrompt = {
   conversationId: string;
   id: string;
@@ -423,6 +490,11 @@ export function ChatPane({
   const promptQueuesByConversationRef = useRef<Map<string, QueuedPrompt[]>>(
     new Map(),
   );
+  const eventBatchRef = useRef<BatchedConversationEvent[]>([]);
+  const eventBatchFrameRef = useRef<number | null>(null);
+  const applyEventToConversationViewRef = useRef<
+    ((cid: string, event: AgentEvent) => void) | null
+  >(null);
   const [view, setView] = useState<ChatViewState>(() => {
     const initial = initialStateFromHistory(history);
     return isStreaming ? beginTurn(initial) : initial;
@@ -1315,12 +1387,66 @@ export function ChatPane({
     ],
   );
 
+  const flushBatchedConversationEvents = useCallback(() => {
+    eventBatchFrameRef.current = null;
+    const events = eventBatchRef.current;
+    if (events.length === 0) return;
+    eventBatchRef.current = [];
+    const apply = applyEventToConversationViewRef.current;
+    if (!apply) return;
+    for (const { conversationId: cid, event } of events) {
+      apply(cid, event);
+    }
+  }, []);
+
+  const scheduleBatchedConversationEvent = useCallback(
+    (cid: string, event: AgentEvent) => {
+      pushBatchedConversationEvent(eventBatchRef.current, {
+        conversationId: cid,
+        event,
+      });
+      if (eventBatchFrameRef.current === null) {
+        eventBatchFrameRef.current = window.requestAnimationFrame(
+          flushBatchedConversationEvents,
+        );
+      }
+    },
+    [flushBatchedConversationEvents],
+  );
+
+  useEffect(() => {
+    applyEventToConversationViewRef.current = applyEventToConversationView;
+  }, [applyEventToConversationView]);
+
   useEffect(() => {
     const unsubscribe = subscribeEvents((cid, event) => {
+      if (isUiStreamDelta(event)) {
+        scheduleBatchedConversationEvent(cid, event);
+        return;
+      }
+      if (eventBatchRef.current.length > 0) {
+        if (eventBatchFrameRef.current !== null) {
+          window.cancelAnimationFrame(eventBatchFrameRef.current);
+          eventBatchFrameRef.current = null;
+        }
+        flushBatchedConversationEvents();
+      }
       applyEventToConversationView(cid, event);
     });
-    return unsubscribe;
-  }, [subscribeEvents, applyEventToConversationView]);
+    return () => {
+      unsubscribe();
+      if (eventBatchFrameRef.current !== null) {
+        window.cancelAnimationFrame(eventBatchFrameRef.current);
+        eventBatchFrameRef.current = null;
+      }
+      flushBatchedConversationEvents();
+    };
+  }, [
+    applyEventToConversationView,
+    flushBatchedConversationEvents,
+    scheduleBatchedConversationEvent,
+    subscribeEvents,
+  ]);
 
   useEffect(() => {
     const unsubscribe = externalDrops.subscribe((incoming) => {
