@@ -8,6 +8,7 @@ description = "Local codebase index for Sinew (FTS chunks, incremental sync)"
 
 [dependencies]
 anyhow = { workspace = true }
+regex = { workspace = true }
 directories = { workspace = true }
 fastembed = "4"
 notify = { workspace = true }

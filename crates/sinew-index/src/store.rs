@@ -137,6 +137,25 @@ impl IndexStore {
         Ok(())
     }
 
+    pub fn update_chunk_embedding(&self, chunk_id: i64, embedding: &[f32]) -> Result<()> {
+        let conn = self.connection()?;
+        conn.execute(
+            "UPDATE chunks SET embedding = ?1 WHERE id = ?2",
+            params![crate::embeddings::vector_to_bytes(embedding), chunk_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_chunks_without_embedding(&self) -> Result<Vec<(i64, String)>> {
+        let conn = self.connection()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, content FROM chunks WHERE embedding IS NULL OR length(embedding) = 0",
+        )?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .context("unable to list chunks missing embeddings")
+    }
+
     pub fn stats(&self) -> Result<(usize, usize)> {
         let conn = self.connection()?;
         let files: i64 = conn.query_row("SELECT COUNT(*) FROM files", [], |row| row.get(0))?;

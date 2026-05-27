@@ -20,6 +20,7 @@ pub struct IndexStats {
     pub files_indexed: usize,
     pub chunks_indexed: usize,
     pub files_updated: usize,
+    pub embeddings_backfilled: usize,
 }
 
 pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
@@ -60,8 +61,7 @@ pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
         if store.file_hash(&relative)?.as_deref() == Some(hash.as_str()) {
             continue;
         }
-        let chunks = chunk_file_content(&content);
-        let mut chunks = chunks;
+        let mut chunks = chunk_file_content(&content, &relative);
         if crate::embeddings::is_available() {
             let texts = chunks
                 .iter()
@@ -86,6 +86,7 @@ pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
     let (files, chunks) = store.stats()?;
     stats.files_indexed = files;
     stats.chunks_indexed = chunks;
+    stats.embeddings_backfilled = backfill_missing_embeddings(&store)?;
     Ok(stats)
 }
 
@@ -96,6 +97,7 @@ pub fn index_stats(workspace_root: &Path) -> Result<IndexStats> {
         files_indexed: files,
         chunks_indexed: chunks,
         files_updated: 0,
+        embeddings_backfilled: 0,
     })
 }
 
@@ -148,4 +150,31 @@ fn system_time_to_ms(value: SystemTime) -> Option<i64> {
         .duration_since(SystemTime::UNIX_EPOCH)
         .ok()
         .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
+}
+
+const EMBEDDING_BACKFILL_BATCH: usize = 32;
+
+fn backfill_missing_embeddings(store: &IndexStore) -> Result<usize> {
+    if !crate::embeddings::is_available() {
+        return Ok(0);
+    }
+    let pending = store.list_chunks_without_embedding()?;
+    if pending.is_empty() {
+        return Ok(0);
+    }
+    let mut updated = 0usize;
+    for batch in pending.chunks(EMBEDDING_BACKFILL_BATCH) {
+        let texts = batch
+            .iter()
+            .map(|(_, content)| content.clone())
+            .collect::<Vec<_>>();
+        let Ok(vectors) = crate::embeddings::embed_passages(&texts) else {
+            break;
+        };
+        for ((chunk_id, _), vector) in batch.iter().zip(vectors) {
+            store.update_chunk_embedding(*chunk_id, &vector)?;
+            updated += 1;
+        }
+    }
+    Ok(updated)
 }

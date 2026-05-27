@@ -39,8 +39,9 @@ pub fn snapshot(workspace_root: &str) -> Option<WorkspaceSnapshot> {
         files_indexed: 0,
         chunks_indexed: 0,
         files_updated: 0,
+        embeddings_backfilled: 0,
     });
-    let mut project_layout = build_project_layout(&path, 3, 120);
+    let mut project_layout = build_project_layout(&path, 4, 200);
     if let Some(object) = project_layout.as_object_mut() {
         object.insert(
             "localIndex".into(),
