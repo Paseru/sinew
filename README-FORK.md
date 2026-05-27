@@ -91,25 +91,29 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Authentification OAuth Sécurisée* : Connexion fluide via OAuth avec renouvellement automatique des jetons de session (remplace la lecture locale SQLite instable de `state.vscdb` pour éviter les soucis de droits d'accès).
   * *Stealth & Mimétisme IDE* : En-têtes HTTP personnalisés (`x-cursor-client-version` réglable via `SINEW_CURSOR_CLIENT_VERSION`, `user-agent`, `x-cursor-checksum` calculé dynamiquement) simulant un client Cursor légitime pour éviter tout blocage.
   * *Support Multi-sessions & Multimodal* : Routage des abonnements prioritaires, gestion de la vision (analyse d'images) et génération d'images via providers locaux ou DALL-E dans l'agent Composer.
-  * 📂 *Fichiers : `crates/sinew-cursor/`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`*
+  * *Gestion des dossiers récents* : Possibilité de supprimer des dossiers de l'historique directement depuis l'écran d'accueil.
+  * 📂 *Fichiers : `crates/sinew-cursor/`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`, `src/components/Welcome.tsx`, `src/lib/recents.ts`*
 
 * **🔍 Indexation Sémantique Locale & Codebase Search** :
   * *Indexation Arrière-plan & Embeddings* : Module `sinew-index` pour analyser le projet localement et générer des embeddings vectoriels des fichiers avec découpage intelligent respectueux de la structure des symboles.
+  * *Badge d'état dans la Sidebar* : Affichage dynamique sous le nom du projet du nombre de fichiers et fragments indexés, ainsi que du moteur actif (sémantique ou classique).
   * *Context Injection* : Intégration transparente des résultats de recherche sémantique comme contexte explicite injecté directement dans les prompts envoyés à l'agent.
-  * 📂 *Fichiers : `crates/sinew-index/`, `crates/sinew-app/src/codebase_search.rs`, `src/components/chat/ChatPane.tsx`*
+  * 📂 *Fichiers : `crates/sinew-index/`, `crates/sinew-app/src/codebase_search.rs`, `src/components/chat/ChatPane.tsx`, `src/components/Workspace.tsx`*
 
 * **🌐 Extension Chrome (Sinew Chrome Bridge) de Pointe** :
   * *Suppression du Timeout de 20s* : Résolution d'un délai d'attente bloquant lors de la navigation et de la recherche d'onglets cibles via CDP.
   * *Stealth & Trajectoire Bézier* : Déplacements du curseur simulés via des courbes de Bézier physiques multi-candidates et masquage complet de la barre d'avertissement de débogage Chrome.
   * *Design Premium de la Popup* : Redesign complet avec thème sombre moderne, lueur néon, états de diagnostic pliables et indicateur d'attachement du debugger en temps réel.
-  * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`, `sinew-chrome-bridge/popup.js`, `sinew-chrome-bridge/background.js`, `.sinew/skills/browser/SKILL.md`*
+  * *Exécution depuis l'Explorateur & Chat* : Intégration d'un menu d'ouverture directe et d'exécution dans les liens de fichiers du chat et dans le menu contextuel clic-droit du FileTree.
+  * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`, `sinew-chrome-bridge/popup.js`, `sinew-chrome-bridge/background.js`, `.sinew/skills/browser/SKILL.md`, `src/components/FileTree.tsx`, `src/components/chat/Markdown.tsx`*
 
 * **⚡ Suppression des Popups de Console sur Windows** :
-  * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP ou des sidecars d'arrière-plan.
-  * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`*
+  * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP, des commandes Git ou de l'analyse globale SOTA.
+  * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`, `src-tauri/src/git.rs`, `crates/sinew-app/src/check_sota.rs`*
 
-* **🎨 Ajustements UI, Encodage & Mode Très Compact** :
+* **🎨 Ajustements UI, Encodage & Traduction Dynamique** :
   * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
+  * *Dictionnaire frRuntime* : Intégration d'un dictionnaire d'internationalisation runtime (`frRuntime.ts`) pour la traduction à la volée de toute l'interface.
   * *Rendu Grand Écran & Démarrage* : Fixation de la largeur `#root` à 100% sur écran large et animations d'introduction stylisées de l'icône de boot.
   * *Mode Ultra Pur* : Amélioration du mode "Très compact" pour masquer les tools réussis et n'afficher que l'animation d'état en cours.
-  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`*
+  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`, `src/lib/frRuntime.ts`*
