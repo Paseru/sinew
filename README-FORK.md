@@ -82,7 +82,7 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `Cargo.toml`, `src/components/chat/Markdown.tsx`*
 * **🛡️ Sécurisation & Spoofing ChatGPT Codex** : Spoofing complet de toutes les requêtes (WebSockets, SSE, et images DALL-E 3) avec le User-Agent officiel `"codex-cli"` pour éliminer les risques de détection/bannissement.
   * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
-* **🎨 Splash Screen & Correction d'Encodage** : Splash Screen statique instantané (défini dans `index.html`) pour supprimer le flash blanc au démarrage. Remplacement et échappement unicode de tous les points médians (`·`) pour éliminer définitivement les bugs d'affichage Windows.
-  * 📂 *Fichiers : `index.html`, `src/styles.css`, `crates/sinew-app/src/agent/turn.rs`*
+* **🎨 Écran de Démarrage & Splash Logo** : Splash screen statique instantané (dans `index.html`) contre le flash blanc au démarrage, complété par des animations d'ouverture dynamique des barres du logo sur l'écran d'accueil. Inclut l'échappement unicode de tous les points médians (`·`) pour éliminer définitivement les bugs d'affichage Windows.
+  * 📂 *Fichiers : `index.html`, `src/components/Welcome.tsx`, `src/styles.css`, `crates/sinew-app/src/agent/turn.rs`*
 * **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées avec le nom réel du PC actif (ex: `[PCSALON] ` ou `[PCPORTABLE] `) basé sur les variables d'environnement (`%COMPUTERNAME%` / `$HOSTNAME`), facilitant le tri multi-PC.
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
