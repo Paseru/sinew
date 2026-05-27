@@ -82,10 +82,18 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     strip_all_visible_tool_result_ids(&mut history);
     normalize_tool_call_inputs(&mut history);
     repair_missing_tool_results(&mut history);
-    mcp.refresh_catalog(&history).await;
+    let mut cancelled = false;
+    tokio::select! {
+        biased;
+        command = cmd_rx.recv() => {
+            if matches!(command, Some(EngineCommand::Cancel)) {
+                cancelled = true;
+            }
+        }
+        _ = mcp.refresh_catalog(&history) => {}
+    }
 
     let root_accepts_steering = steering_rx.is_some();
-    let mut cancelled = false;
     let mut compacted = false;
     let mut loops = 0usize;
     let mut auto_compaction_attempts = 0usize;
@@ -93,6 +101,26 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     let mut eager_tool_results = BTreeMap::<String, JoinHandle<ToolRunResult>>::new();
     let mut read_fingerprints = successful_read_fingerprints(&history, &read);
     todo_list.normalize();
+
+    if cancelled {
+        if root_accepts_steering {
+            cancel.close_steering();
+        }
+        send_event(&event_tx, event_scope.as_ref(), AgentEvent::Interrupted);
+        send_event(
+            &event_tx,
+            event_scope.as_ref(),
+            AgentEvent::TurnFinished { duration_ms: None },
+        );
+        todo_list.normalize();
+        return TurnOutput {
+            history,
+            todo_list,
+            goal_workflow,
+            interrupted: true,
+            compacted: false,
+        };
+    }
 
     'conversation: loop {
         drain_steering_commands(
@@ -222,7 +250,21 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
 
         let mut stream_retry_attempts = 0usize;
         let (message_builder, mut stop_reason, response_usage) = 'stream_attempt: loop {
-            let mut stream = match provider.stream(request.clone()).await {
+            let stream_res = tokio::select! {
+                biased;
+                res = provider.stream(request.clone()) => Some(res),
+                command = cmd_rx.recv() => {
+                    if matches!(command, Some(EngineCommand::Cancel)) {
+                        cancelled = true;
+                        break 'conversation;
+                    }
+                    None
+                }
+            };
+            let Some(stream_res) = stream_res else {
+                continue 'stream_attempt;
+            };
+            let mut stream = match stream_res {
                 Ok(stream) => stream,
                 Err(err) => {
                     if should_retry_stream(&err, stream_retry_attempts) {
@@ -234,7 +276,16 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                             error = %err,
                             "retrying provider stream setup"
                         );
-                        tokio::time::sleep(stream_retry_delay(stream_retry_attempts)).await;
+                        tokio::select! {
+                            biased;
+                            command = cmd_rx.recv() => {
+                                if matches!(command, Some(EngineCommand::Cancel)) {
+                                    cancelled = true;
+                                    break 'conversation;
+                                }
+                            }
+                            _ = tokio::time::sleep(stream_retry_delay(stream_retry_attempts)) => {}
+                        }
                         continue 'stream_attempt;
                     }
 
@@ -456,7 +507,16 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         error = %err,
                         "retrying provider stream"
                     );
-                    tokio::time::sleep(stream_retry_delay(stream_retry_attempts)).await;
+                    tokio::select! {
+                        biased;
+                        command = cmd_rx.recv() => {
+                            if matches!(command, Some(EngineCommand::Cancel)) {
+                                cancelled = true;
+                                break 'conversation;
+                            }
+                        }
+                        _ = tokio::time::sleep(stream_retry_delay(stream_retry_attempts)) => {}
+                    }
                     continue 'stream_attempt;
                 }
 
