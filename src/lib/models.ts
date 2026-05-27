@@ -158,7 +158,7 @@ export const MODELS: ModelEntry[] = [
     value: "google:gemini-3.5-flash",
     provider: "google",
     label: "Gemini 3.5 Flash",
-    thinking: ["minimal", "low", "medium", "high"],
+    thinking: ["low", "medium", "high"],
     defaultThinking: "high",
   },
   {
