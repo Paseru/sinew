@@ -82,7 +82,7 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `Cargo.toml`, `src/components/chat/Markdown.tsx`*
 * **🛡️ Sécurisation & Spoofing ChatGPT Codex** : Spoofing complet de toutes les requêtes (WebSockets, SSE, et images DALL-E 3) avec le User-Agent officiel `"codex-cli"` pour éliminer les risques de détection/bannissement.
   * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
-* **🎨 Écran de Démarrage & Splash Logo** : Splash screen statique instantané (intégré dans `index.html`) contre le flash blanc de la fenêtre Tauri, suivi d'une animation d'ouverture dynamique des barres du logo sur l'écran d'accueil.
+* **🎨 Animation de démarrage & Splash Screen** : Élimination du flash blanc de la fenêtre Tauri grâce à un Splash Screen statique instantané (intégré dans `index.html`), suivi d'une animation d'ouverture dynamique des barres du logo sur l'écran d'accueil.
   * 📂 *Fichiers : `index.html`, `src/components/Welcome.tsx`, `src/styles.css`*
 * **🔤 Correction d'Encodage Windows** : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éliminer définitivement les bugs d'affichage de caractères corrompus.
   * 📂 *Fichiers : `crates/sinew-app/src/agent/turn.rs`*
