@@ -357,7 +357,12 @@ impl GoogleProvider {
         &self,
         body: &wire::CodeAssistGenerateRequest,
     ) -> Result<reqwest::Response> {
-        let bases = [self.config.base_url.as_str(), PROD_BASE_URL];
+        let bases = [
+            PROD_BASE_URL,
+            self.config.base_url.as_str(),
+            SANDBOX_BASE_URL,
+            AUTOPUSH_BASE_URL,
+        ];
         let mut last_error = None;
         for base_url in bases {
             let request = self

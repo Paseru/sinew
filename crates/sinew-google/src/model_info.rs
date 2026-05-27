@@ -111,16 +111,22 @@ pub fn antigravity_model_and_thinking(
         Effort::High | Effort::Xhigh | Effort::Max => "high",
     };
 
-    // Antigravity exposes 3.5-flash uniquement sous l'ID `gemini-3.5-flash-low`.
-    // Le thinkingLevel reste libre, mais l'ID modèle est figé.
+    // Antigravity exposes 3.5-flash with separate extra-low/low/agent IDs matching your plan's quotas.
     if base == "gemini-3.5-flash" {
-        return ("gemini-3.5-flash-low".into(), Some(thinking_level));
+        let model_id = match thinking_level {
+            "minimal" | "low" => "gemini-3.5-flash-extra-low",
+            "medium" => "gemini-3.5-flash-low",
+            _ => "gemini-3-flash-agent",
+        };
+        return (model_id.into(), Some(thinking_level));
     }
-    // Gemini 3.1 Pro on Antigravity is always routed to the agentic variant
-    // (`gemini-pro-agent`), which is the fine-tuned artefact for tool use and
-    // long thinking. The `thinkingLevel` is still variable.
+    // Gemini 3.1 Pro on Antigravity is routed to either -low or -high to leverage your active quotas.
     if base == "gemini-3.1-pro" {
-        return ("gemini-pro-agent".into(), Some(thinking_level));
+        let model_id = match thinking_level {
+            "minimal" | "low" => "gemini-3.1-pro-low",
+            _ => "gemini-3.1-pro-high",
+        };
+        return (model_id.into(), Some(thinking_level));
     }
     // Claude Opus 4.6 uses a specific thinking ID on the server.
     if base == "claude-opus-4.6" {
