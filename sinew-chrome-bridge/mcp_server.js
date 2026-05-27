@@ -276,8 +276,15 @@ async function navigateTab(tabId, url) {
 }
 
 function buildActionTasks(task) {
-  const text = String(task || '').toLowerCase();
+  const original = String(task || '');
+  const text = original.toLowerCase();
   const actions = [];
+  if ((text.includes('google') || text.includes('google.fr') || text.includes('google.com')) && (text.includes('julienpiron') || text.includes('recherche') || text.includes('search') || text.includes('champ'))) {
+    actions.push('clique dans le champ de recherche');
+    const queryMatch = original.match(/(?:tape|écris|ecris|saisis|type|recherche(?: sur google)?|search)\s+(.+?)(?:\s+puis|\s+et|$)/i);
+    const query = (queryMatch && queryMatch[1] ? queryMatch[1] : (text.includes('julienpiron') ? 'julienpiron' : '')).trim();
+    if (query) actions.push(`tape ${query} puis appuie sur Entrée`);
+  }
   if (text.includes('hamburger') || text.includes('menu')) {
     actions.push('ouvre le menu hamburger');
     if (text.includes('referme') || text.includes('ferme') || text.includes('close')) {

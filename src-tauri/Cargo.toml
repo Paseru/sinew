@@ -22,6 +22,7 @@ sinew-google = { workspace = true }
 sinew-kimi = { workspace = true }
 sinew-openai = { workspace = true }
 sinew-openrouter = { workspace = true }
+sinew-cursor = { workspace = true }
 directories = { workspace = true }
 rusqlite = { workspace = true }
 

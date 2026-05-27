@@ -89,6 +89,12 @@ use sinew_openrouter::{
     validate_api_key as validate_openrouter_api_key_remote, OpenRouterAuthStatus,
     OpenRouterCatalogModel, OpenRouterProvider, PROVIDER_ID as OPENROUTER_PROVIDER_ID,
 };
+use sinew_cursor::{
+    delete_composer_auth, delete_default_api_auth, load_composer_auth_status,
+    load_default_api_auth_status, save_default_api_key as persist_cursor_api_key,
+    sync_composer_auth_from_ide, CursorApiAuthStatus, CursorComposerAuthStatus, CursorProvider,
+    PROVIDER_ID as CURSOR_PROVIDER_ID,
+};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -489,6 +495,12 @@ pub fn run() {
             Arc::new(provider) as Arc<dyn Provider>,
         );
     }
+    if let Ok(provider) = CursorProvider::from_default_sources() {
+        providers.insert(
+            CURSOR_PROVIDER_ID.into(),
+            Arc::new(provider) as Arc<dyn Provider>,
+        );
+    }
 
     let default_model = if providers.contains_key("anthropic") {
         ModelRef::new("anthropic", ANTHROPIC_MODEL_ID).with_effort(Effort::Max)
@@ -665,6 +677,13 @@ pub fn run() {
             providers::search_openrouter_models,
             providers::add_openrouter_model,
             providers::remove_openrouter_model,
+            providers::get_cursor_composer_status,
+            providers::sync_cursor_composer_auth,
+            providers::disconnect_cursor_composer,
+            providers::get_cursor_api_status,
+            providers::save_cursor_api_key,
+            providers::disconnect_cursor_api,
+            providers::get_cursor_usage,
             conversations::probe_mcp_tools,
             conversations::list_installed_skills_command,
             conversations::save_skill_settings,

@@ -2069,3 +2069,82 @@ pub(super) async fn cancel_active_turns_for_provider(state: &DesktopState, provi
         }
     }
 }
+
+pub(super) fn install_cursor_provider(
+    providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
+) -> std::result::Result<(), String> {
+    let provider = CursorProvider::from_default_sources().map_err(error_to_string)?;
+    providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?
+        .insert(CURSOR_PROVIDER_ID.into(), Arc::new(provider) as Arc<dyn Provider>);
+    Ok(())
+}
+
+#[tauri::command]
+pub(super) fn get_cursor_composer_status() -> std::result::Result<CursorComposerAuthStatus, String> {
+    load_composer_auth_status().map_err(error_to_string)
+}
+
+#[tauri::command]
+pub(super) fn sync_cursor_composer_auth(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<CursorComposerAuthStatus, String> {
+    let status = sync_composer_auth_from_ide().map_err(error_to_string)?;
+    install_cursor_provider(&state.providers)?;
+    Ok(status)
+}
+
+#[tauri::command]
+pub(super) fn disconnect_cursor_composer(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<(), String> {
+    delete_composer_auth().map_err(error_to_string)?;
+    install_cursor_provider(&state.providers).ok();
+    Ok(())
+}
+
+#[tauri::command]
+pub(super) fn get_cursor_api_status() -> std::result::Result<CursorApiAuthStatus, String> {
+    load_default_api_auth_status().map_err(error_to_string)
+}
+
+#[tauri::command]
+pub(super) fn save_cursor_api_key(
+    state: State<'_, DesktopState>,
+    api_key: String,
+) -> std::result::Result<CursorApiAuthStatus, String> {
+    let status = persist_cursor_api_key(&api_key).map_err(error_to_string)?;
+    install_cursor_provider(&state.providers)?;
+    Ok(status)
+}
+
+#[tauri::command]
+pub(super) fn disconnect_cursor_api(state: State<'_, DesktopState>) -> std::result::Result<(), String> {
+    delete_default_api_auth().map_err(error_to_string)?;
+    install_cursor_provider(&state.providers).ok();
+    Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct CursorUsageQuotaInfo {
+    pub auto_percent_used: f64,
+    pub api_percent_used: f64,
+    pub total_percent_used: f64,
+}
+
+#[tauri::command]
+pub(super) async fn get_cursor_usage() -> std::result::Result<CursorUsageQuotaInfo, String> {
+    let provider = CursorProvider::from_default_sources().map_err(error_to_string)?;
+    let usage = provider
+        .usage_snapshot()
+        .await
+        .map_err(error_to_string)?
+        .ok_or_else(|| "Cursor composer session is not connected".to_string())?;
+    Ok(CursorUsageQuotaInfo {
+        auto_percent_used: usage.auto_percent_used,
+        api_percent_used: usage.api_percent_used,
+        total_percent_used: usage.total_percent_used,
+    })
+}

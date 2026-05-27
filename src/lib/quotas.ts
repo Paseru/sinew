@@ -178,6 +178,42 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
     }
   }
 
+  if (providerId === "cursor") {
+    try {
+      const quota = await api.getCursorUsage();
+      const windows: QuotaWindow[] = [
+        {
+          label: "Auto + Composer",
+          remainingPercent:
+            typeof quota?.autoPercentUsed === "number"
+              ? Math.max(0, 100 - quota.autoPercentUsed)
+              : null,
+          usedPercent:
+            typeof quota?.autoPercentUsed === "number" ? quota.autoPercentUsed : null,
+        },
+        {
+          label: "API",
+          remainingPercent:
+            typeof quota?.apiPercentUsed === "number"
+              ? Math.max(0, 100 - quota.apiPercentUsed)
+              : null,
+          usedPercent:
+            typeof quota?.apiPercentUsed === "number" ? quota.apiPercentUsed : null,
+        },
+      ];
+      return {
+        kind: "rateLimits",
+        percentage: windows[0]?.remainingPercent ?? null,
+        isReal: true,
+        label: "Cursor Pro+",
+        source: "Cursor GetCurrentPeriodUsage",
+        windows,
+      };
+    } catch (err) {
+      return unavailableQuota(`Impossible de lire Cursor: ${String(err)}`);
+    }
+  }
+
   return unavailableQuota("Quota reel non expose par ce fournisseur");
 }
 

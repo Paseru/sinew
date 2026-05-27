@@ -7,7 +7,7 @@ import type {
 } from "../types";
 
 export type ModelId = string;
-export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter";
+export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter" | "cursor";
 export type ModeModelSelection = { model: ModelId; thinking: ThinkingLevel };
 export type ModeModelSelections = Record<AgentMode, ModeModelSelection>;
 
@@ -45,6 +45,11 @@ export const PROVIDERS: {
     value: "kimi",
     label: "Kimi",
     icon: "local:kimi",
+  },
+  {
+    value: "cursor",
+    label: "Cursor",
+    icon: "local:cursor",
   },
   {
     value: "openrouter",
@@ -181,6 +186,22 @@ export const MODELS: ModelEntry[] = [
     label: "Kimi 2.6",
     thinking: ["off", "high"],
     defaultThinking: "high",
+  },
+  {
+    value: "cursor:composer-2.5-fast",
+    provider: "cursor",
+    label: "Composer 2.5 Fast",
+    thinking: ["off", "low", "medium", "high", "xhigh"],
+    defaultThinking: "medium",
+    supportsFast: true,
+    defaultFast: true,
+  },
+  {
+    value: "cursor:composer-2.5",
+    provider: "cursor",
+    label: "Composer 2.5",
+    thinking: ["off", "low", "medium", "high", "xhigh"],
+    defaultThinking: "medium",
   },
 ];
 

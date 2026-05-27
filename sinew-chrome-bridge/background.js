@@ -360,6 +360,13 @@ function buildSilentActionTasks(task) {
   const text = String(task || '').toLowerCase();
   const actions = [];
 
+  if (text.includes('google') && (text.includes('julienpiron') || text.includes('recherche') || text.includes('search'))) {
+    actions.push('clique dans le champ de recherche');
+    const queryMatch = String(task || '').match(/(?:tape|écris|ecris|saisis|recherche(?: sur google)?|search)\s+([^,.;]+?)(?:\s+puis|\s+et|$)/i);
+    const query = (queryMatch && queryMatch[1] ? queryMatch[1] : (text.includes('julienpiron') ? 'julienpiron' : '')).trim();
+    if (query) actions.push(`tape ${query} puis appuie sur Entrée`);
+  }
+
   if (text.includes('hamburger') || text.includes('menu')) {
     actions.push('clique le bouton menu hamburger');
     if (text.includes('referme') || text.includes('ferme') || text.includes('close')) {
@@ -433,6 +440,25 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
     const amount = detection.scrollY || 500;
     await chrome.tabs.sendMessage(tabId, { type: "AGENT_DOM_SCROLL", scrollY: amount }).catch(() => {});
     return { success: true, action: 'scroll', message: 'Scroll humain DOM effectué.' };
+  }
+
+  if (detection.action === 'type') {
+    await ensureCursorInjected(tabId);
+    const target = detection.target;
+    if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y)) {
+      throw new Error('Invalid target bounding box');
+    }
+    const textToType = detection.text || '';
+    const sequence = ++cursorMoveSeq;
+    const start = { x: Math.max(24, target.x - 260), y: Math.max(24, target.y + 160) };
+    const end = { x: target.x, y: target.y };
+    for (const p of humanPath(start, end, cursorOptions.timing.steps)) {
+      await showCursor(tabId, Math.round(p.x), Math.round(p.y), sequence, cursorOptions);
+      await new Promise(r => setTimeout(r, cursorOptions.timing.minDelay + Math.random() * cursorOptions.timing.jitter));
+    }
+    const typeResult = await chrome.tabs.sendMessage(tabId, { type: 'AGENT_DOM_TYPE', x: end.x, y: end.y, text: textToType, submit: !!detection.submit, delayMs: cursorOptions.speed === 'slow' ? 120 : cursorOptions.speed === 'fast' ? 35 : 70 }).catch(err => ({ ok: false, error: err.message }));
+    if (!typeResult || typeResult.ok === false) throw new Error(typeResult?.error || 'DOM type failed');
+    return { success: true, action: 'type', element: target.element, message: `Saisie humaine DOM effectuée: ${textToType}` };
   }
 
   const target = detection.target;

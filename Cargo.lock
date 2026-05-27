@@ -21,6 +21,7 @@ dependencies = [
  "sinew-anthropic",
  "sinew-app",
  "sinew-core",
+ "sinew-cursor",
  "sinew-google",
  "sinew-kimi",
  "sinew-openai",
@@ -3989,6 +3990,25 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "sinew-cursor"
+version = "0.1.25"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "bytes",
+ "directories",
+ "futures",
+ "reqwest 0.12.28",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sinew-core",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

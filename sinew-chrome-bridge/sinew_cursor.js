@@ -653,6 +653,59 @@
       sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "" });
       return true;
     }
+    else if (message.type === "AGENT_DOM_TYPE") {
+      handleActivity();
+      const x = Number(message.x);
+      const y = Number(message.y);
+      const text = String(message.text || "");
+      const delayMs = Math.max(10, Number(message.delayMs) || 70);
+      const initialEl = document.elementFromPoint(x, y);
+      const el = initialEl && initialEl.closest
+        ? (initialEl.closest('input, textarea, [contenteditable="true"], [role="textbox"]') || initialEl)
+        : initialEl;
+      if (!el) {
+        sendResponse({ ok: false, error: "No editable element at target point" });
+        return true;
+      }
+      const isEditable = el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable || el.getAttribute("role") === "textbox";
+      if (!isEditable) {
+        sendResponse({ ok: false, error: `Target is not editable: ${el.tagName}` });
+        return true;
+      }
+      el.focus?.({ preventScroll: true });
+      const setValue = (value) => {
+        if (el.isContentEditable || el.getAttribute("role") === "textbox") {
+          el.textContent = value;
+        } else {
+          el.value = value;
+        }
+        el.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText", data: value }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      let current = el.isContentEditable || el.getAttribute("role") === "textbox" ? (el.textContent || "") : (el.value || "");
+      if (current) {
+        current = "";
+        setValue(current);
+      }
+      (async () => {
+        for (const ch of text) {
+          current += ch;
+          el.dispatchEvent(new KeyboardEvent("keydown", { key: ch, bubbles: true, cancelable: true }));
+          setValue(current);
+          el.dispatchEvent(new KeyboardEvent("keyup", { key: ch, bubbles: true, cancelable: true }));
+          await new Promise(resolve => setTimeout(resolve, delayMs + Math.random() * delayMs));
+        }
+        if (message.submit) {
+          el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+          const form = el.closest && el.closest("form");
+          if (form && typeof form.requestSubmit === "function") form.requestSubmit();
+          else if (form) form.submit();
+          el.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+        }
+        sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "", text });
+      })();
+      return true;
+    }
     else if (message.type === "AGENT_DOM_SCROLL") {
       handleActivity();
       const amount = Number(message.scrollY) || Math.round(window.innerHeight * 0.6);
@@ -697,6 +750,13 @@
         semanticWords.push("search", "query", "q", "recherche", "find");
       }
       const queryWords = Array.from(new Set([...queryWordsRaw, ...semanticWords]));
+      let typeText = "";
+      let typeSubmit = /\b(entrée|entrer|enter|valide|submit|recherche)\b/.test(taskText);
+      if (action === "type") {
+        const typeMatch = task.match(/(?:tape|écris|ecris|saisis|type)\s+(.+?)(?:\s+puis|\s+et|$)/i);
+        typeText = (typeMatch && typeMatch[1] ? typeMatch[1] : "").trim();
+        if (!typeText && taskText.includes("julienpiron")) typeText = "julienpiron";
+      }
 
       const wantsMenu = taskText.includes("hamburger") || taskText.includes("menu") || taskText.includes("burger");
       const wantsMenuClose = wantsMenu && /\b(referme|ferme|fermer|close|dismiss|x)\b/.test(taskText);
@@ -761,7 +821,10 @@
         const menuGeometry = iconOnly && (text === "☰" || text === "≡" || iconSignal >= 2 || rect.top < window.innerHeight * 0.35);
         const closeSignal = /(^|\s|_|-)(close|fermer|dismiss|modal-close)(\s|$|_|-)/.test(signature) || (iconOnly && (text === "×" || text === "x"));
 
-        if (action === "type" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) score += 40;
+        if (action === "type" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable || role === "textbox")) {
+          score += 160;
+          if (name === "q" || id === "search" || ariaLabel.includes("search") || ariaLabel.includes("recherche") || title.includes("search") || title.includes("recherche")) score += 180;
+        }
         if (action === "click" && isButtonLike) score += 25;
         if (wantsMenu) {
           if (wantsMenuOpen && closeSignal) return;
@@ -806,6 +869,8 @@
             element: { tagName: bestEl.tagName, id: bestEl.id, className: typeof bestEl.className === 'string' ? bestEl.className : "" },
             score: bestScore
           },
+          text: action === "type" ? typeText : undefined,
+          submit: action === "type" ? typeSubmit : undefined,
           message: `Cible détectée à (${x}, ${y}) pour ${bestEl.tagName}.`
         });
       }, 450);

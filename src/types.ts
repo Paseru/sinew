@@ -251,6 +251,28 @@ export type KimiProviderStatus = {
   error?: string | null;
 };
 
+export type CursorComposerAuthStatus = {
+  connected: boolean;
+  email?: string | null;
+  membershipType?: string | null;
+  subscriptionStatus?: string | null;
+  source?: string | null;
+  expiresAtMs?: number | null;
+  lastSyncMs?: number | null;
+};
+
+export type CursorApiAuthStatus = {
+  connected: boolean;
+  keyPreview?: string | null;
+  lastValidatedMs?: number | null;
+};
+
+export type CursorUsageQuotaInfo = {
+  autoPercentUsed: number;
+  apiPercentUsed: number;
+  totalPercentUsed: number;
+};
+
 export type StartKimiLoginOutput = {
   loginId: string;
   authUrl: string;
