@@ -122,6 +122,18 @@ pub fn antigravity_model_and_thinking(
     if base == "gemini-3.1-pro" {
         return ("gemini-pro-agent".into(), Some(thinking_level));
     }
+    // Claude Opus 4.6 uses a specific thinking ID on the server.
+    if base == "claude-opus-4.6" {
+        return ("claude-opus-4-6-thinking".into(), Some(thinking_level));
+    }
+    // Claude Sonnet 4.6 on the server does not have dots.
+    if base == "claude-sonnet-4.6" {
+        return ("claude-sonnet-4-6".into(), Some(thinking_level));
+    }
+    // GPT-OSS 120B on the server is called gpt-oss-120b-medium.
+    if base == "gpt-oss-120b" {
+        return ("gpt-oss-120b-medium".into(), Some(thinking_level));
+    }
     if is_pro {
         (format!("{base}-{thinking_level}"), Some(thinking_level))
     } else {
