@@ -296,6 +296,17 @@ textarea {
   }
 }
 
+@keyframes welcome-fade-in-up {
+  0% {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .welcome__mark-dot {
   width: 48px;
   height: 48px;
@@ -341,6 +352,8 @@ textarea {
   line-height: 1;
   margin: 0;
   color: var(--text-0);
+  animation: welcome-fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.12s;
 }
 .welcome__title-dot {
   color: var(--text-3);
@@ -353,6 +366,8 @@ textarea {
   font-size: 14px;
   color: var(--text-3);
   letter-spacing: -0.005em;
+  animation: welcome-fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.16s;
 }
 
 /* ---- primary CTA — tactile card -------------------------------- */
@@ -367,6 +382,13 @@ textarea {
   text-align: left;
   color: var(--text-0);
   transition: background 140ms ease, transform 90ms ease;
+  animation: welcome-fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.welcome__cta:nth-child(1) {
+  animation-delay: 0.22s;
+}
+.welcome__cta:nth-child(2) {
+  animation-delay: 0.28s;
 }
 .welcome__cta:hover {
   background: var(--bg-4);
@@ -448,6 +470,8 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  animation: welcome-fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.34s;
 }
 
 .welcome__section-heading {
@@ -580,6 +604,8 @@ textarea {
   color: var(--text-2);
   line-height: 1.5;
   letter-spacing: -0.005em;
+  animation: welcome-fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.34s;
 }
 
 /* ------------------------------------------------------------------
