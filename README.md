@@ -102,20 +102,6 @@ Sinew supports five model providers, each with its own connection method:
 
 When you connect to Anthropic, OpenAI, Google or Kimi via OAuth, Sinew uses **your existing subscription directly** (Claude Max, ChatGPT Plus / Pro, etc.) with its own harness. No API key to provide, no metered billing — you're already paying the subscription anyway, you might as well use it.
 
-### Google Antigravity & Model Routing
-
-When connected via your Google account (using Google OAuth / Antigravity), the harness supports a highly resilient connection and precise model mapping:
-
-- **Resilient Multi-Endpoint Routing & Failover**: Implements a 4-level fallback (Production `cloudcode-pa`, base URL, sandbox, and autopush) to match the official extension's routing. If a request hits a `503 Service Unavailable` or `429 Too Many Requests`, the provider automatically falls back to an alternate endpoint to prevent disruptions.
-- **Mandatory Headers**: Sends the required `x-goog-api-client` (specifically `gl-node/22.21.1`) and `gl-node` headers to bypass low-priority 503 capacity limits on the API.
-- **Enhanced Model Support & Server-Side Mapping**:
-  - **Gemini 3.1 Pro** is routed to `gemini-pro-agent` on the backend, which is optimized for tool use and long thinking.
-  - **Gemini 3.5 Flash** is routed to the agentic `gemini-3-flash-agent` variant.
-  - **Claude Opus 4.6** and **Claude Sonnet 4.6** are supported and mapped to their server-side thinking variants (`claude-opus-4-6-thinking` and `claude-sonnet-4-6`).
-  - **GPT-OSS 120B** is supported (`gpt-oss-120b-medium`) with tool declarations and thinking parameters automatically disabled to avoid server-side 500 errors.
-- **Quota & Effort Level Mapping**: Links the UI effort levels (Low, Medium, High) with corresponding thinking levels (`LOW`, `MEDIUM`, `HIGH`) and maps them to the appropriate active rate-limit quota groups in Google AI Ultra/developer platform.
-- **Thought Signature Validator Bypass**: Automatically appends the bypass parameter (`skip_thought_signature_validator`) to prevent issues with missing reasoning signature tokens when shifting between models.
-
 ### No ecosystem lock-in
 
 Claude Code is limited to Anthropic models. Codex to OpenAI models. Sinew isn't locked anywhere: you can connect several providers in parallel and pick the right model for the right task.

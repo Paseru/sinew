@@ -55,7 +55,9 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Identifiants API & Outils corrigés* : Câblage technique des modèles réels (`claude-opus-4-6-thinking`, `claude-sonnet-4-6`, `gpt-oss-120b-medium`) évitant les erreurs 404. Désactivation spécifique de la déclaration des outils MCP pour `gpt-oss-120b` (résolvant l'erreur 500).
   * *Haute Priorité & Résilience 503* : Injection de l'en-tête officiel `x-goog-api-client` (simulant l'extension native) pour intégrer la file d'attente à haute priorité et bascule automatique asynchrone sur les serveurs de secours (`sandbox`/`autopush`) si le serveur principal signale une surcharge (erreur 503).
   * *Bypass de Signature* : Ajout automatique du jeton de contournement `skip_thought_signature_validator` pour éviter tout rejet lié aux signatures de réflexion historiques manquantes lors du changement de modèle.
-  * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `crates/sinew-google/src/model_info.rs`, `src/lib/models.ts`*
+  * *Détection Dynamique de la Plateforme (OS & Architecture)* : Génération d'un en-tête `user-agent` réaliste simulant précisément l'environnement hôte de l'utilisateur (Windows, macOS, Linux, avec architectures x86_64 ou arm64) pour toutes les requêtes API de l'assistant de code.
+  * *Stabilisation de l'onboarding et du suivi des quotas* : Utilisation par défaut du point de terminaison de production (`cloudcode-pa`), et sécurisation de la récupération des quotas via des en-têtes standardisés (`x-goog-api-client: gl-node/22.21.1` et `user-agent` approprié) pour éviter les blocages.
+  * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `crates/sinew-google/src/model_info.rs`, `src/lib/models.ts`, `src-tauri/src/providers.rs`*
 
 ---
 

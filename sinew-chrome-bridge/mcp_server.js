@@ -828,22 +828,6 @@ async function executeNavigate(url) {
   });
 }
 
-async function executeNavigate(url) {
-  const targetUrl = normalizeUrl(url);
-  if (!targetUrl) return JSON.stringify({ success: false, error: `Invalid URL: ${url || ''}` });
-  const tab = await getReadyTab(targetUrl);
-  const location = await navigateTab(tab.id, targetUrl);
-  const actualUrl = location?.href || tab.url || '';
-  const success = actualUrl && sameOriginOrUrl(actualUrl, targetUrl);
-  if (success) rememberControlledTab({ ...tab, url: actualUrl });
-  return JSON.stringify({
-    success,
-    tab: compactTab({ ...tab, url: actualUrl || targetUrl, title: location?.title || tab.title }),
-    navigation: location,
-    error: success ? undefined : `Navigation did not reach ${targetUrl}; current URL is ${actualUrl || 'unknown'}`,
-  });
-}
-
 async function executeClickTarget(target, timeoutMs = 20000, cursorOptions = {}) {
   if (!target || !String(target).trim()) {
     return JSON.stringify({ success: false, error: 'Missing click target' });
