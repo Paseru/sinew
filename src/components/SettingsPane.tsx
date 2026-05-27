@@ -1325,7 +1325,7 @@ export function SettingsPane({ workspacePath }: Props) {
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">Options</span>
-          <span className="settings-pane__nav-count">4</span>
+          <span className="settings-pane__nav-count">5</span>
         </button>
         <button
           type="button"
@@ -1805,9 +1805,9 @@ function OptionsSection({
             style={{
               padding: "6px 12px",
               borderRadius: "6px",
-              backgroundColor: "var(--bg-accent, #3b82f6)",
-              color: "#fff",
-              border: "none",
+              backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
+              color: "var(--text-0, #fff)",
+              border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
               cursor: "pointer",
               fontSize: "12px",
               fontWeight: 500,
@@ -1839,10 +1839,10 @@ function OptionsSection({
               gap: "8px",
               padding: "10px 12px",
               borderRadius: "6px",
-              backgroundColor: sotaData.status === "ok" ? "rgba(34, 197, 94, 0.1)" : "rgba(234, 179, 8, 0.1)",
-              border: `1px solid ${sotaData.status === "ok" ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}`,
+              backgroundColor: sotaData.status === "ok" ? "var(--bg-2, rgba(255, 255, 255, 0.04))" : "rgba(234, 179, 8, 0.1)",
+              border: `1px solid ${sotaData.status === "ok" ? "var(--line-1, rgba(255, 255, 255, 0.08))" : "rgba(234, 179, 8, 0.2)"}`,
               fontSize: "13px",
-              color: sotaData.status === "ok" ? "#22c55e" : "#eab308"
+              color: sotaData.status === "ok" ? "var(--text-1, rgba(255, 255, 255, 0.85))" : "#eab308"
             }}>
               <Icon
                 icon={sotaData.status === "ok" ? "solar:check-circle-bold" : "solar:danger-bold"}
@@ -1889,8 +1889,8 @@ function OptionsSection({
                         padding: "2px 6px",
                         borderRadius: "4px",
                         fontWeight: 600,
-                        backgroundColor: isAvailable ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                        color: isAvailable ? "#22c55e" : "#ef4444"
+                        backgroundColor: isAvailable ? "var(--bg-3, rgba(255, 255, 255, 0.08))" : "rgba(239, 68, 68, 0.15)",
+                        color: isAvailable ? "var(--text-2, rgba(255, 255, 255, 0.65))" : "#ef4444"
                       }}>
                         {isAvailable ? (locale === "fr" ? "Disponible" : "Available") : (locale === "fr" ? "Manquant" : "Missing")}
                       </span>
