@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const WebSocket = require('./node_modules/ws');
 
-const BRIDGE_ORIGIN = process.env.MCP_BROWSER_CDP_URL || 'http://localhost:29002';
+const BRIDGE_ORIGIN = process.env.MCP_BROWSER_CDP_URL || 'http://127.0.0.1:29002';
 const BRIDGE_URL = new URL(BRIDGE_ORIGIN);
 const BRIDGE_WS_ORIGIN = `${BRIDGE_URL.protocol === 'https:' ? 'wss:' : 'ws:'}//${BRIDGE_URL.host}`;
 const CHROME_WAIT_MS = 20000;
@@ -91,10 +91,10 @@ function normalizeCursorOptions(input = {}) {
 
 function extractUrl(task) {
   if (!task) return null;
-  const explicit = String(task).match(/https?:\/\/[^\s)\],.;!?]+/i);
+  const explicit = String(task).match(/https?:\/\/[^\s)]+/i);
   if (explicit) return normalizeUrl(explicit[0]);
 
-  const domain = String(task).match(/\b[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s)\],.;!?]*)?/i);
+  const domain = String(task).match(/\b[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s)]*)?/i);
   return domain ? normalizeUrl(domain[0]) : null;
 }
 

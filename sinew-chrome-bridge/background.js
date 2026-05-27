@@ -133,10 +133,10 @@ function extractSearchQuery(task) {
 }
 
 function extractTaskUrl(task) {
-  const explicit = String(task || '').match(/https?:\/\/[^\s)\],.;!?]+/i);
-  if (explicit) return explicit[0];
-  const domain = String(task || '').match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s)\],.;!?]*)?/i);
-  return domain ? `https://${domain[0]}` : null;
+  const explicit = String(task || '').match(/https?:\/\/[^\s)]+/i);
+  if (explicit) return explicit[0].replace(/[)\],.;!?]+$/g, '');
+  const domain = String(task || '').match(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(\/[^\s)]*)?/i);
+  return domain ? `https://${domain[0].replace(/[)\],.;!?]+$/g, '')}` : null;
 }
 
 function shouldAutoNavigateTask(task) {

@@ -38,7 +38,7 @@ new_server = {
     "command": node_path,
     "args": [str(script_dir / "mcp_server.js")],
     "env": [
-        {"key": "MCP_BROWSER_CDP_URL", "value": "http://localhost:29002"},
+        {"key": "MCP_BROWSER_CDP_URL", "value": "http://127.0.0.1:29002"},
         {"key": "SINEW_CHROME_BRIDGE_DIR", "value": str(script_dir)},
     ],
     "cwd": str(script_dir),
