@@ -127,11 +127,13 @@ Depending on the provider, three distinct tracking systems are implemented:
 - **OpenRouter Credits**: For API-key-based OpenRouter connections, the harness queries the `/auth/key` endpoint to extract your total credit limit, credits used, and exact remaining USD balance (or indicators for unlimited keys).
 
 ### Dynamic Visual Cues
-To ensure you are never surprised by rate-limiting, progress bars in the Settings panel are dynamically color-coded based on your remaining percentage:
-- **Green (>80% remaining):** Comfortable headroom.
-- **Blue (>50% remaining):** Stable usage.
-- **Pink (>20% remaining):** Reaching limits soon.
-- **Red (<20% remaining):** Critically low; throttle imminent.
+To ensure you are never surprised by rate-limiting, Sinew provides immediate visual feedback:
+- **Chat Composer Status Dot**: A colored indicator dot appears directly next to the model picker in the chat composer to reflect your current remaining quota percentage. Clicking the dot opens the connection settings instantly. The model selection dropdown also displays custom color-coded dots for every cached provider.
+- **Progress Bars in Settings**: Rich status bars are dynamically color-coded based on your remaining percentage:
+  - **Green (>80% remaining):** Comfortable headroom.
+  - **Blue (>50% remaining):** Stable usage.
+  - **Pink (>20% remaining):** Reaching limits soon.
+  - **Red (<20% remaining):** Critically low; throttle imminent.
 
 ---
 
