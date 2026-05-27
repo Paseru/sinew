@@ -265,33 +265,33 @@ textarea {
 
 @keyframes welcome-slide-in-top-bar {
   0% {
-    transform: translate(-8px, -4px);
+    transform: translateY(-8px);
     opacity: 0;
   }
   100% {
-    transform: translate(0, 0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
 
 @keyframes welcome-slide-in-mid-bar {
   0% {
-    transform: translate(8px, 0);
+    transform: translateX(8px);
     opacity: 0;
   }
   100% {
-    transform: translate(0, 0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
 
 @keyframes welcome-slide-in-bot-bar {
   0% {
-    transform: translate(-8px, 4px);
+    transform: translateY(8px);
     opacity: 0;
   }
   100% {
-    transform: translate(0, 0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -308,13 +308,16 @@ textarea {
 }
 
 .welcome__mark-dot {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-0);
+  background: var(--bg-2);
+  color: var(--text-1);
   animation: welcome-pop-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.05s;
-  margin-bottom: 8px;
 }
 .welcome__mark-inner {
   display: inline-flex;
