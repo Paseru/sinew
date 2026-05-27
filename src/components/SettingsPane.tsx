@@ -2016,7 +2016,7 @@ function ProvidersSection({
           )}
         </ProviderCard>
         {(openAiAccounts.some((account) => account.key.startsWith("openai:")) || unconnectedAccounts.length > 0) && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "10px", marginLeft: "14px", borderLeft: "2px solid var(--line-2)", paddingLeft: "20px", maxWidth: "100%", minWidth: 0 }}>
+          <div className="settings-pane__secondary-grid">
             {openAiAccounts
               .filter((account) => account.key.startsWith("openai:"))
               .map((account) => {
@@ -2484,10 +2484,10 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "11px" }}>
-        <span style={{ color: "var(--text-3)", whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
-        <span style={{ color: "var(--text-2)", fontWeight: 600, whiteSpace: "nowrap" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "11px", minWidth: 0 }}>
+        <span style={{ color: "var(--text-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{formatWindowLabel(item)}</span>
+        <span style={{ color: "var(--text-2)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }} title={percent == null ? "—" : `${percent.toFixed(0)}%${reset ? ` · ${reset}` : ""}`}>
           {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` · ${reset}` : ""}
         </span>
       </div>
