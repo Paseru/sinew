@@ -23,6 +23,7 @@ use crate::{
 const COMPOSER_CHAT_URL: &str =
     "https://api2.cursor.sh/aiserver.v1.ChatService/StreamUnifiedChatWithToolsIdempotentSSE";
 const AUTO_POOL_THRESHOLD: f64 = 98.0;
+const STREAM_IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(45);
 
 #[derive(Clone)]
 pub struct CursorConfig {
@@ -187,7 +188,7 @@ async fn stream_composer(
     let session_id = uuid::Uuid::new_v4().to_string();
     let request_id = uuid::Uuid::new_v4().to_string();
     let mut headers = reqwest::header::HeaderMap::new();
-    identity.apply(&mut headers, &session_id, &request_id);
+    identity.apply_authenticated(&mut headers, &session_id, &request_id, &token);
 
     headers.insert(
         reqwest::header::HeaderName::from_static("x-idempotency-key"),
@@ -207,7 +208,7 @@ async fn stream_composer(
         .header("connect-protocol-version", "1")
         .header("accept", "application/connect+json")
         .body(payload)
-        .timeout(std::time::Duration::from_secs(300))
+        .timeout(std::time::Duration::from_secs(120))
         .send()
         .await
         .map_err(|err| AppError::Network(err.to_string()))?;
@@ -236,7 +237,19 @@ async fn stream_composer(
     let events = async_stream::try_stream! {
         let mut open_part: Option<(usize, PartKind)> = None;
 
-        while let Some(chunk) = byte_stream.next().await {
+        loop {
+            let next = tokio::time::timeout(STREAM_IDLE_TIMEOUT, byte_stream.next()).await;
+            let chunk = match next {
+                Ok(Some(chunk)) => chunk,
+                Ok(None) => break,
+                Err(_) if !started => {
+                    Err(AppError::Network(
+                        "Composer stream timed out waiting for the first response. Reconnect Cursor in Settings > Providers.".into(),
+                    ))?;
+                    break;
+                }
+                Err(_) => break,
+            };
             let chunk = chunk.map_err(|err| AppError::Network(err.to_string()))?;
             buffer.extend_from_slice(&chunk);
             for frame in decode_connect_frames(&mut buffer)? {

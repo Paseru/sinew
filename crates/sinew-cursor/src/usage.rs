@@ -24,7 +24,7 @@ pub async fn fetch_usage(
     let session_id = uuid::Uuid::new_v4().to_string();
     let request_id = uuid::Uuid::new_v4().to_string();
     let mut headers = reqwest::header::HeaderMap::new();
-    identity.apply(&mut headers, &session_id, &request_id);
+    identity.apply_authenticated(&mut headers, &session_id, &request_id, access_token);
 
     let response = http
         .post(USAGE_URL)

@@ -205,6 +205,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_live_cursor_usage() {
+        let provider = match crate::client::CursorProvider::from_default_sources() {
+            Ok(provider) => provider,
+            Err(err) => {
+                println!("Skipping usage test: {err:?}");
+                return;
+            }
+        };
+        match provider.usage_snapshot().await {
+            Ok(Some(usage)) => println!("USAGE OK: {usage:?}"),
+            Ok(None) => println!("USAGE: not connected"),
+            Err(err) => println!("USAGE ERROR: {err:?}"),
+        }
+    }
+
+    #[tokio::test]
     async fn test_live_composer_request() {
         use sinew_core::Provider;
         use futures::StreamExt;
@@ -216,6 +232,9 @@ mod tests {
                 return;
             }
         };
+        let identity = crate::identity::CursorIdeIdentity::load();
+        println!("Using machine_id={}", identity.machine_id);
+        println!("mac_machine_id={:?}", identity.mac_machine_id);
         let request = ProviderRequest::new(
             ModelRef::new("cursor", "composer-2.5"),
             vec![ChatMessage::user_text("Say OK")],

@@ -9,6 +9,7 @@ use base64::Engine as _;
 use directories::ProjectDirs;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use sinew_core::{AppError, Result};
 
 pub const CURSOR_CLIENT_VERSION: &str = "3.5.38";
@@ -51,8 +52,7 @@ impl CursorIdeIdentity {
     }
 
     fn assemble() -> Self {
-        let (machine_id, mac_machine_id) = load_cursor_storage_ids()
-            .unwrap_or_else(|| (load_or_create_sinew_machine_id(), None));
+        let (machine_id, mac_machine_id) = load_machine_ids();
         let client_version = Self::resolve_client_version();
         let (platform, arch) = detect_platform();
         Self {
@@ -81,6 +81,34 @@ impl CursorIdeIdentity {
     }
 
     pub fn apply(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
+        self.apply_common(headers, session_id, request_id);
+        set_header(
+            headers,
+            "x-cursor-checksum",
+            &self.checksum_for_machine_id(&self.machine_id, self.mac_machine_id.as_deref()),
+        );
+    }
+
+    /// Authenticated Cursor API calls derive `x-client-key` and the checksum
+    /// machine id from the bearer token, matching standalone OAuth clients.
+    pub fn apply_authenticated(
+        &self,
+        headers: &mut HeaderMap,
+        session_id: &str,
+        request_id: &str,
+        access_token: &str,
+    ) {
+        self.apply_common(headers, session_id, request_id);
+        let machine_id = Self::token_machine_id(access_token);
+        set_header(headers, "x-client-key", &Self::token_client_key(access_token));
+        set_header(
+            headers,
+            "x-cursor-checksum",
+            &self.checksum_for_machine_id(&machine_id, None),
+        );
+    }
+
+    fn apply_common(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
         set_header(headers, "user-agent", &self.user_agent());
         set_header(headers, "x-cursor-client-version", &self.client_version);
         set_header(headers, "x-cursor-client-type", "ide");
@@ -90,12 +118,21 @@ impl CursorIdeIdentity {
         set_header(headers, "x-ghost-mode", "false");
         set_header(headers, "x-new-onboarding-completed", "true");
         set_header(headers, "x-cursor-timezone", &self.timezone);
-        set_header(headers, "x-cursor-checksum", &self.checksum());
+        set_header(headers, "connect-accept-encoding", "gzip");
         set_header(headers, "x-session-id", session_id);
         set_header(headers, "x-request-id", request_id);
+        set_header(headers, "x-amzn-trace-id", &format!("Root={request_id}"));
     }
 
-    fn checksum(&self) -> String {
+    pub fn token_client_key(access_token: &str) -> String {
+        sha256_hex(access_token)
+    }
+
+    pub fn token_machine_id(access_token: &str) -> String {
+        sha256_hex(&format!("{access_token}machineId"))
+    }
+
+    fn checksum_for_machine_id(&self, machine_id: &str, mac_machine_id: Option<&str>) -> String {
         let millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|duration| duration.as_millis() as u64)
@@ -115,12 +152,21 @@ impl CursorIdeIdentity {
             state = *byte;
         }
         let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
-        if let Some(mac_id) = &self.mac_machine_id {
-            format!("{encoded}{}/{}", self.machine_id, mac_id)
+        if let Some(mac_id) = mac_machine_id {
+            format!("{encoded}{machine_id}/{mac_id}")
         } else {
-            format!("{encoded}{}", self.machine_id)
+            format!("{encoded}{machine_id}")
         }
     }
+
+    fn checksum(&self) -> String {
+        self.checksum_for_machine_id(&self.machine_id, self.mac_machine_id.as_deref())
+    }
+}
+
+fn sha256_hex(input: &str) -> String {
+    let digest = Sha256::digest(input.as_bytes());
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 fn cursor_storage_json_path() -> Option<PathBuf> {
@@ -129,6 +175,42 @@ fn cursor_storage_json_path() -> Option<PathBuf> {
     let path = config_dir.join("Cursor").join("User").join("globalStorage").join("storage.json");
     if path.exists() {
         Some(path)
+    } else {
+        None
+    }
+}
+
+/// Standalone Composer identity: always prefer the Sinew-persisted device id
+/// (the same id used during OAuth login). Cursor IDE telemetry ids are only
+/// used when explicitly opted in via `SINEW_CURSOR_USE_IDE_MACHINE=1`.
+fn load_machine_ids() -> (String, Option<String>) {
+    if let Some(sinew_id) = load_sinew_persisted_machine_id() {
+        return (sinew_id, None);
+    }
+    if use_cursor_ide_machine_ids() {
+        if let Some(ids) = load_cursor_storage_ids() {
+            return ids;
+        }
+    }
+    (load_or_create_sinew_machine_id(), None)
+}
+
+fn use_cursor_ide_machine_ids() -> bool {
+    std::env::var("SINEW_CURSOR_USE_IDE_MACHINE")
+        .map(|value| {
+            let trimmed = value.trim();
+            trimmed == "1" || trimmed.eq_ignore_ascii_case("true")
+        })
+        .unwrap_or(false)
+}
+
+fn load_sinew_persisted_machine_id() -> Option<String> {
+    let path = sinew_device_path()?;
+    let contents = fs::read_to_string(path).ok()?;
+    let device: PersistedDevice = serde_json::from_str(&contents).ok()?;
+    let trimmed = device.machine_id.trim();
+    if is_valid_machine_id(trimmed) {
+        Some(trimmed.to_string())
     } else {
         None
     }
@@ -197,18 +279,13 @@ fn sinew_device_path() -> Option<PathBuf> {
 }
 
 fn load_or_create_sinew_machine_id() -> String {
+    if let Some(existing) = load_sinew_persisted_machine_id() {
+        return existing;
+    }
+
     let Some(path) = sinew_device_path() else {
         return uuid::Uuid::new_v4().to_string();
     };
-
-    if let Ok(contents) = fs::read_to_string(&path) {
-        if let Ok(device) = serde_json::from_str::<PersistedDevice>(&contents) {
-            let trimmed = device.machine_id.trim();
-            if is_valid_machine_id(trimmed) {
-                return trimmed.to_string();
-            }
-        }
-    }
 
     let machine_id = uuid::Uuid::new_v4().to_string();
     if let Err(err) = persist_sinew_machine_id(&path, &machine_id) {
@@ -287,6 +364,42 @@ mod identity_tests {
         assert!(!is_valid_machine_id(""));
         assert!(!is_valid_machine_id("not-a-uuid"));
         assert!(is_valid_machine_id(&uuid::Uuid::new_v4().to_string()));
+    }
+
+    #[test]
+    fn token_derived_auth_headers_are_stable() {
+        let token = "test-token";
+        let client_key = CursorIdeIdentity::token_client_key(token);
+        let machine_id = CursorIdeIdentity::token_machine_id(token);
+        assert_eq!(client_key.len(), 64);
+        assert_eq!(machine_id.len(), 64);
+        assert_ne!(client_key, machine_id);
+        assert_eq!(client_key, CursorIdeIdentity::token_client_key(token));
+    }
+
+    #[test]
+    fn sinew_device_id_takes_precedence_over_cursor_storage() {
+        let sinew_id = uuid::Uuid::new_v4().to_string();
+        let path = std::env::temp_dir().join(format!(
+            "sinew-cursor-device-priority-{}.json",
+            uuid::Uuid::new_v4()
+        ));
+        persist_sinew_machine_id(&path, &sinew_id).expect("persist device id");
+
+        let loaded = load_sinew_persisted_machine_id_from_path(&path);
+        assert_eq!(loaded.as_deref(), Some(sinew_id.as_str()));
+        let _ = fs::remove_file(path);
+    }
+
+    fn load_sinew_persisted_machine_id_from_path(path: &std::path::Path) -> Option<String> {
+        let contents = fs::read_to_string(path).ok()?;
+        let device: PersistedDevice = serde_json::from_str(&contents).ok()?;
+        let trimmed = device.machine_id.trim();
+        if is_valid_machine_id(trimmed) {
+            Some(trimmed.to_string())
+        } else {
+            None
+        }
     }
 
     #[test]
