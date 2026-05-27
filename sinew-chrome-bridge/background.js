@@ -11,6 +11,7 @@ let lastConnectedAt = null;
 const attachedTabs = new Set();
 const ALLOW_DEBUGGER_ATTACH = false;
 let cursorMoveSeq = 0;
+const lastCursorPositionByTabId = new Map();
 
 function normalizeCursorOptions(options = {}) {
   const mode = ['visible', 'hidden'].includes(String(options.mode || 'visible').toLowerCase())
@@ -182,10 +183,53 @@ function waitForTabReady(tabId, timeoutMs = 8000) {
   });
 }
 
+function clampCursorPoint(point, viewport = {}) {
+  const width = Number.isFinite(viewport.width) ? viewport.width : 1280;
+  const height = Number.isFinite(viewport.height) ? viewport.height : 720;
+  return {
+    x: Math.round(Math.min(Math.max(Number(point.x) || 24, 16), Math.max(16, width - 16))),
+    y: Math.round(Math.min(Math.max(Number(point.y) || 24, 16), Math.max(16, height - 16)))
+  };
+}
+
+function inferViewport(target = {}) {
+  const rect = target.rect || {};
+  const width = target.viewport?.width || target.viewportWidth || Math.max(1280, (Number(target.x) || 0) + (Number(rect.width) || 0) + 80);
+  const height = target.viewport?.height || target.viewportHeight || Math.max(720, (Number(target.y) || 0) + (Number(rect.height) || 0) + 80);
+  return { width, height };
+}
+
 function randomStartNearTarget(target) {
-  const horizontal = (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 220);
-  const vertical = (Math.random() < 0.5 ? -1 : 1) * (90 + Math.random() * 180);
-  return { x: Math.max(24, Math.round(target.x + horizontal)), y: Math.max(24, Math.round(target.y + vertical)) };
+  const viewport = inferViewport(target);
+  const side = Math.floor(Math.random() * 4);
+  const margin = 24 + Math.random() * 96;
+  const edgePoint = [
+    { x: margin, y: viewport.height * (0.12 + Math.random() * 0.76) },
+    { x: viewport.width - margin, y: viewport.height * (0.12 + Math.random() * 0.76) },
+    { x: viewport.width * (0.12 + Math.random() * 0.76), y: margin },
+    { x: viewport.width * (0.12 + Math.random() * 0.76), y: viewport.height - margin }
+  ][side];
+
+  const targetVicinity = {
+    x: (Number(target.x) || viewport.width / 2) + (Math.random() - 0.5) * (260 + Math.random() * 360),
+    y: (Number(target.y) || viewport.height / 2) + (Math.random() - 0.5) * (180 + Math.random() * 300)
+  };
+
+  return clampCursorPoint(Math.random() < 0.55 ? targetVicinity : edgePoint, viewport);
+}
+
+function getHumanCursorStart(tabId, target) {
+  const viewport = inferViewport(target);
+  const saved = lastCursorPositionByTabId.get(String(tabId));
+  if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+    return clampCursorPoint(saved, viewport);
+  }
+  return randomStartNearTarget(target);
+}
+
+function rememberHumanCursor(tabId, point, target = {}) {
+  if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return;
+  lastCursorPositionByTabId.set(String(tabId), clampCursorPoint(point, inferViewport(target)));
 }
 
 function connect() {
@@ -279,19 +323,50 @@ async function handleMessage(msg) {
         });
         break;
 
+      case "evaluate":
+        runLocked(async () => {
+          const tabId = parseInt(params.tabId);
+          try {
+            const expression = String(params.expression || 'undefined');
+            const injections = await chrome.scripting.executeScript({
+              target: { tabId },
+              args: [expression],
+              func: (source) => {
+                let value;
+                try {
+                  value = (new Function(`return (${source});`))();
+                } catch {
+                  value = (new Function(`return (() => { ${source} })();`))();
+                }
+                if (value && typeof value.then === 'function') return value;
+                if (value === undefined) return null;
+                return { __sinewValue: value };
+              }
+            });
+            const rawValue = injections && injections[0] ? injections[0].result : null;
+            const value = rawValue && typeof rawValue === 'object' && Object.prototype.hasOwnProperty.call(rawValue, '__sinewValue') ? rawValue.__sinewValue : rawValue;
+            sendResponse(id, { ok: true, success: true, value });
+          } catch (err) {
+            sendResponse(id, { ok: false, success: false, error: err.message });
+          }
+        });
+        break;
+
       case "query_selector":
       case "click_selector":
       case "type_selector":
+      case "press_key":
+      case "select_option":
       case "wait_selector":
-      case "evaluate":
         runLocked(async () => {
           const tabId = parseInt(params.tabId);
           const typeByCommand = {
             query_selector: "AGENT_QUERY_SELECTOR",
             click_selector: "AGENT_CLICK_SELECTOR",
             type_selector: "AGENT_TYPE_SELECTOR",
-            wait_selector: "AGENT_WAIT_SELECTOR",
-            evaluate: "AGENT_EVALUATE"
+            press_key: "AGENT_PRESS_KEY",
+            select_option: "AGENT_SELECT_OPTION",
+            wait_selector: "AGENT_WAIT_SELECTOR"
           };
           try {
             await ensureCursorInjected(tabId);
@@ -652,6 +727,7 @@ function humanPath(start, end, steps = 34) {
 }
 
 async function showCursor(tabId, x, y, moveSequence = ++cursorMoveSeq, cursorOptions = normalizeCursorOptions()) {
+  rememberHumanCursor(tabId, { x, y });
   await chrome.tabs.sendMessage(tabId, {
     type: "AGENT_CURSOR_STATE",
     state: { x, y, visible: cursorOptions.mode !== 'hidden', moveSequence, sessionId: "session-" + tabId, turnId: "turn-human-cdp" }
@@ -674,13 +750,14 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
     }
     const textToType = detection.text || '';
     const sequence = ++cursorMoveSeq;
-    const start = randomStartNearTarget(target);
+    const start = getHumanCursorStart(tabId, target);
     const end = { x: target.x, y: target.y };
     for (const p of humanPath(start, end, cursorOptions.timing.steps)) {
       await showCursor(tabId, Math.round(p.x), Math.round(p.y), sequence, cursorOptions);
       await new Promise(r => setTimeout(r, cursorOptions.timing.minDelay + Math.random() * cursorOptions.timing.jitter));
     }
     const typeResult = await sendTabMessage(tabId, { type: 'AGENT_DOM_TYPE', x: end.x, y: end.y, text: textToType, submit: !!detection.submit, delayMs: cursorOptions.speed === 'slow' ? 120 : cursorOptions.speed === 'fast' ? 35 : 70 }, 20000);
+    rememberHumanCursor(tabId, end, target);
     if (!typeResult || typeResult.ok === false || typeResult.success === false) throw new Error(typeResult?.error || 'DOM type failed');
     return { success: true, action: 'type', element: target.element, message: `Saisie humaine DOM effectuée: ${textToType}` };
   }
@@ -692,7 +769,7 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
 
   await ensureCursorInjected(tabId);
 
-  const start = randomStartNearTarget(target);
+  const start = getHumanCursorStart(tabId, target);
   const end = { x: target.x, y: target.y };
   const points = humanPath(start, end, cursorOptions.timing.steps);
   const sequence = ++cursorMoveSeq;
@@ -708,6 +785,7 @@ async function performHumanCdpAction(tabId, detection, taskText, cursorOptions =
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CLICK_EVENT", event: { x: end.x, y: end.y, type: "mousePressed", button: "left" } }).catch(() => {});
   const clickResult = await sendTabMessage(tabId, { type: "AGENT_DOM_CLICK", x: end.x, y: end.y }, 12000);
   await chrome.tabs.sendMessage(tabId, { type: "AGENT_CURSOR_STATE", state: { x: end.x, y: end.y, visible: cursorOptions.mode !== 'hidden', moveSequence: sequence, sessionId: "session-" + tabId, turnId: "turn-human-dom" } }).catch(() => {});
+  rememberHumanCursor(tabId, end, target);
   await new Promise(r => setTimeout(r, 250));
 
   if (!clickResult || clickResult.ok === false || clickResult.success === false) {

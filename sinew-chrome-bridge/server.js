@@ -80,6 +80,7 @@ const LOCK_PATH = path.join(LOCK_DIR, 'chrome-bridge.lock');
 let lockFd = null;
 let lockPayloadBase = null;
 let runAsBridgeClientOnly = false;
+let extensionSocket = null;
 
 function isPidRunning(pid) {
   const n = Number(pid);
@@ -107,6 +108,8 @@ function writeBridgeLock(fd) {
       pid: process.pid,
       port: PORT,
       native: isNativeMode,
+      ownsServer: !runAsBridgeClientOnly,
+      connected: false,
       startedAt: new Date().toISOString(),
       exe: process.execPath,
       argv: process.argv.slice(1),
@@ -114,6 +117,8 @@ function writeBridgeLock(fd) {
   }
   const lockPayload = {
     ...lockPayloadBase,
+    ownsServer: !runAsBridgeClientOnly,
+    connected: typeof isExtensionConnected === 'function' ? isExtensionConnected() : false,
     heartbeatAt: new Date().toISOString(),
   };
   const payload = JSON.stringify(lockPayload, null, 2);
@@ -134,7 +139,8 @@ function acquireBridgeLock() {
       const current = readBridgeLock();
       const heartbeatMs = current?.heartbeatAt ? Date.parse(current.heartbeatAt) : 0;
       const freshHeartbeat = Number.isFinite(heartbeatMs) && Date.now() - heartbeatMs < 20000;
-      if (current && (isPidRunning(current.pid) || freshHeartbeat)) {
+      const serverOwner = current?.ownsServer !== false;
+      if (current && serverOwner && (isPidRunning(current.pid) || freshHeartbeat)) {
         return { acquired: false, active: true, current };
       }
       try { fs.unlinkSync(LOCK_PATH); } catch (unlinkErr) {
@@ -223,7 +229,6 @@ function launchChromeDetached(targetUrl = 'about:blank') {
 }
 
 // Connected clients registries
-let extensionSocket = null;
 const pageSockets = new Map(); // tabId (string) -> Set of page-scoped playwright sockets
 const browserSockets = new Set(); // Set of browser-scoped playwright sockets
 
@@ -231,7 +236,10 @@ let messageCounter = 0;
 const pendingRequests = new Map(); // bridgeMsgId -> { playwrightSocket, originalId, sessionId, timeout, resolve }
 
 function isExtensionConnected() {
-  return !!(extensionSocket && typeof extensionSocket.send === 'function' && (extensionSocket.readyState === WebSocket.OPEN || extensionSocket.isNative === true));
+  if (isNativeMode && !runAsBridgeClientOnly) {
+    return !!(extensionSocket && extensionSocket.isNative === true);
+  }
+  return !!(extensionSocket && typeof extensionSocket.send === 'function' && extensionSocket.readyState === WebSocket.OPEN);
 }
 
 class TabSession {
@@ -803,7 +811,7 @@ const server = http.createServer((req, res) => {
     });
     extensionSocket.send(JSON.stringify({ id: requestId, command: 'page_snapshot', params: { tabId, limit } }));
   }
-  else if (pathname === '/api/query_selector' || pathname === '/api/click_selector' || pathname === '/api/type_selector' || pathname === '/api/wait_selector' || pathname === '/api/evaluate') {
+  else if (pathname === '/api/query_selector' || pathname === '/api/click_selector' || pathname === '/api/type_selector' || pathname === '/api/press_key' || pathname === '/api/select_option' || pathname === '/api/wait_selector' || pathname === '/api/evaluate') {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -822,6 +830,15 @@ const server = http.createServer((req, res) => {
       selector: parsedUrl.query.selector || '',
       text: parsedUrl.query.text || '',
       expression: parsedUrl.query.expression || '',
+      key: parsedUrl.query.key || '',
+      code: parsedUrl.query.code || '',
+      value: parsedUrl.query.value,
+      label: parsedUrl.query.label,
+      index: parsedUrl.query.index !== undefined ? Number(parsedUrl.query.index) : undefined,
+      ctrlKey: /^(1|true|yes)$/i.test(String(parsedUrl.query.ctrlKey || '')),
+      shiftKey: /^(1|true|yes)$/i.test(String(parsedUrl.query.shiftKey || '')),
+      altKey: /^(1|true|yes)$/i.test(String(parsedUrl.query.altKey || '')),
+      metaKey: /^(1|true|yes)$/i.test(String(parsedUrl.query.metaKey || '')),
       submit: /^(1|true|yes)$/i.test(String(parsedUrl.query.submit || '')),
       visible: !/^(0|false|no)$/i.test(String(parsedUrl.query.visible || '')),
       scroll: !/^(0|false|no)$/i.test(String(parsedUrl.query.scroll || '')),
@@ -2177,7 +2194,6 @@ if (isNativeMode && !runAsBridgeClientOnly) {
 
   process.stdin.on('end', () => {
     console.error("🧬 [Proxy] process.stdin closed. Keeping HTTP bridge alive for reconnectable local control.");
-    if (extensionSocket === virtualSocket) extensionSocket = null;
     updateHeartbeatAfterNativeDisconnect();
   });
 
@@ -2209,8 +2225,8 @@ wss.on('connection', (ws, req) => {
   // ============================================
   if (pathname === '/extension') {
     const isBridgeClient = parsedUrl.query.nativeBridge === 'true';
-    if (isNativeMode && !isBridgeClient && extensionSocket?.isNative) {
-      console.error("🧬 [Proxy] WebSocket extension connected but Native Messaging is active. Rejecting to avoid collisions.");
+    if (isNativeMode && !runAsBridgeClientOnly && extensionSocket?.isNative) {
+      console.error("🧬 [Proxy] WebSocket tunnel connected but Native Messaging is already active. Rejecting to keep native session authoritative.");
       ws.close(1008, "Native Messaging is active");
       return;
     }
@@ -2228,11 +2244,11 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('close', () => {
-      console.log("ðŸ§¬ [Proxy] Chrome Extension WebSocket disconnected.");
-      if (extensionSocket === ws) {
-        extensionSocket = null;
-      }
-    });
+    console.log("ðŸ§¬ [Proxy] Chrome Extension WebSocket disconnected.");
+    if (extensionSocket === ws && (!isNativeMode || runAsBridgeClientOnly)) {
+      extensionSocket = null;
+    }
+  });
   } 
   
   // ============================================
@@ -2858,6 +2874,7 @@ wss.on('error', handleListenError);
 function startBridgeClientMode() {
   const ws = new WebSocket("ws://localhost:29002/extension?nativeBridge=true");
   
+  const currentServerPid = lockState.current?.pid;
   ws.on('open', () => {
     console.error("🧬 [Bridge Client] Tunnel established with active server!");
   });
@@ -2882,8 +2899,18 @@ function startBridgeClientMode() {
 
   process.stdin.on('end', () => {
     console.error("🧬 [Bridge Client] Stdin closed. Terminating...");
-    ws.close();
-    process.exit(0);
+    try {
+      const current = readBridgeLock();
+      if (currentServerPid && Number(current?.pid) === Number(currentServerPid) && current?.connected === false) {
+        fs.unlinkSync(LOCK_PATH);
+      }
+    } catch {}
+    // Keep the WebSocket open for a short grace period: Chrome can close native stdin
+    // immediately after startup even though the tunnel is already registered.
+    setTimeout(() => {
+      try { ws.close(); } catch {}
+      process.exit(0);
+    }, 30000).unref?.();
   });
 
   ws.on('message', (data) => {

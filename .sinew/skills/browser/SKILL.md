@@ -23,7 +23,7 @@ For Chrome automation, use this order:
 1. `open_browser` / `navigate` — open the target page.
 2. `page_snapshot` or `query_selector` — inspect available elements.
 3. `wait_for_selector` — wait for stable UI before acting.
-4. `click_selector` / `type_selector` — direct, fast, reliable action.
+4. `click_selector` / `type_selector` / `select_option` / `press_key` — direct, fast, reliable action.
 5. `evaluate` — read page state or perform small DOM checks.
 6. `screenshot` only when visual confirmation is needed.
 7. `click` / `run_browser_agent` only as fallback when no selector is available.
@@ -65,6 +65,15 @@ Prefer:
 
 - `type_selector("input[name='q']", "search query", submit=true)`
 - `type_selector("textarea", "message")`
+
+### Keyboard and Selects
+
+Use:
+
+- `press_key("Enter", selector="input[name='q']")`
+- `press_key("Escape")`
+- `select_option("select[name='country']", value="FR")`
+- `select_option("select", label="France")`
 
 ### Evaluating
 

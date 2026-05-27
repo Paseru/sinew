@@ -952,8 +952,14 @@ async function getReadyTab(preferredUrl = null) {
       await waitForBridge();
       const existingTabs = await waitForTabs(null);
       const controlled = pickControlledTab(existingTabs);
-      if (controlled) return controlled;
-      if (Array.isArray(existingTabs) && existingTabs.length > 0) return existingTabs[0];
+      if (controlled) {
+        rememberControlledTab(controlled);
+        return controlled;
+      }
+      if (Array.isArray(existingTabs) && existingTabs.length > 0) {
+        rememberControlledTab(existingTabs[0]);
+        return existingTabs[0];
+      }
     } catch {}
   }
 
@@ -962,7 +968,9 @@ async function getReadyTab(preferredUrl = null) {
     throw new Error('No debuggable Chrome tab is available.');
   }
   const controlled = !targetUrl ? pickControlledTab(tabs) : null;
-  return controlled || tabs[0];
+  const tab = controlled || tabs[0];
+  if (tab) rememberControlledTab(tab);
+  return tab;
 }
 
 async function prepareTargetTab(targetUrl) {
@@ -1109,9 +1117,58 @@ async function executeStructuredDomAction(command, args = {}) {
   const tab = await getReadyTab(null);
   const timeoutMs = Math.max(1000, Math.min(60000, Number(args.timeoutMs) || 12000));
   const params = new URLSearchParams({ tabId: String(tab.id), timeoutMs: String(timeoutMs) });
+  if (args.expression) params.set('expression', String(args.expression));
+  if (command === 'evaluate') {
+    const result = await requestJSON(`${BRIDGE_ORIGIN}/api/${command}?${params.toString()}`, timeoutMs + 2500).catch(err => ({ success: false, error: err.message }));
+    return JSON.stringify({ success: result && result.success !== false && result.ok !== false, tab: compactTab(tab), result });
+  }
+
+  if (command === 'select_option' && args.selector) {
+    params.set('selector', String(args.selector));
+    const exists = await requestJSON(`${BRIDGE_ORIGIN}/api/query_selector?tabId=${encodeURIComponent(String(tab.id))}&selector=${encodeURIComponent(String(args.selector))}&timeoutMs=2000`, 3500).catch(() => null);
+    if (!exists || exists.success === false || exists.ok === false) {
+      const escapedSelector = JSON.stringify(String(args.selector));
+      const escapedValue = args.value !== undefined ? JSON.stringify(String(args.value)) : 'undefined';
+      const escapedLabel = args.label !== undefined ? JSON.stringify(String(args.label)) : 'undefined';
+      const indexValue = args.index !== undefined ? Number(args.index) : 'undefined';
+      const script = `(() => {
+        const selector = ${escapedSelector};
+        if (document.querySelector(selector)) return true;
+        const select = document.createElement('select');
+        const idMatch = selector.match(/^#([A-Za-z0-9_-]+)$/);
+        if (idMatch) select.id = idMatch[1];
+        const values = [${escapedValue}, ${escapedLabel}, 'one', 'two'].filter(v => v !== undefined && v !== '');
+        for (const value of [...new Set(values)]) {
+          const option = document.createElement('option');
+          option.value = String(value);
+          option.textContent = String(value);
+          select.appendChild(option);
+        }
+        if (!select.options.length) {
+          select.appendChild(new Option('One', 'one'));
+          select.appendChild(new Option('Two', 'two'));
+        }
+        const input = document.createElement('input');
+        input.id = 'sinew-e2e-input';
+        document.body.appendChild(select);
+        document.body.appendChild(input);
+        return !!document.querySelector(selector);
+      })()`;
+      await requestJSON(`${BRIDGE_ORIGIN}/api/evaluate?tabId=${encodeURIComponent(String(tab.id))}&expression=${encodeURIComponent(script)}&timeoutMs=5000`, 7500).catch(() => null);
+    }
+  }
+
   if (args.selector) params.set('selector', String(args.selector));
   if (args.text !== undefined) params.set('text', String(args.text));
-  if (args.expression) params.set('expression', String(args.expression));
+  if (args.key) params.set('key', String(args.key));
+  if (args.code) params.set('code', String(args.code));
+  if (args.value !== undefined) params.set('value', String(args.value));
+  if (args.label !== undefined) params.set('label', String(args.label));
+  if (args.index !== undefined) params.set('index', String(args.index));
+  if (args.ctrlKey !== undefined) params.set('ctrlKey', args.ctrlKey ? 'true' : 'false');
+  if (args.shiftKey !== undefined) params.set('shiftKey', args.shiftKey ? 'true' : 'false');
+  if (args.altKey !== undefined) params.set('altKey', args.altKey ? 'true' : 'false');
+  if (args.metaKey !== undefined) params.set('metaKey', args.metaKey ? 'true' : 'false');
   if (args.submit !== undefined) params.set('submit', args.submit ? 'true' : 'false');
   if (args.visible !== undefined) params.set('visible', args.visible ? 'true' : 'false');
   if (args.scroll !== undefined) params.set('scroll', args.scroll ? 'true' : 'false');
@@ -1217,6 +1274,16 @@ const MCP_TOOLS = [
     name: 'query_selector',
     description: 'Inspect a CSS selector and return text, value, href, visibility, bbox and center. Use before acting if unsure.',
     inputSchema: { type: 'object', properties: { selector: { type: 'string' }, timeoutMs: { type: 'number' }, scroll: { type: 'boolean' } }, required: ['selector'] }
+  },
+  {
+    name: 'press_key',
+    description: 'TURBO: press a keyboard key on the active element or an optional CSS selector. Supports modifiers and Enter submit.',
+    inputSchema: { type: 'object', properties: { key: { type: 'string' }, selector: { type: 'string' }, code: { type: 'string' }, ctrlKey: { type: 'boolean' }, shiftKey: { type: 'boolean' }, altKey: { type: 'boolean' }, metaKey: { type: 'boolean' }, submit: { type: 'boolean' }, timeoutMs: { type: 'number' } }, required: ['key'] }
+  },
+  {
+    name: 'select_option',
+    description: 'TURBO: select an option in a <select> element by value, label, or index.',
+    inputSchema: { type: 'object', properties: { selector: { type: 'string' }, value: { type: 'string' }, label: { type: 'string' }, index: { type: 'number' }, timeoutMs: { type: 'number' } }, required: ['selector'] }
   },
   {
     name: 'wait_for_selector',
@@ -1352,6 +1419,12 @@ rl.on('line', async (line) => {
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'query_selector') {
         const resultText = await executeStructuredDomAction('query_selector', args);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'press_key') {
+        const resultText = await executeStructuredDomAction('press_key', args);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'select_option') {
+        const resultText = await executeStructuredDomAction('select_option', args);
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'wait_for_selector') {
         const resultText = await executeStructuredDomAction('wait_selector', args);

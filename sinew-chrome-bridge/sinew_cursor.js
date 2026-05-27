@@ -573,6 +573,16 @@
 
   // Set new target coordinates and animate
   function updateCursorState(state) {
+    const wasHidden = !activeState.visible;
+    const shouldSnapIntoView = wasHidden && state.visible && Number.isFinite(state.x) && Number.isFinite(state.y);
+    if (shouldSnapIntoView) {
+      xSpring.value = state.x;
+      xSpring.target = state.x;
+      xSpring.velocity = 0;
+      ySpring.value = state.y;
+      ySpring.target = state.y;
+      ySpring.velocity = 0;
+    }
     activeState = { ...activeState, ...state };
     hasArrived = false;
     
@@ -839,6 +849,70 @@
         el.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
       }
       sendResponse({ ok: true, success: true, action: "type_selector", selector, tagName: el.tagName, id: el.id || "", text });
+      return true;
+    }
+    else if (message.type === "AGENT_PRESS_KEY") {
+      handleActivity();
+      const selector = String(message.selector || "");
+      const key = String(message.key || "Enter");
+      const target = selector ? document.querySelector(selector) : (document.activeElement || document.body);
+      if (!target) {
+        sendResponse({ ok: false, success: false, error: selector ? `Selector not found: ${selector}` : "No active element" });
+        return true;
+      }
+      target.scrollIntoView?.({ block: "center", inline: "center", behavior: "auto" });
+      target.focus?.({ preventScroll: true });
+      const codeByKey = { Enter: "Enter", Escape: "Escape", Tab: "Tab", Backspace: "Backspace", Delete: "Delete", ArrowUp: "ArrowUp", ArrowDown: "ArrowDown", ArrowLeft: "ArrowLeft", ArrowRight: "ArrowRight", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown", Space: "Space" };
+      const code = String(message.code || codeByKey[key] || (key.length === 1 ? `Key${key.toUpperCase()}` : key));
+      const opts = { key, code, bubbles: true, cancelable: true, ctrlKey: !!message.ctrlKey, shiftKey: !!message.shiftKey, altKey: !!message.altKey, metaKey: !!message.metaKey };
+      try {
+        target.dispatchEvent(new KeyboardEvent("keydown", opts));
+        if (key.length === 1) target.dispatchEvent(new KeyboardEvent("keypress", opts));
+        if (key === "Enter") {
+          const form = target.closest && target.closest("form");
+          if (form && message.submit !== false) {
+            if (typeof form.requestSubmit === "function") form.requestSubmit();
+            else form.submit();
+          }
+        }
+        target.dispatchEvent(new KeyboardEvent("keyup", opts));
+        sendResponse({ ok: true, success: true, action: "press_key", selector: selector || null, key, code, tagName: target.tagName || "" });
+      } catch (err) {
+        sendResponse({ ok: false, success: false, error: err.message });
+      }
+      return true;
+    }
+    else if (message.type === "AGENT_SELECT_OPTION") {
+      handleActivity();
+      const selector = String(message.selector || "");
+      const select = selector ? document.querySelector(selector) : null;
+      if (!select) {
+        sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
+        return true;
+      }
+      if (select.tagName !== "SELECT") {
+        sendResponse({ ok: false, success: false, error: `Target is not a SELECT: ${select.tagName}` });
+        return true;
+      }
+      const value = message.value !== undefined ? String(message.value) : null;
+      const label = message.label !== undefined ? String(message.label).toLowerCase() : null;
+      const index = Number.isInteger(message.index) ? message.index : null;
+      const options = Array.from(select.options || []);
+      let option = null;
+      if (value !== null) option = options.find(opt => opt.value === value);
+      if (!option && label !== null) option = options.find(opt => String(opt.label || opt.textContent || "").trim().toLowerCase() === label || String(opt.textContent || "").toLowerCase().includes(label));
+      if (!option && index !== null) option = options[index] || null;
+      if (!option) {
+        sendResponse({ ok: false, success: false, error: "Option not found", options: options.map((opt, i) => ({ index: i, value: opt.value, label: opt.label || opt.textContent || "" })).slice(0, 50) });
+        return true;
+      }
+      select.scrollIntoView?.({ block: "center", inline: "center", behavior: "auto" });
+      select.focus?.({ preventScroll: true });
+      select.value = option.value;
+      option.selected = true;
+      select.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertReplacementText", data: option.value }));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      sendResponse({ ok: true, success: true, action: "select_option", selector, value: option.value, label: option.label || option.textContent || "", index: options.indexOf(option) });
       return true;
     }
     else if (message.type === "AGENT_WAIT_SELECTOR") {
@@ -1300,6 +1374,7 @@
             x,
             y,
             rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+            viewport: { width: window.innerWidth, height: window.innerHeight },
              element: { tagName: bestEl.tagName, id: bestEl.id, className: typeof bestEl.className === 'string' ? bestEl.className : "", href: bestEl.href || bestEl.getAttribute?.('href') || "" },
             score: bestScore
           },
