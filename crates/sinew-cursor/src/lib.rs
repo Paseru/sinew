@@ -1,6 +1,7 @@
 mod auth;
 mod client;
 mod connect;
+mod context_injection;
 mod conversation;
 mod identity;
 mod model_info;

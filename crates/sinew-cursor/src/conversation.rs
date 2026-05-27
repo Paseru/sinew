@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 use sinew_core::{Effort, Part, ProviderRequest, Role, ServiceTier, ToolDescriptor};
 
 use crate::{
+    context_injection::append_local_index_excerpts,
     identity::CursorIdeIdentity,
     sanitize::{sanitize_outbound_json, sanitize_outbound_text},
     tools::{build_client_tool_result, cursor_tool_name, is_mappable_sinew_tool, SUPPORTED_TOOLS},
@@ -124,6 +125,7 @@ fn build_explicit_context(request: &ProviderRequest, tools: &[ToolDescriptor]) -
         context.push_str("\n\n");
         context.push_str(&mcp_summary);
     }
+    append_local_index_excerpts(request, &mut context);
     json!({ "context": context })
 }
 
