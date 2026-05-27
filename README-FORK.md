@@ -35,8 +35,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `src-tauri/src/state.rs`*
 * **🌐 Version Française** : Traduction dynamique des panneaux de configurations et boutons clés pour un meilleur confort visuel.
   * 📂 *Fichiers : `src/lib/locale.ts`*
-* **🔄 Synchro OneDrive & SQLite** : Fusion différentielle automatique de votre historique et préférences entre plusieurs PC avec gestion intelligente des suppressions.
-  * 📂 *Fichiers : `src-tauri/src/lib.rs`*
+* **🔄 Synchro OneDrive & SQLite** : Fusion différentielle automatique de votre historique et préférences entre plusieurs PC avec gestion intelligente des suppressions. La synchronisation de l'historique et des suppressions (tombstones) s'effectue désormais en temps réel et en arrière-plan dès qu'une action de modification (création, renommage, suppression) a lieu (plus besoin d'attendre la fermeture de l'application).
+  * 📂 *Fichiers : `src-tauri/src/lib.rs`, `src-tauri/src/conversations.rs`*
 * **⚡ Diagnostic SOTA** : Un panneau de contrôle en un clic pour tester en temps réel l'état et la version de vos outils (Git, Node, Rust, Python, Ripgrep).
   * 📂 *Fichiers : `crates/sinew-app/src/check_sota.rs`*
 
@@ -48,5 +48,11 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`*
 * **👥 Multi-comptes OpenAI** : Enregistrez plusieurs clés API distinctes via le bouton `[ + ]` et basculez instantanément de l'une à l'autre.
   * 📂 *Fichiers : `src/components/SettingsPane.tsx`*
-* **📊 Suivi en temps réel des Quotas** : Ajout de fonctions natives (`get_antigravity_quota` pour Gemini, `get_openai_codex_rate_limits` pour ChatGPT Plus/Pro, et `getOpenRouterKeyDetails` pour OpenRouter) pour suivre vos limites réelles d'utilisation. Les quotas s'affichent sous forme de barres colorées adaptatives (Vert/Bleu/Rose/Rouge) dans les options, et via une pastille de statut dynamique directement intégrée dans le champ de saisie du chat.
+* **📊 Suivi en temps réel des Quotas** : Ajout de fonctions natives (`get_antigravity_quota` pour Gemini, `get_openai_codex_rate_limits` pour ChatGPT Plus/Pro, et `getOpenRouterKeyDetails` pour OpenRouter) pour suivre vos limites réelles d'utilisation. Les quotas s'affichent sous forme de barres colorées adaptatives (Vert/Bleu/Rose/Rouge) dans les options, et via une pastille de statut dynamique directement intégrée dans le champ de saisie du chat. Seuls les 8 modèles officiels de votre abonnement Antigravity actif sont conservés et affichés dans les quotas.
   * 📂 *Fichiers : `src/lib/quotas.ts`, `src-tauri/src/providers.rs`, `src/components/SettingsPane.tsx`, `src/components/chat/ChatPane.tsx`*
+* **🤖 Routage & Résilience Google Antigravity (SOTA)** : Amélioration majeure du connecteur Google Antigravity pour une robustesse optimale de vos modèles d'abonnement :
+  * *Branchement dynamique des quotas* : Liaison exacte du niveau d'effort sélectionné en UI (Low, Medium, High) avec les barres de quota correspondantes du compte Google AI Ultra.
+  * *Identifiants API & Outils corrigés* : Câblage technique des modèles réels (`claude-opus-4-6-thinking`, `claude-sonnet-4-6`, `gpt-oss-120b-medium`) évitant les erreurs 404. Désactivation spécifique de la déclaration des outils MCP pour `gpt-oss-120b` (résolvant l'erreur 500).
+  * *Haute Priorité & Résilience 503* : Injection de l'en-tête officiel `x-goog-api-client` (simulant l'extension native) pour intégrer la file d'attente à haute priorité et bascule automatique asynchrone sur les serveurs de secours (`sandbox`/`autopush`) si le serveur principal signale une surcharge (erreur 503).
+  * *Bypass de Signature* : Ajout automatique du jeton de contournement `skip_thought_signature_validator` pour éviter tout rejet lié aux signatures de réflexion historiques manquantes lors du changement de modèle.
+  * 📂 *Fichiers : `crates/sinew-google/src/client.rs`, `crates/sinew-google/src/model_info.rs`, `src/lib/models.ts`*
