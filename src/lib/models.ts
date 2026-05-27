@@ -141,41 +141,6 @@ export const MODELS: ModelEntry[] = [
     supportsFast: true,
   },
   {
-    value: "google:claude-opus-4.6",
-    provider: "google",
-    label: "Claude Opus 4.6",
-    thinking: ["medium", "high"],
-    defaultThinking: "medium",
-  },
-  {
-    value: "google:claude-sonnet-4.6",
-    provider: "google",
-    label: "Claude Sonnet 4.6",
-    thinking: ["medium", "high"],
-    defaultThinking: "medium",
-  },
-  {
-    value: "google:gpt-oss-120b",
-    provider: "google",
-    label: "GPT-OSS 120B",
-    thinking: ["low", "medium", "high"],
-    defaultThinking: "medium",
-  },
-  {
-    value: "google:gemini-2.5-pro",
-    provider: "google",
-    label: "Gemini 2.5 Pro",
-    thinking: ["low", "medium", "high"],
-    defaultThinking: "high",
-  },
-  {
-    value: "google:gemini-3.1-flash-lite",
-    provider: "google",
-    label: "Gemini 3.1 Flash Lite",
-    thinking: ["low", "medium"],
-    defaultThinking: "medium",
-  },
-  {
     value: "google:gemini-3.1-pro",
     provider: "google",
     label: "Gemini 3.1 Pro",
@@ -422,7 +387,9 @@ function normalizedGoogleModelName(name: string): string {
   if (
     name === "gemini-3.5-flash-low" ||
     name === "gemini-3.5-flash-medium" ||
-    name === "gemini-3.5-flash-high"
+    name === "gemini-3.5-flash-high" ||
+    name === "gemini-3.5-flash-extra-low" ||
+    name === "gemini-3-flash-agent"
   ) {
     return "gemini-3.5-flash";
   }
