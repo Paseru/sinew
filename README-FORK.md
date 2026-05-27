@@ -12,6 +12,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
 * **🎨 Écran de Démarrage & Splash Logo** : Suppression complète du flash blanc au lancement de la fenêtre grâce à un Splash Screen intégré directement dans le HTML statique. Le logo de démarrage s'anime de manière fluide (ouverture des barres de l'icône) avant le chargement complet de l'application React.
   * 📂 *Fichiers : `index.html`, `src/components/Welcome.tsx`, `src/styles.css`*
+* **🛑 Désactivation de la mise à jour automatique** : L'auto-updater officiel est désactivé pour éviter que vos modifications personnelles et les fonctionnalités propres à ce fork ne soient écrasées par les versions amont standard.
+  * 📂 *Fichiers : `src-tauri/tauri.conf.json`, `src/components/Welcome.tsx`*
 
 ---
 
@@ -94,9 +96,10 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
 * **🤖 Intégration de Cursor & Agent Composer 2.5** :
   * *Authentification OAuth Sécurisée* : Connexion fluide via OAuth avec renouvellement automatique des jetons de session (remplace la lecture locale SQLite instable de `state.vscdb` pour éviter les soucis de droits d'accès).
   * *Stealth & Mimétisme IDE* : En-têtes HTTP personnalisés (`x-cursor-client-version` réglable via `SINEW_CURSOR_CLIENT_VERSION`, `user-agent`, `x-cursor-checksum` calculé dynamiquement) simulant un client Cursor légitime pour éviter tout blocage.
+  * *Stealth & Anonymisation (Sanitize)* : Remplacement automatique à la volée de toute mention de 'Sinew' ou 'Hyrak' par 'Cursor' dans les flux sortants (textes et JSON) afin d'éviter la détection de marque par le serveur.
   * *Support Multi-sessions & Multimodal* : Routage des abonnements prioritaires, gestion de la vision (analyse d'images) et génération d'images via providers locaux ou DALL-E dans l'agent Composer.
   * *Gestion des dossiers récents* : Possibilité de supprimer des dossiers de l'historique directement depuis l'écran d'accueil.
-  * 📂 *Fichiers : `crates/sinew-cursor/`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`, `src/components/Welcome.tsx`, `src/lib/recents.ts`*
+  * 📂 *Fichiers : `crates/sinew-cursor/`, `crates/sinew-cursor/src/sanitize.rs`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`, `src/components/Welcome.tsx`, `src/lib/recents.ts`*
 
 * **🔍 Indexation Sémantique Locale & Codebase Search** :
   * *Indexation Arrière-plan & Embeddings* : Module `sinew-index` pour analyser le projet localement et générer des embeddings vectoriels des fichiers avec découpage intelligent respectueux de la structure des symboles.
