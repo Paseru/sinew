@@ -233,7 +233,7 @@ export const Markdown = memo(function Markdown({ text, onOpenFile, workspacePath
     <div className="md">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+        rehypePlugins={[[rehypeHighlight, { detect: false, ignoreMissing: true }]]}
         components={{
           pre({ children }) {
             // `code` already swaps fenced ```mermaid blocks for an
