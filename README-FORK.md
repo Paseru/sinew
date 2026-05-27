@@ -10,6 +10,8 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `src/components/Welcome.tsx`, `src-tauri/src/workspace.rs`*
 * **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées de `[Bureau] ` ou `[Perso] ` en fonction du nom d'hôte de la machine (`%COMPUTERNAME%`), facilitant le tri et l'identification lors de la synchronisation Multi-PC.
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
+* **🎨 Écran de Démarrage & Splash Logo** : Suppression complète du flash blanc au lancement de la fenêtre grâce à un Splash Screen intégré directement dans le HTML statique. Le logo de démarrage s'anime de manière fluide (ouverture des barres de l'icône) avant le chargement complet de l'application React.
+  * 📂 *Fichiers : `index.html`, `src/components/Welcome.tsx`, `src/styles.css`*
 
 ---
 
@@ -124,6 +126,6 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
 
 * **🎨 Ajustements UI, Encodage & Mode Très Compact** :
   * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
-  * *Rendu Grand Écran & Démarrage* : Fixation de la largeur `#root` à 100% sur écran large et animations d'introduction stylisées de l'icône de boot.
+  * *Écran de Démarrage & Splash Logo* : Suppression du flash blanc au lancement et intégration d'une animation d'introduction (boot splash screen) stylisée et instantanée (définie dans `index.html`) complétée par des animations d'apparition des barres du logo sur l'écran d'accueil.
   * *Mode Ultra Pur* : Amélioration du mode "Très compact" pour masquer les tools réussis et n'afficher que l'animation d'état en cours.
-  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`*
+  * 📂 *Fichiers : `src/styles.css`, `src/components/Welcome.tsx`, `index.html`, `crates/sinew-app/src/agent/turn.rs`, `src/components/chat/AIThinkingBlock.tsx`*
