@@ -2086,33 +2086,6 @@ function ProvidersSection({
                       <option value="gpt-5.2">GPT-5.2</option>
                     </select>
                   </div>
-                  
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
-                    <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto", width: "55px" }}>Thinking:</span>
-                    <select
-                      value={currentThinking}
-                      onChange={(e) => onUpdateSecondaryThinking(account.key, e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="xhigh">XHigh</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                      <option value="off">Off</option>
-                    </select>
-                  </div>
-                  
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
-                    <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto", width: "55px" }}>Speed:</span>
-                    <select
-                      value={currentFast}
-                      onChange={(e) => onUpdateSecondaryFast(account.key, e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="true">Fast (on)</option>
-                      <option value="false">Fast (off)</option>
-                    </select>
-                  </div>
                 </div>
               </ProviderCard>
             );
