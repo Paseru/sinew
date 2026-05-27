@@ -1168,6 +1168,22 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
                 continue;
             }
 
+            // On ne garde que les 8 modèles officiels de l'abonnement Antigravity
+            let is_official = matches!(
+                label,
+                "Claude Opus 4.6 (Thinking)"
+                    | "Claude Sonnet 4.6 (Thinking)"
+                    | "GPT-OSS 120B (Medium)"
+                    | "Gemini 3.5 Flash (Low)"
+                    | "Gemini 3.5 Flash (Medium)"
+                    | "Gemini 3.5 Flash (High)"
+                    | "Gemini 3.1 Pro (Low)"
+                    | "Gemini 3.1 Pro (High)"
+            );
+            if !is_official {
+                continue;
+            }
+
             let quota = info.get("quotaInfo");
             let remaining = quota
                 .and_then(|value| value.get("remainingFraction"))
