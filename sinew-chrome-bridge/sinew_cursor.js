@@ -438,7 +438,7 @@
   const label = document.createElement("div");
   label.className = "cursor-label";
   label.textContent = "Sinew ACTIVE";
-  // overlay.appendChild(label); // Disabled to match clean Codex style (no flashing text next to the cursor)
+  // overlay.appendChild(label); // Disabled to match clean minimalist style (no flashing text next to the cursor)
 
   shadow.appendChild(overlay);
   document.documentElement.appendChild(container);
@@ -493,7 +493,7 @@
 
   // DOM Attention Layer (HUD highlighted elements)
   function updateTargetHud(x, y, visible) {
-    // Disabled to match clean Codex-like visual style (no flashing pink boxes)
+    // Disabled to match clean minimalist style (no flashing pink boxes)
     targetHud.classList.remove("active");
     lastTargetEl = null;
     return;
@@ -592,7 +592,7 @@
   }
 
   // ==========================================================
-  // Controlled tab visual indicator (Codex-style underline)
+  // Controlled tab visual indicator (Sinew-style glowing bar)
   // ==========================================================
   let controlledIndicatorTimer = null;
 
@@ -1170,7 +1170,7 @@
   // ==========================================================
   const macroWidget = document.createElement("div");
   macroWidget.className = "cyber-macro-widget collapsed";
-  // shadow.appendChild(macroWidget); // Disabled to avoid floating red dot on the right, matching clean Codex style
+    // shadow.appendChild(macroWidget); // Disabled to avoid floating red dot on the right, matching clean minimalist style
 
   let isRecording = false;
   let recordedSteps = [];

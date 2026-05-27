@@ -1,6 +1,6 @@
 // 🧬 Sinew Chrome Bridge — Service Worker (Manifest V3)
 // Upgraded to SOTA Sinew-grade sequential execution queue and automatic biological cursor physics injection.
-// Pure Native Messaging connection (No fallback to match Codex standard).
+// Pure Native Messaging connection (Optimized for Sinew Native Messenger).
 
 let nativePort = null;
 let reconnectTimer = null;

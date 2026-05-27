@@ -1,5 +1,5 @@
 @echo off
-title 🧬 Launch Chrome Silent (Codex Mode)
+title 🧬 Launch Chrome Silent (Sinew Mode)
 echo.
 echo =======================================================
 echo    🧬 Launching Chrome in Silent SOTA mode...

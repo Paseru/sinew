@@ -524,8 +524,6 @@ async function ensureCdpCursor(cdp, cursorOptions = {}) {
       const selectors = [
         '#Sinew-agent-overlay-root',
         '#sinew-agent-overlay-root',
-        '#codex-agent-overlay-root',
-        '#Codex-agent-overlay-root',
         '[id$="-agent-overlay-root"]',
         '[id*="agent-overlay-root"]'
       ];
@@ -1186,7 +1184,7 @@ const MCP_TOOLS = [
   }
 ];
 
-// Execute the smart browser automation natively and silently (Codex-style local mode)
+// Execute the smart browser automation natively and silently (Sinew-grade local mode)
 async function executeBrowserTask(task, cursorOptions = {}) {
   log(`Executing native Chrome action: "${task}"`);
   const cursor = normalizeCursorOptions(cursorOptions);
