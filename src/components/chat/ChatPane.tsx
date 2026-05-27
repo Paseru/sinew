@@ -400,13 +400,6 @@ function serviceTierForSelection(
 ): ServiceTier | null {
   const entry = availableModels.find((model) => model.value === selection.model);
   if (!entry) return null;
-  const isOpenAi = entry.provider.startsWith("openai:") || entry.provider === "openai";
-  if (isOpenAi) {
-    // If the entry has a defaultFast preference, use it unless overridden by fastEnabled.
-    // Wait, actually if fastEnabled is toggled, it should override. But we can also just respect entry?.defaultFast.
-    const isFast = entry.defaultFast !== undefined ? entry.defaultFast : fastEnabled;
-    return isFast ? "fast" : null;
-  }
   return fastEnabled && entry.supportsFast ? "fast" : null;
 }
 
