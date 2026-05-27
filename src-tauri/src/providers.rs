@@ -1040,10 +1040,28 @@ pub(super) async fn get_openai_codex_rate_limits(
         request = request.header("ChatGPT-Account-Id", account_id);
     }
 
-    let response = request
+    let mut response = request
         .send()
         .await
         .map_err(|err| format!("Failed to fetch Codex quotas: {err}"))?;
+        
+    // Fallback suggéré par la communauté si /codex/wham/usage renvoie 403 (Business/Workspace)
+    if response.status() == reqwest::StatusCode::FORBIDDEN || response.status() == reqwest::StatusCode::NOT_FOUND {
+        let mut fallback_req = http
+            .get("https://chatgpt.com/backend-api/wham/usage")
+            .header("authorization", format!("Bearer {}", bearer.token))
+            .header("user-agent", "codex-cli")
+            .header("accept", "application/json");
+        if let Some(account_id) = bearer.account_id.as_deref() {
+            fallback_req = fallback_req.header("ChatGPT-Account-Id", account_id);
+        }
+        if let Ok(fb_resp) = fallback_req.send().await {
+            if fb_resp.status().is_success() {
+                response = fb_resp;
+            }
+        }
+    }
+
     if !response.status().is_success() {
         return Err(format!("Codex quota endpoint returned status {}", response.status()));
     }

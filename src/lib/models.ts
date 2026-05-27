@@ -151,7 +151,7 @@ export const MODELS: ModelEntry[] = [
     value: "google:gemini-3.1-pro",
     provider: "google",
     label: "Gemini 3.1 Pro",
-    thinking: ["low", "medium", "high"],
+    thinking: ["low", "high"],
     defaultThinking: "high",
   },
   {
