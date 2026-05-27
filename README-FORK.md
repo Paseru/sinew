@@ -88,11 +88,6 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Masquage complet de l'identité* : toutes les requêtes (WebSockets, flux HTTP SSE et appels d'API de chat/quotas) utilisant le compte ChatGPT Codex transmettent désormais l'en-tête `user-agent` officiel `"codex-cli"` pour éviter toute détection.
   * *Génération d'images sous couverture* : correction de l'outil de création d'images par abonnement (DALL-E 3) qui n'envoyait pas le bon User-Agent, désormais aligné sur `"codex-cli"`.
   * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
-
----
-
-## 📅 28/05 — Intégration Cursor (Composer), Indexation Sémantique & Optimisations Système
-
 * **🤖 Intégration de Cursor & Agent Composer 2.5** :
   * *Authentification OAuth Sécurisée* : Connexion fluide via OAuth avec renouvellement automatique des jetons de session (remplace la lecture locale SQLite instable de `state.vscdb` pour éviter les soucis de droits d'accès).
   * *Stealth & Mimétisme IDE* : En-têtes HTTP personnalisés (`x-cursor-client-version` réglable via `SINEW_CURSOR_CLIENT_VERSION`, `user-agent`, `x-cursor-checksum` calculé dynamiquement) simulant un client Cursor légitime pour éviter tout blocage.
@@ -100,33 +95,27 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * *Support Multi-sessions & Multimodal* : Routage des abonnements prioritaires, gestion de la vision (analyse d'images) et génération d'images via providers locaux ou DALL-E dans l'agent Composer.
   * *Gestion des dossiers récents* : Possibilité de supprimer des dossiers de l'historique directement depuis l'écran d'accueil.
   * 📂 *Fichiers : `crates/sinew-cursor/`, `crates/sinew-cursor/src/sanitize.rs`, `src-tauri/src/providers.rs`, `src/lib/models.ts`, `src/components/SettingsPane.tsx`, `src/components/Welcome.tsx`, `src/lib/recents.ts`*
-
 * **🔍 Indexation Sémantique Locale & Codebase Search** :
   * *Indexation Arrière-plan & Embeddings* : Module `sinew-index` pour analyser le projet localement et générer des embeddings vectoriels des fichiers avec découpage intelligent respectueux de la structure des symboles.
   * *Badge d'état dans la Sidebar* : Affichage dynamique sous le nom du projet du nombre de fichiers et fragments indexés, ainsi que du moteur actif (sémantique ou classique).
   * *Context Injection* : Intégration transparente des résultats de recherche sémantique comme contexte explicite injecté directement dans les prompts envoyés à l'agent.
   * 📂 *Fichiers : `crates/sinew-index/`, `crates/sinew-app/src/codebase_search.rs`, `src/components/chat/ChatPane.tsx`, `src/components/Workspace.tsx`*
-
 * **🌐 Extension Chrome (Sinew Chrome Bridge) de Pointe** :
   * *Suppression du Timeout de 20s* : Résolution d'un délai d'attente bloquant lors de la navigation et de la recherche d'onglets cibles via CDP.
   * *Stealth & Trajectoire Bézier* : Déplacements du curseur simulés via des courbes de Bézier physiques multi-candidates et masquage complet de la barre d'avertissement de débogage Chrome.
   * *Design Premium de la Popup* : Redesign complet avec thème sombre moderne, lueur néon, états de diagnostic pliables et indicateur d'attachement du debugger en temps réel.
   * *Exécution depuis l'Explorateur & Chat* : Intégration d'un menu d'ouverture directe et d'exécution dans les liens de fichiers du chat et dans le menu contextuel clic-droit du FileTree.
   * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`, `sinew-chrome-bridge/popup.js`, `sinew-chrome-bridge/background.js`, `.sinew/skills/browser/SKILL.md`, `src/components/FileTree.tsx`, `src/components/chat/Markdown.tsx`*
-
 * **⚡ Suppression des Popups de Console sur Windows** :
   * *Lancement Silencieux des Processus* : Suppression définitive des clignotements intempestifs de fenêtres d'invite de commandes Windows (`cmd.exe`/`powershell.exe`) lors du démarrage des serveurs d'outils MCP, des commandes Git ou de l'analyse globale SOTA.
   * 📂 *Fichiers : `crates/sinew-app/src/bash.rs`, `src-tauri/src/platform.rs`, `src-tauri/src/git.rs`, `crates/sinew-app/src/check_sota.rs`*
-
 * **🛠️ Diagnostics Monaco & read_lints en Temps Réel** :
   * *Collecte Active* : Remontée instantanée en arrière-plan des diagnostics, erreurs et alertes de compilation du composant d'édition Monaco de Sinew (`EditorPane.tsx`).
   * *Corrélation d'erreurs* : Le nouvel outil `read_lints` permet à l'IA d'interroger directement ces diagnostics locaux (et de lancer des vérifications système via `cargo`, `eslint`, `ruff`) afin de corriger ses erreurs de code de manière proactive.
   * 📂 *Fichiers : `src/components/EditorPane.tsx`, `crates/sinew-app/src/read_lints.rs`, `crates/sinew-app/src/editor_diagnostics.rs`*
-
 * **🧠 Compaction Avancée des Tools & Logs** :
   * *Repli Automatique* : En modes `Compact` ou `Très compact`, les cartes d'outils réussis (lecture/écriture de fichiers, exécution bash, listes de tâches, compactage de contexte) masquent leurs détails techniques complexes (diffs, arguments de lecture, etc.) et cachent la flèche de dépliage pour un journal plus propre, ne s'ouvrant automatiquement qu'en cas d'erreur de traitement.
   * 📂 *Fichiers : `src/components/chat/ToolCard.tsx`, `src/components/chat/PlanningNextMoveBlock.tsx`, `src/components/chat/stream.ts`*
-
 * **🎨 Ajustements UI, Encodage & Mode Très Compact** :
   * *Correction des Bugs d'Encodage Windows* : Remplacement et échappement unicode de tous les caractères point médian (`·`) pour éviter les plantages d'affichage.
   * *Écran de Démarrage & Splash Logo* : Suppression du flash blanc au lancement et intégration d'une animation d'introduction (boot splash screen) stylisée et instantanée (définie dans `index.html`) complétée par des animations d'apparition des barres du logo sur l'écran d'accueil.
