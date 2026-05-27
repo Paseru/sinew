@@ -606,11 +606,13 @@ impl AppStore {
     ) -> Result<SavedConversation> {
         let id = Uuid::new_v4().to_string();
         let now = now_ms();
-        let computer_name = std::env::var("COMPUTERNAME").unwrap_or_default();
-        let tag = if computer_name.to_lowercase() == "pcportable" {
-            "[Bureau] "
+        let host = std::env::var("COMPUTERNAME")
+            .or_else(|_| std::env::var("HOSTNAME"))
+            .unwrap_or_default();
+        let tag = if !host.trim().is_empty() {
+            format!("[{}] ", host.trim())
         } else {
-            "[Perso] "
+            "".to_string()
         };
         let title = format!("{}{}", tag, DEFAULT_CONVERSATION_TITLE);
         let todo_list = TodoListState::default();

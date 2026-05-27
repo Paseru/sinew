@@ -84,5 +84,5 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `crates/sinew-openai/src/client.rs`, `crates/sinew-openai/src/websocket.rs`, `crates/sinew-app/src/image.rs`*
 * **🎨 Splash Screen & Correction d'Encodage** : Splash Screen statique instantané (défini dans `index.html`) pour supprimer le flash blanc au démarrage. Remplacement et échappement unicode de tous les points médians (`·`) pour éliminer définitivement les bugs d'affichage Windows.
   * 📂 *Fichiers : `index.html`, `src/styles.css`, `crates/sinew-app/src/agent/turn.rs`*
-* **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées de `[Bureau] ` ou `[Perso] ` en fonction du nom d'hôte de la machine (`%COMPUTERNAME%`) pour faciliter le tri multi-PC.
+* **🏷️ Préfixe automatique de conversation** : Les conversations créées sont automatiquement préfixées avec le nom réel du PC actif (ex: `[PCSALON] ` ou `[PCPORTABLE] `) basé sur les variables d'environnement (`%COMPUTERNAME%` / `$HOSTNAME`), facilitant le tri multi-PC.
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
