@@ -95,6 +95,7 @@ type QueuedPrompt = QueuedPromptStripItem & {
   mode: AgentMode;
   serviceTier: ServiceTier | null;
   createdAtMs: number;
+  steering?: boolean;
 };
 
 type EditingQueuedPrompt = {
@@ -419,6 +420,9 @@ export function ChatPane({
 }: Props) {
   const conversationViewsRef = useRef<Map<string, ChatViewState>>(new Map());
   const composerDraftsRef = useRef<Map<string, ComposerDraft>>(new Map());
+  const promptQueuesByConversationRef = useRef<Map<string, QueuedPrompt[]>>(
+    new Map(),
+  );
   const [view, setView] = useState<ChatViewState>(() => {
     const initial = initialStateFromHistory(history);
     return isStreaming ? beginTurn(initial) : initial;
@@ -609,6 +613,10 @@ export function ChatPane({
       ]);
       setConfiguredProviders(providers);
       setOpenRouterModels(models);
+      
+      // Charger en arrière-plan les quotas de tous les fournisseurs configurés
+      // pour que les pastilles de statut dans le menu déroulant soient à jour.
+      void Promise.allSettled(providers.map((p) => fetchProviderQuota(p)));
     } catch {
       setConfiguredProviders([]);
       setOpenRouterModels([]);
@@ -799,6 +807,10 @@ export function ChatPane({
       subAgentViews,
     );
   }, [subAgentViews]);
+
+  useEffect(() => {
+    promptQueuesByConversationRef.current = promptQueuesByConversation;
+  }, [promptQueuesByConversation]);
 
   useEffect(() => {
     viewRef.current = view;
@@ -1261,6 +1273,25 @@ export function ChatPane({
       if (event.type === "sub_agent_event") applySubAgentEvent(cid, event);
       if (event.type === "tool_finished") applySubAgentToolMeta(cid, event);
       applyTokenUsageEvent(cid, event);
+      if (event.type === "steering_applied") {
+        setPromptQueuesByConversation((current) =>
+          updatePromptQueue(current, cid, (queue) =>
+            queue.filter((prompt) => prompt.id !== event.id),
+          ),
+        );
+      } else if (
+        event.type === "turn_finished" ||
+        event.type === "interrupted" ||
+        event.type === "error"
+      ) {
+        setPromptQueuesByConversation((current) =>
+          updatePromptQueue(current, cid, (queue) =>
+            queue.map((prompt) =>
+              prompt.steering ? { ...prompt, steering: false } : prompt,
+            ),
+          ),
+        );
+      }
       if (cid === viewConversationIdRef.current) {
         setView((prev) => {
           const next = reduceEventForConversation(cid, prev, event);
@@ -1652,6 +1683,99 @@ export function ChatPane({
     serviceTier,
   ]);
 
+  const steerQueuedPrompt = useCallback(
+    async (nextPrompt: QueuedPrompt, restoreIndex = 0) => {
+      const steeringPrompt = { ...nextPrompt, steering: true };
+      blockedQueueItemIdsRef.current.delete(nextPrompt.id);
+      setPromptQueuesByConversation((current) =>
+        updatePromptQueue(current, conversationId, (queue) =>
+          insertQueuedPrompt(
+            queue.filter((prompt) => prompt.id !== nextPrompt.id),
+            steeringPrompt,
+            restoreIndex,
+          ),
+        ),
+      );
+      setView((prev) =>
+        appendUserMessage(
+          prev,
+          nextPrompt.text,
+          optimisticNextUserHistoryIndex(history, prev),
+          userAttachmentsFromQueue(nextPrompt.attachments),
+          {
+            id: `steer-pending-${nextPrompt.id}`,
+            pendingSteeringId: nextPrompt.id,
+            pendingLabel: "Pending",
+          },
+        ),
+      );
+      try {
+        const accepted = await api.steerTurn(
+          workspacePath,
+          conversationId,
+          nextPrompt.id,
+          nextPrompt.text,
+          nextPrompt.attachments,
+        );
+        if (!accepted) {
+          setView((prev) => ({
+            ...prev,
+            blocks: prev.blocks.filter(
+              (block) =>
+                !(block.kind === "user-text" && block.pendingSteeringId === nextPrompt.id),
+            ),
+          }));
+          setPromptQueuesByConversation((current) => {
+            const currentQueue = current.get(conversationId) ?? EMPTY_QUEUED_PROMPTS;
+            if (currentQueue.some((prompt) => prompt.id === nextPrompt.id && !prompt.steering)) {
+              return current;
+            }
+            return updatePromptQueue(current, conversationId, (queue) =>
+              insertQueuedPrompt(
+                queue.filter((prompt) => prompt.id !== nextPrompt.id),
+                { ...nextPrompt, steering: false },
+                restoreIndex,
+              ),
+            );
+          });
+          void onStop().catch((err) => {
+            setView((prev) => ({
+              ...prev,
+              lastError: String(err),
+            }));
+          });
+        }
+      } catch (err) {
+        blockedQueueItemIdsRef.current.add(nextPrompt.id);
+        setView((prev) => ({
+          ...prev,
+          blocks: prev.blocks.filter(
+            (block) =>
+              !(block.kind === "user-text" && block.pendingSteeringId === nextPrompt.id),
+          ),
+        }));
+        setPromptQueuesByConversation((current) => {
+          const currentQueue = current.get(conversationId) ?? EMPTY_QUEUED_PROMPTS;
+          if (currentQueue.some((prompt) => prompt.id === nextPrompt.id && !prompt.steering)) {
+            return current;
+          }
+          return updatePromptQueue(current, conversationId, (queue) =>
+            insertQueuedPrompt(
+              queue.filter((prompt) => prompt.id !== nextPrompt.id),
+              { ...nextPrompt, steering: false },
+              restoreIndex,
+            ),
+          );
+        });
+        setView((prev) => ({
+          ...prev,
+          lastError: String(err),
+        }));
+      }
+    },
+    [conversationId, history, onStop, workspacePath],
+  );
+
   const sendQueuedPrompt = useCallback(
     (nextPrompt: QueuedPrompt, restoreIndex = 0) => {
       if (dequeueInFlightRef.current !== null) return;
@@ -1713,6 +1837,7 @@ export function ChatPane({
     const nextPrompt = queuedPrompts[0];
     if (!nextPrompt) return;
     if (blockedQueueItemIdsRef.current.has(nextPrompt.id)) return;
+    if (nextPrompt.steering) return;
     if (dequeueInFlightRef.current !== null) return;
 
     sendQueuedPrompt(nextPrompt, 0);
@@ -2614,16 +2739,19 @@ export function ChatPane({
       const itemIndex = queuedPrompts.findIndex((prompt) => prompt.id === id);
       if (itemIndex < 0) return;
       const item = queuedPrompts[itemIndex];
+      if (item.steering) return;
       blockedQueueItemIdsRef.current.delete(id);
       const streaming =
         view.status === "streaming" ||
         isStreaming ||
-        activeSubAgentId !== null ||
         dequeueInFlightRef.current !== null;
+      if (streaming && activeSubAgentId === null) {
+        void steerQueuedPrompt(item, itemIndex);
+        return;
+      }
       if (streaming) {
-        // Bring this prompt to the front of the queue so the auto-dequeue
-        // effect picks it up right after the current turn stops, then ask
-        // the active turn to stop.
+        // Fallback for sub-agent views: the main turn cannot steer a nested
+        // context directly, so keep previous stop-then-run behavior.
         setPromptQueuesByConversation((current) =>
           updatePromptQueue(current, conversationId, (queue) => {
             const first = queue[0];
@@ -2648,6 +2776,7 @@ export function ChatPane({
       onStop,
       queuedPrompts,
       sendQueuedPrompt,
+      steerQueuedPrompt,
       view.status,
     ],
   );
@@ -5458,6 +5587,7 @@ function buildQueuedPrompt({
     mode,
     serviceTier,
     createdAtMs: createdAtMs ?? Date.now(),
+    steering: false,
   };
 }
 
@@ -5811,6 +5941,7 @@ function BlockView({
         >
           <div
             className="msg__body user-text"
+            data-pending-steering={block.pendingSteeringId ? "true" : "false"}
             data-rewindable={rewindDisabled ? "false" : "true"}
             data-rewriting={
               rewriteHistoryIndex !== null &&
@@ -5833,6 +5964,12 @@ function BlockView({
                   }
             }
           >
+            {block.pendingLabel && (
+              <span className="user-text__pending-label">
+                <Icon icon="solar:hourglass-line-duotone" width={12} height={12} />
+                {block.pendingLabel}
+              </span>
+            )}
             {teamMessages ? (
               <TeamMessageStack
                 messages={visibleTeamMessages}
