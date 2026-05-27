@@ -50,3 +50,5 @@ Ce document liste les fonctionnalités développées pour mon usage quotidien su
   * 📂 *Fichiers : `sinew-chrome-bridge/mcp_server.js`*
 * **👥 Multi-comptes OpenAI** : Enregistrez plusieurs clés API distinctes via le bouton `[ + ]` et basculez instantanément de l'une à l'autre.
   * 📂 *Fichiers : `src/components/SettingsPane.tsx`*
+* **📊 Suivi en temps réel des Quotas** : Visualisez instantanément vos quotas et limites actives directement sous forme de barres de progression colorées (vert/bleu/rose/rouge) dans vos configurations de connexion (OAuth OpenAI Codex, OAuth Antigravity, et clés API OpenRouter).
+  * 📂 *Fichiers : `src/lib/quotas.ts`, `src-tauri/src/providers.rs`*
