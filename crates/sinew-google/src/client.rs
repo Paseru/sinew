@@ -358,7 +358,12 @@ impl GoogleProvider {
         &self,
         body: &wire::CodeAssistGenerateRequest,
     ) -> Result<reqwest::Response> {
-        let bases = [self.config.base_url.as_str(), PROD_BASE_URL];
+        let bases = [
+            self.config.base_url.as_str(),
+            PROD_BASE_URL,
+            SANDBOX_BASE_URL,
+            AUTOPUSH_BASE_URL,
+        ];
         let mut last_error = None;
         for base_url in bases {
             let request = self
@@ -378,7 +383,10 @@ impl GoogleProvider {
             let err = read_http_error(response).await;
             if matches!(
                 status,
-                reqwest::StatusCode::FORBIDDEN | reqwest::StatusCode::NOT_FOUND
+                reqwest::StatusCode::FORBIDDEN
+                    | reqwest::StatusCode::NOT_FOUND
+                    | reqwest::StatusCode::SERVICE_UNAVAILABLE
+                    | reqwest::StatusCode::TOO_MANY_REQUESTS
             ) {
                 last_error = Some(err);
                 continue;
