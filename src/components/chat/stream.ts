@@ -731,7 +731,7 @@ function summaryFromInput(
         : typeof record.name === "string"
           ? record.name
           : "";
-    if (server && tool) return `Load ${server} \u00b7 ${tool}`;
+    if (server && tool) return `Load ${server} - ${tool}`;
     return "Load MCP tool";
   }
   if (canonicalName === "web_search" && input && typeof input === "object") {
@@ -764,7 +764,7 @@ function mcpSummaryFromMeta(
     typeof record.serverName === "string" ? record.serverName.trim() : "";
   const toolName =
     typeof record.toolName === "string" ? record.toolName.trim() : "";
-  if (serverName && toolName) return `${mcpServerLabel(serverName)} \u00b7 ${mcpToolLabel(toolName)}`;
+  if (serverName && toolName) return `${mcpServerLabel(serverName)} - ${mcpToolLabel(toolName)}`;
   if (serverName) return mcpServerLabel(serverName);
   return undefined;
 }
@@ -773,7 +773,7 @@ function mcpSummaryFromName(name: string): string | undefined {
   const [, rawServer, ...rawToolParts] = name.split("__");
   const server = mcpServerLabel(rawServer || "MCP", true);
   const tool = mcpToolLabel(rawToolParts.join("__") || "tool", true);
-  return `${server} \u00b7 ${tool}`;
+  return `${server} - ${tool}`;
 }
 
 function mcpToolLabel(value: string, generated = false): string {
@@ -839,9 +839,9 @@ function isSubAgentLikeTool(name: string): boolean {
 }
 
 function subAgentNameFromSummary(summary: string): string | null {
-  const parts = summary.split("\u00b7").map((part) => part.trim()).filter(Boolean);
+  const parts = summary.split(" - ").map((part) => part.trim()).filter(Boolean);
   if (parts.length >= 2 && /^sub-agent$/i.test(parts[0])) {
-    return parts.slice(1).join(" \u00b7 ");
+    return parts.slice(1).join(" - ");
   }
   if (parts.length >= 2 && /^agent$/i.test(parts[0])) {
     return parts[1]?.replace(/^@/, "") ?? null;

@@ -3965,7 +3965,7 @@ function TeamAgentRail({
               <span className="team-agent-chip__body">
                 <span className="team-agent-chip__name">{agent.name}</span>
                 <span className="team-agent-chip__meta">
-                  {agentStatusLabel(agent.status)} \u00b7 {label}
+                  {agentStatusLabel(agent.status)} - {label}
                 </span>
               </span>
             </button>
@@ -5298,9 +5298,9 @@ function subAgentFromMeta(
 
 function subAgentNameFromSummary(summary?: string): string | null {
   if (!summary) return null;
-  const parts = summary.split("\u00b7").map((part) => part.trim()).filter(Boolean);
+  const parts = summary.split(" - ").map((part) => part.trim()).filter(Boolean);
   if (parts.length >= 2 && /^sub-agent$/i.test(parts[0])) {
-    return parts.slice(1).join(" \u00b7 ");
+    return parts.slice(1).join(" - ");
   }
   if (parts.length >= 2 && /^agent$/i.test(parts[0])) {
     return parts[1]?.replace(/^@/, "") ?? null;

@@ -537,7 +537,7 @@ fn test_team_tool() -> TeamTool {
         1,
         None,
         Arc::new(RwLock::new(TeamRuntime::default())),
-        new_editor_diagnostics_store(),
+        crate::new_editor_diagnostics_store(),
         TurnCancel::empty(),
     )
 }

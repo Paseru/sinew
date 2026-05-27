@@ -91,20 +91,20 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             if file_count == 1 {
                 if let Some(path) = groups[0].get("path").and_then(Value::as_str) {
                     if replacement_count > 1 {
-                        return format!("Edit {path} · {replacement_count} replacements");
+                        return format!("Edit {path} - {replacement_count} replacements");
                     }
                     return format!("Edit {path}");
                 }
                 return if replacement_count > 1 {
-                    format!("Edit file · {replacement_count} replacements")
+                    format!("Edit file - {replacement_count} replacements")
                 } else {
                     "Edit file".to_string()
                 };
             }
             return if replacement_count > 0 {
-                format!("Edit files · {file_count} files · {replacement_count} replacements")
+                format!("Edit files - {file_count} files - {replacement_count} replacements")
             } else {
-                format!("Edit files · {file_count} files")
+                format!("Edit files - {file_count} files")
             };
         }
         return "Edit file".to_string();
@@ -125,7 +125,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
         return if count == 0 {
             "Clean context".to_string()
         } else {
-            format!("Clean context · {count} results")
+            format!("Clean context - {count} results")
         };
     }
     if name == tool_names::UPDATE_GOAL {
@@ -198,7 +198,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty());
         if let (Some(server), Some(tool)) = (server, tool) {
-            return format!("Load {server} · {tool}");
+            return format!("Load {server} - {tool}");
         }
         return "Load MCP tool".to_string();
     }
@@ -209,7 +209,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            return format!("Load skill · {skill}");
+            return format!("Load skill - {skill}");
         }
         return "Load skill".to_string();
     }
@@ -220,7 +220,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            return format!("Sub-agent · {task}");
+            return format!("Sub-agent - {task}");
         }
         return "Sub-agent".to_string();
     }
@@ -241,11 +241,11 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty());
         return match (team, agent, objective) {
-            (Some(team), Some(agent), _) => format!("Agent Swarm · restart @{agent} · {team}"),
-            (None, Some(agent), _) => format!("Agent Swarm · restart @{agent}"),
-            (Some(team), None, Some(objective)) => format!("Agent Swarm · {team} · {objective}"),
-            (Some(team), None, None) => format!("Agent Swarm · {team}"),
-            (None, None, Some(objective)) => format!("Agent Swarm · {objective}"),
+            (Some(team), Some(agent), _) => format!("Agent Swarm - restart @{agent} - {team}"),
+            (None, Some(agent), _) => format!("Agent Swarm - restart @{agent}"),
+            (Some(team), None, Some(objective)) => format!("Agent Swarm - {team} - {objective}"),
+            (Some(team), None, None) => format!("Agent Swarm - {team}"),
+            (None, None, Some(objective)) => format!("Agent Swarm - {objective}"),
             _ => "Agent Swarm".to_string(),
         };
     }
@@ -256,7 +256,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            return format!("Agent Swarm · {team}");
+            return format!("Agent Swarm - {team}");
         }
         return "Create Agent Swarm".to_string();
     }
@@ -273,8 +273,8 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty());
         return match (teammate, task) {
-            (Some(teammate), Some(task)) => format!("Agent · @{teammate} · {task}"),
-            (Some(teammate), None) => format!("Agent · @{teammate}"),
+            (Some(teammate), Some(task)) => format!("Agent - @{teammate} - {task}"),
+            (Some(teammate), None) => format!("Agent - @{teammate}"),
             _ => "Agent teammate".to_string(),
         };
     }
@@ -285,7 +285,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            return format!("Message · {to}");
+            return format!("Message - {to}");
         }
         return "Send Agent Swarm message".to_string();
     }
@@ -296,7 +296,7 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            return format!("Task · create · {subject}");
+            return format!("Task - create - {subject}");
         }
         return "Create task".to_string();
     }
@@ -321,11 +321,11 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty());
         return match (action, task_id, subject) {
-            (Some("create"), _, Some(subject)) => format!("Task · create · {subject}"),
+            (Some("create"), _, Some(subject)) => format!("Task - create - {subject}"),
             (Some(action @ ("update" | "claim" | "delete")), Some(task_id), _) => {
-                format!("Task · {action} · #{task_id}")
+                format!("Task - {action} - #{task_id}")
             }
-            (Some(action), _, _) => format!("Task · {action}"),
+            (Some(action), _, _) => format!("Task - {action}"),
             _ => "Task list".to_string(),
         };
     }
@@ -345,8 +345,8 @@ pub(super) fn summarize_tool(name: &str, input: &Value) -> String {
             .map(str::trim)
             .filter(|value| !value.is_empty());
         return match (task_id, status) {
-            (Some(task_id), Some(status)) => format!("Task · #{task_id} · {status}"),
-            (Some(task_id), None) => format!("Task · #{task_id}"),
+            (Some(task_id), Some(status)) => format!("Task - #{task_id} - {status}"),
+            (Some(task_id), None) => format!("Task - #{task_id}"),
             _ => "Update task".to_string(),
         };
     }

@@ -495,20 +495,20 @@ function globTitleParts(argsPretty?: string, output?: string, isError?: boolean)
   if (isError) return { main: `Glob ${pattern} in ${scope}`, meta: "failed" };
   if (matches) {
     const label = matches === "1" ? "match" : "matches";
-    return { main: `Glob ${pattern} in ${scope} \u00b7`, meta: `${matches} ${label}` };
+    return { main: `Glob ${pattern} in ${scope} -`, meta: `${matches} ${label}` };
   }
   return { main: `Glob ${pattern} in ${scope}`, meta: null };
 }
 
 function mcpTitleParts(name: string, summary?: string) {
   const summaryParts = summary
-    ?.split(" \u00b7 ")
+    ?.split(" - ")
     .map((part) => part.trim())
     .filter(Boolean);
   if (summaryParts && summaryParts.length >= 2) {
-    const meta = summaryParts.slice(1).join(" \u00b7 ");
+    const meta = summaryParts.slice(1).join(" - ");
     return {
-      main: `${mcpServerLabel(summaryParts[0])} \u00b7`,
+      main: `${mcpServerLabel(summaryParts[0])} -`,
       meta: mcpToolLabel(meta),
     };
   }
@@ -523,7 +523,7 @@ function mcpTitleParts(name: string, summary?: string) {
   const server = mcpServerLabel(rawServer || "MCP", true);
   const tool = mcpToolLabel(rawToolParts.join("__") || "tool", true);
   return {
-    main: `${server} \u00b7`,
+    main: `${server} -`,
     meta: tool,
   };
 }
@@ -566,9 +566,9 @@ function teamStopOutput(output?: string): string | undefined {
 
 function subAgentNameFromSummary(summary?: string): string | null {
   if (!summary) return null;
-  const parts = summary.split("\u00b7").map((part) => part.trim()).filter(Boolean);
+  const parts = summary.split(" - ").map((part) => part.trim()).filter(Boolean);
   if (parts.length >= 2 && /^sub-agent$/i.test(parts[0])) {
-    return parts.slice(1).join(" \u00b7 ");
+    return parts.slice(1).join(" - ");
   }
   if (parts.length >= 2 && /^agent$/i.test(parts[0])) {
     return parts[1]?.replace(/^@/, "") ?? null;

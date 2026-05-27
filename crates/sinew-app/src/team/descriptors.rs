@@ -228,14 +228,14 @@ impl TeamTool {
     pub fn summary_for_tool_name(&self, name: &str) -> Option<String> {
         let canonical = tool_names::canonical_tool_name(name);
         match canonical {
-            TEAM_RUN_TOOL => Some("Agent Swarm · run".to_string()),
-            TEAM_CREATE_TOOL => Some("Agent Swarm · disabled create".to_string()),
-            AGENT_TOOL => Some("Agent Swarm · disabled agent spawn".to_string()),
-            SEND_MESSAGE_TOOL => Some("Agent Swarm · message".to_string()),
-            TASK_CREATE_TOOL => Some("Task · create".to_string()),
-            TASK_UPDATE_TOOL => Some("Task · update".to_string()),
-            TEAM_STATUS_TOOL => Some("Agent Swarm · status".to_string()),
-            TEAM_STOP_TOOL => Some("Agent Swarm · stop".to_string()),
+            TEAM_RUN_TOOL => Some("Agent Swarm - run".to_string()),
+            TEAM_CREATE_TOOL => Some("Agent Swarm - disabled create".to_string()),
+            AGENT_TOOL => Some("Agent Swarm - disabled agent spawn".to_string()),
+            SEND_MESSAGE_TOOL => Some("Agent Swarm - message".to_string()),
+            TASK_CREATE_TOOL => Some("Task - create".to_string()),
+            TASK_UPDATE_TOOL => Some("Task - update".to_string()),
+            TEAM_STATUS_TOOL => Some("Agent Swarm - status".to_string()),
+            TEAM_STOP_TOOL => Some("Agent Swarm - stop".to_string()),
             _ => None,
         }
     }
