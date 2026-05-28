@@ -8,13 +8,25 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "=== 2. Recherche de l'installateur compilé ===" -ForegroundColor Cyan
-$nsisDir = Join-Path $PSScriptRoot "..\src-tauri\target\release\bundle\nsis"
-if (-not (Test-Path $nsisDir)) {
-    $nsisDir = Resolve-Path "src-tauri/target/release/bundle/nsis" -ErrorAction SilentlyContinue
+$searchPaths = @(
+    "C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\bundle\nsis",
+    "target\release\bundle\nsis",
+    "src-tauri\target\release\bundle\nsis",
+    (Join-Path $PSScriptRoot "..\target\release\bundle\nsis"),
+    (Join-Path $PSScriptRoot "..\src-tauri\target\release\bundle\nsis")
+)
+
+$nsisDir = $null
+foreach ($path in $searchPaths) {
+    if ($path -and (Test-Path $path)) {
+        $nsisDir = $path
+        Write-Host "Dossier d'installateurs trouvé : $nsisDir" -ForegroundColor Green
+        break
+    }
 }
 
-if (-not $nsisDir -or -not (Test-Path $nsisDir)) {
-    Write-Error "Impossible de trouver le dossier de bundle NSIS : $nsisDir"
+if (-not $nsisDir) {
+    Write-Error "Impossible de trouver le dossier de bundle NSIS dans les chemins de recherche."
     Exit 1
 }
 
@@ -26,7 +38,7 @@ if ($exeFiles.Count -eq 0) {
 
 # Get the most recent exe or the first one
 $exeFile = $exeFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-Write-Host "Trouvé : $($exeFile.FullName)" -ForegroundColor Green
+Write-Host "Trouvé : $($exeFile.FullName) (Modifié le : $($exeFile.LastWriteTime))" -ForegroundColor Green
 
 Write-Host "=== 3. Copie vers le Bureau OneDrive ===" -ForegroundColor Cyan
 $desktopPath = [Environment]::GetFolderPath([Environment+SpecialFolder]::Desktop)
