@@ -247,15 +247,44 @@ mod tests {
         .with_workspace_root(r"C:\Dev\sinew")
         .with_cache_key(format!("live-test-{}", uuid::Uuid::new_v4()));
         println!("Sending live Composer request...");
+        let assert_live = std::env::var("SINEW_CURSOR_LIVE_ASSERT")
+            .map(|value| {
+                let trimmed = value.trim();
+                trimmed == "1" || trimmed.eq_ignore_ascii_case("true")
+            })
+            .unwrap_or(false);
         match provider.stream(request).await {
             Ok(mut stream) => {
                 println!("Stream established. Reading events:");
+                let mut saw_message = false;
                 while let Some(event) = stream.next().await {
                     println!("EVENT: {:?}", event);
+                    match event {
+                        Ok(sinew_core::StreamEvent::MessageStart { .. })
+                        | Ok(sinew_core::StreamEvent::TextDelta { .. })
+                        | Ok(sinew_core::StreamEvent::ThinkingDelta { .. }) => {
+                            saw_message = true;
+                        }
+                        Ok(_) => {}
+                        Err(err) => {
+                            println!("STREAM EVENT ERROR: {:?}", err);
+                            if assert_live {
+                                panic!("live Composer stream error: {err:?}");
+                            }
+                        }
+                    }
+                }
+                if assert_live && !saw_message {
+                    panic!(
+                        "live Composer stream returned no text/thinking events (idempotent key still blocked?)"
+                    );
                 }
             }
             Err(err) => {
                 println!("STREAM ERROR: {:?}", err);
+                if assert_live {
+                    panic!("live Composer stream failed: {err:?}");
+                }
             }
         }
     }

@@ -10,7 +10,8 @@
     "test:chrome-bridge:structured": "node sinew-chrome-bridge/e2e-structured.mjs",
     "prepare-sidecars": "node scripts/prepare-sidecars.mjs",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "compil": "powershell -ExecutionPolicy Bypass -File ./scripts/compil.ps1"
   },
   "dependencies": {
     "@iconify-json/solar": "1.2.5",
@@ -25,6 +26,7 @@
     "@xterm/addon-web-links": "0.13.0-beta.218",
     "@xterm/addon-webgl": "0.20.0-beta.217",
     "@xterm/xterm": "6.1.0-beta.218",
+    "cytoscape": "^3.33.4",
     "highlight.js": "^11.10.0",
     "lucide-react": "1.8.0",
     "mermaid": "11.15.0",

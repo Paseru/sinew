@@ -1,3 +1,11 @@
+//! Blob + idempotent encryption material for `StreamUnifiedChatWithToolsIdempotentSSE`.
+//!
+//! Live probes (May 2026): `x-idempotent-encryption-key` must be **base64url** that decodes to
+//! **exactly 32 bytes**. Other lengths → immediate `invalid`; 32-byte values (including raw blob
+//! key, SHA-256/HMAC derivations) → HTTP 200 then **hang** (~10 s) with no `serverChunk`.
+//! The correct 32-byte payload is still unknown — likely not in the Cursor JS bundle; see
+//! `scripts/CAPTURE-MITM.md` and `scripts/probe_idempotent_crypto.py`.
+
 use base64::Engine as _;
 use sinew_core::{AppError, Result};
 
