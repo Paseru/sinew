@@ -5,7 +5,7 @@
   "identifier": "dev.hyrak.sinew",
   "build": {
     "beforeBuildCommand": "npm run prepare-sidecars && npm run prepare-agent-bridge && npm run build",
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run prepare-agent-bridge && npm run dev",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },

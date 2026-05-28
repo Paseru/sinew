@@ -71,8 +71,16 @@ fn tsx_binary(dir: &Path) -> PathBuf {
     }
 }
 
-fn bridge_ready(dir: &Path) -> bool {
+/// True when the Node bridge can run without `npm ci` (bundled release or dev install).
+pub fn bridge_ready(dir: &Path) -> bool {
     tsx_binary(dir).is_file() && dir.join("vendor").join("agent_pb.ts").is_file()
+}
+
+/// Node fallback is available (bundled or dev tree with deps installed).
+pub fn node_bridge_available() -> bool {
+    bridge_directory()
+        .map(|dir| bridge_ready(&dir))
+        .unwrap_or(false)
 }
 
 /// Install `agent-bridge` npm deps if missing (no-op when bundled `node_modules` exists).

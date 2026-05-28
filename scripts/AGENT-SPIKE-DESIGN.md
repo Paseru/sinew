@@ -54,9 +54,10 @@ crates/sinew-cursor/src/
 ### Sélection transport
 
 ```text
-# Défaut: agent.v1 + bridge Rust (pas de subprocess Node au démarrage)
-SINEW_CURSOR_BRIDGE=node              # forcer Node/tsx
-SINEW_CURSOR_BRIDGE_FALLBACK=1        # repli Node si Rust échoue
+# Utilisateur : OAuth Cursor dans Réglages uniquement (rien d'autre)
+# Défaut: agent.v1 + bridge Rust ; repli Node auto si bundle prêt (build release)
+SINEW_CURSOR_BRIDGE=node              # forcer Node/tsx (debug)
+SINEW_CURSOR_BRIDGE_FALLBACK=0        # désactiver repli Node
 SINEW_CURSOR_TRANSPORT=idempotent     # legacy IdempotentSSE (cassé)
 ```
 
@@ -126,7 +127,7 @@ SINEW_CURSOR_TRANSPORT=idempotent     # legacy IdempotentSSE (cassé)
 
 1. ~~`probe_agent_run.py`~~ — `GetUsableModels` OK (200).
 2. ~~`SINEW_CURSOR_TRANSPORT=agent`~~ — branché via `scripts/agent-bridge` + `crates/sinew-cursor/src/agent/`.
-3. `cd scripts/agent-bridge && npm install` puis test `run-stream.mjs` (voir README).
+3. ~~`npm install` manuel~~ — `prepare-agent-bridge` au build/dev ; utilisateur = OAuth seulement.
 4. ~~`npm install` manuel~~ — auto au build + au lancement Sinew.
 5. Historique multi-tours + checkpoint persisté (`cursor-agent-conversations.json` par `cache_key`).
 6. Outils Read/Write/Delete/Grep/Bash via MCP + exec natifs read/ls/write.
@@ -134,6 +135,6 @@ SINEW_CURSOR_TRANSPORT=idempotent     # legacy IdempotentSSE (cassé)
 8. ~~Tokens usage (`tokenDelta`)~~ — `StreamEvent::Usage` en direct + `MessageStop` (barre contexte Sinew).
 9. ~~Edit search-replace~~ — `old_string` / `new_string` dans `agent/tools.rs`.
 10. Outils Composer visibles dans le chat (`composer_bridge` meta, pas de double exécution).
-11. Bridge 100 % Rust — **phase 4** : Rust seul par défaut (pas de `npm` au démarrage), repli Node opt-in `SINEW_CURSOR_BRIDGE_FALLBACK=1`, `project_layouts` dans requestContext, CI `cursor-agent.yml`. Reste : daemon Node/H2 multi-tours.
+11. Bridge 100 % Rust — **phase 5** : OAuth seul côté user, repli Node **automatique** si bundle prêt, messages FR, `prepare-agent-bridge` en dev. Reste : retirer bundle Node du install si 100 % fiable.
 12. ~~Fermeture stream~~ — idle 2,5s après texte, `stepCompleted`/`turnEnded`, cap 120s, `test-live.ps1` timeout 90s.
 5. MITM optionnel ; tools/sessions agent (phase 2).

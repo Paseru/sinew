@@ -457,17 +457,22 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
             tracing::info!(path = %bundled.display(), "agent-bridge: bundle embarqué");
         }
     }
+    let _ = sinew_cursor::agent::setup::bridge_directory();
 
-    if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
-        tauri::async_runtime::spawn(async move {
+    tauri::async_runtime::spawn(async move {
+        if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
             match ensure_agent_bridge_ready().await {
-                Ok(dir) => tracing::debug!(path = %dir.display(), "agent-bridge Node prêt (fallback/forcé)"),
-                Err(err) => tracing::warn!(error = %err, "agent-bridge Node: préparation échouée"),
+                Ok(dir) => {
+                    tracing::info!(path = %dir.display(), "agent-bridge: deps installées (repli auto)")
+                }
+                Err(err) => tracing::warn!(error = %err, "agent-bridge: install auto échouée (Rust seul)"),
             }
-        });
-    } else {
-        tracing::debug!("agent-bridge Node ignoré au démarrage (bridge Rust seul)");
-    }
+        } else if sinew_cursor::agent::setup::node_bridge_available() {
+            tracing::debug!("agent-bridge Node prête (repli auto sans npm)");
+        } else {
+            tracing::debug!("Composer: bridge Rust OAuth (aucune config requise)");
+        }
+    });
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

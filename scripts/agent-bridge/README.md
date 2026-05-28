@@ -1,49 +1,27 @@
-# Agent bridge (agent.v1 Run)
+# agent-bridge (Node)
 
-Pont Node pour Sinew : encode une requête `agent.v1.AgentService/Run` en protobuf et stream les deltas texte.
+Pont **optionnel** pour `agent.v1` — Sinew utilise par défaut le **bridge Rust** (aucune config).
 
-## Installation
+## Utilisateur final
 
-**Automatique** : au build Sinew (`npm run prepare-agent-bridge`) et au premier lancement de l’app (`npm ci` si besoin). Rien à faire pour l’utilisateur final.
+1. Ouvrir Sinew → **Réglages → Fournisseurs**
+2. **Connecter Cursor** (OAuth Google ou GitHub)
+3. Utiliser Composer — rien d'autre à installer ni variable d'environnement.
 
-Développeurs (optionnel) :
+## Développeur
 
-```powershell
-npm run prepare-agent-bridge
+```bash
+npm run prepare-agent-bridge   # une fois (ou automatique via beforeBuildCommand / beforeDevCommand)
 ```
 
-Télécharge `vendor/agent_pb.ts` depuis [cursor-oauth-opencode](https://github.com/jaredboynton/cursor-oauth-opencode).
+Repli Node automatique si le bridge Rust échoue **et** que `node_modules` est présent (build release ou `prepare-agent-bridge`).
 
-Requiert **`npx tsx`** (dépendance npm) pour exécuter `vendor/agent_pb.ts`.
+Forcer Node : `SINEW_CURSOR_BRIDGE=node`  
+Désactiver le repli : `SINEW_CURSOR_BRIDGE_FALLBACK=0`
 
-Corrections critiques du bridge :
-- réponses `exec` enveloppées dans `AgentClientMessage` (pas du protobuf `ExecClientMessage` nu) ;
-- `conversationState.turns` = références blob (SHA-256), pas octets inline ;
-- message utilisateur courant uniquement via `userMessageAction`.
-
-## Test manuel
+Tests :
 
 ```powershell
-$token = (Get-Content "$env:LOCALAPPDATA\Hyrak\sinew\data\cursor-composer-auth.json" | ConvertFrom-Json).tokens.accessToken
-$line = @{ accessToken=$token; modelId="composer-2.5"; systemPrompt="You are Composer"; userText="Say OK" } | ConvertTo-Json -Compress
-.\test-live.ps1
-# ou :
-$line | npx tsx run-stream.mjs
-```
-
-## Transport dans Sinew
-
-Par défaut Sinew utilise déjà `agent.v1` (aucune variable requise).
-
-Pour forcer l’ancien chemin IdempotentSSE (cassé) :
-
-```powershell
-$env:SINEW_CURSOR_TRANSPORT = "idempotent"
-```
-
-Test live :
-
-```powershell
-cd C:\Dev\Sinew
-cargo test -p sinew-cursor test_live_composer_request -- --nocapture
+.\scripts\agent-bridge\test-live.ps1
+.\scripts\agent-bridge\test-live-rust.ps1
 ```

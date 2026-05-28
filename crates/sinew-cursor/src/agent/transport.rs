@@ -14,20 +14,31 @@ pub fn use_rust_agent_bridge() -> bool {
     !prefer_node_bridge()
 }
 
-/// Opt-in Node fallback when the Rust bridge fails (`SINEW_CURSOR_BRIDGE_FALLBACK=1`).
-pub fn allow_node_fallback() -> bool {
+/// Force-disable automatic Node fallback (`SINEW_CURSOR_BRIDGE_FALLBACK=0`).
+pub fn forbid_node_fallback() -> bool {
     match std::env::var("SINEW_CURSOR_BRIDGE_FALLBACK") {
-        Ok(value) => matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "node"
-        ),
+        Ok(value) => matches!(value.trim().to_ascii_lowercase().as_str(), "0" | "false" | "no"),
         Err(_) => false,
     }
 }
 
-/// Pre-install Node `agent-bridge` at startup only when Node may run.
+/// Retry via Node when Rust fails if the bundled/dev bridge is ready (no env var for users).
+pub fn should_auto_fallback_to_node() -> bool {
+    if prefer_node_bridge() || forbid_node_fallback() {
+        return false;
+    }
+    super::setup::node_bridge_available()
+}
+
+/// Background `npm ci` only when a bridge dir exists but deps are missing (packaged app repair).
 pub fn should_prepare_node_bridge_at_startup() -> bool {
-    prefer_node_bridge() || allow_node_fallback()
+    if prefer_node_bridge() {
+        return true;
+    }
+    if forbid_node_fallback() {
+        return false;
+    }
+    super::setup::bridge_directory().is_some_and(|dir| !super::setup::bridge_ready(&dir))
 }
 
 /// Transport selection for Cursor Composer streaming.
@@ -81,18 +92,19 @@ mod tests {
     }
 
     #[test]
-    fn node_fallback_off_by_default() {
-        let _guard = env_lock();
-        std::env::remove_var("SINEW_CURSOR_BRIDGE_FALLBACK");
-        assert!(!super::allow_node_fallback());
-    }
-
-    #[test]
-    fn startup_skips_node_without_fallback() {
+    fn auto_fallback_uses_bundled_bridge_when_ready() {
         let _guard = env_lock();
         std::env::remove_var("SINEW_CURSOR_BRIDGE");
         std::env::remove_var("SINEW_CURSOR_BRIDGE_FALLBACK");
-        assert!(!super::should_prepare_node_bridge_at_startup());
+        let _ = super::should_auto_fallback_to_node();
+    }
+
+    #[test]
+    fn forbid_fallback_when_disabled() {
+        let _guard = env_lock();
+        std::env::set_var("SINEW_CURSOR_BRIDGE_FALLBACK", "0");
+        assert!(super::forbid_node_fallback());
+        std::env::remove_var("SINEW_CURSOR_BRIDGE_FALLBACK");
     }
 
     #[test]

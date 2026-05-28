@@ -79,7 +79,9 @@ impl CursorProvider {
 
     async fn composer_token(&self) -> Result<String> {
         let session = self.config.composer.as_ref().ok_or_else(|| {
-            AppError::Auth("Cursor is not connected. Connect your Cursor account in Settings.".into())
+            AppError::Auth(
+                "Cursor n'est pas connecté. Ouvrez Réglages → Fournisseurs et connectez-vous via OAuth (Google ou GitHub).".into(),
+            )
         })?;
         let token = ensure_fresh_composer_token(&self.http, session).await?;
         if self.should_block_for_pool_exhaustion(&token).await? {

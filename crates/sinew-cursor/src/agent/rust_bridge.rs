@@ -17,6 +17,21 @@ use super::state::AgentConversationStore;
 use super::tools::execute_tool;
 use super::transcript::split_transcript;
 
+const OAUTH_HINT: &str =
+    "Connectez votre compte Cursor dans Réglages → Fournisseurs (OAuth Google ou GitHub).";
+
+fn map_rust_bridge_error(err: AppError) -> AppError {
+    match &err {
+        AppError::Auth(msg) if !msg.contains("Réglages") => {
+            AppError::Auth(format!("{msg} {OAUTH_HINT}"))
+        }
+        AppError::Network(msg) if !msg.contains("Réglages") && !msg.contains("OAuth") => {
+            AppError::Network(format!("{msg} {OAUTH_HINT}"))
+        }
+        _ => err,
+    }
+}
+
 /// Stream via native Rust HTTP/2 + prost (no Node subprocess).
 pub async fn stream_via_rust_bridge(
     identity: &CursorIdeIdentity,
@@ -25,13 +40,13 @@ pub async fn stream_via_rust_bridge(
 ) -> Result<ProviderStream> {
     match stream_via_rust_bridge_inner(identity, token.clone(), request.clone()).await {
         Ok(stream) => Ok(stream),
-        Err(err) if super::transport::allow_node_fallback() => {
+        Err(err) if super::transport::should_auto_fallback_to_node() => {
             tracing::warn!(
-                "Rust agent bridge failed ({err}), falling back to Node (SINEW_CURSOR_BRIDGE_FALLBACK)"
+                "Rust agent bridge failed ({err}), automatic fallback to bundled Node bridge"
             );
             stream_via_node_bridge(identity, token, request).await
         }
-        Err(err) => Err(err),
+        Err(err) => Err(map_rust_bridge_error(err)),
     }
 }
 
@@ -202,9 +217,9 @@ async fn stream_via_rust_bridge_inner(
         }
 
         if !started_text && tools_executed == 0 {
-            Err(AppError::Network(
-                "Rust agent bridge returned no text (OAuth Composer connecté ?)".into(),
-            ))?;
+            Err(AppError::Network(format!(
+                "Composer n'a renvoyé aucun texte. {OAUTH_HINT}"
+            )))?;
         }
 
         let stop_reason = if tools_executed > 0 {
