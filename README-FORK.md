@@ -94,16 +94,31 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
 
 ---
 
-## 📅 28/05 — Abonnement Gemini et Sélection Dynamique de Modèles d'Images
+## 📅 28/05 — Confort de l'Éditeur, Sauvegarde Automatique SOTA, Tailles Dynamiques & Abonnement Gemini
 
+* **🖱️ Menu clic droit premium sur les onglets de l'éditeur (Context Menu) avec traduction française dynamique**
+  * **Pourquoi c'est top :** Un confort de navigation indispensable au clic droit sur chaque onglet ouvert pour fermer les fichiers (l'onglet actif, les autres ou tous les onglets à sa droite) en un instant.
+  * **Ergonomie & Accès :** Intègre la copie directe en un clic du chemin absolu/relatif et l'accès direct au fichier dans l'explorateur système (Finder/Explorer). Entièrement bilingue (français/anglais) selon vos paramètres.
+  * 📂 *Fichiers : `src/components/Workspace.tsx`, `src/components/EditorPane.tsx`, `src/styles.css`*
+* **💾 Sauvegarde automatique intelligente (Auto-Save SOTA) avec debounce réactif**
+  * **Pourquoi c'est top :** Plus besoin de faire `Ctrl+S` ! L'application enregistre vos fichiers en arrière-plan de manière transparente 1,5 seconde après l'arrêt de la frappe.
+  * **Intégration propre :** Réactif, activable ou désactivable d'un simple commutateur dans vos paramètres d'options sans perturber votre travail.
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/components/EditorPane.tsx`*
+* **🔎 Sélecteurs de la taille du texte (Éditeur & Chat) avec variables CSS à chaud**
+  * **Pourquoi c'est top :** Ajustez le confort visuel global de votre plan de travail. Deux sélecteurs de contrôle tactiles (`+` et `-`) font varier précisément la taille des textes du code et du chat de l'IA (de 10px à 22px).
+  * **Performance :** L'ajustement s'effectue à chaud sans aucune latence via l'injection de variables CSS documentaires appliquées dès le démarrage.
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/components/EditorPane.tsx`, `src/App.tsx`, `src/styles.css`*
+* **🔑 Diagnostic Windows OAuth résistant aux blocages de ports**
+  * **Pourquoi c'est top :** Fini les échecs de connexion mystérieux. En cas d'erreur de port réseau (code 10013) typique sous Windows, l'IA capture l'exception et vous conseille instantanément de vérifier les plages d'adresses ou de redémarrer WinNAT/HNS.
+  * 📂 *Fichiers : `src-tauri/src/providers.rs`*
 * **🍌 Abonnement Gemini (Google OAuth) sans clé API dans l'outil d'images**
-  * Ajout de l'interrupteur toggle « Utiliser l'abonnement Gemini » (symétrique à OpenAI) pour s'authentifier directement avec ton compte Google connecté, sans clé API.
+  * **Pourquoi c'est top :** Authentifiez-vous directement avec votre compte Google connecté sans clé API externe grâce à l'interrupteur symétrique à OpenAI.
   * 📂 *Fichiers : `crates/sinew-app/src/image.rs`, `src/components/SettingsPane.tsx`, `src/types.ts`*
-* **🎨 Menu déroulant de sélection des 3 derniers modèles d'images phares**
-  * Intégration d'un sélecteur de modèles d'images complet : passez librement entre `gpt-image-2`, `gpt-image-1.5`, `dall-e-3` pour OpenAI, et `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, `gemini-2.5-flash-image` pour Gemini.
+* **🎨 Menu déroulant de sélection des modèles d'images phares**
+  * **Pourquoi c'est top :** Passez librement entre les meilleurs générateurs d'images du marché (`gpt-image-2`, `gpt-image-1.5`, `dall-e-3` pour OpenAI, et `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, `gemini-2.5-flash-image` pour Gemini).
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`, `crates/sinew-app/src/image.rs`, `src/components/SettingsPane.tsx`*
 * **⚙️ Intégration de sécurité & Synchro automatique**
-  * Réinitialisation de l'abonnement d'images si le fournisseur Google est déconnecté, et sauvegarde immédiate des préférences dans le profil utilisateur.
+  * **Pourquoi c'est top :** Sauvegarde immédiate des préférences utilisateur dans votre profil et réinitialisation de l'abonnement d'images si le fournisseur Google est déconnecté.
   * 📂 *Fichiers : `src-tauri/src/providers.rs`, `src/components/SettingsPane.tsx`*
 
 ---
@@ -215,21 +230,5 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * Securisation du script de test en direct (`test-live.ps1`) via une exécution asynchrone par `Start-Job` surveillée avec arrêt forcé au bout de 90 secondes si le serveur distant ne répond pas.
   * 📂 *Fichiers : `scripts/agent-bridge/run-stream.mjs`, `scripts/agent-bridge/test-live.ps1`*
 
----
-
-## 📅 01/06 — Clic Droit Onglets, Sauvegarde Automatique, Réglages de Taille & Robustesse Windows
-
-* **🖱️ Menu clic droit sur les onglets de l'éditeur (Editor Tab Context Menu) avec localisation multilingue**
-  * Ajout d'un menu contextuel complet par clic droit (ou raccourci `F10`) sur les onglets de l'éditeur. Permet de fermer l'onglet (raccourci `Ctrl+F4`), de fermer les autres, de fermer à droite, de fermer tous les onglets, de copier le chemin (absolu ou relatif) et d'ouvrir le dossier système Finder/Explorateur. Les libellés sont entièrement traduits en français ou en anglais selon vos préférences.
-  * 📂 *Fichiers : `src/components/Workspace.tsx`, `src/components/EditorPane.tsx`, `src/styles.css`*
-* **💾 Sauvegarde automatique SOTA (Auto-Save) réactive**
-  * Intégration d'une option d'activation de la sauvegarde automatique. Une fois active, tout fichier modifié est enregistré de manière transparente en arrière-plan après 1,5 seconde d'inactivité de frappe (debounce réactif pur React), sans aucune interruption de saisie.
-  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/components/EditorPane.tsx`*
-* **🔎 Sélecteurs de la taille du texte (Éditeur & Chat) avec variables CSS à chaud**
-  * Ajout de boutons interactifs de contrôle (`+` et `-`) pour régler précisément la taille des caractères de l'éditeur de code Monaco et du chat de discussion IA (de 10px à 22px). La taille du chat s'adapte instantanément via l'injection de variables CSS documentaires appliquées dès le démarrage.
-  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/components/EditorPane.tsx`, `src/App.tsx`, `src/styles.css`*
-* **🔑 Diagnostic Windows OAuth résilient aux conflits de ports**
-  * Capture intelligente de l'erreur d'autorisation réseau spécifique à Windows (code 10013) lors des connexions OAuth pour suggérer automatiquement de vérifier les plages d'adresses ou de redémarrer les services système WinNAT/HNS.
-  * 📂 *Fichiers : `src-tauri/src/providers.rs`*
 
 
