@@ -186,4 +186,16 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * Ajout du module de tramage de données pour `application/connect+proto` (`connect_proto.rs`), permettant d'encapsuler et de décoder de manière fluide le protocole Connect-RPC en Rust.
   * Création d'un utilitaire d'extraction de schéma `export-agent-descriptor.mjs` qui exporte l'ensemble de descripteurs de fichiers Protobuf (`FileDescriptorSet`) sous forme binaire (`agent.fds`) pour alimenter `prost-build` et générer automatiquement des clients typés en Rust.
   * 📂 *Fichiers : `crates/sinew-cursor/src/agent/connect_proto.rs`, `scripts/export-agent-descriptor.mjs`*
+* **🔑 Connexion Cursor sans clé : Extraction automatique des jetons locaux (`state.vscdb`)**
+  * Sinew scanne et extrait automatiquement vos jetons de session Cursor officiels directement à partir de la base de données SQLite locale de l'IDE Cursor (`state.vscdb`) stockée sur votre PC. Permet une authentification et une connexion transparentes et instantanées sans aucune configuration ni saisie manuelle.
+  * 📂 *Fichiers : `src-tauri/src/state.rs`, `crates/sinew-cursor/src/auth/oauth.rs`*
+* **🏢 Badge d'espace de travail ChatGPT Team/Enterprise (`/wham/accounts/check`)**
+  * Pour les comptes OpenAI / Codex connectés, Sinew interroge les serveurs sécurisés pour récupérer et afficher le nom réel de votre espace de travail d'entreprise (Team / Enterprise workspace) directement à côté de votre email dans les paramètres.
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/lib/ipc.ts`*
+* **🏎️ Batching de rendu & Fluidité du chat sous haut débit**
+  * Optimisation radicale de la réactivité du chat grâce au regroupement par lots (batching) des deltas de streaming de l'IA, supprimant toute surcharge du processeur et maintenant une fluidité d'affichage optimale de l'interface même lors de réponses ultra-rapides.
+  * 📂 *Fichiers : `src/components/chat/stream.ts`, `src/components/chat/ChatPane.tsx`*
+* **⚡ Sélecteurs de vitesse et d'intelligence à la volée**
+  * Ajout de boutons d'action rapide (raccourcis 5.5 XHigh Fast) sur chaque carte de profil OpenAI secondaire dans les paramètres pour modifier instantanément les priorités de calcul et de rapidité de vos assistants.
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/types.ts`*
 
