@@ -23,6 +23,7 @@
 │           └── SKILL.md
 ├── scripts
 │   ├── agent-bridge
+│   │   └── export-agent-fds-prost.mjs
 │   │   ├── h2-bridge.mjs
 │   │   ├── run-stream.mjs
 │   │   ├── test-live.ps1
@@ -162,11 +163,16 @@
 │           ├── agent
 │           │   ├── bridge.rs
 │           │   ├── connect_proto.rs
+│           │   ├── proto_pool.rs
+│           │   ├── run_h2.rs
+│           │   ├── run_request.rs
 │           │   ├── rust_bridge.rs
+│           │   ├── server_decode.rs
 │           │   ├── models.rs
 │           │   └── transport.rs
 │           ├── proto
 │           │   ├── agent.fds
+│           │   ├── agent.pb
 │           │   └── README.md
 │           ├── client.rs
 │           ├── encryption.rs
