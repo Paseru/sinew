@@ -319,18 +319,37 @@ pub(super) async fn save_skill_settings(
 
 #[tauri::command]
 pub(super) async fn register_chrome_bridge(
+    app_handle: tauri::AppHandle,
     workspace_path: String,
 ) -> std::result::Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
         use std::path::PathBuf;
+        use tauri::Manager;
 
-        let workspace_root = PathBuf::from(&workspace_path);
-        let ps_script = workspace_root.join("sinew-chrome-bridge").join("register.ps1");
-        if !ps_script.exists() {
-            return Err("Le script d'enregistrement sinew-chrome-bridge/register.ps1 est introuvable dans ce dossier.".to_string());
+        // Try resource path first
+        let mut ps_script = None;
+        if let Ok(resource_dir) = app_handle.path().resource_dir() {
+            let path = resource_dir.join("sinew-chrome-bridge").join("register.ps1");
+            if path.exists() {
+                ps_script = Some(path);
+            }
         }
+
+        // Fallback to workspace path
+        if ps_script.is_none() {
+            let workspace_root = PathBuf::from(&workspace_path);
+            let path = workspace_root.join("sinew-chrome-bridge").join("register.ps1");
+            if path.exists() {
+                ps_script = Some(path);
+            }
+        }
+
+        let ps_script = match ps_script {
+            Some(path) => path,
+            None => return Err("Le script d'enregistrement register.ps1 est introuvable. Veuillez vous assurer que le dossier sinew-chrome-bridge est présent dans vos ressources ou votre espace de travail.".to_string()),
+        };
 
         let output = Command::new("powershell")
             .arg("-ExecutionPolicy")
