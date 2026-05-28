@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use async_stream::try_stream;
 use sinew_core::{
-    AppError, PartKind, ProviderRequest, ProviderStream, Result, StopReason, StreamEvent, Usage,
+    AppError, PartKind, ProviderRequest, ProviderStream, Result, StopReason, StreamEvent,
+    ToolCallIntro, Usage,
 };
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
@@ -151,8 +152,10 @@ pub async fn stream_via_node_bridge(
         yield StreamEvent::MessageStart { model: model_name.clone() };
         let text_index = 0usize;
         let thinking_index = 1usize;
+        let mut next_tool_index = 2usize;
         let mut open_part: Option<(usize, PartKind)> = None;
         let mut started_text = false;
+        let mut tools_executed = 0u32;
         let mut usage = Usage::default();
 
         while let Some(line) = line_rx.recv().await {
@@ -197,6 +200,7 @@ pub async fn stream_via_node_bridge(
                     .unwrap_or(output as u64) as u32;
                 usage.output_tokens = output;
                 usage.total_tokens = total.max(output);
+                yield StreamEvent::Usage { usage };
                 continue;
             }
 
@@ -205,9 +209,45 @@ pub async fn stream_via_node_bridge(
                     .get("toolName")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
+                let tool_id = value
+                    .get("toolCallId")
+                    .and_then(|v| v.as_str())
+                    .or_else(|| value.get("execId").and_then(|v| v.as_str()))
+                    .unwrap_or("composer-tool")
+                    .to_string();
                 let args = value.get("args").cloned().unwrap_or(serde_json::Value::Null);
+                if let Some((idx, _)) = open_part.take() {
+                    yield StreamEvent::PartStop { index: idx };
+                }
+                let tool_index = next_tool_index;
+                next_tool_index += 1;
+                let args_json = serde_json::to_string(&args)
+                    .map_err(|err| AppError::Provider(format!("tool args json: {err}")))?;
+                yield StreamEvent::PartStart {
+                    index: tool_index,
+                    kind: PartKind::ToolCall,
+                    tool: Some(ToolCallIntro {
+                        id: tool_id.clone(),
+                        name: tool_name.to_string(),
+                    }),
+                };
+                yield StreamEvent::ToolJsonDelta {
+                    index: tool_index,
+                    chunk: args_json,
+                };
                 let content = execute_tool(tool_name, &args, &workspace_for_tools);
                 let is_error = content.starts_with("Error:");
+                yield StreamEvent::PartMeta {
+                    index: tool_index,
+                    meta: serde_json::json!({
+                        "composer_bridge": {
+                            "content": content,
+                            "is_error": is_error,
+                        }
+                    }),
+                };
+                yield StreamEvent::PartStop { index: tool_index };
+                tools_executed += 1;
                 let response = serde_json::json!({
                     "type": "tool_response",
                     "execId": value.get("execId"),
@@ -266,16 +306,18 @@ pub async fn stream_via_node_bridge(
             yield StreamEvent::PartStop { index: idx };
         }
 
-        if !started_text {
+        if !started_text && tools_executed == 0 {
             Err(AppError::Network(
                 "agent bridge returned no text (OAuth Composer connecté ?)".into(),
             ))?;
         }
 
-        yield StreamEvent::MessageStop {
-            stop_reason: StopReason::EndTurn,
-            usage,
+        let stop_reason = if tools_executed > 0 {
+            StopReason::ToolUse
+        } else {
+            StopReason::EndTurn
         };
+        yield StreamEvent::MessageStop { stop_reason, usage };
     };
 
     Ok(Box::pin(events))

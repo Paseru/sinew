@@ -128,6 +128,8 @@ crates/sinew-cursor/src/
 5. Historique multi-tours + checkpoint persisté (`cursor-agent-conversations.json` par `cache_key`).
 6. Outils Read/Write/Delete/Grep/Bash via MCP + exec natifs read/ls/write.
 7. HTTP/2 inline (un seul processus Node/tsx, plus de sous-processus h2-bridge).
-8. Tokens usage (`tokenDelta`) remontés jusqu'à `MessageStop`.
-9. Edit search-replace (`old_string` / `new_string`).
+8. ~~Tokens usage (`tokenDelta`)~~ — `StreamEvent::Usage` en direct + `MessageStop` (barre contexte Sinew).
+9. ~~Edit search-replace~~ — `old_string` / `new_string` dans `agent/tools.rs`.
+10. Outils Composer visibles dans le chat (`composer_bridge` meta, pas de double exécution).
+11. Bridge 100 % Rust (`prost` + HTTP/2) — chantier suivant.
 5. MITM optionnel ; tools/sessions agent (phase 2).

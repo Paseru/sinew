@@ -39,6 +39,29 @@ use crate::{system_prompt_with_todo, tool_names, ReadFingerprint, ToolRunResult}
 
 const SAFE_STREAM_MAX_RETRIES: usize = 5;
 
+fn tool_result_from_composer_bridge_meta(meta: &Option<Value>) -> Option<ToolRunResult> {
+    let Value::Object(map) = meta.as_ref()? else {
+        return None;
+    };
+    let Value::Object(bridge) = map.get("composer_bridge")? else {
+        return None;
+    };
+    let content = bridge
+        .get("content")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let is_error = bridge
+        .get("is_error")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    Some(if is_error {
+        ToolRunResult::err(content, Vec::new())
+    } else {
+        ToolRunResult::ok(content, Vec::new())
+    })
+}
+
 fn cursor_system_prompt(
     base: &str,
     mode: AgentMode,
@@ -699,10 +722,15 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         let mut tool_results = Vec::new();
         for part in &assistant.parts {
             if let Part::ToolCall {
-                id, name, input, ..
+                id,
+                name,
+                input,
+                meta,
             } = part
             {
-                let result = if name == "clean_context" {
+                let result = if let Some(result) = tool_result_from_composer_bridge_meta(meta) {
+                    result
+                } else if name == "clean_context" {
                     run_clean_context(&mut history, input.clone(), &current_turn_tool_result_ids)
                 } else if name == "update_goal" {
                     run_update_goal(&mut goal_workflow, input.clone())
