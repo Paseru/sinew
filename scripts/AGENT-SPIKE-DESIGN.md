@@ -131,6 +131,6 @@ crates/sinew-cursor/src/
 8. ~~Tokens usage (`tokenDelta`)~~ — `StreamEvent::Usage` en direct + `MessageStop` (barre contexte Sinew).
 9. ~~Edit search-replace~~ — `old_string` / `new_string` dans `agent/tools.rs`.
 10. Outils Composer visibles dans le chat (`composer_bridge` meta, pas de double exécution).
-11. Bridge 100 % Rust — **phase 2+** : exec bidirectionnel, MCP, LS `shallowLayout`, pool HTTP/2 partagé (`h2_client.rs`), retry 429/5xx (`retry.rs`), test live `test_live_rust_agent_bridge`. Reste : Rust par défaut, un processus sans Node.
+11. Bridge 100 % Rust — **phase 3** : Rust par défaut (repli Node), pool H2 (`h2_client.rs`), retry Rust+Node 429/5xx, LS `shallowLayout`, test `test-live-rust.ps1`. Reste : supprimer Node du chemin nominal.
 12. ~~Fermeture stream~~ — idle 2,5s après texte, `stepCompleted`/`turnEnded`, cap 120s, `test-live.ps1` timeout 90s.
 5. MITM optionnel ; tools/sessions agent (phase 2).

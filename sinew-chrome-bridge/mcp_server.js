@@ -200,7 +200,14 @@ async function waitForBridge(timeoutMs = BRIDGE_WAIT_MS) {
     await sleep(500);
   }
 
-  throw new Error(`Chrome bridge did not become ready${lastError ? `: ${lastError.message}` : ''}`);
+  throw new Error(
+    "Erreur de connexion : L'extension Sinew Chrome n'est pas connectée au pont local.\n" +
+    "Pour résoudre ce problème :\n" +
+    "1. Ouvrez Google Chrome et accédez à 'chrome://extensions'.\n" +
+    "2. Si l'extension 'Sinew Chrome Bridge' n'est pas installée, cliquez sur 'Charger l'extension non empaquetée' et sélectionnez le dossier 'sinew-chrome-bridge' dans le projet.\n" +
+    "3. Si elle est déjà installée mais désactivée, activez simplement son interrupteur bleu.\n" +
+    "4. Cliquez sur l'icône de l'extension dans la barre d'outils et cliquez sur 'Reconnect' pour qu'elle passe au Vert 🟢."
+  );
 }
 
 function sameOriginOrUrl(tabUrl, targetUrl) {

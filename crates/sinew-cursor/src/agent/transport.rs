@@ -1,9 +1,18 @@
-/// Use the native Rust agent bridge when `SINEW_CURSOR_BRIDGE=rust` (experimental).
-pub fn use_rust_agent_bridge() -> bool {
+/// Force the Node `agent-bridge` subprocess (`SINEW_CURSOR_BRIDGE=node`).
+pub fn prefer_node_bridge() -> bool {
     match std::env::var("SINEW_CURSOR_BRIDGE") {
-        Ok(value) => matches!(value.trim().to_ascii_lowercase().as_str(), "rust" | "1" | "true"),
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "node" | "0" | "false"
+        ),
         Err(_) => false,
     }
+}
+
+/// Use the native Rust HTTP/2 bridge (default). Falls back to Node on error unless
+/// `SINEW_CURSOR_BRIDGE=node` forces Node only.
+pub fn use_rust_agent_bridge() -> bool {
+    !prefer_node_bridge()
 }
 
 /// Transport selection for Cursor Composer streaming.
@@ -40,10 +49,19 @@ mod tests {
     }
 
     #[test]
-    fn rust_bridge_only_when_forced() {
+    fn rust_bridge_by_default() {
         let _guard = env_lock();
-        std::env::set_var("SINEW_CURSOR_BRIDGE", "rust");
+        std::env::remove_var("SINEW_CURSOR_BRIDGE");
         assert!(super::use_rust_agent_bridge());
+        assert!(!super::prefer_node_bridge());
+    }
+
+    #[test]
+    fn node_bridge_when_forced() {
+        let _guard = env_lock();
+        std::env::set_var("SINEW_CURSOR_BRIDGE", "node");
+        assert!(!super::use_rust_agent_bridge());
+        assert!(super::prefer_node_bridge());
         std::env::remove_var("SINEW_CURSOR_BRIDGE");
     }
 

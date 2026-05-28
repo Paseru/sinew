@@ -754,12 +754,6 @@ const sendFrame = (frame) => {
   h2Stream.write(frame);
 };
 
-h2Client = http2.connect("https://api2.cursor.sh");
-h2Client.on("error", (err) => {
-  emit({ error: `h2 client: ${err}` });
-  gracefulFinish(1);
-});
-
 const h2Headers = {
   ...apiHeaders,
   ":method": "POST",
@@ -769,17 +763,34 @@ const h2Headers = {
   authorization: `Bearer ${accessToken}`,
   "connect-protocol-version": "1",
 };
-h2Stream = h2Client.request(h2Headers);
-sendFrame(frameConnect(requestBytes));
+
+const MAX_RUN_ATTEMPTS = 4;
+const RETRY_HTTP_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+
+function backoffMs(attempt) {
+  return 800 * 2 ** attempt + Math.floor(Math.random() * 500);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableNetworkError(err) {
+  const msg = String(err?.message || err).toLowerCase();
+  return (
+    msg.startsWith("retry:") ||
+    msg.includes("timeout") ||
+    msg.includes("econnreset") ||
+    msg.includes("etimedout") ||
+    msg.includes("socket hang up")
+  );
+}
 
 const heartbeat = create(AgentClientMessageSchema, {
   message: { case: "clientHeartbeat", value: create(ClientHeartbeatSchema, {}) },
 });
 const heartbeatBytes = () =>
   frameConnect(toBinary(AgentClientMessageSchema, heartbeat));
-heartbeatTimer = setInterval(() => {
-  sendFrame(heartbeatBytes());
-}, 15_000);
 
 let pending = Buffer.alloc(0);
 function ingestConnectBytes(chunk) {
@@ -810,17 +821,85 @@ function ingestConnectBytes(chunk) {
   pending = pending.subarray(offset);
 }
 
-h2Stream.on("data", ingestConnectBytes);
-h2Stream.on("end", () => {
-  if (finished) return;
-  if (!sawText) {
-    emit({ error: "stream ended without text deltas" });
+function wireH2Stream() {
+  sendFrame(frameConnect(requestBytes));
+  heartbeatTimer = setInterval(() => {
+    sendFrame(heartbeatBytes());
+  }, 15_000);
+
+  h2Stream.on("data", ingestConnectBytes);
+  h2Stream.on("end", () => {
+    if (finished) return;
+    if (!sawText) {
+      emit({ error: "stream ended without text deltas" });
+      gracefulFinish(1);
+      return;
+    }
+    gracefulFinish(0);
+  });
+  h2Stream.on("error", (err) => {
+    emit({ error: `h2 stream: ${err}` });
     gracefulFinish(1);
-    return;
+  });
+}
+
+async function openRunWithRetry() {
+  for (let attempt = 0; attempt < MAX_RUN_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      debug(`Run retry ${attempt + 1}/${MAX_RUN_ATTEMPTS}`);
+      await sleep(backoffMs(attempt - 1));
+    }
+    try {
+      await new Promise((resolve, reject) => {
+        const client = http2.connect("https://api2.cursor.sh");
+        client.on("error", (err) => {
+          try {
+            client.close();
+          } catch {
+            /* ignore */
+          }
+          reject(err);
+        });
+        const stream = client.request(h2Headers);
+        stream.on("response", (headers) => {
+          const status = Number(headers[":status"] ?? 0);
+          if (status === 200) {
+            h2Client = client;
+            h2Stream = stream;
+            resolve();
+            return;
+          }
+          try {
+            client.close();
+          } catch {
+            /* ignore */
+          }
+          if (RETRY_HTTP_STATUS.has(status) && attempt + 1 < MAX_RUN_ATTEMPTS) {
+            reject(new Error(`retry:${status}`));
+            return;
+          }
+          reject(new Error(`agent Run failed: ${status}`));
+        });
+        stream.on("error", (err) => {
+          try {
+            client.close();
+          } catch {
+            /* ignore */
+          }
+          reject(err);
+        });
+      });
+      wireH2Stream();
+      return;
+    } catch (err) {
+      if (attempt + 1 < MAX_RUN_ATTEMPTS && isRetryableNetworkError(err)) {
+        continue;
+      }
+      emit({ error: String(err?.message || err) });
+      gracefulFinish(1);
+      return;
+    }
   }
-  gracefulFinish(0);
-});
-h2Stream.on("error", (err) => {
-  emit({ error: `h2 stream: ${err}` });
-  gracefulFinish(1);
-});
+}
+
+await openRunWithRetry();

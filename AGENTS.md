@@ -169,6 +169,7 @@
 │           │   ├── h2_client.rs
 │           │   ├── mod.rs
 │           │   ├── retry.rs
+│           │   └── transport.rs (Rust bridge par défaut, `SINEW_CURSOR_BRIDGE=node` pour forcer Node)
 │           │   ├── models.rs
 │           │   ├── proto_dynamic.rs
 │           │   ├── proto_pool.rs
