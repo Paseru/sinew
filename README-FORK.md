@@ -167,4 +167,23 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
 * **🔍 Suite de tests locaux & Analyse MITM (Laboratoire réseau)**
   * Intégration d'un ensemble de scripts d'ingénierie inverse dans `scripts/mitm/` (`install-mitmproxy.ps1`, `start-mitmweb.ps1`, `check-mitm.ps1`) facilitant l'interception et le débogage en temps réel du trafic chiffré des outils IA, complété par des scripts de vérification cryptographique et d'exécution idempotente.
   * 📂 *Fichiers : `scripts/mitm/`, `scripts/verify_all.py`, `scripts/probe_agent_run.py`*
+* **📦 Distribution d'installateurs pré-compilés à la racine (`build/`)**
+  * Inclusion directe dans le dépôt de bundles d'installation prêts à l'emploi (NSIS `.exe` et `.msi` sous le dossier `build/`) pour permettre un déploiement et un test immédiats de Sinew sans nécessiter d'environnement de compilation local complexe.
+  * 📂 *Fichiers : `build/Sinew.exe`, `build/Sinew_0.1.25_x64-setup.exe`, `build/Sinew_0.1.25_x64_en-US.msi`*
+* **🛠️ Nouveaux outils natifs d'analyse pour l'agent de workspace (`list_dir` et `delete_file`)**
+  * Extension des capacités d'édition autonomes par l'implémentation d'outils performants en Rust permettant de lister de grands répertoires (`list_dir`) et d'effectuer des suppressions de fichiers obsolètes ou temporaires (`delete_file`) de manière optimisée pour le contexte de l'IA.
+  * 📂 *Fichiers : `crates/sinew-app/src/list_dir.rs`, `crates/sinew-app/src/delete_file.rs`*
+* **🧭 Affichage visuel des plans d'action de l'IA (« PlanningNextMoveBlock »)**
+  * Intégration d'un bloc visuel dynamique et interactif (`PlanningNextMoveBlock.tsx`) dans le fil du chat montrant en temps réel les prochaines étapes planifiées par le Swarm IA (Planning Board) pour une transparence totale de sa trajectoire de résolution.
+  * 📂 *Fichiers : `src/components/chat/PlanningNextMoveBlock.tsx`*
+* **🔒 Écran de verrouillage de sécurité lors des mises à jour (« UpdaterLockScreen »)**
+  * Ajout d'une interface de verrouillage élégante bloquant les interactions utilisateur pendant l'application des correctifs système afin d'éviter tout conflit de fichiers ou corruption de l'historique SQLite sous-jacent.
+  * 📂 *Fichiers : `src/components/UpdaterLockScreen.tsx`*
+* **📄 Spécifications techniques et Guides d'architecture réseau**
+  * Rédaction et dépôt de ressources techniques haut de gamme : `AGENT-SPIKE-DESIGN.md` (spécification complète du protocole de transport Cursor) et `CAPTURE-MITM.md` (instructions détaillées d'interception réseau).
+  * 📂 *Fichiers : `scripts/AGENT-SPIKE-DESIGN.md`, `scripts/CAPTURE-MITM.md`*
+* **🔌 Encapsulation Connect-RPC Protobuf (`connect_proto.rs`) & Exportateur de Schémas (`export-agent-descriptor.mjs`)**
+  * Ajout du module de tramage de données pour `application/connect+proto` (`connect_proto.rs`), permettant d'encapsuler et de décoder de manière fluide le protocole Connect-RPC en Rust.
+  * Création d'un utilitaire d'extraction de schéma `export-agent-descriptor.mjs` qui exporte l'ensemble de descripteurs de fichiers Protobuf (`FileDescriptorSet`) sous forme binaire (`agent.fds`) pour alimenter `prost-build` et générer automatiquement des clients typés en Rust.
+  * 📂 *Fichiers : `crates/sinew-cursor/src/agent/connect_proto.rs`, `scripts/export-agent-descriptor.mjs`*
 
