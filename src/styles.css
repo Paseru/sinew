@@ -6112,6 +6112,7 @@ textarea {
   background: var(--bg-1);
   overscroll-behavior: contain;
   scrollbar-width: none;
+  font-size: var(--chat-font-size, var(--fs-base));
 }
 .chat-body::-webkit-scrollbar { width: 0; height: 0; }
 

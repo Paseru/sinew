@@ -1804,6 +1804,57 @@ function OptionsSection({
 
   const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
 
+  const [autosave, setAutosave] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.autosave") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const [editorFontSize, setEditorFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.editor-font-size");
+      return saved ? parseInt(saved, 10) : 12;
+    } catch {
+      return 12;
+    }
+  });
+
+  const [chatFontSize, setChatFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.chat-font-size");
+      return saved ? parseInt(saved, 10) : 13;
+    } catch {
+      return 13;
+    }
+  });
+
+  const toggleAutosave = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
+    } catch {}
+    setAutosave(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: enabled }));
+  };
+
+  const changeEditorFontSize = (size: number) => {
+    try {
+      localStorage.setItem("sinew.editor-font-size", size.toString());
+    } catch {}
+    setEditorFontSize(size);
+    window.dispatchEvent(new CustomEvent("sinew:editor-font-size-changed", { detail: size }));
+  };
+
+  const changeChatFontSize = (size: number) => {
+    try {
+      localStorage.setItem("sinew.chat-font-size", size.toString());
+    } catch {}
+    setChatFontSize(size);
+    document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
+    window.dispatchEvent(new CustomEvent("sinew:chat-font-size-changed", { detail: size }));
+  };
+
   const [sotaData, setSotaData] = useState<any>(null);
   const [loadingSota, setLoadingSota] = useState<boolean>(false);
   const [sotaError, setSotaError] = useState<string | null>(null);
@@ -1914,6 +1965,97 @@ function OptionsSection({
             onClick={() => togglePowerUser(false)}
           >
             {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Sauvegarde automatique" : "Auto-Save"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Sauvegarde automatiquement vos fichiers modifiés après un court instant d'inactivité de frappe."
+              : "Automatically save your modified files after a brief period of inactivity."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Auto-Save">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={autosave}
+            data-active={autosave ? "true" : "false"}
+            onClick={() => toggleAutosave(true)}
+          >
+            {locale === "fr" ? "Activé (1.5s)" : "Enabled (1.5s)"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!autosave}
+            data-active={!autosave ? "true" : "false"}
+            onClick={() => toggleAutosave(false)}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Taille du texte (Éditeur)" : "Editor Font Size"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Ajustez la taille des caractères dans l'éditeur de code."
+              : "Adjust the text size in the code editor."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Editor Font Size">
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeEditorFontSize(Math.max(10, editorFontSize - 1))}
+          >
+            -
+          </button>
+          <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+            {editorFontSize}px
+          </span>
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeEditorFontSize(Math.min(22, editorFontSize + 1))}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Taille du texte (Chat)" : "Chat Font Size"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Ajustez la taille des caractères dans le panneau de chat."
+              : "Adjust the text size in the chat pane."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Font Size">
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeChatFontSize(Math.max(10, chatFontSize - 1))}
+          >
+            -
+          </button>
+          <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+            {chatFontSize}px
+          </span>
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeChatFontSize(Math.min(22, chatFontSize + 1))}
+          >
+            +
           </button>
         </div>
       </div>

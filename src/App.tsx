@@ -25,6 +25,14 @@ export default function App() {
   const [state, setState] = useState<AppState>({ kind: "boot" });
   const [bootError, setBootError] = useState<string | null>(null);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sinew.chat-font-size");
+      const size = saved ? parseInt(saved, 10) : 13;
+      document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
+    } catch {}
+  }, []);
+
   const openWorkspace = useCallback(async (path: string) => {
     setBootError(null);
     try {

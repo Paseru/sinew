@@ -105,6 +105,56 @@ export function EditorPane({
     index: number;
   } | null>(null);
   const activeTab: EditorTab | undefined = settingsActive ? undefined : tabs[activeIndex];
+
+  const [editorFontSize, setEditorFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.editor-font-size");
+      return saved ? parseInt(saved, 10) : 12;
+    } catch {
+      return 12;
+    }
+  });
+
+  const [autosaveEnabled, setAutosaveEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.autosave") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleFont = (event: Event) => {
+      const size = (event as CustomEvent<number>).detail;
+      setEditorFontSize(size);
+    };
+    const handleAutosave = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      setAutosaveEnabled(enabled);
+    };
+    window.addEventListener("sinew:editor-font-size-changed", handleFont);
+    window.addEventListener("sinew:autosave-changed", handleAutosave);
+    return () => {
+      window.removeEventListener("sinew:editor-font-size-changed", handleFont);
+      window.removeEventListener("sinew:autosave-changed", handleAutosave);
+    };
+  }, []);
+
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  // SOTA Auto-save debounced effect
+  useEffect(() => {
+    if (!autosaveEnabled || !activeTab || !activeTab.dirty || isPlanMarkdownPath(activeTab.relativePath)) return;
+
+    const timer = setTimeout(() => {
+      onSaveRef.current(activeIndex);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [activeTab?.buffer, activeTab?.dirty, autosaveEnabled, activeIndex]);
+
   // Close the image context menu whenever the user switches tabs or
   // toggles into the settings view, so it never lingers on the wrong file.
   useEffect(() => {
@@ -544,8 +594,8 @@ export function EditorPane({
                   options={{
                     fontFamily:
                       '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace',
-                    fontSize: 12,
-                    lineHeight: 18,
+                    fontSize: editorFontSize,
+                    lineHeight: editorFontSize + 6,
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
                     smoothScrolling: true,
