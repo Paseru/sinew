@@ -152,6 +152,7 @@
 │           └── wire.rs
 ├── src-tauri
 │   ├── Cargo.toml
+│   ├── PROVIDERS.md
 │   ├── binaries
 │   │   └── .gitkeep
 │   ├── build.rs
