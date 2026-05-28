@@ -34,6 +34,7 @@ hyper-util = { version = "0.1", features = ["client", "client-legacy", "http2", 
 http-body-util = { version = "0.1", features = ["full"] }
 hyper-rustls = { version = "0.27", features = ["http2", "ring", "native-tokio"] }
 tokio-util = { version = "0.7", features = ["io"] }
+tokio-stream = "0.1"
 hex = "0.4"
 
 [lints]

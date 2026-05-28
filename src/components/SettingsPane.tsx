@@ -2734,7 +2734,9 @@ function ProvidersSection({
           status={cursorStatus}
           connectedMeta={[
             cursorComposerStatus?.email || "Session Composer",
-            cursorComposerStatus?.membershipType ?? null,
+            cursorComposerStatus?.membershipType && cursorComposerStatus.membershipType !== "pro_plus"
+              ? cursorComposerStatus.membershipType
+              : null,
           ]}
           loading={loading}
           busy={busy}

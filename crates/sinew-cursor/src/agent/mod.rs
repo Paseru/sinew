@@ -1,7 +1,11 @@
 mod bridge;
 mod connect_proto;
 mod conversation_id;
+mod proto_pool;
+mod run_h2;
+mod run_request;
 mod rust_bridge;
+mod server_decode;
 mod setup;
 mod state;
 mod tools;
