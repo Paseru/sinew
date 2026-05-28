@@ -186,9 +186,9 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * Ajout du module de tramage de données pour `application/connect+proto` (`connect_proto.rs`), permettant d'encapsuler et de décoder de manière fluide le protocole Connect-RPC en Rust.
   * Création d'un utilitaire d'extraction de schéma `export-agent-descriptor.mjs` qui exporte l'ensemble de descripteurs de fichiers Protobuf (`FileDescriptorSet`) sous forme binaire (`agent.fds`) pour alimenter `prost-build` et générer automatiquement des clients typés en Rust.
   * 📂 *Fichiers : `crates/sinew-cursor/src/agent/connect_proto.rs`, `scripts/export-agent-descriptor.mjs`*
-* **🔑 Connexion Cursor sans clé : Extraction automatique des jetons locaux (`state.vscdb`)**
-  * Sinew scanne et extrait automatiquement vos jetons de session Cursor officiels directement à partir de la base de données SQLite locale de l'IDE Cursor (`state.vscdb`) stockée sur votre PC. Permet une authentification et une connexion transparentes et instantanées sans aucune configuration ni saisie manuelle.
-  * 📂 *Fichiers : `src-tauri/src/state.rs`, `crates/sinew-cursor/src/auth/oauth.rs`*
+* **🔑 Transition sécurisée de la connexion Cursor (OAuth exclusif)**
+  * Désactivation de la synchronisation directe depuis la base SQLite locale de l'IDE Cursor (`state.vscdb`) au profit d'une connexion OAuth sécurisée et robuste et d'un renouvellement automatique des jetons directement depuis l'interface de Sinew. Cela évite les instabilités de lecture et garantit la conformité et la sécurité des jetons.
+  * 📂 *Fichiers : `crates/sinew-cursor/src/auth/composer.rs`*
 * **🏢 Badge d'espace de travail ChatGPT Team/Enterprise (`/wham/accounts/check`)**
   * Pour les comptes OpenAI / Codex connectés, Sinew interroge les serveurs sécurisés pour récupérer et afficher le nom réel de votre espace de travail d'entreprise (Team / Enterprise workspace) directement à côté de votre email dans les paramètres.
   * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/lib/ipc.ts`*
@@ -198,4 +198,20 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
 * **⚡ Sélecteurs de vitesse et d'intelligence à la volée**
   * Ajout de boutons d'action rapide (raccourcis 5.5 XHigh Fast) sur chaque carte de profil OpenAI secondaire dans les paramètres pour modifier instantanément les priorités de calcul et de rapidité de vos assistants.
   * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/types.ts`*
+* **📁 Gestion dynamique multi-compte et auto-détection des fichiers JSON d'authentification (`openai-auth-*.json`)**
+  * Sinew ne se limite pas à un seul compte secondaire : il scanne dynamiquement tous les fichiers JSON d'authentification (`openai-auth-*.json`) présents dans le dossier de données de l'application et les instancie automatiquement en tant que fournisseurs OpenAI distincts (`openai:X`).
+  * 📂 *Fichiers : `crates/sinew-openai/src/auth.rs`, `crates/sinew-openai/src/lib.rs`*
+* **💾 Importation et calcul d'expiration automatique des jetons JWT OpenAI collés manuellement**
+  * En cas d'échec de la connexion OAuth classique, vous pouvez coller directement votre jeton d'accès JWT. Sinew calcule et planifie automatiquement sa date d'expiration par décodage interne du JWT (`save_raw_access_token`), récupérant également l'email de profil et le type d'abonnement.
+  * 📂 *Fichiers : `crates/sinew-openai/src/auth.rs`*
+* **🛡️ Sécurité avancée & Spoofing User-Agent pour les canaux WebSocket OpenAI**
+  * Pour les connexions ChatGPT Codex avec OAuth, Sinew applique un spoofing dynamique d'empreinte sous l'en-tête `"user-agent": "codex-cli"` non seulement sur les flux HTTP classiques, mais également sur les connexions WebSocket bidirectionnelles persistantes, éliminant tout risque de détection.
+  * 📂 *Fichiers : `crates/sinew-openai/src/websocket.rs`*
+* **⚙️ Intégration du dossier de travail (`workspace_root`) dans le cycle de vie des appels IA**
+  * Injection systématique du dossier racine actif (`workspace_root`) dans l'objet de requête `ProviderRequest`, permettant au Swarm IA et aux extensions de localiser les outils et de résoudre instantanément les chemins de fichiers relatifs.
+  * 📂 *Fichiers : `crates/sinew-core/src/provider.rs`*
+* **⏱️ Protection contre le gel des flux du pont (Timers d'inactivité & Jobs de tests)**
+  * Ajout d'une gestion intelligente des timeouts dans le pont de streaming (`run-stream.mjs`) : implémentation d'un délai d'inactivité automatique après réception de texte (`2500ms`) et d'un chronomètre de sécurité global (`120s`) pour empêcher tout blocage ou gel du canal HTTP/2.
+  * Sécurisation du script de test en direct (`test-live.ps1`) via une exécution asynchrone par `Start-Job` surveillée avec arrêt forcé au bout de 90 secondes si le serveur distant ne répond pas.
+  * 📂 *Fichiers : `scripts/agent-bridge/run-stream.mjs`, `scripts/agent-bridge/test-live.ps1`*
 
