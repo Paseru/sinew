@@ -20,7 +20,7 @@ const REJECT: &str = "Tool not available in Sinew Rust agent bridge.";
 pub struct ExecContext<'a> {
     pub workspace_root: &'a str,
     pub tools: &'a [JsonValue],
-    pub workspace_snapshot: Option<&'a JsonValue>,
+    #[allow(dead_code)] pub workspace_snapshot: Option<&'a JsonValue>,
 }
 
 #[derive(Debug, Clone)]

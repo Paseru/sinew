@@ -66,6 +66,48 @@ const FALLBACK_TOOL_SETTINGS: ToolSettings = {
 const PROVIDERS_CHANGED_EVENT = "sinew:providers-changed";
 const TOOL_SETTINGS_CHANGED_EVENT = "sinew:tool-settings-changed";
 
+// Global cache to execute SOTA diagnostics exactly once at application startup.
+// Prevents re-running diagnostics when entering the Options page.
+interface SotaCache {
+  data: any;
+  error: string | null;
+  promise: Promise<any> | null;
+}
+
+const sotaCache: SotaCache = {
+  data: null,
+  error: null,
+  promise: null,
+};
+
+const triggerSotaDiagnostics = (force = false): Promise<any> => {
+  if (!force && sotaCache.promise) {
+    return sotaCache.promise;
+  }
+
+  const promise = api.checkSotaDiagnostics()
+    .then((dataStr) => {
+      const parsed = JSON.parse(dataStr);
+      sotaCache.data = parsed;
+      sotaCache.error = null;
+      return parsed;
+    })
+    .catch((err) => {
+      const errMsg = err?.toString() || "Unknown error";
+      sotaCache.error = errMsg;
+      sotaCache.data = null;
+      throw new Error(errMsg);
+    });
+
+  sotaCache.promise = promise;
+  return promise;
+};
+
+// Eagerly trigger in the background at startup
+setTimeout(() => {
+  triggerSotaDiagnostics().catch(() => {});
+}, 500);
+
 type Props = {
   workspacePath: string;
 };
@@ -1855,26 +1897,33 @@ function OptionsSection({
     window.dispatchEvent(new CustomEvent("sinew:chat-font-size-changed", { detail: size }));
   };
 
-  const [sotaData, setSotaData] = useState<any>(null);
-  const [loadingSota, setLoadingSota] = useState<boolean>(false);
-  const [sotaError, setSotaError] = useState<string | null>(null);
+  const [sotaData, setSotaData] = useState<any>(sotaCache.data);
+  const [loadingSota, setLoadingSota] = useState<boolean>(!sotaCache.data && !!sotaCache.promise);
+  const [sotaError, setSotaError] = useState<string | null>(sotaCache.error);
 
-  const runSotaDiagnostics = useCallback(async () => {
+  const runSotaDiagnostics = useCallback(async (force = false) => {
+    // If we have cached data and we are not forcing a refresh, just set it and return.
+    if (!force && sotaCache.data) {
+      setSotaData(sotaCache.data);
+      setSotaError(sotaCache.error);
+      setLoadingSota(false);
+      return;
+    }
     setLoadingSota(true);
     setSotaError(null);
     try {
-      const dataStr = await api.checkSotaDiagnostics();
-      const parsed = JSON.parse(dataStr);
+      const parsed = await triggerSotaDiagnostics(force);
       setSotaData(parsed);
+      setSotaError(null);
     } catch (err: any) {
-      setSotaError(err.toString());
+      setSotaError(sotaCache.error || err.toString());
     } finally {
       setLoadingSota(false);
     }
   }, []);
 
   useEffect(() => {
-    runSotaDiagnostics();
+    runSotaDiagnostics(false);
   }, [runSotaDiagnostics]);
 
   useEffect(() => {
@@ -2144,7 +2193,7 @@ function OptionsSection({
           <button
             type="button"
             className="settings-pane__button"
-            onClick={runSotaDiagnostics}
+            onClick={() => runSotaDiagnostics(true)}
             disabled={loadingSota}
             style={{
               padding: "6px 12px",

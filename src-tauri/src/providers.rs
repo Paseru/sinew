@@ -1076,7 +1076,7 @@ pub(super) async fn disconnect_openai_provider(
     ))
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct OpenAiAccountInfo {
     pub(super) key: String,
@@ -1084,7 +1084,7 @@ pub(super) struct OpenAiAccountInfo {
     pub(super) plan_type: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct RateLimitWindowInfo {
     pub(super) used_percent: f64,
@@ -1093,7 +1093,7 @@ pub(super) struct RateLimitWindowInfo {
     pub(super) reset_at: Option<i64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct OpenAiCodexRateLimitInfo {
     pub(super) key: String,
@@ -1106,7 +1106,7 @@ pub(super) struct OpenAiCodexRateLimitInfo {
     pub(super) raw: serde_json::Value,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct AntigravityQuotaGroupInfo {
     pub(super) group: String,
@@ -1116,7 +1116,7 @@ pub(super) struct AntigravityQuotaGroupInfo {
     pub(super) count: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct AntigravityQuotaInfo {
     pub(super) project_id: Option<String>,
@@ -1124,11 +1124,28 @@ pub(super) struct AntigravityQuotaInfo {
     pub(super) raw: serde_json::Value,
 }
 
+static ANTIGRAVITY_QUOTA_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, (AntigravityQuotaInfo, std::time::Instant)>>> = std::sync::OnceLock::new();
+static CURSOR_USAGE_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(CursorUsageQuotaInfo, std::time::Instant)>>> = std::sync::OnceLock::new();
+static DEEPSEEK_BALANCE_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(serde_json::Value, std::time::Instant)>>> = std::sync::OnceLock::new();
+static OPENROUTER_KEY_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(serde_json::Value, std::time::Instant)>>> = std::sync::OnceLock::new();
+static OPENAI_CODEX_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, (OpenAiCodexRateLimitInfo, std::time::Instant)>>> = std::sync::OnceLock::new();
+
 #[tauri::command]
 pub(super) async fn get_openai_codex_rate_limits(
     key: Option<String>,
 ) -> std::result::Result<OpenAiCodexRateLimitInfo, String> {
-    let target_key = key.unwrap_or_else(|| "openai".to_string());
+    let target_key = key.clone().unwrap_or_else(|| "openai".to_string());
+
+    // Check cache
+    let cache = OPENAI_CODEX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Ok(guard) = cache.lock() {
+        if let Some((cached, fetched_at)) = guard.get(&target_key) {
+            if fetched_at.elapsed() < std::time::Duration::from_secs(30) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
     let path = if target_key == "openai" {
         default_auth_path().map_err(error_to_string)?
     } else {
@@ -1247,8 +1264,8 @@ pub(super) async fn get_openai_codex_rate_limits(
         }
     }
 
-    Ok(OpenAiCodexRateLimitInfo {
-        key: target_key,
+    let result = OpenAiCodexRateLimitInfo {
+        key: target_key.clone(),
         email: status.email,
         plan_type: raw
             .get("plan_type")
@@ -1260,7 +1277,13 @@ pub(super) async fn get_openai_codex_rate_limits(
         primary,
         secondary,
         raw,
-    })
+    };
+
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(target_key, (result.clone(), std::time::Instant::now()));
+    }
+
+    Ok(result)
 }
 
 fn parse_rate_limit_window(value: &serde_json::Value) -> Option<RateLimitWindowInfo> {
@@ -1287,6 +1310,18 @@ fn parse_rate_limit_window(value: &serde_json::Value) -> Option<RateLimitWindowI
 pub(super) async fn get_antigravity_quota(
     key: Option<String>,
 ) -> std::result::Result<AntigravityQuotaInfo, String> {
+    let cache_key = key.clone().unwrap_or_else(|| "default".to_string());
+    
+    // Check cache
+    let cache = ANTIGRAVITY_QUOTA_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    if let Ok(guard) = cache.lock() {
+        if let Some((cached, fetched_at)) = guard.get(&cache_key) {
+            if fetched_at.elapsed() < std::time::Duration::from_secs(30) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
     let path = if let Some(k) = key.as_deref() {
         sinew_google::auth::path_for_auth_key(k).map_err(error_to_string)?
     } else {
@@ -1417,11 +1452,17 @@ pub(super) async fn get_antigravity_quota(
     let mut groups = groups.into_values().collect::<Vec<_>>();
     groups.sort_by(|a, b| a.label.cmp(&b.label));
 
-    Ok(AntigravityQuotaInfo {
+    let result = AntigravityQuotaInfo {
         project_id: project,
         groups,
         raw,
-    })
+    };
+
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(cache_key, (result.clone(), std::time::Instant::now()));
+    }
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -2032,6 +2073,15 @@ pub(super) async fn get_openrouter_provider_status(
 
 #[tauri::command]
 pub(super) async fn get_openrouter_key_details() -> std::result::Result<serde_json::Value, String> {
+    let cache = OPENROUTER_KEY_CACHE.get_or_init(|| std::sync::Mutex::new(None));
+    if let Ok(guard) = cache.lock() {
+        if let Some((ref cached, fetched_at)) = *guard {
+            if fetched_at.elapsed() < std::time::Duration::from_secs(30) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
     let api_key = load_default_openrouter_api_key().map_err(error_to_string)?;
     let Some(api_key) = api_key else {
         return Err("No OpenRouter API key found".to_string());
@@ -2050,11 +2100,25 @@ pub(super) async fn get_openrouter_key_details() -> std::result::Result<serde_js
         .json()
         .await
         .map_err(|err| format!("Failed to parse response: {err}"))?;
+
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some((data.clone(), std::time::Instant::now()));
+    }
+
     Ok(data)
 }
 
 #[tauri::command]
 pub(super) async fn get_deepseek_balance() -> std::result::Result<serde_json::Value, String> {
+    let cache = DEEPSEEK_BALANCE_CACHE.get_or_init(|| std::sync::Mutex::new(None));
+    if let Ok(guard) = cache.lock() {
+        if let Some((ref cached, fetched_at)) = *guard {
+            if fetched_at.elapsed() < std::time::Duration::from_secs(30) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
     let api_key = load_default_deepseek_api_key().map_err(error_to_string)?;
     let Some(api_key) = api_key else {
         return Err("No DeepSeek API key found".to_string());
@@ -2073,6 +2137,11 @@ pub(super) async fn get_deepseek_balance() -> std::result::Result<serde_json::Va
         .json()
         .await
         .map_err(|err| format!("Failed to parse response: {err}"))?;
+
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some((data.clone(), std::time::Instant::now()));
+    }
+
     Ok(data)
 }
 
@@ -2551,15 +2620,30 @@ pub(super) struct CursorUsageQuotaInfo {
 
 #[tauri::command]
 pub(super) async fn get_cursor_usage() -> std::result::Result<CursorUsageQuotaInfo, String> {
+    let cache = CURSOR_USAGE_CACHE.get_or_init(|| std::sync::Mutex::new(None));
+    if let Ok(guard) = cache.lock() {
+        if let Some((ref cached, fetched_at)) = *guard {
+            if fetched_at.elapsed() < std::time::Duration::from_secs(30) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
     let provider = CursorProvider::from_default_sources().map_err(error_to_string)?;
     let usage = provider
         .usage_snapshot()
         .await
         .map_err(error_to_string)?
         .ok_or_else(|| "Cursor composer session is not connected".to_string())?;
-    Ok(CursorUsageQuotaInfo {
+    let result = CursorUsageQuotaInfo {
         auto_percent_used: usage.auto_percent_used,
         api_percent_used: usage.api_percent_used,
         total_percent_used: usage.total_percent_used,
-    })
+    };
+
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some((result.clone(), std::time::Instant::now()));
+    }
+
+    Ok(result)
 }

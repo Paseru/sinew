@@ -22,23 +22,16 @@ pub fn forbid_node_fallback() -> bool {
     }
 }
 
-/// Retry via Node when Rust fails if the bundled/dev bridge is ready (no env var for users).
+/// Automatic Node fallback is disabled — Composer uses the native Rust bridge by default.
+/// Set `SINEW_CURSOR_BRIDGE=node` only for local debugging.
 pub fn should_auto_fallback_to_node() -> bool {
-    if prefer_node_bridge() || forbid_node_fallback() {
-        return false;
-    }
-    super::setup::node_bridge_available()
+    false
 }
 
-/// Background `npm ci` only when a bridge dir exists but deps are missing (packaged app repair).
+/// Install Node bridge deps only when explicitly forcing the Node bridge.
 pub fn should_prepare_node_bridge_at_startup() -> bool {
-    if prefer_node_bridge() {
-        return true;
-    }
-    if forbid_node_fallback() {
-        return false;
-    }
-    super::setup::bridge_directory().is_some_and(|dir| !super::setup::bridge_ready(&dir))
+    prefer_node_bridge()
+        && super::setup::bridge_directory().is_some_and(|dir| !super::setup::bridge_ready(&dir))
 }
 
 /// Transport selection for Cursor Composer streaming.
@@ -92,11 +85,11 @@ mod tests {
     }
 
     #[test]
-    fn auto_fallback_uses_bundled_bridge_when_ready() {
+    fn auto_fallback_disabled_by_default() {
         let _guard = env_lock();
         std::env::remove_var("SINEW_CURSOR_BRIDGE");
         std::env::remove_var("SINEW_CURSOR_BRIDGE_FALLBACK");
-        let _ = super::should_auto_fallback_to_node();
+        assert!(!super::should_auto_fallback_to_node());
     }
 
     #[test]

@@ -193,7 +193,10 @@ pub async fn ensure_fresh_composer_token(
     http: &reqwest::Client,
     session: &ComposerSession,
 ) -> Result<String> {
-    if !token_needs_refresh(session.expires_at_ms) {
+    let expires_at_ms = session
+        .expires_at_ms
+        .or_else(|| jwt_exp_ms(&session.access_token));
+    if !token_needs_refresh(expires_at_ms) {
         return Ok(session.access_token.clone());
     }
     let Some(refresh) = session.refresh_token.as_ref() else {
@@ -219,7 +222,11 @@ pub async fn ensure_fresh_composer_token(
         .await
         .map_err(|err| AppError::Network(err.to_string()))?;
     if !response.status().is_success() {
-        return Ok(session.access_token.clone());
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return Err(AppError::Auth(format!(
+            "rafraîchissement OAuth Composer échoué ({status}) : reconnectez-vous dans Réglages → Fournisseurs. {body}"
+        )));
     }
     let payload: serde_json::Value = response
         .json()

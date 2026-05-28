@@ -74,7 +74,8 @@ pub async fn stream_via_node_bridge(
         None
     };
 
-    let api_headers = identity.agent_bridge_headers(&token);
+    // Omit `apiHeaders` so Node uses the same minimal CLI defaults as `test-live.ps1`.
+    let _ = identity;
     let mut payload = serde_json::json!({
         "accessToken": token,
         "modelId": model,
@@ -85,7 +86,6 @@ pub async fn stream_via_node_bridge(
         "tools": tools_json(&request),
         "turns": history_turns,
         "workspaceSnapshot": workspace_snapshot,
-        "apiHeaders": api_headers,
     });
     if let Some(state) = persisted {
         if let Some(checkpoint) = state.checkpoint_b64 {

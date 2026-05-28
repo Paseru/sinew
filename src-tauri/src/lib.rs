@@ -459,20 +459,20 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
     }
     let _ = sinew_cursor::agent::bridge_directory();
 
-    tauri::async_runtime::spawn(async move {
-        if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
-            match ensure_agent_bridge_ready().await {
-                Ok(dir) => {
-                    tracing::info!(path = %dir.display(), "agent-bridge: deps installées (repli auto)")
+    if sinew_cursor::agent::transport::prefer_node_bridge() {
+        tauri::async_runtime::spawn(async move {
+            if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
+                match ensure_agent_bridge_ready().await {
+                    Ok(dir) => {
+                        tracing::info!(path = %dir.display(), "agent-bridge: deps installées (SINEW_CURSOR_BRIDGE=node)")
+                    }
+                    Err(err) => tracing::warn!(error = %err, "agent-bridge: install Node échouée"),
                 }
-                Err(err) => tracing::warn!(error = %err, "agent-bridge: install auto échouée (Rust seul)"),
             }
-        } else if sinew_cursor::agent::node_bridge_available() {
-            tracing::debug!("agent-bridge Node prête (repli auto sans npm)");
-        } else {
-            tracing::debug!("Composer: bridge Rust OAuth (aucune config requise)");
-        }
-    });
+        });
+    } else {
+        tracing::debug!("Composer: bridge Rust natif (OAuth, sans Node)");
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -481,6 +481,14 @@ pub fn run() {
         let log_dir = dirs.data_local_dir();
         let _ = fs::create_dir_all(log_dir);
         let log_path = log_dir.join("desktop-app.log");
+        const MAX_LOG_BYTES: u64 = 32 * 1024 * 1024;
+        if let Ok(meta) = fs::metadata(&log_path) {
+            if meta.len() > MAX_LOG_BYTES {
+                let backup = log_dir.join("desktop-app.log.old");
+                let _ = fs::remove_file(&backup);
+                let _ = fs::rename(&log_path, &backup);
+            }
+        }
         fs::OpenOptions::new()
             .create(true)
             .write(true)
@@ -496,8 +504,12 @@ pub fn run() {
     let _ = tracing_subscriber::fmt()
         .with_writer(make_writer)
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("debug")),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // `debug` par défaut gonfle la RAM (ort/hyper/reqwest) et produit des logs énormes.
+                tracing_subscriber::EnvFilter::new(
+                    "info,sinew_app=debug,sinew_cursor=info,ort=warn,hyper=warn,reqwest=warn,h2=warn",
+                )
+            }),
         )
         .try_init();
 

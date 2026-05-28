@@ -20,6 +20,7 @@ pub async fn fetch_usable_models(
     let response = http
         .post(format!("{API2_BASE}{GET_USABLE_MODELS}"))
         .headers(headers)
+        .header("content-type", "application/proto")
         .body(Vec::new())
         .send()
         .await

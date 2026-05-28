@@ -14,8 +14,8 @@ pub enum BridgeEvent {
     Thinking(String),
     Usage { output_tokens: u32, total_tokens: u32 },
     ToolRequest {
-        exec_id: String,
-        exec_msg_id: String,
+        #[allow(dead_code)] exec_id: String,
+        #[allow(dead_code)] exec_msg_id: String,
         tool_call_id: String,
         tool_name: String,
         args: serde_json::Value,

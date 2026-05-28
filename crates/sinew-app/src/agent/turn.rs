@@ -1076,8 +1076,24 @@ fn update_read_fingerprint_cache(
     }
 }
 
+fn is_non_retryable_stream_err(err: &AppError) -> bool {
+    let msg = match err {
+        AppError::Auth(m) | AppError::Network(m) | AppError::Stream(m) => m.to_ascii_lowercase(),
+        AppError::Decode(m) => m.to_ascii_lowercase(),
+        AppError::RetryableStream { message, .. } => message.to_ascii_lowercase(),
+        _ => return false,
+    };
+    msg.contains("unauthenticated")
+        || msg.contains("non authentifié")
+        || msg.contains("oauth")
+        || msg.contains("réglages → fournisseurs")
+        || msg.contains("not connected")
+        || msg.contains("n'est pas connecté")
+}
+
 fn should_retry_stream(err: &AppError, attempts: usize) -> bool {
     attempts < SAFE_STREAM_MAX_RETRIES
+        && !is_non_retryable_stream_err(err)
         && matches!(
             err,
             AppError::Network(_)

@@ -111,39 +111,26 @@ impl CursorIdeIdentity {
         );
     }
 
-    /// Headers for `agent.v1.AgentService` (matches cursor-oauth-opencode / CLI).
+    /// Minimal CLI headers for `agent.v1` (matches `run-stream.mjs` defaults).
+    /// Do not mix IDE `apply_common` headers here — the server rejects cli+ide combos as unauthenticated.
     pub fn apply_agent_authenticated(
         &self,
         headers: &mut HeaderMap,
-        session_id: &str,
-        request_id: &str,
+        _session_id: &str,
+        _request_id: &str,
         access_token: &str,
     ) {
-        self.apply_authenticated(headers, session_id, request_id, access_token);
-        set_header(headers, "content-type", "application/proto");
-        set_header(headers, "te", "trailers");
+        let machine_id = Self::token_machine_id(access_token);
+        set_header(headers, "authorization", &format!("Bearer {access_token}"));
+        set_header(headers, "x-client-key", &Self::token_client_key(access_token));
+        set_header(
+            headers,
+            "x-cursor-checksum",
+            &self.checksum_for_machine_id(&machine_id, None),
+        );
         set_header(headers, "x-cursor-client-type", "cli");
         set_header(headers, "x-ghost-mode", "true");
         set_header(headers, "x-cursor-client-version", AGENT_CLI_CLIENT_VERSION);
-    }
-
-    /// HTTP/2 headers for the Node `agent-bridge` (Connect+proto Run).
-    pub fn agent_bridge_headers(
-        &self,
-        access_token: &str,
-    ) -> std::collections::HashMap<String, String> {
-        let session_id = uuid::Uuid::new_v4().to_string();
-        let request_id = uuid::Uuid::new_v4().to_string();
-        let mut headers = HeaderMap::new();
-        self.apply_agent_authenticated(&mut headers, &session_id, &request_id, access_token);
-        headers
-            .iter()
-            .filter_map(|(name, value)| {
-                let key = name.as_str();
-                let val = value.to_str().ok()?;
-                Some((key.to_string(), val.to_string()))
-            })
-            .collect()
     }
 
     fn apply_common(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
@@ -402,6 +389,24 @@ mod identity_tests {
         assert!(!is_valid_machine_id(""));
         assert!(!is_valid_machine_id("not-a-uuid"));
         assert!(is_valid_machine_id(&uuid::Uuid::new_v4().to_string()));
+    }
+
+    #[test]
+    fn apply_agent_authenticated_sets_bearer() {
+        let identity = CursorIdeIdentity::load();
+        let token = "test-access-token";
+        let mut headers = HeaderMap::new();
+        identity.apply_agent_authenticated(
+            &mut headers,
+            "session",
+            "request",
+            token,
+        );
+        let auth = headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert_eq!(auth, format!("Bearer {token}"));
     }
 
     #[test]

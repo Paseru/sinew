@@ -13,7 +13,7 @@ pub fn message_desc(name: &str) -> Result<prost_reflect::MessageDescriptor> {
 
 pub fn setf(msg: &mut DynamicMessage, name: &str, value: Value) -> Result<()> {
     msg.try_set_field_by_name(name, value)
-        .map_err(|err| AppError::Provider(format!("proto field: {err}")))
+        .map_err(field_err)
 }
 
 pub fn field_err(err: SetFieldError) -> AppError {

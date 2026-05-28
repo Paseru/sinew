@@ -56,6 +56,7 @@ impl AgentConversationStore {
         if cache_key.trim().is_empty() {
             return Ok(());
         }
+        let (checkpoint_b64, blobs) = trim_checkpoint_payload(checkpoint_b64, blobs);
         self.conversations.insert(
             cache_key.to_string(),
             PersistedAgentConversation {
@@ -85,4 +86,28 @@ fn store_path() -> PathBuf {
     directories::ProjectDirs::from("dev", "hyrak", "sinew")
         .map(|dirs| dirs.data_dir().join("cursor-agent-conversations.json"))
         .unwrap_or_else(|| PathBuf::from("cursor-agent-conversations.json"))
+}
+
+const MAX_CHECKPOINT_B64_CHARS: usize = 2 * 1024 * 1024;
+const MAX_BLOB_B64_CHARS: usize = 256 * 1024;
+const MAX_BLOBS_PER_CONVERSATION: usize = 24;
+
+fn trim_checkpoint_payload(
+    checkpoint_b64: String,
+    blobs: HashMap<String, String>,
+) -> (String, HashMap<String, String>) {
+    let checkpoint = if checkpoint_b64.len() > MAX_CHECKPOINT_B64_CHARS {
+        checkpoint_b64[..MAX_CHECKPOINT_B64_CHARS].to_string()
+    } else {
+        checkpoint_b64
+    };
+    let mut trimmed = HashMap::new();
+    for (id, blob) in blobs.into_iter().take(MAX_BLOBS_PER_CONVERSATION) {
+        if blob.len() > MAX_BLOB_B64_CHARS {
+            trimmed.insert(id, blob[..MAX_BLOB_B64_CHARS].to_string());
+        } else {
+            trimmed.insert(id, blob);
+        }
+    }
+    (checkpoint, trimmed)
 }

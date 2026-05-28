@@ -9,7 +9,7 @@ use sinew_core::{
 use crate::identity::CursorIdeIdentity;
 use crate::workspace;
 
-use super::bridge::{stream_via_node_bridge, tools_json};
+use super::bridge::tools_json;
 use super::conversation_id::stable_agent_conversation_id;
 use super::run_h2::{run_agent_stream, AgentRunConfig, ToolResponse};
 use super::server_decode::BridgeEvent;
@@ -22,6 +22,13 @@ const OAUTH_HINT: &str =
 
 fn map_rust_bridge_error(err: AppError) -> AppError {
     match &err {
+        AppError::Auth(msg) | AppError::Network(msg)
+            if msg.to_ascii_lowercase().contains("unauthenticated") =>
+        {
+            AppError::Auth(format!(
+                "Session Cursor refusée (non authentifié). Déconnectez puis reconnectez dans Réglages → Fournisseurs. {OAUTH_HINT}"
+            ))
+        }
         AppError::Auth(msg) if !msg.contains("Réglages") => {
             AppError::Auth(format!("{msg} {OAUTH_HINT}"))
         }
@@ -38,16 +45,9 @@ pub async fn stream_via_rust_bridge(
     token: String,
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
-    match stream_via_rust_bridge_inner(identity, token.clone(), request.clone()).await {
-        Ok(stream) => Ok(stream),
-        Err(err) if super::transport::should_auto_fallback_to_node() => {
-            tracing::warn!(
-                "Rust agent bridge failed ({err}), automatic fallback to bundled Node bridge"
-            );
-            stream_via_node_bridge(identity, token, request).await
-        }
-        Err(err) => Err(map_rust_bridge_error(err)),
-    }
+    stream_via_rust_bridge_inner(identity, token, request)
+        .await
+        .map_err(map_rust_bridge_error)
 }
 
 async fn stream_via_rust_bridge_inner(
