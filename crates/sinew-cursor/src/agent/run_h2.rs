@@ -8,9 +8,6 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, StreamBody};
 use hyper::body::Frame;
 use hyper::{Method, Request, StatusCode};
-use hyper_rustls::HttpsConnectorBuilder;
-use hyper_util::client::legacy::Client;
-use hyper_util::rt::TokioExecutor;
 use reqwest::header::HeaderMap;
 use sinew_core::{AppError, Result};
 use tokio::sync::mpsc;
@@ -22,6 +19,10 @@ use crate::identity::CursorIdeIdentity;
 
 use super::client_proto::{encode_client_heartbeat, encode_kv_get_blob_result, encode_kv_set_blob_result};
 use super::connect_proto::frame_connect_proto;
+use super::h2_client::{shared_h2_client, AgentUploadBody};
+use super::retry::{
+    backoff_before_retry, is_retryable_network_err, is_retryable_status, MAX_RUN_ATTEMPTS,
+};
 use super::exec_handler::{
     encode_mcp_result, handle_exec_server_message, ExecContext, ExecOutcome, PendingToolRequest,
 };
@@ -100,22 +101,7 @@ async fn run_agent_stream_inner(
     let mut blob_store = built.blob_store;
     let initial_frame = frame_connect_proto(&built.request_bytes);
 
-    let https = HttpsConnectorBuilder::new()
-        .with_native_roots()
-        .map_err(|err| AppError::Network(err.to_string()))?
-        .https_or_http()
-        .enable_http2()
-        .build();
-    type UploadBody = StreamBody<ReceiverStream<Result<Frame<Bytes>, std::io::Error>>>;
-    let client: Client<_, UploadBody> = Client::builder(TokioExecutor::new())
-        .http2_only(true)
-        .build(https);
-
-    let (body_tx, body_rx) = mpsc::channel(64);
-    let body = StreamBody::new(ReceiverStream::new(body_rx));
-    let _ = body_tx
-        .send(Ok(Frame::data(Bytes::from(initial_frame))))
-        .await;
+    let client = shared_h2_client()?;
 
     let session_id = uuid::Uuid::new_v4().to_string();
     let request_id = uuid::Uuid::new_v4().to_string();
@@ -126,35 +112,77 @@ async fn run_agent_stream_inner(
         &request_id,
         &config.token,
     );
-    let mut req_builder = Request::builder()
-        .method(Method::POST)
-        .uri(API2_RUN)
-        .header("content-type", "application/connect+proto")
-        .header("te", "trailers")
-        .header("connect-protocol-version", "1");
-    for (name, value) in headers.iter() {
-        if let Ok(val) = value.to_str() {
-            req_builder = req_builder.header(name.as_str(), val);
+
+    let mut response = None;
+    let mut body_tx = None;
+    let mut last_err: Option<AppError> = None;
+    for attempt in 0..MAX_RUN_ATTEMPTS {
+        if attempt > 0 {
+            tokio::time::sleep(backoff_before_retry(attempt - 1)).await;
+        }
+        let (upload_tx, upload_rx) = mpsc::channel(64);
+        let body: AgentUploadBody = StreamBody::new(ReceiverStream::new(upload_rx));
+        let _ = upload_tx
+            .send(Ok(Frame::data(Bytes::from(initial_frame.clone()))))
+            .await;
+
+        let mut req_builder = Request::builder()
+            .method(Method::POST)
+            .uri(API2_RUN)
+            .header("content-type", "application/connect+proto")
+            .header("te", "trailers")
+            .header("connect-protocol-version", "1");
+        for (name, value) in headers.iter() {
+            if let Ok(val) = value.to_str() {
+                req_builder = req_builder.header(name.as_str(), val);
+            }
+        }
+        let request = req_builder
+            .body(body)
+            .map_err(|err| AppError::Network(err.to_string()))?;
+
+        match client.request(request).await {
+            Ok(resp) if resp.status() == StatusCode::OK => {
+                response = Some(resp);
+                body_tx = Some(upload_tx);
+                break;
+            }
+            Ok(resp) if is_retryable_status(resp.status()) && attempt + 1 < MAX_RUN_ATTEMPTS => {
+                warn!(
+                    "agent Run HTTP {} — retry {}/{}",
+                    resp.status(),
+                    attempt + 1,
+                    MAX_RUN_ATTEMPTS
+                );
+                last_err = Some(AppError::Network(format!(
+                    "agent Run failed: {}",
+                    resp.status()
+                )));
+            }
+            Ok(resp) => {
+                return Err(AppError::Network(format!(
+                    "agent Run failed: {}",
+                    resp.status()
+                )));
+            }
+            Err(err) => {
+                let net = AppError::Network(format!("agent Run HTTP/2: {err}"));
+                if is_retryable_network_err(&net) && attempt + 1 < MAX_RUN_ATTEMPTS {
+                    warn!("agent Run network error — retry {}/{}", attempt + 1, MAX_RUN_ATTEMPTS);
+                    last_err = Some(net);
+                } else {
+                    return Err(net);
+                }
+            }
         }
     }
-    let request = req_builder
-        .body(body)
-        .map_err(|err| AppError::Network(err.to_string()))?;
-
-    let response = client
-        .request(request)
-        .await
-        .map_err(|err| AppError::Network(format!("agent Run HTTP/2: {err}")))?;
-
-    if response.status() != StatusCode::OK {
-        return Err(AppError::Network(format!(
-            "agent Run failed: {}",
-            response.status()
-        )));
-    }
+    let response = response.ok_or_else(|| {
+        last_err.unwrap_or_else(|| AppError::Network("agent Run failed after retries".into()))
+    })?;
+    let body_tx = body_tx.expect("body_tx set with successful response");
 
     let (frame_tx, mut frame_rx) = mpsc::channel::<Vec<u8>>(64);
-    let body_tx_upload = body_tx.clone();
+    let body_tx_upload = body_tx;
     let upload_done = Arc::new(tokio::sync::Notify::new());
     let upload_done_worker = upload_done.clone();
     tokio::spawn(async move {

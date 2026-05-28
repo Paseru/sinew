@@ -4,6 +4,8 @@
   "path": "native-host-wrapper.exe",
   "type": "stdio",
   "allowed_origins": [
+    "chrome-extension://fokjdmcbdkdbajceeljedfgcchogihbg/",
+    "chrome-extension://ndacamocppkooeihenfhedhmbknakjfb/",
     "chrome-extension://kooobgnecenccliamhjbcncjnjpjoeic/",
     "chrome-extension://kedgddpfjpfoghaecofgpmeogiihcgig/"
   ]

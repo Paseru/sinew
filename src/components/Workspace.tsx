@@ -711,6 +711,46 @@ export function Workspace({
     if (activeTabIndex >= 0) closeTab(activeTabIndex);
   }, [activeTabIndex, closeSettings, closeTab, settingsActive]);
 
+  const closeOtherTabs = useCallback((index: number) => {
+    const tab = tabsRef.current[index];
+    if (!tab) return;
+    setTabs([tab]);
+    setActiveTabIndex(0);
+    setSettingsActive(false);
+  }, []);
+
+  const closeTabsToRight = useCallback((index: number) => {
+    const tabCount = tabsRef.current.length;
+    if (index < 0 || index >= tabCount - 1) return;
+    setTabs((prev) => prev.slice(0, index + 1));
+    setActiveTabIndex((active) => {
+      if (active < 0) return active;
+      return active > index ? index : active;
+    });
+  }, []);
+
+  const closeAllTabs = useCallback(() => {
+    setTabs([]);
+    setActiveTabIndex(-1);
+  }, []);
+
+  const revealTab = useCallback(
+    (index: number) => {
+      const tab = tabsRef.current[index];
+      if (!tab) return;
+      if (tab.external) {
+        void api.revealAbsolutePath(tab.doc.absolutePath).catch((err) =>
+          console.error(err),
+        );
+        return;
+      }
+      void api.revealEntry(workspacePath, tab.relativePath).catch((err) =>
+        console.error(err),
+      );
+    },
+    [workspacePath],
+  );
+
   const handleTreeEntryRenamed = useCallback(
     (oldRelativePath: string, entry: WorkspaceEntry) => {
       setTabs((prev) =>
@@ -2032,8 +2072,12 @@ export function Workspace({
               activeIndex={activeTabIndex}
               onActivate={activateFileTab}
               onClose={closeTab}
+              onCloseOthers={closeOtherTabs}
+              onCloseToRight={closeTabsToRight}
+              onCloseAll={closeAllTabs}
               onChange={updateBuffer}
               onSave={saveTab}
+              onRevealTab={revealTab}
               onOpenFile={openChatFile}
               settingsOpen={settingsOpen}
               settingsActive={settingsActive}

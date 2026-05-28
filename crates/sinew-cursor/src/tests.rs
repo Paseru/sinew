@@ -258,6 +258,72 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_live_rust_agent_bridge() {
+        use futures::StreamExt;
+        use sinew_core::{ChatMessage, ModelRef, ProviderRequest, StreamEvent};
+
+        let session = match crate::auth::composer::load_composer_session() {
+            Ok(Some(session)) => session,
+            _ => {
+                println!("Skipping rust bridge live test: not connected");
+                return;
+            }
+        };
+        let http = reqwest::Client::builder()
+            .user_agent(crate::identity::CursorIdeIdentity::load().user_agent())
+            .build()
+            .expect("http client");
+        let token = match crate::auth::composer::ensure_fresh_composer_token(&http, &session).await
+        {
+            Ok(token) => token,
+            Err(err) => {
+                println!("Skipping rust bridge live test: {err:?}");
+                return;
+            }
+        };
+        let identity = crate::identity::CursorIdeIdentity::load();
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2-fast"),
+            vec![ChatMessage::user_text("Dis OK en une phrase.")],
+        )
+        .with_workspace_root(r"C:\Dev\Sinew")
+        .with_cache_key(format!("rust-live-{}", uuid::Uuid::new_v4()));
+        let assert_live = std::env::var("SINEW_CURSOR_LIVE_ASSERT")
+            .map(|v| v.trim() == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        match crate::agent::stream_via_rust_bridge(&identity, token, request).await {
+            Ok(mut stream) => {
+                let mut saw_text = false;
+                while let Some(event) = stream.next().await {
+                    match event {
+                        Ok(StreamEvent::TextDelta { .. }) | Ok(StreamEvent::ThinkingDelta { .. }) => {
+                            saw_text = true;
+                        }
+                        Err(err) => {
+                            println!("RUST BRIDGE STREAM ERROR: {err:?}");
+                            if assert_live {
+                                panic!("rust agent bridge stream error: {err:?}");
+                            }
+                            return;
+                        }
+                        Ok(_) => {}
+                    }
+                }
+                println!("Rust agent bridge live: saw_text={saw_text}");
+                if assert_live && !saw_text {
+                    panic!("rust agent bridge returned no text");
+                }
+            }
+            Err(err) => {
+                println!("RUST BRIDGE ERROR: {err:?}");
+                if assert_live {
+                    panic!("rust agent bridge failed: {err:?}");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_live_composer_request() {
         use sinew_core::Provider;
         use futures::StreamExt;

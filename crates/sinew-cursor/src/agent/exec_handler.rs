@@ -188,6 +188,64 @@ pub fn encode_mcp_result(
     encode_exec_client_message(exec_id, id, "mcp_result", mcp_result)
 }
 
+/// Shallow directory listing (parity with Node `shallowLayout` in exec-handlers.mjs).
+fn shallow_layout_tree(root: &Path, max_entries: usize) -> Result<DynamicMessage> {
+    let node_desc = message_desc("agent.v1.LsDirectoryTreeNode")?;
+    let file_desc = message_desc("agent.v1.LsDirectoryTreeNode_File")?;
+    let mut children_dirs = Vec::new();
+    let mut children_files = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(root) {
+        for entry in entries.flatten().take(max_entries) {
+            let path = entry.path();
+            let abs = path.display().to_string();
+            if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                let mut dir_node = DynamicMessage::new(node_desc.clone());
+                setf(&mut dir_node, "abs_path", ProtoValue::String(abs))?;
+                setf(
+                    &mut dir_node,
+                    "children_were_processed",
+                    ProtoValue::Bool(false),
+                )?;
+                setf(&mut dir_node, "children_dirs", ProtoValue::List(vec![]))?;
+                setf(&mut dir_node, "children_files", ProtoValue::List(vec![]))?;
+                setf(&mut dir_node, "num_files", ProtoValue::I32(0))?;
+                children_dirs.push(ProtoValue::Message(dir_node));
+            } else if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                let mut file_node = DynamicMessage::new(file_desc.clone());
+                setf(&mut file_node, "name", ProtoValue::String(name))?;
+                children_files.push(ProtoValue::Message(file_node));
+            }
+        }
+    }
+    let mut root_node = DynamicMessage::new(node_desc);
+    setf(
+        &mut root_node,
+        "abs_path",
+        ProtoValue::String(root.display().to_string()),
+    )?;
+    setf(
+        &mut root_node,
+        "children_were_processed",
+        ProtoValue::Bool(true),
+    )?;
+    setf(&mut root_node, "children_dirs", ProtoValue::List(children_dirs))?;
+    setf(
+        &mut root_node,
+        "children_files",
+        ProtoValue::List(children_files),
+    )?;
+    let num_files = root_node
+        .get_field_by_name("children_files")
+        .map(|v| match v.as_ref() {
+            ProtoValue::List(items) => items.len() as i32,
+            _ => 0,
+        })
+        .unwrap_or(0);
+    setf(&mut root_node, "num_files", ProtoValue::I32(num_files))?;
+    Ok(root_node)
+}
+
 fn resolve_path(root: &str, raw: &str) -> Result<PathBuf> {
     let base = PathBuf::from(root);
     let target = if Path::new(raw).is_absolute() {
@@ -253,20 +311,11 @@ fn handle_ls_args(args: &DynamicMessage, workspace_root: &str) -> Result<Dynamic
     let mut result = DynamicMessage::new(result_desc);
     match resolve_path(workspace_root, &path) {
         Ok(full) => {
-            let content = execute_tool("list_dir", &serde_json::json!({ "path": path }), workspace_root);
+            let root_node = shallow_layout_tree(&full, 120)?;
             let ok_desc = message_desc("agent.v1.LsSuccess")?;
-            let node_desc = message_desc("agent.v1.LsDirectoryTreeNode")?;
-            let mut root_node = DynamicMessage::new(node_desc);
-            setf(
-                &mut root_node,
-                "abs_path",
-                ProtoValue::String(full.display().to_string()),
-            )?;
-            setf(&mut root_node, "children_were_processed", ProtoValue::Bool(true))?;
             let mut ok = DynamicMessage::new(ok_desc);
             setf(&mut ok, "directory_tree_root", ProtoValue::Message(root_node))?;
             setf(&mut result, "success", ProtoValue::Message(ok))?;
-            let _ = content;
         }
         Err(err) => {
             let rej_desc = message_desc("agent.v1.LsRejected")?;

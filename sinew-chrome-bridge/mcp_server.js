@@ -170,6 +170,7 @@ function launchChrome(targetUrl = 'about:blank') {
   const args = [
     '--no-first-run',
     '--no-default-browser-check',
+    `--load-extension=${__dirname}`,
     normalizeUrl(targetUrl) || 'about:blank',
   ];
 

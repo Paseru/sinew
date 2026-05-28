@@ -9719,3 +9719,21 @@ textarea {
 .chat-body[data-compact-mode="very-compact"] .tool-card__code {
   max-height: 140px;
 }
+
+/* Tab context menu */
+.tab-menu {
+  min-width: 236px;
+}
+.tab-menu__item {
+  gap: 9px;
+}
+.tab-menu__item span {
+  flex: 1 1 auto;
+}
+.tab-menu__shortcut {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}

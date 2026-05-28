@@ -21,7 +21,15 @@ $runtimeFiles = @(
     "mcp_server.js",
     "native-host-wrapper.exe",
     "package.json",
-    "package-lock.json"
+    "package-lock.json",
+    "manifest.json",
+    "background.js",
+    "sinew_cursor.js",
+    "popup.html",
+    "popup.js",
+    "icon-32.png",
+    "icon-64.png",
+    "icon-128.png"
 )
 foreach ($file in $runtimeFiles) {
     $source = Join-Path $SourceDir $file
