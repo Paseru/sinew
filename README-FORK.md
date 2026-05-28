@@ -212,6 +212,24 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * 📂 *Fichiers : `crates/sinew-core/src/provider.rs`*
 * **⏱️ Protection contre le gel des flux du pont (Timers d'inactivité & Jobs de tests)**
   * Ajout d'une gestion intelligente des timeouts dans le pont de streaming (`run-stream.mjs`) : implémentation d'un délai d'inactivité automatique après réception de texte (`2500ms`) et d'un chronomètre de sécurité global (`120s`) pour empêcher tout blocage ou gel du canal HTTP/2.
-  * Sécurisation du script de test en direct (`test-live.ps1`) via une exécution asynchrone par `Start-Job` surveillée avec arrêt forcé au bout de 90 secondes si le serveur distant ne répond pas.
+  * Securisation du script de test en direct (`test-live.ps1`) via une exécution asynchrone par `Start-Job` surveillée avec arrêt forcé au bout de 90 secondes si le serveur distant ne répond pas.
   * 📂 *Fichiers : `scripts/agent-bridge/run-stream.mjs`, `scripts/agent-bridge/test-live.ps1`*
+
+---
+
+## 📅 01/06 — Clic Droit Onglets, Sauvegarde Automatique, Réglages de Taille & Robustesse Windows
+
+* **🖱️ Menu clic droit sur les onglets de l'éditeur (Editor Tab Context Menu) avec localisation multilingue**
+  * Ajout d'un menu contextuel complet par clic droit (ou raccourci `F10`) sur les onglets de l'éditeur. Permet de fermer l'onglet (raccourci `Ctrl+F4`), de fermer les autres, de fermer à droite, de fermer tous les onglets, de copier le chemin (absolu ou relatif) et d'ouvrir le dossier système Finder/Explorateur. Les libellés sont entièrement traduits en français ou en anglais selon vos préférences.
+  * 📂 *Fichiers : `src/components/Workspace.tsx`, `src/components/EditorPane.tsx`, `src/styles.css`*
+* **💾 Sauvegarde automatique SOTA (Auto-Save) réactive**
+  * Intégration d'une option d'activation de la sauvegarde automatique. Une fois active, tout fichier modifié est enregistré de manière transparente en arrière-plan après 1,5 seconde d'inactivité de frappe (debounce réactif pur React), sans aucune interruption de saisie.
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/components/EditorPane.tsx`*
+* **🔎 Sélecteurs de la taille du texte (Éditeur & Chat) avec variables CSS à chaud**
+  * Ajout de boutons interactifs de contrôle (`+` et `-`) pour régler précisément la taille des caractères de l'éditeur de code Monaco et du chat de discussion IA (de 10px à 22px). La taille du chat s'adapte instantanément via l'injection de variables CSS documentaires appliquées dès le démarrage.
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/components/EditorPane.tsx`, `src/App.tsx`, `src/styles.css`*
+* **🔑 Diagnostic Windows OAuth résilient aux conflits de ports**
+  * Capture intelligente de l'erreur d'autorisation réseau spécifique à Windows (code 10013) lors des connexions OAuth pour suggérer automatiquement de vérifier les plages d'adresses ou de redémarrer les services système WinNAT/HNS.
+  * 📂 *Fichiers : `src-tauri/src/providers.rs`*
+
 
