@@ -64,6 +64,13 @@ export const THINKING_LEVELS: { value: ThinkingLevel; label: string }[] = [
 
 export const MODELS: ModelEntry[] = [
   {
+    value: "anthropic:claude-opus-4-8",
+    provider: "anthropic",
+    label: "Opus 4.8",
+    thinking: ["off", "low", "medium", "high", "xhigh", "max"],
+    defaultThinking: "medium",
+  },
+  {
     value: "anthropic:claude-opus-4-7",
     provider: "anthropic",
     label: "Opus 4.7",
