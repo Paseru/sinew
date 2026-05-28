@@ -1,6 +1,5 @@
 ﻿{
   "manifest_version": 3,
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxG2HBxAL/dxwZ60CCsbcEVTz82wuESNGW817FYx1z9aP0tn1HU8eoFQjuYHu2IcB61SxdE6g7PfPpT3c6Gv7yqKbpIQqJeZFr1aVVMGWJrn72THXjo++2GPDIN9bB04NCtC77UsklwvQhYnSmylrBlaVWNxjzaOk2gNOw7RTChqgWRqONr+twnwg00w4D/18NrCHcVupyotVpsBWVPSi/2bmESaavJBmiIdA0GH7Ldjb/ekOIue+5EYwk0KX+fwPOzLQVOt9ofUrou4gfbUkhVuh1whLI6vWx0RWp9jn7bQlw4VWtatjPXkz1Z2/yp2dcSgEgdJnz/fLyZs6cDoH5wIDAQAB",
   "name": "Sinew Chrome Bridge",
   "version": "1.0.0",
   "description": "Local Chrome control bridge for Sinew, powered by Native Messaging and CDP.",
