@@ -385,6 +385,9 @@ export const api = {
       input: { settings },
     });
   },
+  registerChromeBridge(workspacePath: string) {
+    return invoke<string>("register_chrome_bridge", { workspacePath });
+  },
   listToolSettings(workspacePath: string) {
     return invoke<ToolSettings>("list_tool_settings", {
       input: { workspacePath },

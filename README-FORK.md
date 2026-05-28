@@ -105,3 +105,34 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
 * **⚙️ Intégration de sécurité & Synchro automatique**
   * Réinitialisation de l'abonnement d'images si le fournisseur Google est déconnecté, et sauvegarde immédiate des préférences dans le profil utilisateur.
   * 📂 *Fichiers : `src-tauri/src/providers.rs`, `src/components/SettingsPane.tsx`*
+
+---
+
+## 📅 29/05 — Fournisseur DeepSeek V3 & R1 (Reasoner) complet avec clés API personnelles
+
+* **🚀 Intégration native de DeepSeek dans l'application**
+  * Ajout du fournisseur officiel **DeepSeek** dans le menu des modèles et de configuration.
+  * Prise en charge complète de la validation de clé API sécurisée via le fichier local `deepseek-auth.json`.
+  * Support de **DeepSeek V3** (`deepseek-chat`) pour des tâches générales rapides avec support natif des outils (tools).
+  * 📂 *Fichiers : `crates/sinew-deepseek/`, `src-tauri/Cargo.toml`, `src-tauri/src/providers.rs`, `src-tauri/src/lib.rs`*
+* **🧠 Réflexion en continu & Visualisation de la pensée pour DeepSeek R1**
+  * Support complet du modèle phare **DeepSeek R1** (`deepseek-reasoner`).
+  * Capture et rendu en temps réel du bloc de réflexion (*reasoning*) grâce à l'extraction et l'affichage fluide du champ `reasoning_content` dans le streaming de chat.
+  * Désactivation sécurisée des outils sur le modèle R1 car l'API officielle de DeepSeek ne supporte pas encore les appels d'outils sur ce modèle.
+  * 📂 *Fichiers : `crates/sinew-deepseek/src/stream.rs`, `crates/sinew-deepseek/src/wire.rs`, `src/lib/models.ts`*
+* **⚙️ Interface utilisateur dédiée dans l'onglet des fournisseurs**
+  * Intégration d'une carte de connexion élégante avec masquage de clé, validation immédiate au collage et indicateur d'état dynamique (*Connected*, *Connecting*, *Needs attention*, *Disconnected*).
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/lib/ipc.ts`, `src/types.ts`*
+
+---
+
+## 📅 30/05 — Synchronisation Multi-PC Intelligente & Réparation du Pont Chrome en Un Clic
+
+* **🌐 Bouton « Configurer / Réparer le pont local » en un clic dans l'interface**
+  * Ajout d'une fonctionnalité de réparation transparente en un clic : si le pont Chrome ne répond pas sur un nouveau PC synchronisé par OneDrive, un avertissement clair et un bouton bleu de réparation automatique s'affichent dans les paramètres MCP.
+  * L'activation exécute de manière invisible le script d'enregistrement système Windows en tâche de fond pour copier les dépendances locales, ajouter les clés de registre Windows nécessaires et recharger les serveurs MCP.
+  * 📂 *Fichiers : `src-tauri/src/conversations.rs`, `src-tauri/src/lib.rs`, `src/lib/ipc.ts`, `src/components/SettingsPane.tsx`*
+* **🧠 Résolution des importations et fiabilité des builds**
+  * Correction d'une visibilité d'import sur `validate_api_key` dans `sinew-deepseek` pour assurer un build de production parfait.
+  * 📂 *Fichiers : `crates/sinew-deepseek/src/lib.rs`*
+

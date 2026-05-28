@@ -316,3 +316,46 @@ pub(super) async fn save_skill_settings(
         .map_err(error_to_string)?;
     Ok(list_installed_skills(workspace_root, &saved))
 }
+
+#[tauri::command]
+pub(super) async fn register_chrome_bridge(
+    workspace_path: String,
+) -> std::result::Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        use std::path::PathBuf;
+
+        let workspace_root = PathBuf::from(&workspace_path);
+        let ps_script = workspace_root.join("sinew-chrome-bridge").join("register.ps1");
+        if !ps_script.exists() {
+            return Err("Le script d'enregistrement sinew-chrome-bridge/register.ps1 est introuvable dans ce dossier.".to_string());
+        }
+
+        let output = Command::new("powershell")
+            .arg("-ExecutionPolicy")
+            .arg("Bypass")
+            .arg("-File")
+            .arg(ps_script)
+            .output();
+
+        match output {
+            Ok(out) => {
+                let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                if out.status.success() {
+                    Ok(stdout)
+                } else {
+                    Err(format!("Erreur lors de l'exécution du script :\n{}\n{}", stdout, stderr))
+                }
+            }
+            Err(err) => Err(format!("Impossible de lancer PowerShell: {}", err)),
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("L'enregistrement du pont Chrome n'est supporté que sur Windows.".to_string())
+    }
+}
+
