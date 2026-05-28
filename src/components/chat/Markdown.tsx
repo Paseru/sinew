@@ -15,6 +15,8 @@ import { Icon } from "@iconify/react";
 import { api } from "../../lib/ipc";
 import { MermaidDiagram } from "./MermaidDiagram";
 
+import { getAppLocale } from "../../lib/locale";
+
 type Props = {
   text: string;
   onOpenFile: (path: string) => void;
@@ -56,6 +58,12 @@ function FileLink({
   workspacePath?: string;
 }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const isFr = getAppLocale() === "fr";
+  const platform = typeof navigator !== "undefined" ? navigator.platform.toLowerCase() : "";
+  const isMac = platform.includes("mac");
+  const revealLabel = isFr
+    ? (isMac ? "Afficher dans le Finder" : "Afficher dans l'Explorateur")
+    : (isMac ? "Reveal in Finder" : "Reveal in Explorer");
 
   useEffect(() => {
     if (!menu) return;
@@ -126,7 +134,7 @@ function FileLink({
             }}
           >
             <Icon icon="solar:file-text-linear" width={14} height={14} />
-            <span>Open in Editor</span>
+            <span>{isFr ? "Ouvrir dans l'éditeur" : "Open in Editor"}</span>
           </button>
 
           {workspacePath && (
@@ -141,7 +149,7 @@ function FileLink({
                 }}
               >
                 <Icon icon="solar:folder-open-linear" width={14} height={14} />
-                <span>Reveal in Explorer</span>
+                <span>{revealLabel}</span>
               </button>
               <button
                 type="button"
@@ -153,7 +161,7 @@ function FileLink({
                 }}
               >
                 <Icon icon="solar:play-linear" width={14} height={14} />
-                <span>Execute / Run</span>
+                <span>{isFr ? "Exécuter / Lancer" : "Execute / Run"}</span>
               </button>
             </>
           )}
