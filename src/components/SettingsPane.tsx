@@ -4626,6 +4626,20 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
               Le pont Chrome nécessite des fichiers système locaux (`AppData`) et une clé de registre Windows.
               Si vous êtes sur un nouveau PC, ou si le pont ne répond pas, vous pouvez l'enregistrer à nouveau en un clic.
             </p>
+            <div style={{
+              fontSize: "12px",
+              lineHeight: "1.4",
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              padding: "8px",
+              borderRadius: "4px",
+              color: "#f87171",
+              marginTop: "4px",
+              fontWeight: "500"
+            }}>
+              ⚠️ IMPORTANT : Pour que l'automatisation fonctionne, vous devez également charger l'extension une première fois dans Google Chrome. 
+              Allez sur <code style={{color: "#fff", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px"}}>chrome://extensions</code>, activez le "Mode développeur", cliquez sur "Charger l'extension non empaquetée" et sélectionnez le dossier <code style={{color: "#fff", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px"}}>sinew-chrome-bridge</code> de ce projet.
+            </div>
             <button
               type="button"
               className="settings-pane__btn"
