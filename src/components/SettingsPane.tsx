@@ -3105,21 +3105,42 @@ function ProviderCard({
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            className="settings-pane__btn"
-            data-primary="true"
-            onClick={onConnect}
-            disabled={loading || busy}
-          >
-            <Icon
-              icon={busy ? "solar:refresh-linear" : "solar:login-2-linear"}
-              width={13}
-              height={13}
-            />
-            <span>{busy ? busyConnectLabel : connectLabel}</span>
-          </button>
-        )}
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {showMinus && (
+              <button
+                type="button"
+                className="settings-pane__btn"
+                onClick={onMinus}
+                disabled={loading || busy}
+                title="Remove account"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "6px 8px",
+                  minWidth: "auto",
+                  color: "var(--text-error, #f87171)"
+                }}
+              >
+                <Icon icon="solar:minus-circle-linear" width={16} height={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="settings-pane__btn"
+              data-primary="true"
+              onClick={onConnect}
+              disabled={loading || busy}
+            >
+              <Icon
+                icon={busy ? "solar:refresh-linear" : "solar:login-2-linear"}
+                width={13}
+                height={13}
+              />
+              <span>{busy ? busyConnectLabel : connectLabel}</span>
+            </button>
+          </div>
+        ) }
       </div>
     </section>
   );
