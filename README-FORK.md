@@ -38,7 +38,7 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 🤖 Modèles d'IA, Comptes & Furtivité (AI Engine)
 
-* **👥 Gestion Multi-comptes OpenAI :** Connexion simultanée de plusieurs profils OpenAI secondaires avec bascule instantanée entre vos différentes clés et abonnements.
+* **👥 Gestion Multi-comptes OpenAI & Google Gemini :** Connexion simultanée de plusieurs profils OpenAI et Google Gemini secondaires avec bascule instantanée entre vos différentes clés, comptes et abonnements.
 * **📊 Quotas en temps réel :** Visualisation dynamique de votre consommation (crédits / balance restante) sous forme de barres de progression et pastille live dans le chat.
 * **🤖 Routage & Résilience Google Antigravity SOTA :** Réparation, optimisation et routage intelligent de vos requêtes vers les modèles Google les plus performants.
 * **⚡ Optimisation de vitesse Gemini :** Streaming et requêtes ultra-rapides pour les modèles Gemini, basés sur l'architecture réseau optimisée de Google Antigravity.
