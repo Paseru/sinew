@@ -54,7 +54,7 @@ crates/sinew-cursor/src/
 ### Sélection transport
 
 ```rust
-// env SINEW_CURSOR_TRANSPORT=agent | idempotent (default idempotent)
+// env SINEW_CURSOR_TRANSPORT=idempotent pour forcer l’ancien chemin (défaut: agent)
 ```
 
 - **`idempotent`** : code actuel (conservé jusqu’à déblocage MITM éventuel).

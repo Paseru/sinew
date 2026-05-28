@@ -28,13 +28,17 @@ $line = @{ accessToken=$token; modelId="composer-2.5"; systemPrompt="You are Com
 $line | npx tsx run-stream.mjs
 ```
 
-## Activer dans Sinew
+## Transport dans Sinew
+
+Par défaut Sinew utilise déjà `agent.v1` (aucune variable requise).
+
+Pour forcer l’ancien chemin IdempotentSSE (cassé) :
 
 ```powershell
-$env:SINEW_CURSOR_TRANSPORT = "agent"
+$env:SINEW_CURSOR_TRANSPORT = "idempotent"
 ```
 
-Puis lancer Sinew / test live :
+Test live :
 
 ```powershell
 cd C:\Dev\Sinew
