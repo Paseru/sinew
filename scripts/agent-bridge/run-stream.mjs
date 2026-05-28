@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
  * Minimal agent.v1 Run bridge for Sinew.
- * stdin: one JSON line { accessToken, modelId, systemPrompt, userText, workspaceRoot? }
- * stdout: NDJSON { type: "text"|"thinking"|"error", delta?, error? }
+ * stdin: line 1 = config JSON; further lines = tool_response from Sinew
+ * stdout: NDJSON text/thinking/error/tool_request
  */
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
+import readline from "node:readline";
 import { fileURLToPath } from "node:url";
+import { buildProjectLayout, handleLsArgs, handleReadArgs } from "./exec-handlers.mjs";
 import { create, toBinary, fromBinary } from "@bufbuild/protobuf";
 import {
   AgentClientMessageSchema,
@@ -40,8 +42,13 @@ import {
   WriteResultSchema,
   KvClientMessageSchema,
   LsDirectoryTreeNodeSchema,
+  McpErrorSchema,
+  McpInstructionsSchema,
   McpRejectedSchema,
   McpResultSchema,
+  McpTextContentSchema,
+  McpToolDefinitionSchema,
+  McpToolResultContentItemSchema,
   ModelDetailsSchema,
   RequestContextEnvSchema,
   RequestContextResultSchema,
@@ -117,7 +124,38 @@ function storeBlob(blobStore, data) {
   return blobId;
 }
 
-function buildRequest(modelId, systemPrompt, userText) {
+function buildMcpToolDefinitions(tools) {
+  if (!Array.isArray(tools)) return [];
+  return tools.map((tool) => {
+    const schema = tool.parameters || { type: "object", properties: {}, required: [] };
+    const inputSchema = new TextEncoder().encode(JSON.stringify(schema));
+    return create(McpToolDefinitionSchema, {
+      name: tool.name,
+      toolName: tool.name,
+      description: tool.description || "",
+      providerIdentifier: "sinew",
+      inputSchema,
+    });
+  });
+}
+
+function decodeMcpArgs(argsMap) {
+  const decoded = {};
+  for (const [key, value] of Object.entries(argsMap || {})) {
+    if (value instanceof Uint8Array) {
+      try {
+        decoded[key] = JSON.parse(new TextDecoder().decode(value));
+      } catch {
+        decoded[key] = new TextDecoder().decode(value);
+      }
+    } else {
+      decoded[key] = value;
+    }
+  }
+  return decoded;
+}
+
+function buildRequest(modelId, systemPrompt, userText, conversationId) {
   const blobStore = new Map();
 
   const systemJson = JSON.stringify({ role: "system", content: systemPrompt || "" });
@@ -161,7 +199,7 @@ function buildRequest(modelId, systemPrompt, userText) {
     conversationState,
     action,
     modelDetails,
-    conversationId: randomUUID(),
+    conversationId: conversationId || randomUUID(),
   });
 
   const clientMessage = create(AgentClientMessageSchema, {
@@ -183,7 +221,7 @@ function sendExecResult(execMsg, resultCase, result, sendFrame) {
   sendFrame(frameConnect(toBinary(AgentClientMessageSchema, clientMsg)));
 }
 
-function buildRequestContext(workspaceRoot) {
+function buildRequestContext(workspaceRoot, snapshot, tools) {
   const root = workspaceRoot?.trim() || process.cwd();
   const projectFolder = path.join(
     process.env.USERPROFILE || process.env.HOME || root,
@@ -191,14 +229,8 @@ function buildRequestContext(workspaceRoot) {
     "projects",
     "sinew-bridge",
   );
-  const layout = create(LsDirectoryTreeNodeSchema, {
-    absPath: root,
-    childrenDirs: [],
-    childrenFiles: [],
-    childrenWereProcessed: true,
-    fullSubtreeExtensionCounts: {},
-    numFiles: 0,
-  });
+  const layout = buildProjectLayout(root, snapshot);
+  const mcpTools = buildMcpToolDefinitions(tools);
   return create(RequestContextSchema, {
     rules: [],
     env: create(RequestContextEnvSchema, {
@@ -214,10 +246,18 @@ function buildRequestContext(workspaceRoot) {
       agentTranscriptsFolder: path.join(projectFolder, "transcripts"),
     }),
     repositoryInfo: [],
-    tools: [],
+    tools: mcpTools,
     gitRepos: [],
-    projectLayouts: [layout],
-    mcpInstructions: [],
+    projectLayouts: layout ? [layout] : [],
+    mcpInstructions: [
+      create(McpInstructionsSchema, {
+        serverName: "sinew",
+        instructions: [
+          `Workspace root: ${root}.`,
+          "Use the MCP tools listed in this request context (Read, Grep, Bash, etc.).",
+        ].join("\n"),
+      }),
+    ],
     fileContents: {},
     customSubagents: [],
   });
@@ -225,11 +265,16 @@ function buildRequestContext(workspaceRoot) {
 
 const REJECT = "Tool not available in Sinew agent bridge spike.";
 
-function handleExecMessage(execMsg, sendFrame) {
+async function handleExecMessage(execMsg, sendFrame, emit, waitToolResponse) {
   const execCase = execMsg.message?.case;
   debug(`exec ${execCase ?? "?"}`);
+  const send = (msg, resultCase, result) => sendExecResult(msg, resultCase, result, sendFrame);
   if (execCase === "requestContextArgs") {
-    const requestContext = buildRequestContext(config.workspaceRoot);
+    const requestContext = buildRequestContext(
+      config.workspaceRoot,
+      config.workspaceSnapshot,
+      config.tools,
+    );
     const result = create(RequestContextResultSchema, {
       result: {
         case: "success",
@@ -240,33 +285,11 @@ function handleExecMessage(execMsg, sendFrame) {
     return;
   }
   if (execCase === "readArgs") {
-    const args = execMsg.message.value;
-    sendExecResult(
-      execMsg,
-      "readResult",
-      create(ReadResultSchema, {
-        result: {
-          case: "rejected",
-          value: create(ReadRejectedSchema, { path: args.path, reason: REJECT }),
-        },
-      }),
-      sendFrame,
-    );
+    handleReadArgs(execMsg, execMsg.message.value, config.workspaceRoot, send);
     return;
   }
   if (execCase === "lsArgs") {
-    const args = execMsg.message.value;
-    sendExecResult(
-      execMsg,
-      "lsResult",
-      create(LsResultSchema, {
-        result: {
-          case: "rejected",
-          value: create(LsRejectedSchema, { path: args.path, reason: REJECT }),
-        },
-      }),
-      sendFrame,
-    );
+    handleLsArgs(execMsg, execMsg.message.value, config.workspaceRoot, send);
     return;
   }
   if (execCase === "grepArgs") {
@@ -393,29 +416,50 @@ function handleExecMessage(execMsg, sendFrame) {
     return;
   }
   if (execCase === "mcpArgs") {
-    sendExecResult(
-      execMsg,
-      "mcpResult",
-      create(McpResultSchema, {
-        result: {
-          case: "rejected",
-          value: create(McpRejectedSchema, {
-            reason: REJECT,
-            isReadonly: false,
-          }),
-        },
-      }),
-      sendFrame,
-    );
+    const mcpArgs = execMsg.message.value;
+    const toolName = mcpArgs.toolName || mcpArgs.name || "";
+    const args = decodeMcpArgs(mcpArgs.args);
+    emit({
+      type: "tool_request",
+      execId: execMsg.execId,
+      execMsgId: execMsg.id,
+      toolCallId: mcpArgs.toolCallId || randomUUID(),
+      toolName,
+      args,
+    });
+    const resp = await waitToolResponse();
+    const content = resp?.content || "Error: empty tool response";
+    const isError = Boolean(resp?.isError) || content.startsWith("Error:");
+    const mcpResult = isError
+      ? create(McpResultSchema, {
+          result: { case: "error", value: create(McpErrorSchema, { error: content }) },
+        })
+      : create(McpResultSchema, {
+          result: {
+            case: "success",
+            value: create(McpSuccessSchema, {
+              isError: false,
+              content: [
+                create(McpToolResultContentItemSchema, {
+                  content: {
+                    case: "text",
+                    value: create(McpTextContentSchema, { text: content }),
+                  },
+                }),
+              ],
+            }),
+          },
+        });
+    sendExecResult(execMsg, "mcpResult", mcpResult, sendFrame);
     return;
   }
   debug(`unhandled exec: ${execCase ?? "?"}`);
 }
 
-function handleServerMessage(msg, blobStore, sendFrame, emit) {
+function handleServerMessage(msg, blobStore, sendFrame, emit, waitToolResponse) {
   const msgCase = msg.message?.case;
   if (msgCase === "execServerMessage") {
-    handleExecMessage(msg.message.value, sendFrame);
+    void handleExecMessage(msg.message.value, sendFrame, emit, waitToolResponse);
   } else if (msgCase === "interactionUpdate") {
     const u = msg.message.value;
     const c = u.message?.case;
@@ -469,14 +513,26 @@ function handleServerMessage(msg, blobStore, sendFrame, emit) {
   }
 }
 
-async function readConfig() {
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  const raw = Buffer.concat(chunks).toString("utf8").trim();
-  if (!raw) throw new Error("no config on stdin");
-  return JSON.parse(raw);
+async function readConfigLine(rl) {
+  const line = await new Promise((resolve, reject) => {
+    rl.once("line", resolve);
+    rl.once("close", () => reject(new Error("stdin closed before config")));
+  });
+  if (!line?.trim()) throw new Error("no config on stdin");
+  return JSON.parse(line);
+}
+
+function waitToolResponse(rl) {
+  return new Promise((resolve, reject) => {
+    rl.once("line", (line) => {
+      try {
+        resolve(JSON.parse(line));
+      } catch (err) {
+        reject(err);
+      }
+    });
+    rl.once("close", () => reject(new Error("stdin closed waiting for tool response")));
+  });
 }
 
 let sawText = false;
@@ -507,8 +563,19 @@ function bumpIdleFinish() {
   idleTimer = setTimeout(() => gracefulFinish(0), 2500);
 }
 
-const config = await readConfig();
-const { accessToken, modelId, systemPrompt, userText, workspaceRoot } = config;
+const stdinRl = readline.createInterface({ input: process.stdin, terminal: false });
+const config = await readConfigLine(stdinRl);
+const {
+  accessToken,
+  modelId,
+  systemPrompt,
+  userText,
+  workspaceRoot,
+  conversationId,
+  tools,
+  workspaceSnapshot,
+} = config;
+const waitForTool = () => waitToolResponse(stdinRl);
 if (!accessToken || !modelId || !userText) {
   console.log(JSON.stringify({ error: "missing accessToken, modelId, or userText" }));
   process.exit(1);
@@ -547,6 +614,7 @@ const { requestBytes, blobStore } = buildRequest(
   modelId,
   systemPrompt || "You are Composer in Cursor IDE.",
   userText,
+  conversationId,
 );
 
 proc.stdin.write(lpEncode(frameConnect(requestBytes)));
@@ -587,9 +655,15 @@ proc.stdout.on("data", (chunk) => {
       try {
         const msg = fromBinary(AgentServerMessageSchema, frame);
         debug(`server case=${msg.message?.case ?? "?"}`);
-        handleServerMessage(msg, blobStore, (f) => {
-          proc.stdin.write(lpEncode(f));
-        }, emit);
+        handleServerMessage(
+          msg,
+          blobStore,
+          (f) => {
+            proc.stdin.write(lpEncode(f));
+          },
+          emit,
+          waitForTool,
+        );
       } catch (err) {
         debug(`parse err: ${err}`);
       }
