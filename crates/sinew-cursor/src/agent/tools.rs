@@ -27,6 +27,9 @@ fn normalize_tool_name(name: &str) -> String {
         "grep" | "rg" => "grep".into(),
         "glob" | "glob_file_search" => "glob".into(),
         "bash" | "shell" | "run_terminal_cmd" => "bash".into(),
+        "write" | "writefile" | "write_file" | "strreplace" | "search_replace" | "edit"
+        | "editfile" | "edit_file" => "write".into(),
+        "delete" | "deletefile" | "delete_file" => "delete".into(),
         other => other.to_string(),
     }
 }
@@ -189,5 +192,39 @@ fn exec_shell(root: &Path, args: &Value) -> String {
             format!("exit={}\n{stdout}{stderr}", output.status)
         }
         Err(err) => format!("Error: shell failed ({err})"),
+    }
+}
+
+fn exec_write(root: &Path, args: &Value) -> String {
+    let Some(path) = pick_string(args, &["path", "filePath", "file_path", "target_file"]) else {
+        return "Error: write requires path".into();
+    };
+    let full = resolve_path(root, &path);
+    if !full.starts_with(root) {
+        return "Error: path outside workspace".into();
+    }
+    let content = pick_string(args, &["content", "contents", "text", "new_string", "replacement"])
+        .unwrap_or_default();
+    let len = content.len();
+    if let Some(parent) = full.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    match std::fs::write(&full, &content) {
+        Ok(()) => format!("Wrote {len} bytes to {}", full.display()),
+        Err(err) => format!("Error writing {}: {err}", full.display()),
+    }
+}
+
+fn exec_delete(root: &Path, args: &Value) -> String {
+    let Some(path) = pick_string(args, &["path", "filePath", "file_path", "target_file"]) else {
+        return "Error: delete requires path".into();
+    };
+    let full = resolve_path(root, &path);
+    if !full.starts_with(root) {
+        return "Error: path outside workspace".into();
+    }
+    match std::fs::remove_file(&full) {
+        Ok(()) => format!("Deleted {}", full.display()),
+        Err(err) => format!("Error deleting {}: {err}", full.display()),
     }
 }

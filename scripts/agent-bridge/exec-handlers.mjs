@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { create } from "@bufbuild/protobuf";
 import {
+  DeleteRejectedSchema,
+  DeleteResultSchema,
+  DeleteSuccessSchema,
   LsDirectoryTreeNodeSchema,
   LsRejectedSchema,
   LsResultSchema,
@@ -9,6 +12,9 @@ import {
   ReadErrorSchema,
   ReadResultSchema,
   ReadSuccessSchema,
+  WriteRejectedSchema,
+  WriteResultSchema,
+  WriteSuccessSchema,
 } from "./vendor/agent_pb.ts";
 
 const READ_LIMIT = 512 * 1024;
@@ -132,6 +138,90 @@ export function handleLsArgs(execMsg, args, workspaceRoot, sendExecResult) {
           case: "rejected",
           value: create(LsRejectedSchema, {
             path: dirPath,
+            reason: String(err?.message || err),
+          }),
+        },
+      }),
+    );
+  }
+}
+
+export function handleWriteArgs(execMsg, args, workspaceRoot, sendExecResult) {
+  const filePath = args.path || args.filePath || "";
+  const content =
+    args.contents ??
+    args.content ??
+    args.text ??
+    args.new_string ??
+    args.replacement ??
+    "";
+  try {
+    const full = resolveWorkspacePath(workspaceRoot, filePath);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, String(content), "utf8");
+    const lines = String(content).split("\n").length;
+    sendExecResult(
+      execMsg,
+      "writeResult",
+      create(WriteResultSchema, {
+        result: {
+          case: "success",
+          value: create(WriteSuccessSchema, {
+            path: filePath,
+            linesCreated: lines,
+            fileSize: Buffer.byteLength(String(content), "utf8"),
+          }),
+        },
+      }),
+    );
+  } catch (err) {
+    sendExecResult(
+      execMsg,
+      "writeResult",
+      create(WriteResultSchema, {
+        result: {
+          case: "rejected",
+          value: create(WriteRejectedSchema, {
+            path: filePath,
+            reason: String(err?.message || err),
+          }),
+        },
+      }),
+    );
+  }
+}
+
+export function handleDeleteArgs(execMsg, args, workspaceRoot, sendExecResult) {
+  const filePath = args.path || args.filePath || "";
+  try {
+    const full = resolveWorkspacePath(workspaceRoot, filePath);
+    const prev = fs.existsSync(full) ? fs.readFileSync(full, "utf8") : "";
+    const size = BigInt(fs.statSync(full).size);
+    fs.unlinkSync(full);
+    sendExecResult(
+      execMsg,
+      "deleteResult",
+      create(DeleteResultSchema, {
+        result: {
+          case: "success",
+          value: create(DeleteSuccessSchema, {
+            path: filePath,
+            deletedFile: filePath,
+            fileSize: size,
+            prevContent: prev,
+          }),
+        },
+      }),
+    );
+  } catch (err) {
+    sendExecResult(
+      execMsg,
+      "deleteResult",
+      create(DeleteResultSchema, {
+        result: {
+          case: "rejected",
+          value: create(DeleteRejectedSchema, {
+            path: filePath,
             reason: String(err?.message || err),
           }),
         },

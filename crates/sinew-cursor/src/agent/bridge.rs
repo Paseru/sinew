@@ -14,21 +14,9 @@ use crate::workspace;
 
 use super::conversation_id::stable_agent_conversation_id;
 use super::setup::{ensure_agent_bridge_ready, run_stream_script, tsx_executable};
+use super::state::AgentConversationStore;
 use super::tools::execute_tool;
-
-fn user_text(request: &ProviderRequest) -> String {
-    let mut parts = Vec::new();
-    for message in &request.transcript {
-        for part in &message.parts {
-            if let sinew_core::Part::Text { text, .. } = part {
-                if !text.trim().is_empty() {
-                    parts.push(text.clone());
-                }
-            }
-        }
-    }
-    parts.join("\n")
-}
+use super::transcript::split_transcript;
 
 fn tools_json(request: &ProviderRequest) -> Vec<serde_json::Value> {
     request
@@ -56,12 +44,20 @@ pub async fn stream_via_node_bridge(
 
     let model = request.model.name.clone();
     let system = request.system_prompt.clone().unwrap_or_default();
-    let user = user_text(&request);
-    let workspace = request
-        .workspace_root
-        .clone()
-        .unwrap_or_default();
+    let (history_turns, current_user) = split_transcript(&request.transcript);
+    let user = if current_user.is_empty() {
+        request
+            .transcript
+            .last()
+            .map(|m| m.text())
+            .unwrap_or_default()
+    } else {
+        current_user
+    };
+    let workspace = request.workspace_root.clone().unwrap_or_default();
+    let cache_key = request.cache_key.clone().unwrap_or_default();
     let conversation_id = stable_agent_conversation_id(request.cache_key.as_deref());
+    let persisted = AgentConversationStore::load().get(&cache_key);
     let trimmed = workspace.trim();
     let workspace_snapshot = if !trimmed.is_empty() {
         workspace::snapshot(trimmed).map(|snap| {
@@ -78,7 +74,7 @@ pub async fn stream_via_node_bridge(
     };
 
     let api_headers = identity.agent_bridge_headers(&token);
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "accessToken": token,
         "modelId": model,
         "systemPrompt": system,
@@ -86,9 +82,18 @@ pub async fn stream_via_node_bridge(
         "workspaceRoot": workspace,
         "conversationId": conversation_id,
         "tools": tools_json(&request),
+        "turns": history_turns,
         "workspaceSnapshot": workspace_snapshot,
         "apiHeaders": api_headers,
     });
+    if let Some(state) = persisted {
+        if let Some(checkpoint) = state.checkpoint_b64 {
+            payload["checkpointB64"] = serde_json::Value::String(checkpoint);
+        }
+        if !state.blobs.is_empty() {
+            payload["blobs"] = serde_json::json!(state.blobs);
+        }
+    }
 
     let mut child = Command::new(&tsx)
         .arg(&script)
@@ -140,7 +145,8 @@ pub async fn stream_via_node_bridge(
     });
 
     let model_name = request.model.name.clone();
-    let workspace_for_tools = workspace;
+    let workspace_for_tools = workspace.clone();
+    let cache_key_for_save = cache_key.clone();
     let events = try_stream! {
         yield StreamEvent::MessageStart { model: model_name.clone() };
         let text_index = 0usize;
@@ -158,6 +164,25 @@ pub async fn stream_via_node_bridge(
 
             if let Some(err) = value.get("error").and_then(|v| v.as_str()) {
                 Err(AppError::Network(err.to_string()))?;
+            }
+
+            if value.get("type").and_then(|v| v.as_str()) == Some("checkpoint") {
+                if !cache_key_for_save.trim().is_empty() {
+                    if let (Some(checkpoint), Some(blobs_value)) = (
+                        value.get("checkpointB64").and_then(|v| v.as_str()),
+                        value.get("blobs"),
+                    ) {
+                        let blobs: std::collections::HashMap<String, String> =
+                            serde_json::from_value(blobs_value.clone()).unwrap_or_default();
+                        let mut store = AgentConversationStore::load();
+                        let _ = store.save_checkpoint(
+                            &cache_key_for_save,
+                            checkpoint.to_string(),
+                            blobs,
+                        );
+                    }
+                }
+                continue;
             }
 
             if value.get("type").and_then(|v| v.as_str()) == Some("tool_request") {
@@ -192,6 +217,9 @@ pub async fn stream_via_node_bridge(
 
             let event_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
             let delta = value.get("delta").and_then(|v| v.as_str()).unwrap_or("");
+            if delta.is_empty() && event_type != "thinking" && event_type != "text" {
+                continue;
+            }
             if delta.is_empty() {
                 continue;
             }

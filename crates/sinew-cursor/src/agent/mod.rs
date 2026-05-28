@@ -1,7 +1,9 @@
 mod bridge;
 mod conversation_id;
 mod setup;
+mod state;
 mod tools;
+mod transcript;
 #[cfg(test)]
 mod models;
 pub mod transport;

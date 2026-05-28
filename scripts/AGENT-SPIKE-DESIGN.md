@@ -125,4 +125,6 @@ crates/sinew-cursor/src/
 2. ~~`SINEW_CURSOR_TRANSPORT=agent`~~ — branché via `scripts/agent-bridge` + `crates/sinew-cursor/src/agent/`.
 3. `cd scripts/agent-bridge && npm install` puis test `run-stream.mjs` (voir README).
 4. ~~`npm install` manuel~~ — auto au build + au lancement Sinew.
+5. Historique multi-tours + checkpoint persisté (`cursor-agent-conversations.json` par `cache_key`).
+6. Outils Read/Write/Delete/Grep/Bash via MCP + exec natifs read/ls/write.
 5. MITM optionnel ; tools/sessions agent (phase 2).

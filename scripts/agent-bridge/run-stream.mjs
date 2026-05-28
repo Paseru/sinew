@@ -9,7 +9,13 @@ import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
-import { buildProjectLayout, handleLsArgs, handleReadArgs } from "./exec-handlers.mjs";
+import {
+  buildProjectLayout,
+  handleDeleteArgs,
+  handleLsArgs,
+  handleReadArgs,
+  handleWriteArgs,
+} from "./exec-handlers.mjs";
 import { create, toBinary, fromBinary } from "@bufbuild/protobuf";
 import {
   AgentClientMessageSchema,
@@ -155,26 +161,130 @@ function decodeMcpArgs(argsMap) {
   return decoded;
 }
 
-function buildRequest(modelId, systemPrompt, userText, conversationId) {
+function restoreBlobStore(blobs) {
   const blobStore = new Map();
+  if (blobs && typeof blobs === "object") {
+    for (const [hex, b64] of Object.entries(blobs)) {
+      if (typeof b64 === "string") {
+        blobStore.set(hex, Buffer.from(b64, "base64"));
+      }
+    }
+  }
+  return blobStore;
+}
 
-  const systemJson = JSON.stringify({ role: "system", content: systemPrompt || "" });
-  const systemBlobId = storeBlob(blobStore, new TextEncoder().encode(systemJson));
+function buildRootPromptMessagesJson(systemPrompt, turns, blobStore) {
+  const ids = [];
+  ids.push(
+    storeBlob(
+      blobStore,
+      new TextEncoder().encode(
+        JSON.stringify({ role: "system", content: systemPrompt || "" }),
+      ),
+    ),
+  );
+  for (const turn of turns || []) {
+    const userText = turn.user_text || turn.userText || "";
+    const assistantText = turn.assistant_text || turn.assistantText || "";
+    if (userText.trim()) {
+      ids.push(
+        storeBlob(
+          blobStore,
+          new TextEncoder().encode(
+            JSON.stringify({
+              role: "user",
+              content: [{ type: "text", text: userText }],
+            }),
+          ),
+        ),
+      );
+    }
+    if (assistantText.trim()) {
+      ids.push(
+        storeBlob(
+          blobStore,
+          new TextEncoder().encode(
+            JSON.stringify({
+              role: "assistant",
+              content: [{ type: "text", text: assistantText }],
+            }),
+          ),
+        ),
+      );
+    }
+  }
+  return ids;
+}
 
-  const conversationState = create(ConversationStateStructureSchema, {
-    rootPromptMessagesJson: [systemBlobId],
-    turns: [],
-    todos: [],
-    pendingToolCalls: [],
-    previousWorkspaceUris: [],
-    fileStates: {},
-    fileStatesV2: {},
-    summaryArchives: [],
-    turnTimings: [],
-    subagentStates: {},
-    selfSummaryCount: 0,
-    readPaths: [],
-  });
+function buildTurnBlobIds(turns, blobStore) {
+  const turnIds = [];
+  for (const turn of turns || []) {
+    const userText = turn.user_text || turn.userText || "";
+    if (!userText.trim()) continue;
+    const userMsg = create(UserMessageSchema, {
+      text: userText,
+      messageId: randomUUID(),
+    });
+    const userBlobId = storeBlob(blobStore, toBinary(UserMessageSchema, userMsg));
+    const stepBlobIds = [];
+    const assistantText = turn.assistant_text || turn.assistantText || "";
+    if (assistantText.trim()) {
+      const step = create(ConversationStepSchema, {
+        message: {
+          case: "assistantMessage",
+          value: create(AssistantMessageSchema, { text: assistantText }),
+        },
+      });
+      stepBlobIds.push(storeBlob(blobStore, toBinary(ConversationStepSchema, step)));
+    }
+    const agentTurn = create(AgentConversationTurnStructureSchema, {
+      userMessage: userBlobId,
+      steps: stepBlobIds,
+    });
+    const turnStructure = create(ConversationTurnStructureSchema, {
+      turn: { case: "agentConversationTurn", value: agentTurn },
+    });
+    turnIds.push(storeBlob(blobStore, toBinary(ConversationTurnStructureSchema, turnStructure)));
+  }
+  return turnIds;
+}
+
+function loadCheckpointState(config, blobStore) {
+  if (!config.checkpointB64) return null;
+  try {
+    const bytes = Buffer.from(config.checkpointB64, "base64");
+    return fromBinary(ConversationStateStructureSchema, bytes);
+  } catch (err) {
+    debug(`checkpoint load failed: ${err}`);
+    return null;
+  }
+}
+
+function buildRequest(modelId, systemPrompt, userText, conversationId, config) {
+  const blobStore = restoreBlobStore(config.blobs);
+  const historyTurns = config.turns || [];
+  const loaded = loadCheckpointState(config, blobStore);
+
+  const conversationState =
+    loaded ??
+    create(ConversationStateStructureSchema, {
+      rootPromptMessagesJson: buildRootPromptMessagesJson(
+        systemPrompt,
+        historyTurns,
+        blobStore,
+      ),
+      turns: buildTurnBlobIds(historyTurns, blobStore),
+      todos: [],
+      pendingToolCalls: [],
+      previousWorkspaceUris: [],
+      fileStates: {},
+      fileStatesV2: {},
+      summaryArchives: [],
+      turnTimings: [],
+      subagentStates: {},
+      selfSummaryCount: 0,
+      readPaths: [],
+    });
 
   const action = create(ConversationActionSchema, {
     action: {
@@ -304,33 +414,11 @@ async function handleExecMessage(execMsg, sendFrame, emit, waitToolResponse) {
     return;
   }
   if (execCase === "writeArgs" || execCase === "editArgs") {
-    const args = execMsg.message.value;
-    sendExecResult(
-      execMsg,
-      "writeResult",
-      create(WriteResultSchema, {
-        result: {
-          case: "rejected",
-          value: create(WriteRejectedSchema, { path: args.path, reason: REJECT }),
-        },
-      }),
-      sendFrame,
-    );
+    handleWriteArgs(execMsg, execMsg.message.value, config.workspaceRoot, send);
     return;
   }
   if (execCase === "deleteArgs") {
-    const args = execMsg.message.value;
-    sendExecResult(
-      execMsg,
-      "deleteResult",
-      create(DeleteResultSchema, {
-        result: {
-          case: "rejected",
-          value: create(DeleteRejectedSchema, { path: args.path, reason: REJECT }),
-        },
-      }),
-      sendFrame,
-    );
+    handleDeleteArgs(execMsg, execMsg.message.value, config.workspaceRoot, send);
     return;
   }
   if (execCase === "shellArgs" || execCase === "shellStreamArgs") {
@@ -456,10 +544,29 @@ async function handleExecMessage(execMsg, sendFrame, emit, waitToolResponse) {
   debug(`unhandled exec: ${execCase ?? "?"}`);
 }
 
+function emitCheckpoint(state, blobStore, emit) {
+  try {
+    const bytes = toBinary(ConversationStateStructureSchema, state);
+    const blobs = {};
+    for (const [hex, data] of blobStore.entries()) {
+      blobs[hex] = Buffer.from(data).toString("base64");
+    }
+    emit({
+      type: "checkpoint",
+      checkpointB64: Buffer.from(bytes).toString("base64"),
+      blobs,
+    });
+  } catch (err) {
+    debug(`checkpoint emit failed: ${err}`);
+  }
+}
+
 function handleServerMessage(msg, blobStore, sendFrame, emit, waitToolResponse) {
   const msgCase = msg.message?.case;
   if (msgCase === "execServerMessage") {
     void handleExecMessage(msg.message.value, sendFrame, emit, waitToolResponse);
+  } else if (msgCase === "conversationCheckpointUpdate") {
+    emitCheckpoint(msg.message.value, blobStore, emit);
   } else if (msgCase === "interactionUpdate") {
     const u = msg.message.value;
     const c = u.message?.case;
@@ -615,6 +722,7 @@ const { requestBytes, blobStore } = buildRequest(
   systemPrompt || "You are Composer in Cursor IDE.",
   userText,
   conversationId,
+  config,
 );
 
 proc.stdin.write(lpEncode(frameConnect(requestBytes)));
