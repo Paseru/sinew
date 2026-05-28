@@ -3558,6 +3558,7 @@ textarea {
   gap: 14px;
   max-width: 100%;
   padding-top: 22px;
+  overflow-y: auto;
 }
 
 .settings-pane__about-hero {

@@ -1487,21 +1487,6 @@ export function SettingsPane({ workspacePath }: Props) {
         <button
           type="button"
           className="settings-pane__nav-item"
-          data-active={section === "about" ? "true" : "false"}
-          onClick={() => setSection("about")}
-        >
-          <Icon
-            icon="solar:info-circle-linear"
-            width={15}
-            height={15}
-            className="settings-pane__nav-icon"
-          />
-          <span className="settings-pane__nav-label">About</span>
-          <span className="settings-pane__nav-count" />
-        </button>
-        <button
-          type="button"
-          className="settings-pane__nav-item"
           data-active={section === "providers" ? "true" : "false"}
           onClick={() => setSection("providers")}
         >
@@ -1574,6 +1559,21 @@ export function SettingsPane({ workspacePath }: Props) {
           <span className="settings-pane__nav-count">
             {subAgentSettings.agents.length}
           </span>
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
+          data-active={section === "about" ? "true" : "false"}
+          onClick={() => setSection("about")}
+        >
+          <Icon
+            icon="solar:info-circle-linear"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">About</span>
+          <span className="settings-pane__nav-count" />
         </button>
       </nav>
 
@@ -1672,6 +1672,7 @@ export function SettingsPane({ workspacePath }: Props) {
           />
         ) : section === "mcp" ? (
           <McpSection
+            workspacePath={workspacePath}
             loading={loading}
             saving={saving}
             probing={probing}
@@ -2133,6 +2134,180 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           <Icon icon="simple-icons:github" width={13} height={13} />
           <span>GitHub</span>
         </a>
+      </div>
+
+      <div className="settings-pane__fork-section" style={{
+        marginTop: "16px",
+        paddingTop: "16px",
+        borderTop: "1px solid var(--line-1)",
+        display: "grid",
+        gap: "12px",
+      }}>
+        <h2 style={{
+          margin: 0,
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "var(--text-0)",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px"
+        }}>
+          <Icon icon="solar:widget-bold" width={16} height={16} style={{ color: "var(--primary)" }} />
+          {locale === "fr" ? "Mon Fork Personnel — Améliorations Clés" : "My Personal Fork — Key Enhancements"}
+        </h2>
+        
+        <p className="settings-pane__about-line" style={{ fontSize: "var(--fs-xs)", color: "var(--text-3)" }}>
+          {locale === "fr" 
+            ? "Ce fork personnel enrichit Sinew avec des fonctionnalités avancées optimisées pour un flux de travail quotidien rapide, autonome et ultra-résilient."
+            : "This personal fork enriches Sinew with advanced features optimized for a fast, autonomous, and ultra-resilient daily workflow."}
+        </p>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: "10px",
+          marginTop: "4px"
+        }}>
+          {/* Item 1 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:play-circle-bold-duotone" width={14} height={14} style={{ color: "#3b82f6" }} />
+              {locale === "fr" ? "Démarrage & Sandbox" : "Startup & Sandbox"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Démarrage instantané en un clic (Mode Sandbox) sans ouvrir de projet pour tester l'IA ou utiliser les outils MCP de manière isolée."
+                : "Instant one-click startup (Sandbox Mode) without opening a project to test AI or use MCP tools in isolation."}
+            </div>
+          </div>
+
+          {/* Item 2 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:chat-round-line-bold-duotone" width={14} height={14} style={{ color: "#10b981" }} />
+              {locale === "fr" ? "Expérience Chat & Ergonomie" : "Chat Experience & Ergonomics"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Clic droit interactif sur les fichiers dans le chat, question collante en haut de l'écran, copie libre débloquée, et bouton « Influencer » intelligent."
+                : "Interactive right-click on files in chat, sticky question at top, unlocked text selection, and smart 'Steering' button."}
+            </div>
+          </div>
+
+          {/* Item 3 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:settings-bold-duotone" width={14} height={14} style={{ color: "#f59e0b" }} />
+              {locale === "fr" ? "Options & Confort de Travail" : "Options & Workplace Comfort"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "3 niveaux de réflexion (Détaillé/Compact/Très compact), Mode Power User avec Git auto, diagnostic SOTA en un clic et version française complète avec synchro OneDrive & SQLite."
+                : "3 thinking levels (Detailed/Compact/Very compact), Power User Mode with auto-Git, one-click SOTA check, and full FR version with OneDrive & SQLite sync."}
+            </div>
+          </div>
+
+          {/* Item 4 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:global-bold-duotone" width={14} height={14} style={{ color: "#ec4899" }} />
+              {locale === "fr" ? "Pont Chrome & MCP" : "Chrome Bridge & MCP"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Pilotez Chrome de façon ultra-stable avec clics souris humains et courbes de Bézier. Zéro timeout et masquage de la barre d'avertissement de débogage."
+                : "Ultra-stable Chrome control with human clicks and physical Bézier curves. Zero timeout and hidden debugging bar."}
+            </div>
+          </div>
+
+          {/* Item 5 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:cpu-bold-duotone" width={14} height={14} style={{ color: "#8b5cf6" }} />
+              {locale === "fr" ? "Résilience Google Antigravity & DeepSeek" : "Google Antigravity & DeepSeek Resilience"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Routage Gemini AI Ultra avec déclaration d'outils réparée, en-têtes Cursor Stealth, intégration native complète de DeepSeek V3 & R1 (réflexion en continu) et multi-comptes."
+                : "Gemini AI Ultra routing with fixed tools, Cursor Stealth headers, native DeepSeek V3 & R1 (continuous reasoning) integration, and multi-accounts."}
+            </div>
+          </div>
+
+          {/* Item 6 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:magnifier-bold-duotone" width={14} height={14} style={{ color: "#06b6d4" }} />
+              {locale === "fr" ? "Indexation Vectorielle & Auto-correction" : "Vector Search & Auto-correction"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Recherche vectorielle sémantique locale avec badge d'état interactif, diagnostics Monaco en temps réel pour auto-correction et zéro popup Windows noire."
+                : "Local semantic vector search with interactive status badge, real-time Monaco diagnostics for auto-correction, and zero black Windows cmd popups."}
+            </div>
+          </div>
+
+          {/* Item 7 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:gallery-bold-duotone" width={14} height={14} style={{ color: "#e11d48" }} />
+              {locale === "fr" ? "Abonnements Gemini Images & Quotas" : "Gemini Images Subscription & Quotas"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Abonnement Gemini (Google OAuth) sans clé API et sélecteur de modèles d'images. Visualisation des quotas en temps réel et pastilles dans le chat."
+                : "Gemini subscription (Google OAuth) without API key and image model selector. Real-time quota charts and status dots in the chat composer."}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -3845,6 +4020,7 @@ function ToolSettingsItem({
 // ---- MCP section component ---------------------------------------------
 
 type McpSectionProps = {
+  workspacePath: string;
   loading: boolean;
   saving: boolean;
   probing: boolean;
@@ -3869,6 +4045,7 @@ type McpSectionProps = {
 };
 
 function McpSection({
+  workspacePath,
   loading,
   saving,
   probing,
@@ -4083,6 +4260,7 @@ function McpSection({
             </div>
           ) : selectedServer ? (
             <ServerDetail
+              workspacePath={workspacePath}
               server={selectedServer}
               probe={selectedProbe}
               probing={probing}
@@ -4106,6 +4284,7 @@ function McpSection({
 }
 
 type ServerDetailProps = {
+  workspacePath: string;
   server: McpServerConfig;
   probe: McpServerProbe | null;
   probing: boolean;
@@ -4114,7 +4293,7 @@ type ServerDetailProps = {
   onRefreshProbes?: () => void;
 };
 
-function ServerDetail({ server, probe, probing, knownToolCount, onToggleAutoLoad, onRefreshProbes }: ServerDetailProps) {
+function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, onToggleAutoLoad, onRefreshProbes }: ServerDetailProps) {
   const [expandedTools, setExpandedTools] = useState<Set<string>>(
     () => new Set<string>(),
   );
@@ -4194,6 +4373,59 @@ function ServerDetail({ server, probe, probing, knownToolCount, onToggleAutoLoad
 
         {probe?.error && (
           <div className="settings-pane__tools-error">{probe.error}</div>
+        )}
+
+        {server.id === "sinew-chrome" && (
+          <div className="settings-pane__chrome-bridge-repair" style={{
+            marginTop: "12px",
+            padding: "12px",
+            border: "1px solid var(--border-color)",
+            borderRadius: "6px",
+            background: "var(--bg-card)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Icon icon="solar:info-circle-linear" width={16} height={16} style={{ color: "#3b82f6" }} />
+              <strong style={{ fontSize: "13px" }}>Synchronisation et configuration locale</strong>
+            </div>
+            <p style={{ margin: 0, fontSize: "12px", opacity: 0.8, lineHeight: "1.4" }}>
+              Le pont Chrome nécessite des fichiers système locaux (`AppData`) et une clé de registre Windows.
+              Si vous êtes sur un nouveau PC, ou si le pont ne répond pas, vous pouvez l'enregistrer à nouveau en un clic.
+            </p>
+            <button
+              type="button"
+              className="settings-pane__btn"
+              style={{
+                alignSelf: "flex-start",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                padding: "6px 12px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "12px",
+                fontWeight: 500,
+                marginTop: "4px"
+              }}
+              onClick={async () => {
+                try {
+                  await api.registerChromeBridge(workspacePath);
+                  onRefreshProbes?.();
+                  alert("Le pont Chrome a été enregistré avec succès sur cet ordinateur ! Veuillez redémarrer l'application pour appliquer les changements.");
+                } catch (e) {
+                  alert("Erreur lors de l'enregistrement : " + e);
+                }
+              }}
+            >
+              <Icon icon="solar:settings-linear" width={14} height={14} />
+              <span>Configurer/Réparer le pont local</span>
+            </button>
+          </div>
         )}
 
         <div className="settings-pane__detail-section">Tools</div>
