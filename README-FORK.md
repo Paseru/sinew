@@ -132,6 +132,10 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * Ajout d'une fonctionnalité de réparation transparente en un clic : si le pont Chrome ne répond pas sur un nouveau PC synchronisé par OneDrive, un avertissement clair et un bouton bleu de réparation automatique s'affichent dans les paramètres MCP.
   * L'activation exécute de manière invisible le script d'enregistrement système Windows en tâche de fond pour copier les dépendances locales, ajouter les clés de registre Windows nécessaires et recharger les serveurs MCP.
   * 📂 *Fichiers : `src-tauri/src/conversations.rs`, `src-tauri/src/lib.rs`, `src/lib/ipc.ts`, `src/components/SettingsPane.tsx`*
+* **📦 Empaquetage natif des ressources (Tauri Resources) & Résolution intelligente par priorité**
+  * L'extension et le pont local (`sinew-chrome-bridge`) sont désormais déclarés en tant que **ressources d'empaquetage officielles dans Tauri**. Ils sont physiquement intégrés au sein de l'installateur compilé (MSI/EXE) et distribués à tous les utilisateurs.
+  * Le moteur Rust de Sinew utilise une **résolution intelligente par priorité** : il recherche d'abord le script d'installation dans le dossier des ressources internes de l'application installée (`app_handle.path().resource_dir()`), puis bascule automatiquement vers le dossier de développement local de votre espace de travail en cas d'absence.
+  * 📂 *Fichiers : `src-tauri/tauri.conf.json`, `src-tauri/src/conversations.rs`*
 * **🧠 Résolution des importations et fiabilité des builds**
   * Correction d'une visibilité d'import sur `validate_api_key` dans `sinew-deepseek` pour assurer un build de production parfait.
   * 📂 *Fichiers : `crates/sinew-deepseek/src/lib.rs`*
