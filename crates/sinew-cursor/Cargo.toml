@@ -26,6 +26,15 @@ rand = { workspace = true }
 sha2 = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
+prost = "0.13"
+prost-reflect = "0.14"
+prost-types = "0.13"
+hyper = { version = "1.6", features = ["client", "http2"] }
+hyper-util = { version = "0.1", features = ["client", "client-legacy", "http2", "tokio"] }
+http-body-util = { version = "0.1", features = ["full"] }
+hyper-rustls = { version = "0.27", features = ["http2", "ring", "native-tokio"] }
+tokio-util = { version = "0.7", features = ["io"] }
+hex = "0.4"
 
 [lints]
 workspace = true

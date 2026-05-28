@@ -3039,7 +3039,7 @@ function ProviderCard({
           </div>
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {children}
-          {connected && quota && <QuotaInlinePanel quota={quota} compact={compact} />}
+          {connected && quota && <QuotaInlinePanel quota={quota} compact={compact} showLabel={false} />}
         </div>
       </div>
       <div className="settings-pane__provider-actions">
@@ -3213,7 +3213,7 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
   );
 }
 
-function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: boolean }) {
+function QuotaInlinePanel({ quota, compact, showLabel = true }: { quota: QuotaInfo; compact?: boolean; showLabel?: boolean }) {
   if (quota.kind === "unavailable") {
     return (
       <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: compact ? 0.7 : 1 }}>
@@ -3240,7 +3240,7 @@ function QuotaInlinePanel({ quota, compact }: { quota: QuotaInfo; compact?: bool
         width: "100%",
       }}
     >
-      {quota.label && !quota.label.startsWith("Projet") && !quota.label.includes("Codex") && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
+      {showLabel && quota.label && !quota.label.startsWith("Projet") && !quota.label.includes("Codex") && <div style={{ color: "var(--text-3)", fontSize: "11px" }}>{quota.label}</div>}
       {quota.kind === "credits" ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
