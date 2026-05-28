@@ -9,7 +9,7 @@ let lastConnectedAt = null;
 
 // Registry of active attached debuggers
 const attachedTabs = new Set();
-const ALLOW_DEBUGGER_ATTACH = false;
+const ALLOW_DEBUGGER_ATTACH = true;
 let cursorMoveSeq = 0;
 const lastCursorPositionByTabId = new Map();
 
