@@ -87,7 +87,6 @@ use sinew_openrouter::{
     load_default_api_key as load_default_openrouter_api_key,
     load_default_auth_status as load_default_openrouter_auth_status,
     save_default_api_key as save_default_openrouter_api_key,
-    touch_default_auth_validation as touch_default_openrouter_auth_validation,
     validate_api_key as validate_openrouter_api_key_remote, OpenRouterAuthStatus,
     OpenRouterCatalogModel, OpenRouterProvider, PROVIDER_ID as OPENROUTER_PROVIDER_ID,
 };
@@ -96,14 +95,14 @@ use sinew_deepseek::{
     load_default_api_key as load_default_deepseek_api_key,
     load_default_auth_status as load_default_deepseek_auth_status,
     save_default_api_key as save_default_deepseek_api_key,
-    touch_default_auth_validation as touch_default_deepseek_auth_validation,
     validate_api_key as validate_deepseek_api_key_remote, DeepSeekAuthStatus,
     DeepSeekProvider, PROVIDER_ID as DEEPSEEK_PROVIDER_ID,
 };
 use sinew_cursor::{
-    create_login_challenge, delete_composer_auth, ensure_fresh_composer_token,
-    load_composer_auth_status, load_composer_session, wait_for_oauth_login, CursorComposerAuthStatus, CursorLoginChallenge, CursorIdeIdentity,
-    CursorProvider, PROVIDER_ID as CURSOR_PROVIDER_ID,
+    create_login_challenge, delete_composer_auth, ensure_agent_bridge_ready,
+    ensure_fresh_composer_token, load_composer_auth_status, load_composer_session,
+    set_bridge_directory, wait_for_oauth_login, CursorComposerAuthStatus, CursorLoginChallenge,
+    CursorIdeIdentity, CursorProvider, PROVIDER_ID as CURSOR_PROVIDER_ID,
 };
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::{
@@ -450,6 +449,23 @@ fn set_multi_pc_sync_enabled(enabled: bool) -> Result<(), String> {
     Err("Not supported on this platform".to_string())
 }
 
+fn configure_agent_bridge_paths(app: &AppHandle) {
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let bundled = resource_dir.join("agent-bridge");
+        if bundled.join("run-stream.mjs").is_file() {
+            set_bridge_directory(bundled.clone());
+            tracing::info!(path = %bundled.display(), "agent-bridge: bundle embarqué");
+        }
+    }
+
+    tauri::async_runtime::spawn(async move {
+        match ensure_agent_bridge_ready().await {
+            Ok(dir) => tracing::debug!(path = %dir.display(), "agent-bridge prêt"),
+            Err(err) => tracing::warn!(error = %err, "agent-bridge: préparation auto échouée (Composer indisponible tant que Node/npm manquent)"),
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let file = directories::ProjectDirs::from("dev", "hyrak", "sinew").and_then(|dirs| {
@@ -574,8 +590,7 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            #[cfg(target_os = "windows")]
-            let _ = app;
+            configure_agent_bridge_paths(app.handle());
 
             // One-shot purge of legacy Google OAuth tokens so users coming from
             // pre-0.1.14 builds reconnect against the fixed Antigravity flow.

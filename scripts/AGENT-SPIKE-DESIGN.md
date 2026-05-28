@@ -124,5 +124,5 @@ crates/sinew-cursor/src/
 1. ~~`probe_agent_run.py`~~ — `GetUsableModels` OK (200).
 2. ~~`SINEW_CURSOR_TRANSPORT=agent`~~ — branché via `scripts/agent-bridge` + `crates/sinew-cursor/src/agent/`.
 3. `cd scripts/agent-bridge && npm install` puis test `run-stream.mjs` (voir README).
-4. Lancer Sinew avec `$env:SINEW_CURSOR_TRANSPORT='agent'`.
+4. ~~`npm install` manuel~~ — auto au build + au lancement Sinew.
 5. MITM optionnel ; tools/sessions agent (phase 2).

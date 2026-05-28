@@ -1,8 +1,10 @@
 mod bridge;
+mod setup;
 #[cfg(test)]
 mod models;
 pub mod transport;
 
 pub use bridge::stream_via_node_bridge;
+pub use setup::{bridge_directory, ensure_agent_bridge_ready, set_bridge_directory};
 #[cfg(test)]
 pub use models::{fetch_usable_models, scan_model_ids, API2_BASE, GET_USABLE_MODELS};

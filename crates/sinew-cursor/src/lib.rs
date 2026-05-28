@@ -1,4 +1,4 @@
-mod agent;
+pub mod agent;
 mod auth;
 mod client;
 mod connect;
@@ -22,6 +22,7 @@ pub use auth::composer::{
     load_composer_session, sync_composer_auth_from_ide, ComposerSession, CursorComposerAuthStatus,
 };
 pub use auth::oauth::{create_login_challenge, wait_for_oauth_login, CursorLoginChallenge};
+pub use agent::{ensure_agent_bridge_ready, set_bridge_directory};
 pub use client::{CursorConfig, CursorProvider};
 pub use identity::CursorIdeIdentity;
 pub use model_info::{capabilities, MODEL_COMPOSER_25, MODEL_COMPOSER_25_FAST, PROVIDER_ID};

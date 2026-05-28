@@ -9,6 +9,7 @@
     "test:chrome-bridge": "node sinew-chrome-bridge/e2e-local.mjs",
     "test:chrome-bridge:structured": "node sinew-chrome-bridge/e2e-structured.mjs",
     "prepare-sidecars": "node scripts/prepare-sidecars.mjs",
+    "prepare-agent-bridge": "node scripts/prepare-agent-bridge.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "compil": "powershell -ExecutionPolicy Bypass -File ./scripts/compil.ps1"

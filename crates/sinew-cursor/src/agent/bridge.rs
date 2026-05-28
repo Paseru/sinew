@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::process::Stdio;
 
 use async_stream::try_stream;
@@ -8,25 +7,7 @@ use sinew_core::{
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-fn bridge_script_path() -> Option<PathBuf> {
-    if let Ok(path) = std::env::var("SINEW_CURSOR_AGENT_BRIDGE") {
-        let trimmed = path.trim();
-        if !trimmed.is_empty() {
-            return Some(PathBuf::from(trimmed));
-        }
-    }
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let candidate = manifest
-        .join("..")
-        .join("..")
-        .join("scripts")
-        .join("agent-bridge")
-        .join("run-stream.mjs");
-    if candidate.exists() {
-        return Some(candidate);
-    }
-    None
-}
+use super::setup::{ensure_agent_bridge_ready, run_stream_script, tsx_executable};
 
 fn user_text(request: &ProviderRequest) -> String {
     let mut parts = Vec::new();
@@ -47,11 +28,9 @@ pub async fn stream_via_node_bridge(
     token: String,
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
-    let script = bridge_script_path().ok_or_else(|| {
-        AppError::Provider(
-            "agent bridge missing: run `npm install` in scripts/agent-bridge or set SINEW_CURSOR_AGENT_BRIDGE".into(),
-        )
-    })?;
+    let bridge_dir = ensure_agent_bridge_ready().await?;
+    let script = run_stream_script(&bridge_dir);
+    let tsx = tsx_executable(&bridge_dir);
 
     let model = request.model.name.clone();
     let system = request.system_prompt.clone().unwrap_or_default();
@@ -66,18 +45,18 @@ pub async fn stream_via_node_bridge(
         "workspaceRoot": workspace,
     });
 
-    let bridge_dir = script.parent().ok_or_else(|| {
-        AppError::Provider("agent bridge script has no parent directory".into())
-    })?;
-
-    let mut child = Command::new("npx")
-        .args(["tsx", script.to_string_lossy().as_ref()])
-        .current_dir(bridge_dir)
+    let mut child = Command::new(&tsx)
+        .arg(&script)
+        .current_dir(&bridge_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|err| AppError::Provider(format!("failed to spawn agent bridge: {err}")))?;
+        .map_err(|err| {
+            AppError::Provider(format!(
+                "failed to spawn agent bridge (tsx): {err}. Vérifiez Node/npm (diagnostic SOTA)."
+            ))
+        })?;
 
     let mut stdin = child
         .stdin
@@ -157,7 +136,7 @@ pub async fn stream_via_node_bridge(
 
         if !started_text {
             Err(AppError::Network(
-                "agent bridge returned no text (install deps: cd scripts/agent-bridge && npm install)".into(),
+                "agent bridge returned no text (OAuth Composer connecté ?)".into(),
             ))?;
         }
 

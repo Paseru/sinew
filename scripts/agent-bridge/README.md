@@ -4,9 +4,12 @@ Pont Node pour Sinew : encode une requête `agent.v1.AgentService/Run` en protob
 
 ## Installation
 
+**Automatique** : au build Sinew (`npm run prepare-agent-bridge`) et au premier lancement de l’app (`npm ci` si besoin). Rien à faire pour l’utilisateur final.
+
+Développeurs (optionnel) :
+
 ```powershell
-cd C:\Dev\Sinew\scripts\agent-bridge
-npm install
+npm run prepare-agent-bridge
 ```
 
 Télécharge `vendor/agent_pb.ts` depuis [cursor-oauth-opencode](https://github.com/jaredboynton/cursor-oauth-opencode).

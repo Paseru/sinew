@@ -4,7 +4,7 @@
   "version": "0.1.26",
   "identifier": "dev.hyrak.sinew",
   "build": {
-    "beforeBuildCommand": "npm run prepare-sidecars && npm run build",
+    "beforeBuildCommand": "npm run prepare-sidecars && npm run prepare-agent-bridge && npm run build",
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
@@ -39,7 +39,8 @@
     "active": true,
     "targets": ["app", "dmg", "msi", "nsis", "deb", "appimage"],
     "resources": [
-      "../sinew-chrome-bridge/**/*"
+      "../sinew-chrome-bridge/**/*",
+      "../scripts/agent-bridge/**/*"
     ],
     "icon": [
       "icons/32x32.png",
