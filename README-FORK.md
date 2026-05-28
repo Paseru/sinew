@@ -1,6 +1,4 @@
-# 🚀 Sinew — Premium Autonome & Intelligent
-
-Bienvenue sur cette édition enrichie de **Sinew**, l'IDE agentique IA le plus flexible, autonome et robuste du marché. 
+# Sinew — Fork de julienpiron.fr
 
 Cette version a été optimisée en profondeur pour offrir une expérience utilisateur haut de gamme (SOTA), une autonomie maximale en arrière-plan, et des intégrations d'intelligence artificielle inégalées.
 
