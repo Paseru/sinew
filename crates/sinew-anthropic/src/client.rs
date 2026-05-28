@@ -17,7 +17,7 @@ const API_VERSION: &str = "2023-06-01";
 const USER_AGENT: &str = "claude-cli/2.1.75";
 const CODE_SYSTEM_PREFIX: &str = "You are Claude Code, Anthropic's official CLI for Claude.";
 // Note: we intentionally do NOT advertise `context-1m-2025-08-07` here.
-// All models currently shipped in the app (Opus 4.6/4.7, Sonnet 4.6) already
+// All models currently shipped in the app (Opus 4.6/4.7/4.8, Sonnet 4.6) already
 // expose a 1M context window natively, and Haiku 4.5 does not support that
 // beta at all. Sending it inconditionally caused:
 //   * Sonnet 4.6 → server-side tier gating → `rate_limit_error: Extra usage
