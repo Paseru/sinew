@@ -141,3 +141,30 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * Correction d'une visibilité d'import sur `validate_api_key` dans `sinew-deepseek` pour assurer un build de production parfait.
   * 📂 *Fichiers : `crates/sinew-deepseek/src/lib.rs`*
 
+---
+
+## 📅 31/05 — Pont Standalone Cursor Composer 2.5 (agent.v1) & Compilateur OneDrive Automatique
+
+* **🤖 Pont standalone Cursor Composer 2.5 via le protocole haute-performance `agent.v1`**
+  * Remplacement complet de l'ancien protocole `IdempotentSSE` obsolète par un serveur-pont Node.js autonome (`agent-bridge`) gérant nativement le streaming Protobuf/gRPC sur des connexions HTTP/2 persistantes vers les serveurs officiels de Cursor.
+  * Gestion robuste du contexte de conversation multi-tours à l'aide de checkpoints et de références de blobs SHA-256 (`conversationState.turns`), évitant le renvoi massif de données brutes à chaque tour.
+  * Furtivité maximale : alignement strict des en-têtes HTTP/2 du pont avec les signatures réseau du moteur Rust de Sinew pour éviter toute détection ou blocage (fingerprinting).
+  * Intégration complète de la panoplie d'outils de Composer : lecture de fichiers (`read`), listing de dossiers (`list_dir`), création (`write_file`), suppression (`delete_file`) et édition chirurgicale par bloc (`edit/replace`).
+  * Décodage et suivi en temps réel des jetons d'utilisation réelle (*usage tokens*) renvoyés directement par le serveur de streaming.
+  * 📂 *Fichiers : `scripts/agent-bridge/`, `crates/sinew-cursor/src/agent/`, `scripts/prepare-agent-bridge.mjs`*
+* **⚡ Installation automatisée, invisible et auto-réparatrice de `agent-bridge`**
+  * Les dépendances du pont Cursor (`npm ci --omit=dev` et compilation des fichiers de protocole `agent_pb.ts`) sont configurées pour s'installer automatiquement au premier lancement de l'application.
+  * Afin de garantir un confort d'utilisation total, l'installation est lancée de manière invisible en tâche de fond sous Windows sans aucune ouverture intempestive de fenêtres d'invite de commandes (flags système `CREATE_NO_WINDOW`).
+  * 📂 *Fichiers : `crates/sinew-cursor/src/agent/setup.rs`, `src-tauri/tauri.conf.json`*
+* **🚀 Script de compilation intelligente et de déploiement Cloud immédiat (`compil.ps1`)**
+  * Automatisation complète de la génération de l'installateur NSIS (`.exe`) via `npx tauri build -b nsis`.
+  * Recherche intelligente à l'échelle du système (locaux et AppData) et copie immédiate du fichier `.exe` généré directement sur le bureau OneDrive actif (`OneDrive/Bureau`) pour une mise à jour instantanée et synchronisée entre tous vos PC d'un simple clic.
+  * 📂 *Fichiers : `scripts/compil.ps1`*
+* **⚙️ Correction des fuites mémoire et boucles infinies de l'interface**
+  * Résolution définitive d'une boucle infinie d'auto-analyse (*infinite auto-probe loop*) et d'une fuite de ressources CPU/mémoire liée aux appels réseau répétitifs lors de la vérification de l'état de l'API DeepSeek dans l'onglet des configurations.
+  * Nettoyage interne : élimination des constantes d'images obsolètes, désactivation de l'icône de démarrage inutile dans le fichier d'entrée web et résolution des avertissements de compilation Rust (`dead_code`).
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `crates/sinew-deepseek/src/lib.rs`, `index.html`*
+* **🔍 Suite de tests locaux & Analyse MITM (Laboratoire réseau)**
+  * Intégration d'un ensemble de scripts d'ingénierie inverse dans `scripts/mitm/` (`install-mitmproxy.ps1`, `start-mitmweb.ps1`, `check-mitm.ps1`) facilitant l'interception et le débogage en temps réel du trafic chiffré des outils IA, complété par des scripts de vérification cryptographique et d'exécution idempotente.
+  * 📂 *Fichiers : `scripts/mitm/`, `scripts/verify_all.py`, `scripts/probe_agent_run.py`*
+
