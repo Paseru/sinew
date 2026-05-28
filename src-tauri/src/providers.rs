@@ -287,6 +287,7 @@ pub(super) fn remove_deepseek_provider(
 pub(super) fn deepseek_provider_status_from_auth(
     auth: DeepSeekAuthStatus,
     connection_state: &str,
+    models: Vec<String>,
     error: Option<String>,
 ) -> DeepSeekProviderStatus {
     DeepSeekProviderStatus {
@@ -294,9 +295,11 @@ pub(super) fn deepseek_provider_status_from_auth(
         connection_state: connection_state.to_string(),
         key_preview: auth.key_preview,
         last_validated_ms: auth.last_validated_ms,
+        models,
         error,
     }
 }
+
 
 pub(super) fn openai_provider_status_from_auth(
     auth: OpenAiAuthStatus,
@@ -1349,17 +1352,32 @@ pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQu
                 continue;
             }
 
+            let group_label = match label {
+                "Claude Opus 4.6 (Thinking)"
+                | "Claude Sonnet 4.6 (Thinking)"
+                | "GPT-OSS 120B (Medium)" => "Claude & GPT-OSS",
+                "Gemini 3.5 Flash (Low)"
+                | "Gemini 3.5 Flash (Medium)"
+                | "Gemini 3.5 Flash (High)"
+                | "Gemini 3.1 Pro (Low)"
+                | "Gemini 3.1 Pro (High)" => "Gemini",
+                _ => label,
+            };
+
             let entry =
                 groups
-                    .entry(label.to_string())
+                    .entry(group_label.to_string())
                     .or_insert_with(|| AntigravityQuotaGroupInfo {
-                        group: label.to_string(),
-                        label: label.to_string(),
+                        group: group_label.to_string(),
+                        label: group_label.to_string(),
                         remaining_percent: remaining,
                         reset_time: reset_time.clone(),
                         count: 0,
                     });
             entry.count += 1;
+            if entry.reset_time.is_none() && reset_time.is_some() {
+                entry.reset_time = reset_time;
+            }
             if let Some(rem) = remaining {
                 entry.remaining_percent = Some(
                     entry
@@ -2009,6 +2027,52 @@ pub(super) async fn get_openrouter_key_details() -> std::result::Result<serde_js
 }
 
 #[tauri::command]
+pub(super) async fn get_deepseek_balance() -> std::result::Result<serde_json::Value, String> {
+    let api_key = load_default_deepseek_api_key().map_err(error_to_string)?;
+    let Some(api_key) = api_key else {
+        return Err("No DeepSeek API key found".to_string());
+    };
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://api.deepseek.com/user/balance")
+        .bearer_auth(api_key)
+        .send()
+        .await
+        .map_err(|err| format!("Failed to fetch DeepSeek balance: {err}"))?;
+    if !response.status().is_success() {
+        return Err(format!("DeepSeek returned status {}", response.status()));
+    }
+    let data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|err| format!("Failed to parse response: {err}"))?;
+    Ok(data)
+}
+
+#[tauri::command]
+pub(super) async fn list_deepseek_models_remote() -> std::result::Result<serde_json::Value, String> {
+    let api_key = load_default_deepseek_api_key().map_err(error_to_string)?;
+    let Some(api_key) = api_key else {
+        return Err("No DeepSeek API key found".to_string());
+    };
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://api.deepseek.com/models")
+        .bearer_auth(api_key)
+        .send()
+        .await
+        .map_err(|err| format!("Failed to fetch DeepSeek models: {err}"))?;
+    if !response.status().is_success() {
+        return Err(format!("DeepSeek returned status {}", response.status()));
+    }
+    let data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|err| format!("Failed to parse response: {err}"))?;
+    Ok(data)
+}
+
+#[tauri::command]
 pub(super) async fn validate_openrouter_api_key(
     state: State<'_, DesktopState>,
     input: ValidateOpenRouterApiKeyInput,
@@ -2075,16 +2139,18 @@ pub(super) async fn get_deepseek_provider_status(
     state: State<'_, DesktopState>,
 ) -> std::result::Result<DeepSeekProviderStatus, String> {
     let auth = load_default_deepseek_auth_status().map_err(error_to_string)?;
-    let state_str = if auth.connected {
+    let api_key = load_default_deepseek_api_key().map_err(error_to_string)?;
+    let (state_str, models) = if api_key.is_some() {
         install_deepseek_provider(&state.providers)?;
-        "connected"
+        ("connected", vec!["deepseek-chat".to_string(), "deepseek-reasoner".to_string()])
     } else {
         remove_deepseek_provider(&state.providers)?;
-        "disconnected"
+        ("disconnected", Vec::new())
     };
     Ok(deepseek_provider_status_from_auth(
         auth,
         state_str,
+        models,
         None,
     ))
 }
@@ -2099,6 +2165,7 @@ pub(super) async fn validate_deepseek_api_key(
         return Ok(deepseek_provider_status_from_auth(
             DeepSeekAuthStatus::disconnected(),
             "disconnected",
+            Vec::new(),
             None,
         ));
     }
@@ -2108,9 +2175,11 @@ pub(super) async fn validate_deepseek_api_key(
         .map_err(error_to_string)?;
     let auth = save_default_deepseek_api_key(&api_key).map_err(error_to_string)?;
     install_deepseek_provider(&state.providers)?;
+    let models = vec!["deepseek-chat".to_string(), "deepseek-reasoner".to_string()];
     Ok(deepseek_provider_status_from_auth(
         auth,
         "connected",
+        models,
         None,
     ))
 }
@@ -2125,6 +2194,7 @@ pub(super) async fn disconnect_deepseek_provider(
     Ok(deepseek_provider_status_from_auth(
         DeepSeekAuthStatus::disconnected(),
         "disconnected",
+        Vec::new(),
         None,
     ))
 }
