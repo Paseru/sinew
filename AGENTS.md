@@ -304,3 +304,11 @@
         ├── Cargo.toml
         └── src
             └── main.rs
+
+## Règles d'architecture & Performance (Fournisseurs / Providers)
+
+⚠️ **TRÈS IMPORTANT pour l'ajout ou la gestion des API de fournisseurs (providers) :**
+- **Pas de requêtes réseau actives lors de la vérification de l'état (status) :** Les commandes Tauri comme `get_*_provider_status` ne doivent **jamais** effectuer de requêtes réseau actives (comme valider la clé API via un appel réseau externe) à chaque appel de statut.
+  - *Pourquoi ?* L'interface utilisateur appelle ces fonctions de statut fréquemment, au démarrage et lors de re-renders de l'interface des paramètres. Faire des requêtes réseau ici entraîne des ralentissements majeurs, des risques de blocages (si le service est en panne ou hors ligne), des fuites de mémoire (accumulation de requêtes/sockets dans tokio/reqwest) et du spamming des API.
+  - *La bonne pratique :* À l'instar d'OpenAI, Anthropic et Google, charger simplement l'état d'authentification enregistré localement sur le disque (`auth.connected`). Si l'utilisateur est marqué connecté, retourner `"connected"`, sinon `"disconnected"`.
+- **Validation unique lors de la soumission de la clé :** Les appels réseau de validation ne doivent être effectués qu'une seule fois via la commande dédiée (`validate_*_api_key`), au moment où l'utilisateur soumet sa clé dans l'interface de connexion.

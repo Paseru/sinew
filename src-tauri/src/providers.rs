@@ -1966,41 +1966,23 @@ pub(super) async fn get_openrouter_provider_status(
         .map_err(error_to_string)?
         .len();
     let auth = load_default_openrouter_auth_status().map_err(error_to_string)?;
-    let Some(api_key) = load_default_openrouter_api_key().map_err(error_to_string)? else {
+    let state_str = if auth.connected {
+        let models = state
+            .store
+            .load_openrouter_models()
+            .map_err(error_to_string)?;
+        install_openrouter_provider(&state.providers, &models)?;
+        "connected"
+    } else {
         remove_openrouter_provider(&state.providers)?;
-        return Ok(openrouter_provider_status_from_auth(
-            auth,
-            "disconnected",
-            model_count,
-            None,
-        ));
+        "disconnected"
     };
-
-    match validate_openrouter_api_key_remote(&api_key).await {
-        Ok(()) => {
-            let auth = touch_default_openrouter_auth_validation().map_err(error_to_string)?;
-            let models = state
-                .store
-                .load_openrouter_models()
-                .map_err(error_to_string)?;
-            install_openrouter_provider(&state.providers, &models)?;
-            Ok(openrouter_provider_status_from_auth(
-                auth,
-                "connected",
-                models.len(),
-                None,
-            ))
-        }
-        Err(err) => {
-            remove_openrouter_provider(&state.providers)?;
-            Ok(openrouter_provider_status_from_auth(
-                auth,
-                "error",
-                model_count,
-                Some(err.to_string()),
-            ))
-        }
-    }
+    Ok(openrouter_provider_status_from_auth(
+        auth,
+        state_str,
+        model_count,
+        None,
+    ))
 }
 
 #[tauri::command]
@@ -2093,34 +2075,18 @@ pub(super) async fn get_deepseek_provider_status(
     state: State<'_, DesktopState>,
 ) -> std::result::Result<DeepSeekProviderStatus, String> {
     let auth = load_default_deepseek_auth_status().map_err(error_to_string)?;
-    let Some(api_key) = load_default_deepseek_api_key().map_err(error_to_string)? else {
+    let state_str = if auth.connected {
+        install_deepseek_provider(&state.providers)?;
+        "connected"
+    } else {
         remove_deepseek_provider(&state.providers)?;
-        return Ok(deepseek_provider_status_from_auth(
-            auth,
-            "disconnected",
-            None,
-        ));
+        "disconnected"
     };
-
-    match validate_deepseek_api_key_remote(&api_key).await {
-        Ok(()) => {
-            let auth = touch_default_deepseek_auth_validation().map_err(error_to_string)?;
-            install_deepseek_provider(&state.providers)?;
-            Ok(deepseek_provider_status_from_auth(
-                auth,
-                "connected",
-                None,
-            ))
-        }
-        Err(err) => {
-            remove_deepseek_provider(&state.providers)?;
-            Ok(deepseek_provider_status_from_auth(
-                auth,
-                "error",
-                Some(err.to_string()),
-            ))
-        }
-    }
+    Ok(deepseek_provider_status_from_auth(
+        auth,
+        state_str,
+        None,
+    ))
 }
 
 #[tauri::command]

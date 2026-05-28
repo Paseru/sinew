@@ -22,4 +22,7 @@ sinew-chrome-bridge/node_modules/
 
 /installers
 .fastembed_cache/
+desktop-state.sqlite3
+desktop-state.sqlite3-wal
+desktop-state.sqlite3-shm
 
