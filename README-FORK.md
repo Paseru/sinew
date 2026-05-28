@@ -1,68 +1,64 @@
-# 🧬 Sinew — Édition Souveraine Premium
+# Sinew — Fork de julienpiron.fr
 
-Cette édition sur mesure de Sinew a été conçue pour offrir une expérience de développement autonome de niveau industriel. Grâce à des optimisations de performance en profondeur, une discrétion réseau absolue et une ergonomie visuelle sans compromis, elle transforme l'assistant en un véritable compagnon souverain de bureau.
-
----
-
-## 🎨 Interface Premium & Ergonomie Augmentée (L'expérience utilisateur ultime)
-
-* **Animation de démarrage immersive (Zero-Flash) :** L'application s'ouvre dans un cocon sombre. La fenêtre ne se révèle qu'une fois le chargement de l'interface et des polices entièrement achevé, éliminant tout flash blanc éblouissant de démarrage. Le logo vectoriel s'anime de manière fluide avec un écartement progressif de ses barres pour un aspect haut de gamme instantané.
-* **Compaction visuelle intelligente à 3 niveaux (Détaillé, Compact, Épuré) :** Prenez le contrôle total de la clarté visuelle selon votre besoin :
-  * *Détaillé* : Visualisez l'intégralité du raisonnement technique et des actions de l'assistant pour un contrôle total.
-  * *Compact* : Repliez les détails techniques d'exécution et les modifications sous des étiquettes pliantes soignées.
-  * *Épuré (Très compact)* : Supprimez absolument tout le bruit technique. Les outils réussis et les longs blocs de réflexion s'évanouissent instantanément après exécution au profit d'un unique carré de pixels pulsant doucement lors des cycles d'activité. (Les erreurs restent visibles pour vous alerter en cas de problème).
-* **Navigation contextuelle interactive par Clic Droit :**
-  * *Sur l'arbre des fichiers* : Lancez instantanément n'importe quel script du projet ou ouvrez vos documents dans leur application système par défaut d'un simple clic droit.
-  * *Sur les liens de fichiers dans le chat* : Lorsqu'un script est créé ou modifié par l'assistant, faire un clic droit directement sur son lien dans le fil de discussion pour l'exécuter, sans avoir à le chercher dans vos répertoires.
-  * *Sur la barre d'onglets de l'éditeur* : Accédez à des actions rapides pour fermer un onglet, fermer les autres onglets ou copier le chemin d'accès pour le révéler dans votre explorateur natif.
-* **Pilule d'action "Influencer" & File d'attente interactive (Todo List) :** Saisissez plusieurs requêtes successives pendant que l'assistant réfléchit. Elles sont stockées dans une liste visuelle et s'exécutent automatiquement à la suite, avec une option d'envoi immédiat ou d'annulation à tout moment. Le bouton d'envoi classique est remplacé par une pilule stylisée avec une flèche dynamique.
-* **Ancre de contexte (Sticky Question) :** Lors de la lecture de réponses très longues, la question posée reste fixée de manière fluide au sommet du chat, soulignée par une élégante bordure lavande pour ne jamais perdre le fil de la discussion.
-* **Sélection et copie de texte libérées :** Copiez et sélectionnez librement n'importe quel texte ou extrait directement depuis le chat, sans aucune restriction d'affichage.
-* **Grille fluide adaptative (Container Queries) :** L'interface et les formulaires de clés d'API s'ajustent de façon fluide à la largeur exacte de la barre latérale lorsque vous redimensionnez les volets de séparation, éliminant tout chevauchement ou coupure de texte.
-* **Visualisation par diagrammes interactifs :** Génération et affichage automatique de schémas de flux et d'arbres de décision interactifs directement dans vos conversations pour éclairer des structures complexes.
+Cette version a été optimisée en profondeur pour offrir une expérience utilisateur haut de gamme (SOTA), une autonomie maximale en arrière-plan, et des intégrations d'intelligence artificielle inégalées.
 
 ---
 
-## 💾 Autonomie Totale & Performances Système
+## 🖱️ Interface, Confort & Ergonomie (Premium UI)
 
-* **Zéro installation technique requise (Émancipation totale) :** Le dialogue en continu avec l'intelligence artificielle s'effectue via un moteur de communication asynchrone natif intégré à l'application. Plus besoin de dépendances logicielles tierces au démarrage, garantissant une utilisation immédiate et universelle sans configuration de terminal.
-* **Zéro popup console sous Windows :** Les outils de recherche, Git, ou d'arrière-plan s'exécutent de façon 100% invisible. Plus aucune invite de commande ou fenêtre noire ne clignote sur votre écran lors de l'activité de l'assistant.
-* **Sauvegarde automatique intelligente (Auto-Save) :** Enregistrement transparent et asynchrone de vos modifications dans l'éditeur de code après un court arrêt de la frappe. Activable ou désactivable d'un clic dans vos options.
-* **Recherche globale instantanée (ripgrep Sidecar) :** Recherche textuelle ultra-rapide au sein de l'arborescence grâce au moteur de recherche de fichiers sidecar intégré, offrant des performances 10 fois supérieures.
-* **Diagnostics de santé et correctifs simplifiés :** Analyse en direct de l'état de votre machine avec conseils clairs pour résoudre les conflits réseaux typiques de Windows (HNS/WinNAT).
-* **Journalisation centralisée :** Consolidation automatique de l'historique et des journaux d'erreurs en arrière-plan dans un unique fichier central permanent pour un dépannage rapide et sans effort.
-* **Mode Bac à Sable (Sandbox) :** Lancement de l'application sans projet ouvert pour échanger librement, tester des idées ou utiliser les outils locaux de manière isolée et sécurisée.
-
----
-
-## 🧠 Intelligence Souveraine, Multi-Comptes & Furtivité
-
-* **Intégration souveraine de DeepSeek (V3 & R1) :**
-  * Support complet du modèle de raisonnement de pointe **DeepSeek R1** avec affichage dynamique et structuré en temps réel de son cheminement de pensée.
-  * Désactivation automatique et intelligente des outils lors de l'utilisation de R1 pour se conformer aux contraintes distantes et éviter tout rejet de requête.
-* **Indicateurs de quotas et balances en direct :** Pastilles colorées indiquant la santé de votre consommation sur une vraie limite glissante, et affichage en direct de vos soldes de crédits réels (USD/CNY) pour DeepSeek et autres API.
-* **Furtivité réseau maximale (Stealth Engine) :**
-  * *Masquage d'identité (User-Agent Spoofing)* : Remplacement des signatures d'identification de connexion par des empreintes système dynamiques imitant fidèlement votre système d'exploitation et des applications officielles légitimes pour éliminer les risques de blocage.
-  * *Bypass anti-plantage d'outils* : Interception et formatage des requêtes d'outils sémantiques non pris en charge pour éviter les blocages de discussion.
-* **Intégration multi-comptes fluide :**
-  * Associez simultanément plusieurs comptes et clés d'API (OpenAI, Google). Les profils sont triés proprement et s'intègrent de manière épurée dans vos sélecteurs, avec possibilité de supprimer facilement les cartes de comptes inutilisées.
-  * Détection automatique et affichage sous forme de badge de votre espace de travail d'entreprise (Team / Enterprise) pour vos abonnements.
+* **🎨 Animation de démarrage premium :** Une animation de boot moderne, fluide et élégante à l'ouverture de l'application.
+* **🧠 3 niveaux de réflexion :** Choix entre Détaillé, Compact ou Très compact pour configurer précisément la verbosité de l'IA et le masquage des détails techniques dans le chat.
+* **📌 Question collante (Sticky Question) :** La question en cours de traitement reste épinglée en haut de l'écran pendant que vous faites défiler le fil de discussion.
+* **🖱️ Menu clic droit interactif :**
+  * **Sur les onglets :** Clic droit pour fermer l'onglet (raccourci `Ctrl+F4`), les autres ou tous les onglets situés à droite, copier le chemin (absolu ou relatif) ou révéler dans le Finder/Explorateur.
+  * **Sur les fichiers dans le chat :** Clic droit direct pour ouvrir le fichier dans l'éditeur, le révéler dans le dossier système ou l'exécuter dans le terminal.
+  * **Sur l'arbre des fichiers (File Tree) :** Option d'exécution directe au clic droit.
+* **🔎 Polices dynamiques ajustables :** Boutons tactiles réactifs (`+` et `-`) dans les options pour ajuster instantanément à chaud la taille du texte de l'éditeur de code Monaco et du chat de l'IA.
+* **🌐 Version française complète :** L'interface entière et toutes les actions de l'application s'adaptent automatiquement en français ou en anglais selon vos préférences.
+* **📋 Sélection et copie libre :** Déblocage de la sélection et copie de texte directement dans le fil de discussion.
+* **📏 Démarcation visuelle du panneau de configuration :** Ligne de séparation verticale élégante à gauche du panneau de configuration des paramètres.
+* **⚡ Découpage du bundle Vite (-80% de taille) :** Monaco Editor et xterm.js sont isolés dans des sous-lots séparés pour un chargement instantané de l'interface utilisateur.
 
 ---
 
-## 🔌 Pont Navigateur Furtif & Synchronisation Décentralisée
+## 💾 Autonomie, Sauvegarde & Robustesse Système
 
-* **Pont de navigation indétectable (Chrome Bridge) :**
-  * *Injections matérielles CDP* : Remplacement des clics de scripts classiques (bloqués par les protections anti-bot) par des injections d'événements matériels natifs de souris (pression physique) au niveau du protocole de débogage du navigateur pour une furtivité web totale.
-  * *Déplacement en Clic Hybride (Turbo Teleport & Bezier)* : Le curseur virtuel combine la rapidité de la téléportation instantanée à proximité immédiate de la cible avec un mouvement final amorti sous courbes de Béziers imitant la main humaine, souligné par une traînée lumineuse néon à l'écran.
-  * *Frappe clavier organique* : Saisie de texte avec variations de délais aléatoires simulant une frappe humaine réelle.
-  * *Discrétion absolue* : Raccordement silencieux à l'onglet via un canal de script isolé, supprimant la bannière jaune d'avertissement de Chrome.
-  * *Réutilisation d'onglet* : Priorise la réutilisation de l'onglet actif pour éviter la congestion de la mémoire.
-* **Alignement flou d'écriture à 8 couches (Fuzzy Matching) :** L'assistant applique vos modifications de fichiers avec une résilience absolue même s'il commet de petites erreurs d'espacement, d'indentation, ou d'apostrophes (exact, espaces nettoyés, ancrages de début/fin avec similarité mathématique, normalisation Unicode, alignement dynamique de marge, tolérance sur les limites).
-* **Sécurité et intégrité de l'éditeur :**
-  * Respect de l'encodage et des retours à la ligne d'origine (BOM UTF-8, LF ou CRLF) avec système de blocage anti-collision sur les modifications parallèles.
-  * *Vérification pré-restauration* : L'application vérifie si vous avez modifié manuellement vos fichiers sur le disque avant de restaurer un état précédent de l'historique, bloquant l'action pour empêcher toute perte de code accidentelle.
-* **Synchronisation OneDrive décentralisée :**
-  * *Zéro conflit cloud (Tombstones)* : Résolution définitive des discussions supprimées qui réapparaissaient sans cesse d'un PC à l'autre grâce à un registre des suppressions purgé automatiquement en tâche de fond.
-  * *Préfixe de machine automatique* : Vos discussions sont préfixées avec le nom de l'ordinateur actif (ex : `[Bureau-Pro] Nouvelle discussion`) pour vous y retrouver instantanément lors de vos sessions de travail partagées.
-* **Auto-Réparation du pont en un clic :** Si le pont de navigation rencontre un problème d'enregistrement sur une machine secondaire lors de la synchronisation cloud, un bouton bleu configurable permet de le réparer de façon 100% silencieuse et automatique en tâche de fond.
+* **💾 Sauvegarde automatique (Auto-Save SOTA) :** Enregistrement automatique et transparent en arrière-plan 1,5 seconde après l'arrêt de la frappe. Activable ou désactivable d'un clic dans vos options.
+* **📦 Mode Sandbox :** Lancement de l'application en un clic sans aucun projet ouvert pour tester l'IA ou utiliser les outils MCP de manière isolée.
+* **☁️ Synchro OneDrive & SQLite automatique :** Synchronisation transparente de vos conversations, configurations de projets et bases de données SQLite entre vos différents ordinateurs.
+* **⚡ Zéro popup console Windows :** Lancement asynchrone et silencieux de tous les outils et serveurs en arrière-plan sans aucune ouverture intempestive de fenêtres d'invite de commandes.
+* **🏷️ Préfixe PC réel automatique :** Identification automatique du nom de la machine physique pour typer et sécuriser les configurations de conversation multi-PC.
+* **🔑 Diagnostic Windows OAuth résilient :** Capture robuste de l'erreur réseau typique sous Windows (code 10013) et conseils clairs pour débloquer la connexion (WinNAT/HNS).
+* **⚡ Diagnostic SOTA :** Vérification en un clic de l'état de santé, du PATH et des versions de tous vos outils de développement (Git, Python, Node, Cargo, etc.).
+* **🔒 Écran de mises à jour sécurisé :** Verrouillage propre de l'interface pendant l'application des correctifs système pour éviter toute corruption de données.
+* **🚀 Script de compilation OneDrive (`compil.ps1`) :** Automatisation de la génération de l'application et copie immédiate sur OneDrive pour un déploiement instantané sur vos PC.
+* **🔄 Active Turn Registry :** Moteur intelligent Rust qui suit les turns de l'agent en cours et assure une reprise instantanée du streaming après un redémarrage ou en cas de déconnexion.
+
+---
+
+## 🤖 Modèles d'IA, Comptes & Furtivité (AI Engine)
+
+* **👥 Gestion Multi-comptes OpenAI :** Connexion simultanée de plusieurs profils OpenAI secondaires avec bascule instantanée entre vos différentes clés et abonnements.
+* **📊 Quotas en temps réel :** Visualisation dynamique de votre consommation (crédits / balance restante) sous forme de barres de progression et pastille live dans le chat.
+* **🤖 Routage & Résilience Google Antigravity SOTA :** Réparation, optimisation et routage intelligent de vos requêtes vers les modèles Google les plus performants.
+* **⚡ Optimisation de vitesse Gemini :** Streaming et requêtes ultra-rapides pour les modèles Gemini, basés sur l'architecture réseau optimisée de Google Antigravity.
+* **🔥 Incorporation d'Opus par Google :** Intégration de Claude 3.5 Opus via les abonnements professionnels Google.
+* **🧭 Système Pending/Steering pour Influencer :** Un vrai système d'interception et de guidage pour orienter, corriger ou ajouter des instructions en temps réel en cours de génération (Pending/Steering).
+* **🔍 Indexation sémantique locale vectorielle :** Indexation et recherche vectorielle haute-performance effectuée localement sur votre machine avec badge d'état interactif dans la barre latérale.
+* **🤖 Intégration de DeepSeek V4 Pro & V4 Flash :** Prise en charge complète des modèles phares **DeepSeek V4 Pro** et **DeepSeek V4 Flash** dans le catalogue de l'application.
+* **🤖 Pont Cursor Composer 2.5 (agent.v1) :** Moteur haute-performance autonome sur connexions HTTP/2 persistantes gérant toutes les modifications chirurgicales de fichiers, avec installation automatique et invisible en arrière-plan, et masquage du sélecteur d'intelligence inutile.
+* **🛡️ Sécurité & Furtivité WebSocket :** Spoofing d'empreinte réseau avancé pour éliminer tout risque de détection ou de blocage sur les flux de ChatGPT.
+* **📡 WebSocket OpenAI :** Transport temps-réel haute performance basé sur WebSocket pour des réponses fluides et à latence minimale avec OpenAI.
+
+---
+
+## 🔌 Extensions & Ponts locaux (MCP & Bridge)
+
+* **🌐 Extension Chrome nouvelle génération :** Pilotage d'actions de navigation ultra-stables en natif Rust avec mouvements et clics à vitesse humaine (mouvements Beziers, physique fluide) et mode silencieux.
+* **🌐 Réparation Chrome en un clic :** Bouton bleu de configuration automatique si le pont Chrome ne répond pas sur un nouveau PC.
+* **📦 Empaquetage des ressources Tauri :** Le pont local et l'extension Chrome sont intégrés directement au sein de l'installateur compilé (MSI/EXE).
+* **🛠️ Outils Rust & ripgrep Sidecar :** Intégration de Ripgrep en binaire natif sidecar et de nouveaux outils (`list_dir`, `delete_file`) pour accélérer la recherche et la gestion des fichiers par 10x.
+* **🛠️ Diagnostics Monaco en temps réel :** Remontée automatique des lints et erreurs de compilation de l'éditeur de code à l'IA en temps réel.
+* **🧠 Logs ultra-compacts :** Nettoyage automatique du contexte de discussion pour éliminer le bruit et optimiser la consommation de jetons.
+* **🔍 Laboratoire réseau MITM :** Outils de débogage et d'ingénierie inverse intégrés pour inspecter le trafic chiffré des outils IA.
+* **🔧 Moteur de remplacement intelligent (Search/Replace) :** Système d'auto-correction à 8 couches (Unicode, indentations, etc.) garantissant que les modifications de l'IA s'insèrent correctement dans vos fichiers même en cas de légères erreurs d'espaces.
