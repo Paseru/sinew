@@ -426,62 +426,7 @@ export function SettingsPane({ workspacePath }: Props) {
     }
   }, [loadConfiguredProviders]);
 
-  const [secondaryModels, setSecondaryModels] = useState<Record<string, string>>(() => {
-    const models: Record<string, string> = {};
-    try {
-      for (let i = 2; i <= 20; i++) {
-        const key = `openai:${i}`;
-        models[key] = localStorage.getItem(`sinew.provider-model.${key}`) || "gpt-5.5";
-      }
-    } catch {}
-    return models;
-  });
 
-  const [secondaryThinking, setSecondaryThinking] = useState<Record<string, string>>(() => {
-    const thinking: Record<string, string> = {};
-    try {
-      for (let i = 2; i <= 20; i++) {
-        const key = `openai:${i}`;
-        thinking[key] = localStorage.getItem(`sinew.provider-thinking.${key}`) || "medium";
-      }
-    } catch {}
-    return thinking;
-  });
-
-  const [secondaryFast, setSecondaryFast] = useState<Record<string, string>>(() => {
-    const fast: Record<string, string> = {};
-    try {
-      for (let i = 2; i <= 20; i++) {
-        const key = `openai:${i}`;
-        fast[key] = localStorage.getItem(`sinew.provider-fast.${key}`) || "true";
-      }
-    } catch {}
-    return fast;
-  });
-
-  const handleUpdateSecondaryModel = useCallback((key: string, model: string) => {
-    try {
-      localStorage.setItem(`sinew.provider-model.${key}`, model);
-    } catch {}
-    setSecondaryModels((prev) => ({ ...prev, [key]: model }));
-    void loadOpenAiStatus();
-  }, [loadOpenAiStatus]);
-
-  const handleUpdateSecondaryThinking = useCallback((key: string, thinking: string) => {
-    try {
-      localStorage.setItem(`sinew.provider-thinking.${key}`, thinking);
-    } catch {}
-    setSecondaryThinking((prev) => ({ ...prev, [key]: thinking }));
-    void loadOpenAiStatus();
-  }, [loadOpenAiStatus]);
-
-  const handleUpdateSecondaryFast = useCallback((key: string, fast: string) => {
-    try {
-      localStorage.setItem(`sinew.provider-fast.${key}`, fast);
-    } catch {}
-    setSecondaryFast((prev) => ({ ...prev, [key]: fast }));
-    void loadOpenAiStatus();
-  }, [loadOpenAiStatus]);
 
   const loadAnthropicStatus = useCallback(async () => {
     setProvidersLoading(true);
@@ -607,6 +552,81 @@ export function SettingsPane({ workspacePath }: Props) {
       setProvidersLoading(false);
     }
   }, [loadConfiguredProviders]);
+
+  const [secondaryModels, setSecondaryModels] = useState<Record<string, string>>(() => {
+    const models: Record<string, string> = {};
+    try {
+      for (let i = 2; i <= 20; i++) {
+        const oKey = `openai:${i}`;
+        models[oKey] = localStorage.getItem(`sinew.provider-model.${oKey}`) || "gpt-5.5";
+        const gKey = `google:${i}`;
+        models[gKey] = localStorage.getItem(`sinew.provider-model.${gKey}`) || "gemini-3.5-flash";
+      }
+    } catch {}
+    return models;
+  });
+
+  const [secondaryThinking, setSecondaryThinking] = useState<Record<string, string>>(() => {
+    const thinking: Record<string, string> = {};
+    try {
+      for (let i = 2; i <= 20; i++) {
+        const oKey = `openai:${i}`;
+        thinking[oKey] = localStorage.getItem(`sinew.provider-thinking.${oKey}`) || "medium";
+        const gKey = `google:${i}`;
+        thinking[gKey] = localStorage.getItem(`sinew.provider-thinking.${gKey}`) || "high";
+      }
+    } catch {}
+    return thinking;
+  });
+
+  const [secondaryFast, setSecondaryFast] = useState<Record<string, string>>(() => {
+    const fast: Record<string, string> = {};
+    try {
+      for (let i = 2; i <= 20; i++) {
+        const oKey = `openai:${i}`;
+        fast[oKey] = localStorage.getItem(`sinew.provider-fast.${oKey}`) || "true";
+        const gKey = `google:${i}`;
+        fast[gKey] = localStorage.getItem(`sinew.provider-fast.${gKey}`) || "true";
+      }
+    } catch {}
+    return fast;
+  });
+
+  const handleUpdateSecondaryModel = useCallback((key: string, model: string) => {
+    try {
+      localStorage.setItem(`sinew.provider-model.${key}`, model);
+    } catch {}
+    setSecondaryModels((prev) => ({ ...prev, [key]: model }));
+    if (key.startsWith("google:")) {
+      void loadGoogleStatus();
+    } else {
+      void loadOpenAiStatus();
+    }
+  }, [loadOpenAiStatus, loadGoogleStatus]);
+
+  const handleUpdateSecondaryThinking = useCallback((key: string, thinking: string) => {
+    try {
+      localStorage.setItem(`sinew.provider-thinking.${key}`, thinking);
+    } catch {}
+    setSecondaryThinking((prev) => ({ ...prev, [key]: thinking }));
+    if (key.startsWith("google:")) {
+      void loadGoogleStatus();
+    } else {
+      void loadOpenAiStatus();
+    }
+  }, [loadOpenAiStatus, loadGoogleStatus]);
+
+  const handleUpdateSecondaryFast = useCallback((key: string, fast: string) => {
+    try {
+      localStorage.setItem(`sinew.provider-fast.${key}`, fast);
+    } catch {}
+    setSecondaryFast((prev) => ({ ...prev, [key]: fast }));
+    if (key.startsWith("google:")) {
+      void loadGoogleStatus();
+    } else {
+      void loadOpenAiStatus();
+    }
+  }, [loadOpenAiStatus, loadGoogleStatus]);
 
   useEffect(() => {
     if (section !== "providers" && section !== "tools") return;
@@ -1167,16 +1187,29 @@ export function SettingsPane({ workspacePath }: Props) {
     }
   }, [settings.servers]);
 
+  const autoProbedServersRef = useRef<Set<string>>(new Set());
+
+  // Clear probed servers cache when saving changes or settings are reloaded
+  useEffect(() => {
+    if (saving || loading) {
+      autoProbedServersRef.current.clear();
+    }
+  }, [saving, loading]);
+
   useEffect(() => {
     if (loading || saving || probing) return;
-    if (!selectedServer?.enabled || selectedProbe) return;
+    if (!selectedServer?.enabled) return;
+    if (selectedServerId && autoProbedServersRef.current.has(selectedServerId)) return;
+
+    if (selectedServerId) {
+      autoProbedServersRef.current.add(selectedServerId);
+    }
     void refreshMcpProbes();
   }, [
     loading,
     probing,
     refreshMcpProbes,
     saving,
-    selectedProbe,
     selectedServer?.enabled,
     selectedServerId,
   ]);
@@ -2748,6 +2781,23 @@ function ProvidersSection({
                   userTier: account.userTier,
                   projectId: account.projectId,
                 };
+                const currentModel = secondaryModels[account.key] || "gemini-3.5-flash";
+
+                const selectStyle = {
+                  background: "var(--bg-3)",
+                  color: "var(--text-1)",
+                  border: "1px solid var(--line-2)",
+                  borderRadius: "4px",
+                  padding: "2px 6px",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  outline: "none",
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                  textOverflow: "ellipsis",
+                  overflow: "hidden",
+                  whiteSpace: "nowrap" as const
+                };
 
                 return (
                   <ProviderCard
@@ -2770,7 +2820,24 @@ function ProvidersSection({
                     onMinus={() => void onDisconnectGoogleAccount(account.key)}
                     providerId={account.key}
                     compact={true}
-                  />
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px", minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center", minWidth: 0 }}>
+                        <span style={{ fontSize: "10px", fontWeight: 500, color: "var(--text-2)", textTransform: "uppercase", flex: "0 0 auto", width: "55px" }}>Model:</span>
+                        <select
+                          value={currentModel}
+                          onChange={(e) => onUpdateSecondaryModel(account.key, e.target.value)}
+                          style={selectStyle}
+                        >
+                          <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                          <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                          <option value="claude-sonnet-4.6">Claude Sonnet 4.6</option>
+                          <option value="claude-opus-4.6">Claude Opus 4.6</option>
+                          <option value="gpt-oss-120b">GPT-OSS 120B</option>
+                        </select>
+                      </div>
+                    </div>
+                  </ProviderCard>
                 );
               })}
             {[...unconnectedGoogleAccounts]
@@ -5987,7 +6054,22 @@ function DeepSeekProviderCard({
   const [revealed, setRevealed] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+  const [remoteModels, setRemoteModels] = useState<any[] | null>(null);
+  const [fetchingModels, setFetchingModels] = useState(false);
   const validationSeq = useRef(0);
+
+  const handleFetchRemoteModels = async () => {
+    setFetchingModels(true);
+    try {
+      const res = await api.listDeepSeekModelsRemote();
+      setRemoteModels(res?.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFetchingModels(false);
+    }
+  };
 
   const displayStatus: DeepSeekProviderStatus = validating
     ? {
@@ -6000,6 +6082,36 @@ function DeepSeekProviderCard({
       };
   const state = displayStatus.connectionState;
   const connected = Boolean(displayStatus.connected);
+
+  useEffect(() => {
+    if (!connected) {
+      setQuota(null);
+      return;
+    }
+    let active = true;
+    const update = async () => {
+      try {
+        const q = await fetchProviderQuota("deepseek");
+        if (active) setQuota(q);
+      } catch (err) {
+        console.error("Failed to fetch DeepSeek quota:", err);
+      }
+    };
+    update();
+    const handleUpdate = () => {
+      const cached = getCachedQuota("deepseek");
+      if (cached && active) {
+        setQuota(cached);
+      } else {
+        update();
+      }
+    };
+    window.addEventListener("sinew:quota-updated", handleUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("sinew:quota-updated", handleUpdate);
+    };
+  }, [connected]);
 
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
@@ -6070,6 +6182,34 @@ function DeepSeekProviderCard({
           </div>
           <p>Use DeepSeek models (V3 & R1) with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
+          {connected && quota && <QuotaInlinePanel quota={quota} />}
+          {connected && (
+            <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div>
+                <button
+                  type="button"
+                  className="settings-pane__button settings-pane__button--secondary"
+                  onClick={handleFetchRemoteModels}
+                  disabled={fetchingModels}
+                  style={{ padding: "4px 10px", fontSize: "11px", height: "auto", minHeight: "26px", cursor: "pointer", width: "fit-content" }}
+                >
+                  {fetchingModels ? "Vérification..." : "🔍 Vérifier les modèles disponibles sur ma clé"}
+                </button>
+              </div>
+              {remoteModels && (
+                <div style={{ fontSize: "11px", opacity: 0.9, color: "var(--color-success)" }}>
+                  {remoteModels.length > 0 ? (
+                    <div>
+                      <strong>Modèles autorisés sur votre clé :</strong>{" "}
+                      {remoteModels.map((m: any) => m.id).join(", ")}
+                    </div>
+                  ) : (
+                    "Aucun modèle retourné par l'API"
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
