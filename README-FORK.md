@@ -16,7 +16,7 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **🔎 Polices dynamiques ajustables :** Boutons tactiles réactifs (`+` et `-`) dans les options pour ajuster instantanément à chaud la taille du texte de l'éditeur de code Monaco et du chat de l'IA.
 * **🌐 Version française complète :** L'interface entière et toutes les actions de l'application s'adaptent automatiquement en français ou en anglais selon vos préférences.
 * **📋 Sélection et copie libre :** Déblocage de la sélection et copie de texte directement dans le fil de discussion.
-* **📏 Démarcation visuelle du panneau de configuration :** Ajout d'une ligne de séparation verticale élégante et nette à gauche du panneau de configuration pour structurer le menu d'onglets des paramètres.
+* **📏 Démarcation visuelle du panneau de configuration :** Ligne de séparation verticale élégante à gauche du panneau de configuration des paramètres.
 
 ---
 
@@ -36,14 +36,14 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 🤖 Modèles d'IA, Comptes & Furtivité (AI Engine)
 
-* **👥 Gestion Multi-comptes :** Connexion simultanée de plusieurs profils OpenAI secondaires avec bascule instantanée entre vos différentes clés et abonnements.
+* **👥 Gestion Multi-comptes OpenAI :** Connexion simultanée de plusieurs profils OpenAI secondaires avec bascule instantanée entre vos différentes clés et abonnements.
 * **📊 Quotas en temps réel :** Visualisation dynamique de votre consommation (crédits / balance restante) sous forme de barres de progression et pastille live dans le chat.
 * **🤖 Routage & Résilience Google Antigravity SOTA :** Réparation, optimisation et routage intelligent de vos requêtes vers les modèles Google les plus performants.
 * **⚡ Optimisation de vitesse Gemini :** Streaming et requêtes ultra-rapides pour les modèles Gemini, basés sur l'architecture réseau optimisée de Google Antigravity.
 * **🔥 Incorporation d'Opus par Google :** Intégration de Claude 3.5 Opus via les abonnements professionnels Google.
 * **🧭 Système Pending/Steering pour Influencer :** Un vrai système d'interception et de guidage pour orienter, corriger ou ajouter des instructions en temps réel en cours de génération (Pending/Steering).
 * **🔍 Indexation sémantique locale vectorielle :** Indexation et recherche vectorielle haute-performance effectuée localement sur votre machine avec badge d'état interactif dans la barre latérale.
-* **🤖 Intégration expérimentale de Composer 2.5 :** Prise en charge du protocole haute-performance `agent.v1` de Cursor Composer, avec masquage automatique du sélecteur d'intelligence inutile pour une interface épurée.
+* **🤖 Pont Cursor Composer 2.5 (agent.v1) :** Moteur haute-performance autonome sur connexions HTTP/2 persistantes gérant toutes les modifications chirurgicales de fichiers, avec installation automatique et invisible en arrière-plan, et masquage du sélecteur d'intelligence inutile.
 * **🛡️ Sécurité & Furtivité WebSocket :** Spoofing d'empreinte réseau avancé pour éliminer tout risque de détection ou de blocage sur les flux de ChatGPT.
 
 ---
