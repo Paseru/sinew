@@ -801,6 +801,23 @@
       const rect = el.getBoundingClientRect();
       const x = Math.round(rect.left + rect.width / 2);
       const y = Math.round(rect.top + rect.height / 2);
+      
+      // Téléportation instantanée et onde de choc (Mode Turbo Visuel)
+      if (typeof xSpring !== "undefined" && typeof ySpring !== "undefined") {
+        xSpring.value = x;
+        xSpring.target = x;
+        xSpring.velocity = 0;
+        ySpring.value = y;
+        ySpring.target = y;
+        ySpring.velocity = 0;
+        if (typeof updateCursorState === "function") {
+          updateCursorState({ x, y, visible: true });
+        }
+        if (typeof triggerClickShockwave === "function") {
+          triggerClickShockwave(x, y);
+        }
+      }
+
       const opts = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0, buttons: 1, pointerId: 1, pointerType: "mouse", isPrimary: true };
       try {
         el.dispatchEvent(new PointerEvent("pointerover", opts));
@@ -834,6 +851,25 @@
       }
       el.scrollIntoView?.({ block: "center", inline: "center", behavior: "auto" });
       el.focus?.({ preventScroll: true });
+
+      // Téléportation du curseur sur le champ de saisie (Mode Turbo Visuel)
+      try {
+        const rect = el.getBoundingClientRect();
+        const x = Math.round(rect.left + rect.width / 2);
+        const y = Math.round(rect.top + rect.height / 2);
+        if (typeof xSpring !== "undefined" && typeof ySpring !== "undefined") {
+          xSpring.value = x;
+          xSpring.target = x;
+          xSpring.velocity = 0;
+          ySpring.value = y;
+          ySpring.target = y;
+          ySpring.velocity = 0;
+          if (typeof updateCursorState === "function") {
+            updateCursorState({ x, y, visible: true });
+          }
+        }
+      } catch (e) {}
+
       const setValue = (value) => {
         if (el.isContentEditable || el.getAttribute("role") === "textbox") el.textContent = value;
         else el.value = value;
