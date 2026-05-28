@@ -80,15 +80,6 @@ if (!(Test-Path $RegPath)) {
 Set-ItemProperty -Path $RegPath -Name "(default)" -Value $ManifestPath
 Write-Host "Cle de registre configuree vers le manifest installe."
 
-# Enregistrement automatique de l'extension dans Chrome (External Extensions)
-$ExtRegPath = "HKCU:\Software\Google\Chrome\Extensions\fokjdmcbdkdbajceeljedfgcchogihbg"
-if (!(Test-Path $ExtRegPath)) {
-    New-Item -Path $ExtRegPath -Force | Out-Null
-}
-Set-ItemProperty -Path $ExtRegPath -Name "path" -Value $InstallDir
-Set-ItemProperty -Path $ExtRegPath -Name "version" -Value "1.0.0"
-Write-Host "Extension pre-enregistree automatiquement dans Chrome."
-
 Write-Host "4/5 Configuration des lanceurs locaux..."
 $NodePath = (Get-Command node).Source
 
