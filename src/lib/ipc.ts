@@ -484,6 +484,9 @@ export const api = {
   getDeepSeekProviderStatus() {
     return invoke<DeepSeekProviderStatus>("get_deepseek_provider_status");
   },
+  getDeepSeekBalance() {
+    return invoke<any>("get_deepseek_balance");
+  },
   getOpenRouterKeyDetails() {
     return invoke<any>("get_openrouter_key_details");
   },

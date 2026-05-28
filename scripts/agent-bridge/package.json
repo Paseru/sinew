@@ -1,0 +1,14 @@
+{
+  "name": "sinew-agent-bridge",
+  "private": true,
+  "type": "module",
+  "description": "Node bridge: agent.v1 Run (connect+proto) for Sinew OAuth",
+  "scripts": {
+    "postinstall": "node install-proto.mjs",
+    "run": "node run-stream.mjs"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.0.0",
+    "tsx": "^4.19.0"
+  }
+}

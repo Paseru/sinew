@@ -22,6 +22,12 @@
 │       └── browser
 │           └── SKILL.md
 ├── scripts
+│   ├── agent-bridge
+│   │   ├── h2-bridge.mjs
+│   │   ├── run-stream.mjs
+│   │   ├── test-live.ps1
+│   │   └── vendor
+│   │       └── agent_pb.ts
 │   ├── mitm
 │   │   ├── check-mitm.ps1
 │   │   ├── install-mitmproxy.ps1
@@ -150,6 +156,17 @@
 │           ├── model_info.rs
 │           ├── stream.rs
 │           └── wire.rs
+│   └── sinew-cursor
+│       ├── Cargo.toml
+│       └── src
+│           ├── agent
+│           │   ├── bridge.rs
+│           │   ├── models.rs
+│           │   └── transport.rs
+│           ├── client.rs
+│           ├── encryption.rs
+│           ├── identity.rs
+│           └── lib.rs
 ├── src-tauri
 │   ├── Cargo.toml
 │   ├── PROVIDERS.md

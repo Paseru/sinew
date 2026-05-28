@@ -705,6 +705,8 @@ pub fn run() {
             providers::get_deepseek_provider_status,
             providers::validate_deepseek_api_key,
             providers::disconnect_deepseek_provider,
+            providers::get_deepseek_balance,
+            providers::list_deepseek_models_remote,
             providers::list_openrouter_models,
             providers::search_openrouter_models,
             providers::add_openrouter_model,

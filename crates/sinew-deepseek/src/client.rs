@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
 use sinew_core::{
-    AppError, ChatMessage, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
+    AppError, ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
     ProviderStream, Result, Role, TokenEstimate, ToolDescriptor,
 };
 
 use crate::{
     auth::Credential,
-    model_info::{self, DEEPSEEK_CHAT_MODEL, DEEPSEEK_REASONER_MODEL},
+    model_info,
     stream::map_stream,
     wire,
 };
@@ -122,6 +122,24 @@ impl Provider for DeepSeekProvider {
         }
 
         let caps = model_info::capabilities(&request.model);
+        let (thinking, reasoning_effort, temperature) = if caps.supports_thinking {
+            if request.effective_effort() != Some(Effort::None) {
+                (
+                    Some(wire::WireThinking { kind: "enabled" }),
+                    Some("high"),
+                    None,
+                )
+            } else {
+                (
+                    Some(wire::WireThinking { kind: "disabled" }),
+                    None,
+                    request.temperature,
+                )
+            }
+        } else {
+            (None, None, request.temperature)
+        };
+
         let body = wire::ChatCompletionsRequest {
             model: &request.model.name,
             messages: to_wire_messages(&request)?,
@@ -131,7 +149,9 @@ impl Provider for DeepSeekProvider {
                 Vec::new()
             },
             max_tokens: request.max_output_tokens.or(Some(caps.max_output_tokens)),
-            temperature: request.temperature,
+            temperature,
+            thinking,
+            reasoning_effort,
             stream: true,
         };
 
@@ -150,16 +170,9 @@ pub async fn validate_api_key(api_key: &str) -> std::result::Result<(), String> 
         .build()
         .map_err(|err| err.to_string())?;
 
-    let body = serde_json::json!({
-        "model": DEEPSEEK_CHAT_MODEL,
-        "messages": [{"role": "user", "content": "ping"}],
-        "max_tokens": 1
-    });
-
     let response = http
-        .post(format!("{}/chat/completions", BASE_URL))
+        .get(format!("{}/models", BASE_URL))
         .bearer_auth(api_key)
-        .json(&body)
         .send()
         .await
         .map_err(|err| format!("Network error: {err}"))?;

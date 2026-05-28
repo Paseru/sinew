@@ -11,7 +11,17 @@ pub struct ChatCompletionsRequest<'a> {
     pub max_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<WireThinking>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_effort: Option<&'static str>,
     pub stream: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WireThinking {
+    #[serde(rename = "type")]
+    pub kind: &'static str,
 }
 
 #[derive(Debug, Serialize)]

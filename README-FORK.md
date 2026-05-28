@@ -122,7 +122,8 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
   * 📂 *Fichiers : `crates/sinew-deepseek/src/stream.rs`, `crates/sinew-deepseek/src/wire.rs`, `src/lib/models.ts`*
 * **⚙️ Interface utilisateur dédiée dans l'onglet des fournisseurs**
   * Intégration d'une carte de connexion élégante avec masquage de clé, validation immédiate au collage et indicateur d'état dynamique (*Connected*, *Connecting*, *Needs attention*, *Disconnected*).
-  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/lib/ipc.ts`, `src/types.ts`*
+  * Affichage en temps réel du **montant restant (crédits / balance active en USD/CNY)** et de la barre de progression par rapport au montant total rechargé (*Topped-up balance*).
+  * 📂 *Fichiers : `src/components/SettingsPane.tsx`, `src/lib/ipc.ts`, `src/types.ts`, `src/lib/quotas.ts`, `src-tauri/src/providers.rs`*
 
 ---
 

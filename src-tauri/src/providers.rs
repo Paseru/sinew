@@ -287,7 +287,6 @@ pub(super) fn remove_deepseek_provider(
 pub(super) fn deepseek_provider_status_from_auth(
     auth: DeepSeekAuthStatus,
     connection_state: &str,
-    models: Vec<String>,
     error: Option<String>,
 ) -> DeepSeekProviderStatus {
     DeepSeekProviderStatus {
@@ -295,7 +294,6 @@ pub(super) fn deepseek_provider_status_from_auth(
         connection_state: connection_state.to_string(),
         key_preview: auth.key_preview,
         last_validated_ms: auth.last_validated_ms,
-        models,
         error,
     }
 }
@@ -2140,17 +2138,16 @@ pub(super) async fn get_deepseek_provider_status(
 ) -> std::result::Result<DeepSeekProviderStatus, String> {
     let auth = load_default_deepseek_auth_status().map_err(error_to_string)?;
     let api_key = load_default_deepseek_api_key().map_err(error_to_string)?;
-    let (state_str, models) = if api_key.is_some() {
+    let state_str = if api_key.is_some() {
         install_deepseek_provider(&state.providers)?;
-        ("connected", vec!["deepseek-chat".to_string(), "deepseek-reasoner".to_string()])
+        "connected"
     } else {
         remove_deepseek_provider(&state.providers)?;
-        ("disconnected", Vec::new())
+        "disconnected"
     };
     Ok(deepseek_provider_status_from_auth(
         auth,
         state_str,
-        models,
         None,
     ))
 }
@@ -2165,7 +2162,6 @@ pub(super) async fn validate_deepseek_api_key(
         return Ok(deepseek_provider_status_from_auth(
             DeepSeekAuthStatus::disconnected(),
             "disconnected",
-            Vec::new(),
             None,
         ));
     }
@@ -2175,11 +2171,9 @@ pub(super) async fn validate_deepseek_api_key(
         .map_err(error_to_string)?;
     let auth = save_default_deepseek_api_key(&api_key).map_err(error_to_string)?;
     install_deepseek_provider(&state.providers)?;
-    let models = vec!["deepseek-chat".to_string(), "deepseek-reasoner".to_string()];
     Ok(deepseek_provider_status_from_auth(
         auth,
         "connected",
-        models,
         None,
     ))
 }
@@ -2194,7 +2188,6 @@ pub(super) async fn disconnect_deepseek_provider(
     Ok(deepseek_provider_status_from_auth(
         DeepSeekAuthStatus::disconnected(),
         "disconnected",
-        Vec::new(),
         None,
     ))
 }

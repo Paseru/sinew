@@ -193,17 +193,17 @@ export const MODELS: ModelEntry[] = [
     defaultThinking: "high",
   },
   {
-    value: "deepseek:deepseek-chat",
+    value: "deepseek:deepseek-v4-flash",
     provider: "deepseek",
-    label: "DeepSeek V3",
-    thinking: [],
-    defaultThinking: "off",
+    label: "DeepSeek V4 Flash",
+    thinking: ["off", "high"],
+    defaultThinking: "high",
   },
   {
-    value: "deepseek:deepseek-reasoner",
+    value: "deepseek:deepseek-v4-pro",
     provider: "deepseek",
-    label: "DeepSeek R1",
-    thinking: ["high"],
+    label: "DeepSeek V4 Pro",
+    thinking: ["off", "high"],
     defaultThinking: "high",
   },
   {
@@ -233,13 +233,18 @@ export function sanitizeOpenRouterName(name: string | null | undefined): string 
 
 export function modelsWithOpenRouter(
   openRouterModels: readonly OpenRouterModel[] = [],
+  deepSeekModels: readonly string[] = [],
 ): ModelEntry[] {
-  return [...MODELS, ...openRouterModelEntries(openRouterModels)];
+  const dsEntries = deepSeekModelEntries(deepSeekModels);
+  const staticDsValues = new Set(MODELS.filter(m => m.provider === "deepseek").map(m => m.value));
+  const filteredDs = dsEntries.filter(e => !staticDsValues.has(e.value));
+  return [...MODELS, ...openRouterModelEntries(openRouterModels), ...filteredDs];
 }
 
 export function availableModelsForProviders(
   configuredProviders: readonly string[],
   openRouterModels: readonly OpenRouterModel[] = [],
+  deepSeekModels: readonly string[] = [],
 ): ModelEntry[] {
   const configured = new Set(configuredProviders);
   const entries: ModelEntry[] = [
@@ -289,18 +294,30 @@ export function availableModelsForProviders(
       });
     } else if (provider.startsWith("google:")) {
       const suffix = provider.slice("google:".length);
-      const googleModels = MODELS.filter((m) => m.provider === "google");
-      for (const m of googleModels) {
-        const baseModelName = m.value.slice("google:".length);
-        entries.push({
-          value: modelId(provider, baseModelName),
-          provider: provider as any,
-          label: `${m.label} (${suffix})`,
-          thinking: m.thinking,
-          defaultThinking: m.defaultThinking,
-          supportsFast: m.supportsFast,
-        });
-      }
+      let modelName = "gemini-3.5-flash";
+      try {
+        modelName = localStorage.getItem(`sinew.provider-model.${provider}`) || "gemini-3.5-flash";
+      } catch {}
+
+      const matchingModel = MODELS.find((m) => m.value === `google:${modelName}`);
+      const label = matchingModel ? matchingModel.label : "Gemini 3.5 Flash";
+      const thinking = (matchingModel ? matchingModel.thinking : ["low", "medium", "high"]) as readonly ThinkingLevel[];
+      
+      let defaultThinking = matchingModel ? matchingModel.defaultThinking : "high";
+      try {
+        const storedThinking = localStorage.getItem(`sinew.provider-thinking.${provider}`);
+        if (storedThinking) {
+          defaultThinking = storedThinking as any;
+        }
+      } catch {}
+
+      entries.push({
+        value: modelId(provider, modelName),
+        provider: provider as any,
+        label: `Google ${suffix}`,
+        thinking,
+        defaultThinking,
+      });
     }
   }
 
@@ -308,7 +325,33 @@ export function availableModelsForProviders(
     entries.push(...openRouterModelEntries(openRouterModels));
   }
 
+  if (configured.has("deepseek") && deepSeekModels.length > 0) {
+    const dsEntries = deepSeekModelEntries(deepSeekModels);
+    const existingValues = new Set(entries.map(e => e.value));
+    for (const e of dsEntries) {
+      if (!existingValues.has(e.value)) {
+        entries.push(e);
+      }
+    }
+  }
+
   return entries;
+}
+
+function deepSeekModelEntries(
+  deepSeekModels: readonly string[],
+): ModelEntry[] {
+  return deepSeekModels.map((modelName) => {
+    const isReasoner = modelName.includes("reasoner") || modelName.includes("r1");
+    const supportsThinking = modelName.includes("v4") || isReasoner;
+    return {
+      value: modelId("deepseek", modelName),
+      provider: "deepseek",
+      label: modelName.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+      thinking: supportsThinking ? ["off", "high"] as readonly ThinkingLevel[] : ["off"] as readonly ThinkingLevel[],
+      defaultThinking: supportsThinking ? "high" : "off",
+    };
+  });
 }
 
 function openRouterModelEntries(
@@ -361,6 +404,10 @@ export function thinkingFromRef(
   }
   if (model?.provider === "deepseek") {
     if (model.name === "deepseek-reasoner") return "high";
+    if (model.name === "deepseek-v4-flash" || model.name === "deepseek-v4-pro") {
+      if (model.effort === "none") return "off";
+      return "high";
+    }
     return "off";
   }
   if (model?.provider === "openrouter") {
@@ -422,6 +469,9 @@ export function modelRefWithThinking(
   if (model.provider === "kimi") return { ...model, effort: "high" };
   if (model.provider === "deepseek") {
     if (model.name === "deepseek-reasoner") return { ...model, effort: "high" };
+    if (model.name === "deepseek-v4-flash" || model.name === "deepseek-v4-pro") {
+      return { ...model, effort: "high" };
+    }
     return { ...model, effort: "none" };
   }
   if (model.provider === "openrouter" && (thinking === "xhigh" || thinking === "max")) {

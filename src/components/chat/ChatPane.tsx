@@ -3717,7 +3717,9 @@ export function ChatPane({
                       const selected = m.value === model;
                       const providerIcon = m.provider.startsWith("openai:")
                         ? "simple-icons:openai"
-                        : PROVIDERS.find((p) => p.value === m.provider)?.icon;
+                        : m.provider.startsWith("google:")
+                          ? "simple-icons:google"
+                          : PROVIDERS.find((p) => p.value === m.provider)?.icon;
                       let qPercent: number | null = null;
                       
                       let baseProviderId: string = m.provider;

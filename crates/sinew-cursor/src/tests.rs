@@ -226,6 +226,38 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_live_agent_usable_models() {
+        let session = match crate::auth::composer::load_composer_session() {
+            Ok(Some(session)) => session,
+            _ => {
+                println!("Skipping agent models test: not connected");
+                return;
+            }
+        };
+        let http = reqwest::Client::builder()
+            .user_agent(crate::identity::CursorIdeIdentity::load().user_agent())
+            .build()
+            .expect("http client");
+        let token = match crate::auth::composer::ensure_fresh_composer_token(&http, &session).await
+        {
+            Ok(token) => token,
+            Err(err) => {
+                println!("Skipping agent models test: {err:?}");
+                return;
+            }
+        };
+        let identity = crate::identity::CursorIdeIdentity::load();
+        match crate::agent::fetch_usable_models(&http, &identity, &token).await {
+            Ok(bytes) => {
+                let models = crate::agent::scan_model_ids(&bytes);
+                println!("GetUsableModels OK: {} bytes, models={models:?}", bytes.len());
+                assert!(!bytes.is_empty());
+            }
+            Err(err) => println!("GetUsableModels ERROR: {err:?}"),
+        }
+    }
+
+    #[tokio::test]
     async fn test_live_composer_request() {
         use sinew_core::Provider;
         use futures::StreamExt;

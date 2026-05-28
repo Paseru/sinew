@@ -6055,21 +6055,7 @@ function DeepSeekProviderCard({
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
-  const [remoteModels, setRemoteModels] = useState<any[] | null>(null);
-  const [fetchingModels, setFetchingModels] = useState(false);
   const validationSeq = useRef(0);
-
-  const handleFetchRemoteModels = async () => {
-    setFetchingModels(true);
-    try {
-      const res = await api.listDeepSeekModelsRemote();
-      setRemoteModels(res?.data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setFetchingModels(false);
-    }
-  };
 
   const displayStatus: DeepSeekProviderStatus = validating
     ? {
@@ -6183,31 +6169,10 @@ function DeepSeekProviderCard({
           <p>Use DeepSeek models (V3 & R1) with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {connected && quota && <QuotaInlinePanel quota={quota} />}
-          {connected && (
-            <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div>
-                <button
-                  type="button"
-                  className="settings-pane__button settings-pane__button--secondary"
-                  onClick={handleFetchRemoteModels}
-                  disabled={fetchingModels}
-                  style={{ padding: "4px 10px", fontSize: "11px", height: "auto", minHeight: "26px", cursor: "pointer", width: "fit-content" }}
-                >
-                  {fetchingModels ? "Vérification..." : "🔍 Vérifier les modèles disponibles sur ma clé"}
-                </button>
-              </div>
-              {remoteModels && (
-                <div style={{ fontSize: "11px", opacity: 0.9, color: "var(--color-success)" }}>
-                  {remoteModels.length > 0 ? (
-                    <div>
-                      <strong>Modèles autorisés sur votre clé :</strong>{" "}
-                      {remoteModels.map((m: any) => m.id).join(", ")}
-                    </div>
-                  ) : (
-                    "Aucun modèle retourné par l'API"
-                  )}
-                </div>
-              )}
+          {connected && displayStatus.models && displayStatus.models.length > 0 && (
+            <div style={{ fontSize: "11px", opacity: 0.9, color: "var(--color-success)", marginTop: "10px" }}>
+              <strong>✓ Modèles vérifiés sur votre clé :</strong>{" "}
+              {displayStatus.models.map(id => id === "deepseek-chat" ? "DeepSeek V3" : id === "deepseek-reasoner" ? "DeepSeek R1" : id).join(", ")}
             </div>
           )}
         </div>

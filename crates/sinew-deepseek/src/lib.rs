@@ -9,4 +9,7 @@ pub use auth::{
     touch_default_auth_validation, Credential, DeepSeekAuthStatus,
 };
 pub use client::{DeepSeekConfig, DeepSeekProvider, validate_api_key};
-pub use model_info::{capabilities, PROVIDER_ID, DEEPSEEK_CHAT_MODEL, DEEPSEEK_REASONER_MODEL};
+pub use model_info::{
+    capabilities, PROVIDER_ID, DEEPSEEK_CHAT_MODEL, DEEPSEEK_REASONER_MODEL,
+    DEEPSEEK_V4_FLASH_MODEL, DEEPSEEK_V4_PRO_MODEL,
+};

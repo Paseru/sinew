@@ -214,6 +214,51 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
     }
   }
 
+  if (providerId === "deepseek") {
+    try {
+      const balance = await api.getDeepSeekBalance();
+      const infos = balance?.balance_infos || [];
+      const usdInfo = infos.find((i: any) => i.currency === "USD") || infos[0];
+      const cnyInfo = infos.find((i: any) => i.currency === "CNY");
+      
+      const activeInfo = usdInfo || cnyInfo;
+      if (!activeInfo) {
+        return unavailableQuota("Pas d'informations de balance trouvees");
+      }
+
+      const totalBalance = parseFloat(activeInfo.total_balance || "0");
+      const toppedUpBalance = parseFloat(activeInfo.topped_up_balance || "0");
+      const currency = activeInfo.currency || "USD";
+
+      if (toppedUpBalance > 0) {
+        const percentage = Math.max(0, Math.min(100, (totalBalance / toppedUpBalance) * 100));
+        return {
+          kind: "credits",
+          percentage,
+          isReal: true,
+          label: `Solde DeepSeek (${currency})`,
+          source: "DeepSeek /user/balance",
+          creditLimit: toppedUpBalance,
+          creditUsed: toppedUpBalance - totalBalance > 0 ? toppedUpBalance - totalBalance : 0,
+          creditRemaining: totalBalance,
+        };
+      }
+
+      return {
+        kind: "credits",
+        percentage: null,
+        isReal: true,
+        label: `Solde DeepSeek: $${totalBalance.toFixed(2)} ${currency}`,
+        source: "DeepSeek /user/balance",
+        creditLimit: null,
+        creditUsed: null,
+        creditRemaining: totalBalance,
+      };
+    } catch (err) {
+      return unavailableQuota(`Impossible de lire la balance DeepSeek: ${String(err)}`);
+    }
+  }
+
   return unavailableQuota("Quota reel non expose par ce fournisseur");
 }
 

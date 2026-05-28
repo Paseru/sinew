@@ -313,6 +313,7 @@ export type DeepSeekProviderStatus = {
   connectionState: ProviderConnectionState;
   keyPreview?: string | null;
   lastValidatedMs?: number | null;
+  models?: string[];
   error?: string | null;
 };
 

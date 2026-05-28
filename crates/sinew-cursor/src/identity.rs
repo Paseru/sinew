@@ -108,6 +108,21 @@ impl CursorIdeIdentity {
         );
     }
 
+    /// Headers for `agent.v1.AgentService` (matches cursor-oauth-opencode / CLI).
+    pub fn apply_agent_authenticated(
+        &self,
+        headers: &mut HeaderMap,
+        session_id: &str,
+        request_id: &str,
+        access_token: &str,
+    ) {
+        self.apply_authenticated(headers, session_id, request_id, access_token);
+        set_header(headers, "content-type", "application/proto");
+        set_header(headers, "te", "trailers");
+        set_header(headers, "x-cursor-client-type", "cli");
+        set_header(headers, "x-ghost-mode", "true");
+    }
+
     fn apply_common(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
         set_header(headers, "user-agent", &self.user_agent());
         set_header(headers, "x-cursor-client-version", &self.client_version);

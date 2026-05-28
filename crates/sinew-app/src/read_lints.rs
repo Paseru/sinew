@@ -91,11 +91,9 @@ impl ReadLintsTool {
             requested_paths
         };
         let mut diagnostics = diagnostics;
-        diagnostics.extend(
-            self.collect_project_diagnostics(&project_paths)
-                .await
-                .context("project linter failed")?,
-        );
+        if let Ok(project_diags) = self.collect_project_diagnostics(&project_paths).await {
+            diagnostics.extend(project_diags);
+        }
         let mut diagnostics = dedupe_diagnostics(diagnostics);
         diagnostics.sort_by(|left, right| {
             left.path
