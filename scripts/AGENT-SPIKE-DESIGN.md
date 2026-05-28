@@ -132,4 +132,5 @@ crates/sinew-cursor/src/
 9. ~~Edit search-replace~~ — `old_string` / `new_string` dans `agent/tools.rs`.
 10. Outils Composer visibles dans le chat (`composer_bridge` meta, pas de double exécution).
 11. Bridge 100 % Rust — en cours : `connect_proto.rs`, `SINEW_CURSOR_BRIDGE=rust` (fallback Node), `proto/agent.fds` + `export-agent-descriptor.mjs`.
+12. ~~Fermeture stream~~ — idle 2,5s après texte, `stepCompleted`/`turnEnded`, cap 120s, `test-live.ps1` timeout 90s.
 5. MITM optionnel ; tools/sessions agent (phase 2).

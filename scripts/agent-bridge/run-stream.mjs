@@ -567,7 +567,11 @@ function handleServerMessage(msg, blobStore, sendFrame, emit, waitToolResponse) 
     if (c === "textDelta") {
       const d = u.message.value.text || "";
       if (d) {
-        sawText = true;
+        if (!sawText) {
+          sawText = true;
+          armMaxTurnTimer();
+        }
+        lastTextAt = Date.now();
         emit({ type: "text", delta: d });
         bumpIdleFinish();
       }
@@ -586,6 +590,14 @@ function handleServerMessage(msg, blobStore, sendFrame, emit, waitToolResponse) 
     } else if (c === "thinkingCompleted") {
       debug("interaction thinkingCompleted");
       if (sawText) bumpIdleFinish();
+    } else if (c === "heartbeat") {
+      if (sawText && lastTextAt > 0 && Date.now() - lastTextAt >= IDLE_AFTER_TEXT_MS) {
+        debug("finish after text + server heartbeat idle");
+        gracefulFinish(0);
+      }
+    } else if (c === "stepCompleted") {
+      debug("interaction stepCompleted");
+      gracefulFinish(0);
     } else if (c === "turnEnded") {
       debug("interaction turnEnded");
       gracefulFinish(0);
@@ -645,17 +657,23 @@ function waitToolResponse(rl) {
 }
 
 let sawText = false;
+let lastTextAt = 0;
 let finished = false;
 let idleTimer = null;
+let maxTurnTimer = null;
 let heartbeatTimer = null;
 let h2Client = null;
 let h2Stream = null;
+
+const IDLE_AFTER_TEXT_MS = 2500;
+const MAX_TURN_MS = 120_000;
 
 function gracefulFinish(code = 0) {
   if (finished) return;
   finished = true;
   if (heartbeatTimer) clearInterval(heartbeatTimer);
   if (idleTimer) clearTimeout(idleTimer);
+  if (maxTurnTimer) clearTimeout(maxTurnTimer);
   try {
     h2Stream?.end();
   } catch {
@@ -671,10 +689,20 @@ function gracefulFinish(code = 0) {
   }, 300);
 }
 
+function armMaxTurnTimer() {
+  if (finished || maxTurnTimer) return;
+  maxTurnTimer = setTimeout(() => {
+    debug(`max turn ${MAX_TURN_MS}ms`);
+    gracefulFinish(0);
+  }, MAX_TURN_MS);
+  maxTurnTimer.unref?.();
+}
+
 function bumpIdleFinish() {
   if (finished) return;
   if (idleTimer) clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => gracefulFinish(0), 2500);
+  idleTimer = setTimeout(() => gracefulFinish(0), IDLE_AFTER_TEXT_MS);
+  idleTimer.unref?.();
 }
 
 const stdinRl = readline.createInterface({ input: process.stdin, terminal: false });

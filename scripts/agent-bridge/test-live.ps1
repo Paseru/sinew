@@ -15,4 +15,15 @@ $payload = @{
 } | ConvertTo-Json -Compress
 
 Set-Location $PSScriptRoot
-$payload | npx --yes tsx run-stream.mjs 2>&1
+$job = Start-Job -ScriptBlock {
+  param($p, $dir)
+  Set-Location $dir
+  $p | npx --yes tsx run-stream.mjs 2>&1
+} -ArgumentList $payload, $PSScriptRoot
+if (-not (Wait-Job $job -Timeout 90)) {
+  Stop-Job $job -Force
+  Remove-Job $job -Force
+  throw "agent-bridge live test timed out after 90s"
+}
+Receive-Job $job
+Remove-Job $job
