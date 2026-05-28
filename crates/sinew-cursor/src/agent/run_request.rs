@@ -5,11 +5,12 @@ use std::collections::HashMap;
 use base64::Engine as _;
 use bytes::Bytes;
 use prost::Message as _;
-use prost_reflect::{DynamicMessage, SetFieldError, Value};
+use prost_reflect::{DynamicMessage, Value};
 use sha2::{Digest, Sha256};
-use sinew_core::{AppError, Result};
+use sinew_core::Result;
 use uuid::Uuid;
 
+use super::proto_dynamic::{message_desc, setf};
 use super::proto_pool::agent_pool;
 use super::state::PersistedAgentConversation;
 use super::transcript::TranscriptTurn;
@@ -269,21 +270,6 @@ fn store_blob(blob_store: &mut HashMap<String, Vec<u8>>, data: &[u8]) -> Vec<u8>
     let id = Sha256::digest(data).to_vec();
     blob_store.insert(hex::encode(&id), data.to_vec());
     id
-}
-
-fn message_desc(name: &str) -> Result<prost_reflect::MessageDescriptor> {
-    agent_pool()?
-        .get_message_by_name(name)
-        .ok_or_else(|| AppError::Provider(format!("proto message not found: {name}")))
-}
-
-fn setf(msg: &mut DynamicMessage, name: &str, value: Value) -> Result<()> {
-    msg.try_set_field_by_name(name, value)
-        .map_err(field_err)
-}
-
-fn field_err(err: SetFieldError) -> AppError {
-    AppError::Provider(format!("proto field: {err}"))
 }
 
 #[cfg(test)]

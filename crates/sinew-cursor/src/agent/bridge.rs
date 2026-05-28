@@ -19,7 +19,7 @@ use super::state::AgentConversationStore;
 use super::tools::execute_tool;
 use super::transcript::split_transcript;
 
-fn tools_json(request: &ProviderRequest) -> Vec<serde_json::Value> {
+pub(crate) fn tools_json(request: &ProviderRequest) -> Vec<serde_json::Value> {
     request
         .tools
         .iter()

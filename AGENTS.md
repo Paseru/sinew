@@ -162,13 +162,22 @@
 │       └── src
 │           ├── agent
 │           │   ├── bridge.rs
+│           │   ├── client_proto.rs
 │           │   ├── connect_proto.rs
+│           │   ├── conversation_id.rs
+│           │   ├── exec_handler.rs
+│           │   ├── mod.rs
+│           │   ├── models.rs
+│           │   ├── proto_dynamic.rs
 │           │   ├── proto_pool.rs
 │           │   ├── run_h2.rs
 │           │   ├── run_request.rs
 │           │   ├── rust_bridge.rs
 │           │   ├── server_decode.rs
-│           │   ├── models.rs
+│           │   ├── setup.rs
+│           │   ├── state.rs
+│           │   ├── tools.rs
+│           │   ├── transcript.rs
 │           │   └── transport.rs
 │           ├── proto
 │           │   ├── agent.fds

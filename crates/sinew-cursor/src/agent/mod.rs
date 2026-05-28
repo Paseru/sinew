@@ -1,6 +1,9 @@
 mod bridge;
+mod client_proto;
 mod connect_proto;
 mod conversation_id;
+mod exec_handler;
+mod proto_dynamic;
 mod proto_pool;
 mod run_h2;
 mod run_request;

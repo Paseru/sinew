@@ -5,6 +5,7 @@ use prost::Message as _;
 use prost_reflect::{DynamicMessage, Value};
 use sinew_core::{AppError, Result};
 
+use super::proto_dynamic::{get_i32_field, get_message_field, get_string_field};
 use super::proto_pool::agent_pool;
 
 #[derive(Debug, Clone)]
@@ -41,11 +42,7 @@ fn collect_events(msg: &DynamicMessage) -> Vec<BridgeEvent> {
     if let Some(update) = get_message_field(msg, "interaction_update") {
         out.extend(interaction_events(&update));
     }
-    if let Some(exec) = get_message_field(msg, "exec_server_message") {
-        if let Some(ev) = exec_tool_request(&exec) {
-            out.push(ev);
-        }
-    }
+    // Exec messages are handled inline in run_h2 (bidirectional loop).
     if let Some(checkpoint) = get_message_field(msg, "conversation_checkpoint_update") {
         if let Some(ev) = checkpoint_event(&checkpoint) {
             out.push(ev);
@@ -86,23 +83,16 @@ fn interaction_events(update: &DynamicMessage) -> Vec<BridgeEvent> {
     out
 }
 
-fn exec_tool_request(exec: &DynamicMessage) -> Option<BridgeEvent> {
-    let mcp = get_message_field(exec, "mcp_args")?;
-    let tool_name = get_string_field(&mcp, "tool_name")
-        .or_else(|| get_string_field(&mcp, "name"))
-        .unwrap_or_default();
-    let tool_call_id = get_string_field(&mcp, "tool_call_id")
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let args = decode_mcp_args_map(&mcp);
-    let exec_id = get_string_field(exec, "exec_id").unwrap_or_default();
-    let exec_msg_id = get_u32_field(exec, "id").map(|n| n.to_string()).unwrap_or_default();
-    Some(BridgeEvent::ToolRequest {
-        exec_id,
-        exec_msg_id,
-        tool_call_id,
-        tool_name,
-        args,
-    })
+pub fn decode_agent_server_message(payload: &[u8]) -> Result<DynamicMessage> {
+    let desc = agent_pool()?
+        .get_message_by_name("agent.v1.AgentServerMessage")
+        .ok_or_else(|| AppError::Provider("AgentServerMessage descriptor missing".into()))?;
+    DynamicMessage::decode(desc, payload)
+        .map_err(|err| AppError::Decode(format!("AgentServerMessage: {err}")))
+}
+
+pub fn decode_mcp_args_from_message(mcp: &DynamicMessage) -> serde_json::Value {
+    decode_mcp_args_map(mcp)
 }
 
 fn decode_mcp_args_map(mcp: &DynamicMessage) -> serde_json::Value {
@@ -157,35 +147,6 @@ fn checkpoint_event(state: &DynamicMessage) -> Option<BridgeEvent> {
         checkpoint_b64,
         blobs: std::collections::HashMap::new(),
     })
-}
-
-fn get_message_field(msg: &DynamicMessage, name: &str) -> Option<DynamicMessage> {
-    let value = msg.get_field_by_name(name)?;
-    match value.as_ref() {
-        Value::Message(m) => Some(m.clone()),
-        _ => None,
-    }
-}
-
-fn get_string_field(msg: &DynamicMessage, name: &str) -> Option<String> {
-    match msg.get_field_by_name(name)?.as_ref() {
-        Value::String(s) => Some(s.clone()),
-        _ => None,
-    }
-}
-
-fn get_i32_field(msg: &DynamicMessage, name: &str) -> Option<i32> {
-    match msg.get_field_by_name(name)?.as_ref() {
-        Value::I32(n) => Some(*n),
-        _ => None,
-    }
-}
-
-fn get_u32_field(msg: &DynamicMessage, name: &str) -> Option<u32> {
-    match msg.get_field_by_name(name)?.as_ref() {
-        Value::U32(n) => Some(*n),
-        _ => None,
-    }
 }
 
 pub fn parse_connect_end(payload: &[u8]) -> Option<String> {

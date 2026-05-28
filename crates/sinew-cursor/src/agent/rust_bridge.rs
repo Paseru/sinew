@@ -7,14 +7,15 @@ use sinew_core::{
 };
 
 use crate::identity::CursorIdeIdentity;
+use crate::workspace;
 
-use super::bridge::stream_via_node_bridge;
+use super::bridge::{stream_via_node_bridge, tools_json};
 use super::conversation_id::stable_agent_conversation_id;
-use super::run_h2::{run_agent_stream, AgentRunConfig};
+use super::run_h2::{run_agent_stream, AgentRunConfig, ToolResponse};
 use super::server_decode::BridgeEvent;
 use super::state::AgentConversationStore;
-use super::transcript::split_transcript;
 use super::tools::execute_tool;
+use super::transcript::split_transcript;
 
 /// Stream via Rust HTTP/2 + prost when `SINEW_CURSOR_BRIDGE=rust`.
 pub async fn stream_via_rust_bridge(
@@ -57,6 +58,20 @@ async fn stream_via_rust_bridge_inner(
     let cache_key = request.cache_key.clone().unwrap_or_default();
     let conversation_id = stable_agent_conversation_id(request.cache_key.as_deref());
     let persisted = AgentConversationStore::load().get(&cache_key);
+    let trimmed = workspace.trim();
+    let workspace_snapshot = if !trimmed.is_empty() {
+        workspace::snapshot(trimmed).map(|snap| {
+            serde_json::json!({
+                "uri": snap.uri,
+                "name": snap.name,
+                "branch": snap.branch,
+                "gitStatus": snap.git_status,
+                "projectLayout": snap.project_layout,
+            })
+        })
+    } else {
+        None
+    };
 
     let config = AgentRunConfig {
         token,
@@ -66,9 +81,14 @@ async fn stream_via_rust_bridge_inner(
         conversation_id,
         history_turns,
         persisted,
+        workspace_root: workspace.clone(),
+        tools: tools_json(&request),
+        workspace_snapshot,
     };
 
-    let mut events_rx = run_agent_stream(identity, config).await?;
+    let handle = run_agent_stream(identity, config).await?;
+    let mut events_rx = handle.events;
+    let tool_tx = handle.tool_responses;
 
     let model_name = model;
     let workspace_for_tools = workspace.clone();
@@ -105,10 +125,11 @@ async fn stream_via_rust_bridge_inner(
                     yield StreamEvent::Usage { usage };
                 }
                 BridgeEvent::ToolRequest {
+                    exec_id: _,
+                    exec_msg_id: _,
                     tool_name,
                     tool_call_id,
                     args,
-                    ..
                 } => {
                     if let Some((idx, _)) = open_part.take() {
                         yield StreamEvent::PartStop { index: idx };
@@ -139,9 +160,12 @@ async fn stream_via_rust_bridge_inner(
                     };
                     yield StreamEvent::PartStop { index: tool_index };
                     tools_executed += 1;
-                    Err(AppError::Provider(
-                        "Rust agent bridge: cannot send exec responses on HTTP/2 stream yet".into(),
-                    ))?;
+                    let _ = tool_tx
+                        .send(ToolResponse {
+                            content,
+                            is_error,
+                        })
+                        .await;
                 }
                 BridgeEvent::Text(delta) => {
                     let index = text_index;
