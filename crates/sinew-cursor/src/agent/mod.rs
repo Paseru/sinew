@@ -21,6 +21,22 @@ pub mod transport;
 
 pub use bridge::stream_via_node_bridge;
 pub use rust_bridge::stream_via_rust_bridge;
+
+use crate::identity::CursorIdeIdentity;
+use sinew_core::{ProviderRequest, ProviderStream, Result};
+
+/// Composer `agent.v1` stream: Rust by default, Node if `SINEW_CURSOR_BRIDGE=node`.
+pub async fn stream_via_agent_bridge(
+    identity: &CursorIdeIdentity,
+    token: String,
+    request: ProviderRequest,
+) -> Result<ProviderStream> {
+    if transport::prefer_node_bridge() {
+        stream_via_node_bridge(identity, token, request).await
+    } else {
+        stream_via_rust_bridge(identity, token, request).await
+    }
+}
 pub use setup::{bridge_directory, ensure_agent_bridge_ready, set_bridge_directory};
 #[cfg(test)]
 pub use models::{fetch_usable_models, scan_model_ids, API2_BASE, GET_USABLE_MODELS};

@@ -458,12 +458,16 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
         }
     }
 
-    tauri::async_runtime::spawn(async move {
-        match ensure_agent_bridge_ready().await {
-            Ok(dir) => tracing::debug!(path = %dir.display(), "agent-bridge prêt"),
-            Err(err) => tracing::warn!(error = %err, "agent-bridge: préparation auto échouée (Composer indisponible tant que Node/npm manquent)"),
-        }
-    });
+    if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
+        tauri::async_runtime::spawn(async move {
+            match ensure_agent_bridge_ready().await {
+                Ok(dir) => tracing::debug!(path = %dir.display(), "agent-bridge Node prêt (fallback/forcé)"),
+                Err(err) => tracing::warn!(error = %err, "agent-bridge Node: préparation échouée"),
+            }
+        });
+    } else {
+        tracing::debug!("agent-bridge Node ignoré au démarrage (bridge Rust seul)");
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

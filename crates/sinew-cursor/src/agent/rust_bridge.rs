@@ -17,7 +17,7 @@ use super::state::AgentConversationStore;
 use super::tools::execute_tool;
 use super::transcript::split_transcript;
 
-/// Stream via Rust HTTP/2 + prost when `SINEW_CURSOR_BRIDGE=rust`.
+/// Stream via native Rust HTTP/2 + prost (no Node subprocess).
 pub async fn stream_via_rust_bridge(
     identity: &CursorIdeIdentity,
     token: String,
@@ -25,12 +25,13 @@ pub async fn stream_via_rust_bridge(
 ) -> Result<ProviderStream> {
     match stream_via_rust_bridge_inner(identity, token.clone(), request.clone()).await {
         Ok(stream) => Ok(stream),
-        Err(err) => {
+        Err(err) if super::transport::allow_node_fallback() => {
             tracing::warn!(
-                "SINEW_CURSOR_BRIDGE=rust failed ({err}), falling back to Node agent-bridge"
+                "Rust agent bridge failed ({err}), falling back to Node (SINEW_CURSOR_BRIDGE_FALLBACK)"
             );
             stream_via_node_bridge(identity, token, request).await
         }
+        Err(err) => Err(err),
     }
 }
 

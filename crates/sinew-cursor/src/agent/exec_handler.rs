@@ -410,6 +410,16 @@ fn build_request_context_result(ctx: &ExecContext<'_>) -> Result<DynamicMessage>
 
     let mut request_context = DynamicMessage::new(ctx_desc);
     setf(&mut request_context, "env", ProtoValue::Message(env))?;
+    if let Ok(full) = resolve_path(root, ".") {
+        if let Ok(layout) = shallow_layout_tree(&full, 120) {
+            setf(
+                &mut request_context,
+                "project_layouts",
+                ProtoValue::List(vec![ProtoValue::Message(layout)]),
+            )?;
+        }
+    }
+
     for tool in ctx.tools {
         if let Some(def) = build_mcp_tool_definition(tool) {
             if let Some(existing) = request_context.get_field_by_name("tools") {

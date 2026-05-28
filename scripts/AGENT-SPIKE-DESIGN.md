@@ -53,12 +53,15 @@ crates/sinew-cursor/src/
 
 ### Sélection transport
 
-```rust
-// env SINEW_CURSOR_TRANSPORT=idempotent pour forcer l’ancien chemin (défaut: agent)
+```text
+# Défaut: agent.v1 + bridge Rust (pas de subprocess Node au démarrage)
+SINEW_CURSOR_BRIDGE=node              # forcer Node/tsx
+SINEW_CURSOR_BRIDGE_FALLBACK=1        # repli Node si Rust échoue
+SINEW_CURSOR_TRANSPORT=idempotent     # legacy IdempotentSSE (cassé)
 ```
 
 - **`idempotent`** : code actuel (conservé jusqu’à déblocage MITM éventuel).
-- **`agent`** : nouveau chemin ; pas de `encryption.rs` header idempotent.
+- **`agent`** : chemin principal ; bridge Rust natif, pas de `encryption.rs` header idempotent.
 
 ### Phase 0 — script Python (sans Rust)
 
@@ -131,6 +134,6 @@ crates/sinew-cursor/src/
 8. ~~Tokens usage (`tokenDelta`)~~ — `StreamEvent::Usage` en direct + `MessageStop` (barre contexte Sinew).
 9. ~~Edit search-replace~~ — `old_string` / `new_string` dans `agent/tools.rs`.
 10. Outils Composer visibles dans le chat (`composer_bridge` meta, pas de double exécution).
-11. Bridge 100 % Rust — **phase 3** : Rust par défaut (repli Node), pool H2 (`h2_client.rs`), retry Rust+Node 429/5xx, LS `shallowLayout`, test `test-live-rust.ps1`. Reste : supprimer Node du chemin nominal.
+11. Bridge 100 % Rust — **phase 4** : Rust seul par défaut (pas de `npm` au démarrage), repli Node opt-in `SINEW_CURSOR_BRIDGE_FALLBACK=1`, `project_layouts` dans requestContext, CI `cursor-agent.yml`. Reste : daemon Node/H2 multi-tours.
 12. ~~Fermeture stream~~ — idle 2,5s après texte, `stepCompleted`/`turnEnded`, cap 120s, `test-live.ps1` timeout 90s.
 5. MITM optionnel ; tools/sessions agent (phase 2).

@@ -9,10 +9,25 @@ pub fn prefer_node_bridge() -> bool {
     }
 }
 
-/// Use the native Rust HTTP/2 bridge (default). Falls back to Node on error unless
-/// `SINEW_CURSOR_BRIDGE=node` forces Node only.
+/// Use the native Rust HTTP/2 bridge (default).
 pub fn use_rust_agent_bridge() -> bool {
     !prefer_node_bridge()
+}
+
+/// Opt-in Node fallback when the Rust bridge fails (`SINEW_CURSOR_BRIDGE_FALLBACK=1`).
+pub fn allow_node_fallback() -> bool {
+    match std::env::var("SINEW_CURSOR_BRIDGE_FALLBACK") {
+        Ok(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "node"
+        ),
+        Err(_) => false,
+    }
+}
+
+/// Pre-install Node `agent-bridge` at startup only when Node may run.
+pub fn should_prepare_node_bridge_at_startup() -> bool {
+    prefer_node_bridge() || allow_node_fallback()
 }
 
 /// Transport selection for Cursor Composer streaming.
@@ -63,6 +78,21 @@ mod tests {
         assert!(!super::use_rust_agent_bridge());
         assert!(super::prefer_node_bridge());
         std::env::remove_var("SINEW_CURSOR_BRIDGE");
+    }
+
+    #[test]
+    fn node_fallback_off_by_default() {
+        let _guard = env_lock();
+        std::env::remove_var("SINEW_CURSOR_BRIDGE_FALLBACK");
+        assert!(!super::allow_node_fallback());
+    }
+
+    #[test]
+    fn startup_skips_node_without_fallback() {
+        let _guard = env_lock();
+        std::env::remove_var("SINEW_CURSOR_BRIDGE");
+        std::env::remove_var("SINEW_CURSOR_BRIDGE_FALLBACK");
+        assert!(!super::should_prepare_node_bridge_at_startup());
     }
 
     #[test]
