@@ -4,11 +4,10 @@
  * stdin: line 1 = config JSON; further lines = tool_response from Sinew
  * stdout: NDJSON text/thinking/error/tool_request
  */
-import { spawn } from "node:child_process";
+import http2 from "node:http2";
 import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 import readline from "node:readline";
-import { fileURLToPath } from "node:url";
 import {
   buildProjectLayout,
   handleDeleteArgs,
@@ -67,9 +66,9 @@ import {
   UserMessageSchema,
 } from "./vendor/agent_pb.ts";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BRIDGE_PATH = path.join(__dirname, "h2-bridge.mjs");
 const CONNECT_END = 0b00000010;
+let outputTokenCount = 0;
+let totalTokenCount = 0;
 
 function sha256Hex(input) {
   return createHash("sha256").update(input, "utf8").digest("hex");
@@ -104,12 +103,6 @@ function frameConnect(data, flags = 0) {
   frame.writeUInt32BE(data.length, 1);
   frame.set(data, 5);
   return frame;
-}
-
-function lpEncode(buf) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(buf.length, 0);
-  return Buffer.concat([len, buf]);
 }
 
 function parseConnectEnd(data) {
@@ -581,6 +574,15 @@ function handleServerMessage(msg, blobStore, sendFrame, emit, waitToolResponse) 
     } else if (c === "thinkingDelta") {
       const d = u.message.value.text || "";
       if (d) emit({ type: "thinking", delta: d });
+    } else if (c === "tokenDelta") {
+      const delta = u.message.value.tokens ?? 0;
+      outputTokenCount += delta;
+      totalTokenCount = Math.max(totalTokenCount, outputTokenCount);
+      emit({
+        type: "usage",
+        outputTokens: outputTokenCount,
+        totalTokens: totalTokenCount,
+      });
     } else if (c === "thinkingCompleted") {
       debug("interaction thinkingCompleted");
       if (sawText) bumpIdleFinish();
@@ -646,7 +648,8 @@ let sawText = false;
 let finished = false;
 let idleTimer = null;
 let heartbeatTimer = null;
-let bridgeProc = null;
+let h2Client = null;
+let h2Stream = null;
 
 function gracefulFinish(code = 0) {
   if (finished) return;
@@ -654,14 +657,18 @@ function gracefulFinish(code = 0) {
   if (heartbeatTimer) clearInterval(heartbeatTimer);
   if (idleTimer) clearTimeout(idleTimer);
   try {
-    bridgeProc?.stdin?.end();
+    h2Stream?.end();
   } catch {
     /* ignore */
   }
   setTimeout(() => {
-    if (bridgeProc && !bridgeProc.killed) bridgeProc.kill();
+    try {
+      h2Client?.close();
+    } catch {
+      /* ignore */
+    }
     process.exit(code);
-  }, 500);
+  }, 300);
 }
 
 function bumpIdleFinish() {
@@ -695,27 +702,16 @@ const debug = (msg) => {
   process.stderr.write(`[agent-bridge] ${msg}\n`);
 };
 
-const proc = spawn("node", [BRIDGE_PATH], { stdio: ["pipe", "pipe", "pipe"] });
-bridgeProc = proc;
-
-const bridgeConfig = JSON.stringify({
-  accessToken,
-  url: "https://api2.cursor.sh",
-  path: "/agent.v1.AgentService/Run",
-  unary: false,
-  headers:
-    config.apiHeaders && typeof config.apiHeaders === "object"
-      ? config.apiHeaders
-      : {
-          "x-cursor-client-type": "cli",
-          "x-ghost-mode": "true",
-          "x-client-key": sha256Hex(accessToken),
-          "x-cursor-checksum": cursorChecksum(accessToken),
-          "x-cursor-client-version": "cli-2026.01.09-231024f",
-        },
-});
-
-proc.stdin.write(lpEncode(Buffer.from(bridgeConfig, "utf8")));
+const apiHeaders =
+  config.apiHeaders && typeof config.apiHeaders === "object"
+    ? config.apiHeaders
+    : {
+        "x-cursor-client-type": "cli",
+        "x-ghost-mode": "true",
+        "x-client-key": sha256Hex(accessToken),
+        "x-cursor-checksum": cursorChecksum(accessToken),
+        "x-cursor-client-version": "cli-2026.01.09-231024f",
+      };
 
 const { requestBytes, blobStore } = buildRequest(
   modelId,
@@ -725,73 +721,78 @@ const { requestBytes, blobStore } = buildRequest(
   config,
 );
 
-proc.stdin.write(lpEncode(frameConnect(requestBytes)));
+const sendFrame = (frame) => {
+  if (finished || !h2Stream || h2Stream.closed || h2Stream.destroyed) return;
+  h2Stream.write(frame);
+};
+
+h2Client = http2.connect("https://api2.cursor.sh");
+h2Client.on("error", (err) => {
+  emit({ error: `h2 client: ${err}` });
+  gracefulFinish(1);
+});
+
+const h2Headers = {
+  ...apiHeaders,
+  ":method": "POST",
+  ":path": "/agent.v1.AgentService/Run",
+  "content-type": "application/connect+proto",
+  te: "trailers",
+  authorization: `Bearer ${accessToken}`,
+  "connect-protocol-version": "1",
+};
+h2Stream = h2Client.request(h2Headers);
+sendFrame(frameConnect(requestBytes));
 
 const heartbeat = create(AgentClientMessageSchema, {
   message: { case: "clientHeartbeat", value: create(ClientHeartbeatSchema, {}) },
 });
+const heartbeatBytes = () =>
+  frameConnect(toBinary(AgentClientMessageSchema, heartbeat));
 heartbeatTimer = setInterval(() => {
-  if (!proc.killed) {
-    proc.stdin.write(lpEncode(frameConnect(toBinary(AgentClientMessageSchema, heartbeat))));
-  }
+  sendFrame(heartbeatBytes());
 }, 15_000);
 
-let stdoutBuf = Buffer.alloc(0);
-proc.stdout.on("data", (chunk) => {
-  stdoutBuf = Buffer.concat([stdoutBuf, chunk]);
-  while (stdoutBuf.length >= 4) {
-    const len = stdoutBuf.readUInt32BE(0);
-    if (stdoutBuf.length < 4 + len) break;
-    const payload = stdoutBuf.subarray(4, 4 + len);
-    stdoutBuf = stdoutBuf.subarray(4 + len);
+let pending = Buffer.alloc(0);
+function ingestConnectBytes(chunk) {
+  pending = Buffer.concat([pending, chunk]);
+  let offset = 0;
+  while (pending.length >= offset + 5) {
+    const flags = pending[offset];
+    const flen = pending.readUInt32BE(offset + 1);
+    if (pending.length < offset + 5 + flen) break;
+    const frame = pending.subarray(offset + 5, offset + 5 + flen);
+    offset += 5 + flen;
 
-    let offset = 0;
-    while (offset + 5 <= payload.length) {
-      const flags = payload[offset];
-      const flen = payload.readUInt32BE(offset + 1);
-      if (offset + 5 + flen > payload.length) break;
-      const frame = payload.subarray(offset + 5, offset + 5 + flen);
-      offset += 5 + flen;
+    if (flags & CONNECT_END) {
+      const err = parseConnectEnd(frame);
+      if (err) emit({ error: err });
+      continue;
+    }
+    if (!frame.length) continue;
 
-      if (flags & CONNECT_END) {
-        const err = parseConnectEnd(frame);
-        if (err) emit({ error: err });
-        continue;
-      }
-      if (!frame.length) continue;
-
-      try {
-        const msg = fromBinary(AgentServerMessageSchema, frame);
-        debug(`server case=${msg.message?.case ?? "?"}`);
-        handleServerMessage(
-          msg,
-          blobStore,
-          (f) => {
-            proc.stdin.write(lpEncode(f));
-          },
-          emit,
-          waitForTool,
-        );
-      } catch (err) {
-        debug(`parse err: ${err}`);
-      }
+    try {
+      const msg = fromBinary(AgentServerMessageSchema, frame);
+      debug(`server case=${msg.message?.case ?? "?"}`);
+      handleServerMessage(msg, blobStore, sendFrame, emit, waitForTool);
+    } catch (err) {
+      debug(`parse err: ${err}`);
     }
   }
-});
+  pending = pending.subarray(offset);
+}
 
-proc.on("close", (code) => {
+h2Stream.on("data", ingestConnectBytes);
+h2Stream.on("end", () => {
   if (finished) return;
-  clearInterval(heartbeatTimer);
-  if (code !== 0) {
-    emit({ error: `bridge exited ${code}` });
-  } else if (!sawText) {
+  if (!sawText) {
     emit({ error: "stream ended without text deltas" });
-    process.exit(1);
+    gracefulFinish(1);
     return;
   }
-  process.exit(code === 0 ? 0 : 1);
+  gracefulFinish(0);
 });
-
-proc.stderr.on("data", (chunk) => {
-  process.stderr.write(chunk);
+h2Stream.on("error", (err) => {
+  emit({ error: `h2 stream: ${err}` });
+  gracefulFinish(1);
 });

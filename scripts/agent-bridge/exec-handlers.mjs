@@ -147,18 +147,30 @@ export function handleLsArgs(execMsg, args, workspaceRoot, sendExecResult) {
 }
 
 export function handleWriteArgs(execMsg, args, workspaceRoot, sendExecResult) {
-  const filePath = args.path || args.filePath || "";
-  const content =
+  const filePath = args.path || args.filePath || args.target_file || "";
+  const oldString = args.old_string ?? args.oldString ?? "";
+  const newString =
+    args.new_string ??
+    args.newString ??
     args.contents ??
     args.content ??
     args.text ??
-    args.new_string ??
     args.replacement ??
     "";
   try {
     const full = resolveWorkspacePath(workspaceRoot, filePath);
     fs.mkdirSync(path.dirname(full), { recursive: true });
-    fs.writeFileSync(full, String(content), "utf8");
+    let content = String(newString);
+    if (oldString && fs.existsSync(full)) {
+      const prior = fs.readFileSync(full, "utf8");
+      if (!prior.includes(oldString)) {
+        throw new Error("old_string not found in file");
+      }
+      content = prior.replace(oldString, newString);
+    } else if (!oldString) {
+      content = String(newString);
+    }
+    fs.writeFileSync(full, content, "utf8");
     const lines = String(content).split("\n").length;
     sendExecResult(
       execMsg,

@@ -16,6 +16,9 @@ pub fn execute_tool(name: &str, args: &Value, workspace_root: &str) -> String {
         "grep" => exec_grep(&root, args),
         "glob" => exec_glob(&root, args),
         "bash" => exec_shell(&root, args),
+        "write" => exec_write(&root, args),
+        "edit" => exec_edit(&root, args),
+        "delete" => exec_delete(&root, args),
         _ => format!("Error: unsupported tool '{name}' in Composer bridge"),
     }
 }
@@ -27,8 +30,8 @@ fn normalize_tool_name(name: &str) -> String {
         "grep" | "rg" => "grep".into(),
         "glob" | "glob_file_search" => "glob".into(),
         "bash" | "shell" | "run_terminal_cmd" => "bash".into(),
-        "write" | "writefile" | "write_file" | "strreplace" | "search_replace" | "edit"
-        | "editfile" | "edit_file" => "write".into(),
+        "write" | "writefile" | "write_file" => "write".into(),
+        "strreplace" | "search_replace" | "edit" | "editfile" | "edit_file" => "edit".into(),
         "delete" | "deletefile" | "delete_file" => "delete".into(),
         other => other.to_string(),
     }
@@ -192,6 +195,35 @@ fn exec_shell(root: &Path, args: &Value) -> String {
             format!("exit={}\n{stdout}{stderr}", output.status)
         }
         Err(err) => format!("Error: shell failed ({err})"),
+    }
+}
+
+fn exec_edit(root: &Path, args: &Value) -> String {
+    let Some(path) = pick_string(args, &["path", "filePath", "file_path", "target_file"]) else {
+        return "Error: edit requires path".into();
+    };
+    let old_str = pick_string(args, &["old_string", "oldString"]).unwrap_or_default();
+    let new_str = pick_string(args, &["new_string", "newString", "content", "text"])
+        .unwrap_or_default();
+    if old_str.is_empty() {
+        return exec_write(root, args);
+    }
+    let full = resolve_path(root, &path);
+    if !full.starts_with(root) {
+        return "Error: path outside workspace".into();
+    }
+    match std::fs::read_to_string(&full) {
+        Ok(prior) => {
+            if !prior.contains(&old_str) {
+                return format!("Error: old_string not found in {}", full.display());
+            }
+            let updated = prior.replace(&old_str, &new_str);
+            match std::fs::write(&full, &updated) {
+                Ok(()) => format!("Edited {}", full.display()),
+                Err(err) => format!("Error writing {}: {err}", full.display()),
+            }
+        }
+        Err(err) => format!("Error reading {}: {err}", full.display()),
     }
 }
 

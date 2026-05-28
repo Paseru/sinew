@@ -153,6 +153,7 @@ pub async fn stream_via_node_bridge(
         let thinking_index = 1usize;
         let mut open_part: Option<(usize, PartKind)> = None;
         let mut started_text = false;
+        let mut usage = Usage::default();
 
         while let Some(line) = line_rx.recv().await {
             let line = line.trim();
@@ -182,6 +183,20 @@ pub async fn stream_via_node_bridge(
                         );
                     }
                 }
+                continue;
+            }
+
+            if value.get("type").and_then(|v| v.as_str()) == Some("usage") {
+                let output = value
+                    .get("outputTokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32;
+                let total = value
+                    .get("totalTokens")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(output as u64) as u32;
+                usage.output_tokens = output;
+                usage.total_tokens = total.max(output);
                 continue;
             }
 
@@ -259,7 +274,7 @@ pub async fn stream_via_node_bridge(
 
         yield StreamEvent::MessageStop {
             stop_reason: StopReason::EndTurn,
-            usage: Usage::default(),
+            usage,
         };
     };
 

@@ -127,4 +127,7 @@ crates/sinew-cursor/src/
 4. ~~`npm install` manuel~~ — auto au build + au lancement Sinew.
 5. Historique multi-tours + checkpoint persisté (`cursor-agent-conversations.json` par `cache_key`).
 6. Outils Read/Write/Delete/Grep/Bash via MCP + exec natifs read/ls/write.
+7. HTTP/2 inline (un seul processus Node/tsx, plus de sous-processus h2-bridge).
+8. Tokens usage (`tokenDelta`) remontés jusqu'à `MessageStop`.
+9. Edit search-replace (`old_string` / `new_string`).
 5. MITM optionnel ; tools/sessions agent (phase 2).
