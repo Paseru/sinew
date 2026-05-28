@@ -827,8 +827,11 @@
         el.focus?.({ preventScroll: true });
         el.dispatchEvent(new PointerEvent("pointerup", { ...opts, buttons: 0 }));
         el.dispatchEvent(new MouseEvent("mouseup", { ...opts, buttons: 0 }));
-        const wasCanceled = !el.dispatchEvent(new MouseEvent("click", { ...opts, buttons: 0 }));
-        if (!wasCanceled && typeof el.click === "function" && el.tagName !== "A") el.click();
+        if (typeof el.click === "function" && el.tagName !== "A") {
+          el.click();
+        } else {
+          el.dispatchEvent(new MouseEvent("click", { ...opts, buttons: 0 }));
+        }
         sendResponse({ ok: true, success: true, action: "click_selector", selector, tagName: el.tagName, id: el.id || "", href: el.href || el.getAttribute?.("href") || "", center: { x, y } });
       } catch (err) {
         sendResponse({ ok: false, success: false, error: err.message });
@@ -1036,10 +1039,11 @@
       el.dispatchEvent(new PointerEvent("pointerup", { ...opts, buttons: 0 }));
       el.dispatchEvent(new MouseEvent("mouseup", { ...opts, buttons: 0 }));
       
-      const clickEvent = new MouseEvent("click", { ...opts, bubbles: true, cancelable: true, buttons: 0 });
-      const wasCanceled = !el.dispatchEvent(clickEvent);
-      if (!wasCanceled && typeof el.click === "function" && el.tagName !== "A") {
+      if (typeof el.click === "function" && el.tagName !== "A") {
         el.click();
+      } else {
+        const clickEvent = new MouseEvent("click", { ...opts, bubbles: true, cancelable: true, buttons: 0 });
+        el.dispatchEvent(clickEvent);
       }
       sendResponse({ ok: true, tagName: el.tagName, id: el.id || "", className: typeof el.className === "string" ? el.className : "", href: hrefToNavigate });
       return true;
