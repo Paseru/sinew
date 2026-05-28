@@ -161,8 +161,13 @@
 │       └── src
 │           ├── agent
 │           │   ├── bridge.rs
+│           │   ├── connect_proto.rs
+│           │   ├── rust_bridge.rs
 │           │   ├── models.rs
 │           │   └── transport.rs
+│           ├── proto
+│           │   ├── agent.fds
+│           │   └── README.md
 │           ├── client.rs
 │           ├── encryption.rs
 │           ├── identity.rs

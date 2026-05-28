@@ -131,5 +131,5 @@ crates/sinew-cursor/src/
 8. ~~Tokens usage (`tokenDelta`)~~ — `StreamEvent::Usage` en direct + `MessageStop` (barre contexte Sinew).
 9. ~~Edit search-replace~~ — `old_string` / `new_string` dans `agent/tools.rs`.
 10. Outils Composer visibles dans le chat (`composer_bridge` meta, pas de double exécution).
-11. Bridge 100 % Rust (`prost` + HTTP/2) — chantier suivant.
+11. Bridge 100 % Rust — en cours : `connect_proto.rs`, `SINEW_CURSOR_BRIDGE=rust` (fallback Node), `proto/agent.fds` + `export-agent-descriptor.mjs`.
 5. MITM optionnel ; tools/sessions agent (phase 2).

@@ -1,3 +1,11 @@
+/// Use the native Rust agent bridge when `SINEW_CURSOR_BRIDGE=rust` (experimental).
+pub fn use_rust_agent_bridge() -> bool {
+    match std::env::var("SINEW_CURSOR_BRIDGE") {
+        Ok(value) => matches!(value.trim().to_ascii_lowercase().as_str(), "rust" | "1" | "true"),
+        Err(_) => false,
+    }
+}
+
 /// Transport selection for Cursor Composer streaming.
 ///
 /// Defaults to `agent.v1` (works with Sinew OAuth). Set `SINEW_CURSOR_TRANSPORT=idempotent`
@@ -29,6 +37,14 @@ mod tests {
         let _guard = env_lock();
         std::env::remove_var("SINEW_CURSOR_TRANSPORT");
         assert!(use_agent_transport());
+    }
+
+    #[test]
+    fn rust_bridge_only_when_forced() {
+        let _guard = env_lock();
+        std::env::set_var("SINEW_CURSOR_BRIDGE", "rust");
+        assert!(super::use_rust_agent_bridge());
+        std::env::remove_var("SINEW_CURSOR_BRIDGE");
     }
 
     #[test]

@@ -36,5 +36,11 @@ async function main() {
   if (!existsSync(tsxBin)) {
     throw new Error(`tsx missing after npm ci: ${tsxBin}`);
   }
+  const exportDescriptor = path.join(scriptDir, "export-agent-descriptor.mjs");
+  const fdsPath = path.join(scriptDir, "..", "crates", "sinew-cursor", "proto", "agent.fds");
+  if (existsSync(vendorProto) && (!existsSync(fdsPath) || process.env.FORCE_AGENT_FDS === "1")) {
+    const node = process.execPath;
+    await execFile(node, [exportDescriptor], { cwd: scriptDir, windowsHide: true });
+  }
   console.log("agent-bridge ready for bundle/runtime.");
 }
