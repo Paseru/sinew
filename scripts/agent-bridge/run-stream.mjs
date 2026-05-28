@@ -40,6 +40,7 @@ import {
   WriteResultSchema,
   KvClientMessageSchema,
   LsDirectoryTreeNodeSchema,
+  McpRejectedSchema,
   McpResultSchema,
   ModelDetailsSchema,
   RequestContextEnvSchema,
@@ -392,8 +393,20 @@ function handleExecMessage(execMsg, sendFrame) {
     return;
   }
   if (execCase === "mcpArgs") {
-    debug("mcpArgs ignored (no MCP host in Sinew spike)");
-    sendExecResult(execMsg, "mcpResult", create(McpResultSchema, {}), sendFrame);
+    sendExecResult(
+      execMsg,
+      "mcpResult",
+      create(McpResultSchema, {
+        result: {
+          case: "rejected",
+          value: create(McpRejectedSchema, {
+            reason: REJECT,
+            isReadonly: false,
+          }),
+        },
+      }),
+      sendFrame,
+    );
     return;
   }
   debug(`unhandled exec: ${execCase ?? "?"}`);
@@ -516,13 +529,16 @@ const bridgeConfig = JSON.stringify({
   url: "https://api2.cursor.sh",
   path: "/agent.v1.AgentService/Run",
   unary: false,
-  headers: {
-    "x-cursor-client-type": "cli",
-    "x-ghost-mode": "true",
-    "x-client-key": sha256Hex(accessToken),
-    "x-cursor-checksum": cursorChecksum(accessToken),
-    "x-cursor-client-version": "cli-2026.01.09-231024f",
-  },
+  headers:
+    config.apiHeaders && typeof config.apiHeaders === "object"
+      ? config.apiHeaders
+      : {
+          "x-cursor-client-type": "cli",
+          "x-ghost-mode": "true",
+          "x-client-key": sha256Hex(accessToken),
+          "x-cursor-checksum": cursorChecksum(accessToken),
+          "x-cursor-client-version": "cli-2026.01.09-231024f",
+        },
 });
 
 proc.stdin.write(lpEncode(Buffer.from(bridgeConfig, "utf8")));

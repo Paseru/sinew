@@ -15,6 +15,9 @@ use sinew_core::{AppError, Result};
 pub const CURSOR_CLIENT_VERSION: &str = "3.5.38";
 // Last verified against Cursor IDE 3.5.33 (May 2026). Override with SINEW_CURSOR_CLIENT_VERSION.
 
+/// `agent.v1` CLI transport (cursor-oauth-opencode); distinct from IDE `3.5.38`.
+pub const AGENT_CLI_CLIENT_VERSION: &str = "cli-2026.01.09-231024f";
+
 static EPHEMERAL_MACHINE_ID: OnceLock<String> = OnceLock::new();
 
 #[derive(Clone, Debug)]
@@ -121,6 +124,26 @@ impl CursorIdeIdentity {
         set_header(headers, "te", "trailers");
         set_header(headers, "x-cursor-client-type", "cli");
         set_header(headers, "x-ghost-mode", "true");
+        set_header(headers, "x-cursor-client-version", AGENT_CLI_CLIENT_VERSION);
+    }
+
+    /// HTTP/2 headers for the Node `agent-bridge` (Connect+proto Run).
+    pub fn agent_bridge_headers(
+        &self,
+        access_token: &str,
+    ) -> std::collections::HashMap<String, String> {
+        let session_id = uuid::Uuid::new_v4().to_string();
+        let request_id = uuid::Uuid::new_v4().to_string();
+        let mut headers = HeaderMap::new();
+        self.apply_agent_authenticated(&mut headers, &session_id, &request_id, access_token);
+        headers
+            .iter()
+            .filter_map(|(name, value)| {
+                let key = name.as_str();
+                let val = value.to_str().ok()?;
+                Some((key.to_string(), val.to_string()))
+            })
+            .collect()
     }
 
     fn apply_common(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {

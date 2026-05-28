@@ -7,6 +7,8 @@ use sinew_core::{
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
+use crate::identity::CursorIdeIdentity;
+
 use super::setup::{ensure_agent_bridge_ready, run_stream_script, tsx_executable};
 
 fn user_text(request: &ProviderRequest) -> String {
@@ -25,6 +27,7 @@ fn user_text(request: &ProviderRequest) -> String {
 
 /// Stream Composer via Node `agent-bridge` (protobuf Run over HTTP/2).
 pub async fn stream_via_node_bridge(
+    identity: &CursorIdeIdentity,
     token: String,
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
@@ -37,12 +40,14 @@ pub async fn stream_via_node_bridge(
     let user = user_text(&request);
     let workspace = request.workspace_root.clone().unwrap_or_default();
 
+    let api_headers = identity.agent_bridge_headers(&token);
     let payload = serde_json::json!({
         "accessToken": token,
         "modelId": model,
         "systemPrompt": system,
         "userText": user,
         "workspaceRoot": workspace,
+        "apiHeaders": api_headers,
     });
 
     let mut child = Command::new(&tsx)

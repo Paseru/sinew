@@ -144,7 +144,7 @@ impl Provider for CursorProvider {
         }
         let token = self.composer_token().await?;
         if crate::agent::transport::use_agent_transport() {
-            return crate::agent::stream_via_node_bridge(token, request).await;
+            return crate::agent::stream_via_node_bridge(&self.identity, token, request).await;
         }
         stream_composer(self, token, request).await
     }
