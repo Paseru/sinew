@@ -37,6 +37,6 @@ pub async fn stream_via_agent_bridge(
         stream_via_rust_bridge(identity, token, request).await
     }
 }
-pub use setup::{bridge_directory, ensure_agent_bridge_ready, set_bridge_directory};
+pub use setup::{bridge_directory, ensure_agent_bridge_ready, node_bridge_available, set_bridge_directory};
 #[cfg(test)]
 pub use models::{fetch_usable_models, scan_model_ids, API2_BASE, GET_USABLE_MODELS};

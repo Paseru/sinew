@@ -1,0 +1,56 @@
+﻿120||README-FORK.md
+121||README-FORK.md
+122||scripts/sinew-auto.ps1, scripts/sinew-build-save.ps1, scripts/sinew-save.ps1, scripts/sinew-sync.ps1
+123||README-FORK.md
+124||README-FORK.md
+125||README-FORK.md, src/styles.css
+126||README-FORK.md
+127||README-FORK.md
+128||README-FORK.md
+129||README-FORK.md
+130||README-FORK.md
+131||README-FORK.md
+132||src/components/SettingsPane.tsx
+133||AGENTS.md
+134||AGENTS.md
+135||README-FORK.md
+136||.gitignore
+137||src/components/FileTree.tsx
+138||README-FORK.md
+139||src/components/chat/ChatPane.tsx, src/components/chat/Markdown.tsx
+140||src/components/chat/AIThinkingBlock.tsx
+141||README-FORK.md
+142||README-FORK.md
+143||README-FORK.md
+144||src/components/chat/AIThinkingBlock.tsx, src/components/chat/ChatPane.tsx, src/components/SettingsPane.tsx
+145||sinew-chrome-bridge/mcp_server.js, sinew-chrome-bridge/run_sinew_bridge.bat
+146||sinew-chrome-bridge/mcp_server.js
+147||sinew-chrome-bridge/sinew_cursor.js
+148||sinew-chrome-bridge/launch_chrome_silent.bat
+149||sinew-chrome-bridge/background.js, sinew-chrome-bridge/mcp_server.js, sinew-chrome-bridge/server.js, sinew-chrome-bridge/sinew_cursor.js
+150||sinew-chrome-bridge/sinew_cursor.js
+151||sinew-chrome-bridge/com.sinew.chrome_bridge.json
+152||src/components/chat/TodoStrip.tsx, src/styles.css
+153||sinew-chrome-bridge/background.js, sinew-chrome-bridge/manifest.json
+154||src/components/chat/ChatPane.tsx, src/components/SettingsPane.tsx, src/styles.css
+155||src/components/chat/TodoStrip.tsx, src/styles.css
+156||src/styles.css
+157||src/components/chat/ChatPane.tsx, src/components/chat/ToolCard.tsx, src/styles.css
+158||README-FORK.md
+159||sinew-chrome-bridge/run_sinew_bridge.bat, sinew-chrome-bridge/server.js
+160||README.md
+161||sinew-chrome-bridge/background.js, sinew-chrome-bridge/register.ps1, sinew-chrome-bridge/run_sinew_bridge.bat, sinew-chrome-bridge/server.js
+162||src/styles.css
+163||sinew-chrome-bridge/server.js
+164||sinew-chrome-bridge/add_to_sinew.py
+165||sinew-chrome-bridge/com.sinew.chrome_bridge.json, sinew-chrome-bridge/native-host-wrapper.exe, sinew-chrome-bridge/register.ps1
+166||sinew-chrome-bridge/add_to_sinew.py, sinew-chrome-bridge/interact_chrome.js, sinew-chrome-bridge/register.ps1, sinew-chrome-bridge/run_sinew_bridge.bat
+167||sinew-chrome-bridge/background.js
+168||sinew-chrome-bridge/server.js
+169||README.md
+170||sinew-chrome-bridge/com.sinew.chrome_bridge.json, sinew-chrome-bridge/register.ps1
+171||sinew-chrome-bridge/add_to_sinew.py, sinew-chrome-bridge/com.sinew.chrome_bridge.json, sinew-chrome-bridge/register.ps1, sinew-chrome-bridge/run_sinew_bridge.bat, sinew-chrome-bridge/server.js
+172||sinew-chrome-bridge/background.js, sinew-chrome-bridge/mcp_server.js, sinew-chrome-bridge/native-host-wrapper.exe, sinew-chrome-bridge/popup.html, sinew-chrome-bridge/popup.js, sinew-chrome-bridge/register.ps1, sinew-chrome-bridge/server.js
+173||src/components/chat/ChatPane.tsx
+174||src/components/chat/AIThinkingBlock.tsx, src/lib/ipc.ts, src/types.ts, src-tauri/src/context.rs, src-tauri/src/models.rs, src-tauri/src/tests.rs, src-tauri/src/turns.rs
+175||sinew-chrome-bridge/background.js, sinew-chrome-bridge/sinew_cursor.js

@@ -1,0 +1,56 @@
+175||src/components/SettingsPane.tsx
+176||src/components/chat/ChatPane.tsx
+177||src/components/SettingsPane.tsx
+178||crates/sinew-app/src/agent/cancel.rs, crates/sinew-app/src/agent/context.rs, crates/sinew-app/src/agent/events.rs, crates/sinew-app/src/agent/tool_dispatch.rs, crates/sinew-app/src/agent/turn.rs, crates/sinew-app/src/lib.rs, crates/sinew-app/src/subagent.rs, crates/sinew-app/src/team.rs, crates/sinew-app/src/team/agent_turns.rs, crates/sinew-app/src/tool_names.rs, crates/sinew-google/src/client.rs, crates/sinew-openai/src/auth.rs, crates/sinew-openai/src/lib.rs, sinew-chrome-bridge/add_to_sinew.py, sinew-chrome-bridge/background.js, sinew-chrome-bridge/com.sinew.chrome_bridge.json, sinew-chrome-bridge/mcp_server.js, sinew-chrome-bridge/native-host-wrapper/src/main.rs, sinew-chrome-bridge/register.ps1, sinew-chrome-bridge/server.js, sinew-chrome-bridge/sinew_cursor.js, src-tauri/src/lib.rs, src-tauri/src/models.rs, src-tauri/src/providers.rs, src-tauri/src/state.rs, src-tauri/src/swarm.rs, src-tauri/src/turns.rs, src-tauri/src/workspace.rs, src/components/chat/TodoStrip.tsx, src/components/chat/stream.ts, src/lib/ipc.ts, src/lib/models.ts, src/styles.css, src/types.ts
+179||src/components/SettingsPane.tsx, src/styles.css
+180||src/components/SettingsPane.tsx
+181||src/lib/models.ts, src/lib/quotas.ts
+182||README-FORK.md
+183||src-tauri/src/providers.rs, src/lib/quotas.ts
+184||src/components/SettingsPane.tsx
+185||README.md, crates/sinew-google/src/auth.rs, crates/sinew-google/src/client.rs, crates/sinew-google/src/model_info.rs, sinew-chrome-bridge/add_to_sinew.py, sinew-chrome-bridge/background.js, sinew-chrome-bridge/e2e-local.mjs, sinew-chrome-bridge/mcp_server.js, sinew-chrome-bridge/native_host.bat, sinew-chrome-bridge/popup.html, sinew-chrome-bridge/popup.js, sinew-chrome-bridge/register.ps1, sinew-chrome-bridge/run_sinew_bridge.bat, sinew-chrome-bridge/server.js, sinew-chrome-bridge/sinew_cursor.js, src-tauri/src/providers.rs
+186||README-FORK.md, README.md, sinew-chrome-bridge/mcp_server.js
+187||README-FORK.md
+188||README-FORK.md
+189||sinew-chrome-bridge/sinew_cursor.js, src-tauri/src/providers.rs, src/components/SettingsPane.tsx, src/lib/models.ts
+190||crates/sinew-app/src/agent/turn.rs
+191||Cargo.toml, src/components/chat/Markdown.tsx
+192||Cargo.lock
+193||src/components/SettingsPane.tsx
+194||src/lib/models.ts
+195||src/components/SettingsPane.tsx
+196||README-FORK.md
+197||src/components/chat/ChatPane.tsx
+198||Cargo.lock, Cargo.toml, crates/sinew-cursor/Cargo.toml, crates/sinew-cursor/src/auth/api.rs, crates/sinew-cursor/src/auth/composer.rs, crates/sinew-cursor/src/auth/mod.rs, crates/sinew-cursor/src/client.rs, crates/sinew-cursor/src/connect.rs, crates/sinew-cursor/src/lib.rs, crates/sinew-cursor/src/model_info.rs, crates/sinew-cursor/src/usage.rs, sinew-chrome-bridge/background.js, sinew-chrome-bridge/mcp_server.js, sinew-chrome-bridge/sinew_cursor.js, src-tauri/Cargo.toml, src-tauri/src/lib.rs, src-tauri/src/providers.rs, src/components/SettingsPane.tsx, src/lib/customIcons.ts, src/lib/ipc.ts, src/lib/models.ts, src/lib/quotas.ts, src/types.ts
+199||README-FORK.md
+200||crates/sinew-openai/src/client.rs, crates/sinew-openai/src/websocket.rs
+201||crates/sinew-app/src/image.rs
+202||README-FORK.md
+203||crates/sinew-google/src/client.rs, crates/sinew-google/src/lib.rs, src-tauri/src/providers.rs
+204||README-FORK.md
+205||crates/sinew-cursor/src/auth/composer.rs
+206||Cargo.lock, crates/sinew-cursor/Cargo.toml, crates/sinew-cursor/src/auth/composer.rs, crates/sinew-cursor/src/auth/mod.rs, crates/sinew-cursor/src/auth/oauth.rs, crates/sinew-cursor/src/lib.rs, crates/sinew-google/src/auth.rs, crates/sinew-google/src/client.rs, crates/sinew-google/src/lib.rs, src-tauri/src/lib.rs, src-tauri/src/models.rs, src-tauri/src/providers.rs, src-tauri/src/state.rs, src/components/SettingsPane.tsx, src/components/chat/ChatPane.tsx, src/lib/ipc.ts, src/styles.css, src/types.ts
+207||src-tauri/src/state.rs
+208||src/styles.css
+209||README.md
+210||crates/sinew-app/src/mcp.rs, crates/sinew-google/src/client.rs, sinew-chrome-bridge/background.js, sinew-chrome-bridge/server.js, src-tauri/src/lib.rs, src-tauri/src/providers.rs, src-tauri/src/state.rs, src/components/SettingsPane.tsx, src/lib/ipc.ts, src/lib/models.ts, src/lib/quotas.ts, src/types.ts
+211||crates/sinew-cursor/src/client.rs, crates/sinew-cursor/src/conversation.rs, src/components/Welcome.tsx, src/styles.css
+212||src-tauri/src/platform.rs, src/components/Welcome.tsx, src/main.tsx, src/styles.css
+213||README-FORK.md
+214||src/components/SettingsPane.tsx
+215||crates/sinew-cursor/src/client.rs, crates/sinew-cursor/src/conversation.rs, crates/sinew-cursor/src/workspace.rs
+216||crates/sinew-cursor/src/conversation.rs
+217||crates/sinew-cursor/src/client.rs, crates/sinew-cursor/src/conversation.rs
+218||sinew-chrome-bridge/background.js
+219||crates/sinew-cursor/src/conversation.rs, crates/sinew-cursor/src/identity.rs
+220||Cargo.lock, Cargo.toml, crates/sinew-cursor/Cargo.toml, crates/sinew-cursor/src/context_injection.rs, crates/sinew-cursor/src/conversation.rs, crates/sinew-cursor/src/lib.rs, crates/sinew-index/Cargo.toml, crates/sinew-index/src/lib.rs, src-tauri/Cargo.toml, src-tauri/src/lib.rs
+221||crates/sinew-cursor/src/conversation.rs, crates/sinew-cursor/src/workspace.rs, src/components/chat/dotmatrix-core.tsx
+222||crates/sinew-cursor/src/context_injection.rs
+223||crates/sinew-cursor/src/conversation.rs, crates/sinew-index/src/lib.rs
+224||crates/sinew-app/src/mcp.rs, crates/sinew-cursor/src/conversation.rs, crates/sinew-cursor/src/tools.rs
+225||crates/sinew-cursor/src/images.rs, src/components/chat/dotmatrix-core.tsx
+226||crates/sinew-app/src/compaction.rs, crates/sinew-app/src/lib.rs
+227||crates/sinew-cursor/src/conversation.rs, crates/sinew-cursor/src/images.rs
+228||sinew-chrome-bridge/background.js, sinew-chrome-bridge/manifest.json, sinew-chrome-bridge/sinew_cursor.js
+229||sinew-chrome-bridge/sinew_cursor.js
+230||Cargo.lock, crates/sinew-cursor/Cargo.toml, crates/sinew-cursor/src/identity.rs, crates/sinew-cursor/src/tests.rs

@@ -457,7 +457,7 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
             tracing::info!(path = %bundled.display(), "agent-bridge: bundle embarqué");
         }
     }
-    let _ = sinew_cursor::agent::setup::bridge_directory();
+    let _ = sinew_cursor::agent::bridge_directory();
 
     tauri::async_runtime::spawn(async move {
         if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
@@ -467,7 +467,7 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
                 }
                 Err(err) => tracing::warn!(error = %err, "agent-bridge: install auto échouée (Rust seul)"),
             }
-        } else if sinew_cursor::agent::setup::node_bridge_available() {
+        } else if sinew_cursor::agent::node_bridge_available() {
             tracing::debug!("agent-bridge Node prête (repli auto sans npm)");
         } else {
             tracing::debug!("Composer: bridge Rust OAuth (aucune config requise)");
