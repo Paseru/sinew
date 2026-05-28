@@ -1284,13 +1284,21 @@ fn parse_rate_limit_window(value: &serde_json::Value) -> Option<RateLimitWindowI
 }
 
 #[tauri::command]
-pub(super) async fn get_antigravity_quota() -> std::result::Result<AntigravityQuotaInfo, String> {
-    let credential = GoogleCredential::load_default()
+pub(super) async fn get_antigravity_quota(
+    key: Option<String>,
+) -> std::result::Result<AntigravityQuotaInfo, String> {
+    let path = if let Some(k) = key.as_deref() {
+        sinew_google::auth::path_for_auth_key(k).map_err(error_to_string)?
+    } else {
+        sinew_google::auth::default_auth_path().map_err(error_to_string)?
+    };
+
+    let credential = GoogleCredential::from_sinew_auth_file(&path)
         .map_err(error_to_string)?
         .ok_or_else(|| "Google OAuth credential not found".to_string())?;
     let http = reqwest::Client::new();
     let token = credential.bearer(&http).await.map_err(error_to_string)?;
-    let project = sinew_google::load_default_user_data()
+    let project = sinew_google::load_user_data(&path)
         .map_err(error_to_string)?
         .map(|user| user.project_id);
     let body = if let Some(project_id) = project.as_deref() {

@@ -147,11 +147,8 @@ impl Credential {
     pub fn source_path(&self) -> Option<PathBuf> {
         match self {
             Self::OAuth(state) => {
-                if let Ok(guard) = state.try_lock() {
-                    guard.source_path.clone()
-                } else {
-                    None
-                }
+                let guard = state.blocking_lock();
+                guard.source_path.clone()
             }
         }
     }
