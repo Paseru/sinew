@@ -3,6 +3,7 @@ mod client;
 mod connect;
 mod context_injection;
 mod conversation;
+mod encryption;
 mod identity;
 mod images;
 mod model_info;

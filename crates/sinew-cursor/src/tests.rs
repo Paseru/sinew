@@ -4,10 +4,15 @@ mod tests {
 
     use crate::{
         conversation::build_stream_request,
+        encryption::BlobEncryptionKey,
         identity::CursorIdeIdentity,
         sanitize::sanitize_outbound_text,
         tools::{build_client_tool_result, parse_tool_call, SUPPORTED_TOOLS},
     };
+
+    fn test_blob_key() -> BlobEncryptionKey {
+        BlobEncryptionKey::from_raw([0xAB; 32])
+    }
 
     #[test]
     fn sanitizes_sinew_branding() {
@@ -64,7 +69,7 @@ mod tests {
         .with_workspace_root(std::env::current_dir().unwrap().display().to_string());
         let identity = CursorIdeIdentity::load();
         let (payload, next_seqno) =
-            build_stream_request(&request, "conv", "idem", 0, &identity, "key");
+            build_stream_request(&request, "conv", "idem", 0, &identity, &test_blob_key());
         assert!(next_seqno >= 1);
         assert!(!payload.is_empty());
         let body = String::from_utf8_lossy(&payload);
@@ -128,7 +133,7 @@ mod tests {
             ],
         );
         let identity = CursorIdeIdentity::load();
-        let (payload, _) = build_stream_request(&request, "conv", "idem", 1, &identity, "key");
+        let (payload, _) = build_stream_request(&request, "conv", "idem", 1, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("toolResults") || body.contains("clientSideToolV2Result"));
     }
@@ -162,7 +167,7 @@ mod tests {
             ],
         );
         let identity = CursorIdeIdentity::load();
-        let (payload, _) = build_stream_request(&request, "conv", "idem", 1, &identity, "key");
+        let (payload, _) = build_stream_request(&request, "conv", "idem", 1, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("CLIENT_SIDE_TOOL_V2_TODO_READ"));
     }
@@ -176,7 +181,7 @@ mod tests {
         .with_cache_key("sinew-conv-123");
         let identity = CursorIdeIdentity::load();
         let (payload, _) =
-            build_stream_request(&request, "sinew-conv-123", "idem", 0, &identity, "key");
+            build_stream_request(&request, "sinew-conv-123", "idem", 0, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("sinew-conv-123"));
     }
@@ -198,7 +203,7 @@ mod tests {
             }],
         );
         let identity = CursorIdeIdentity::load();
-        let (payload, _) = build_stream_request(&request, "conv", "idem", 0, &identity, "key");
+        let (payload, _) = build_stream_request(&request, "conv", "idem", 0, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("clientSideToolV2Calls"));
         assert!(body.contains("CLIENT_SIDE_TOOL_V2_READ_FILE_V2"));

@@ -91,6 +91,15 @@ use sinew_openrouter::{
     validate_api_key as validate_openrouter_api_key_remote, OpenRouterAuthStatus,
     OpenRouterCatalogModel, OpenRouterProvider, PROVIDER_ID as OPENROUTER_PROVIDER_ID,
 };
+use sinew_deepseek::{
+    delete_default_auth as delete_default_deepseek_auth,
+    load_default_api_key as load_default_deepseek_api_key,
+    load_default_auth_status as load_default_deepseek_auth_status,
+    save_default_api_key as save_default_deepseek_api_key,
+    touch_default_auth_validation as touch_default_deepseek_auth_validation,
+    validate_api_key as validate_deepseek_api_key_remote, DeepSeekAuthStatus,
+    DeepSeekProvider, PROVIDER_ID as DEEPSEEK_PROVIDER_ID,
+};
 use sinew_cursor::{
     create_login_challenge, delete_composer_auth, ensure_fresh_composer_token,
     load_composer_auth_status, load_composer_session, wait_for_oauth_login, CursorComposerAuthStatus, CursorLoginChallenge, CursorIdeIdentity,
@@ -494,6 +503,12 @@ pub fn run() {
     if let Ok(provider) = KimiProvider::from_default_sources() {
         providers.insert("kimi".into(), Arc::new(provider) as Arc<dyn Provider>);
     }
+    if let Ok(provider) = DeepSeekProvider::from_default_sources() {
+        providers.insert(
+            DEEPSEEK_PROVIDER_ID.into(),
+            Arc::new(provider) as Arc<dyn Provider>,
+        );
+    }
     if let Ok(provider) =
         OpenRouterProvider::from_default_sources(openrouter_capabilities(&openrouter_models))
     {
@@ -686,6 +701,9 @@ pub fn run() {
             providers::get_openrouter_key_details,
             providers::validate_openrouter_api_key,
             providers::disconnect_openrouter_provider,
+            providers::get_deepseek_provider_status,
+            providers::validate_deepseek_api_key,
+            providers::disconnect_deepseek_provider,
             providers::list_openrouter_models,
             providers::search_openrouter_models,
             providers::add_openrouter_model,

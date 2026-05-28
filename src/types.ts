@@ -182,6 +182,9 @@ export type ToolSettings = {
   defaultPlanModePrompt: string;
   imageProvider: ImageProvider;
   openaiImageUseSubscription: boolean;
+  geminiImageUseSubscription: boolean;
+  openaiImageModel: string;
+  geminiImageModel: string;
   openaiImageApiKey: string;
   nanoBananaApiKey: string;
   webSearchProvider: WebSearchProvider;
@@ -302,6 +305,14 @@ export type OpenRouterProviderStatus = {
   keyPreview?: string | null;
   lastValidatedMs?: number | null;
   modelCount: number;
+  error?: string | null;
+};
+
+export type DeepSeekProviderStatus = {
+  connected: boolean;
+  connectionState: ProviderConnectionState;
+  keyPreview?: string | null;
+  lastValidatedMs?: number | null;
   error?: string | null;
 };
 

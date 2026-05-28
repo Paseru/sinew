@@ -91,3 +91,17 @@ Ce document répertorie toutes les améliorations majeures développées sur mon
 * **🏷️ Préfixe de PC réel : étiquetage automatique des conversations avec le nom d'hôte de la machine**
   * Préfixe automatiquement les nouvelles conversations avec le nom réel du PC actif (`%COMPUTERNAME%` / `$HOSTNAME`) pour s'y retrouver instantanément lors de la synchro multi-PC.
   * 📂 *Fichiers : `crates/sinew-app/src/store.rs`*
+
+---
+
+## 📅 28/05 — Abonnement Gemini et Sélection Dynamique de Modèles d'Images
+
+* **🍌 Abonnement Gemini (Google OAuth) sans clé API dans l'outil d'images**
+  * Ajout de l'interrupteur toggle « Utiliser l'abonnement Gemini » (symétrique à OpenAI) pour s'authentifier directement avec ton compte Google connecté, sans clé API.
+  * 📂 *Fichiers : `crates/sinew-app/src/image.rs`, `src/components/SettingsPane.tsx`, `src/types.ts`*
+* **🎨 Menu déroulant de sélection des 3 derniers modèles d'images phares**
+  * Intégration d'un sélecteur de modèles d'images complet : passez librement entre `gpt-image-2`, `gpt-image-1.5`, `dall-e-3` pour OpenAI, et `gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, `gemini-2.5-flash-image` pour Gemini.
+  * 📂 *Fichiers : `crates/sinew-app/src/store.rs`, `crates/sinew-app/src/image.rs`, `src/components/SettingsPane.tsx`*
+* **⚙️ Intégration de sécurité & Synchro automatique**
+  * Réinitialisation de l'abonnement d'images si le fournisseur Google est déconnecté, et sauvegarde immédiate des préférences dans le profil utilisateur.
+  * 📂 *Fichiers : `src-tauri/src/providers.rs`, `src/components/SettingsPane.tsx`*

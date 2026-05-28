@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn end_stream_frame_uses_connect_end_flag() {
-        let mut body = frame_connect_json(b"{}", 0);
+        let mut body = frame_connect_json(&[], 0);
         append_end_stream_frame(&mut body);
         assert_eq!(body.len(), 10);
         assert_eq!(body[5], 0x02);

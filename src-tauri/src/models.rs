@@ -97,6 +97,16 @@ pub(super) struct OpenRouterProviderStatus {
     pub(super) error: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct DeepSeekProviderStatus {
+    pub(super) connected: bool,
+    pub(super) connection_state: String,
+    pub(super) key_preview: Option<String>,
+    pub(super) last_validated_ms: Option<i64>,
+    pub(super) error: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct WorkspaceInput {

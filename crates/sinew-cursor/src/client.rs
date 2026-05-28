@@ -14,6 +14,7 @@ use crate::{
     auth::composer::{ensure_fresh_composer_token, load_composer_session, ComposerSession},
     connect::{decode_connect_frames, parse_connect_events, ComposerEvent},
     conversation::build_stream_request,
+    encryption::BlobEncryptionKey,
     identity::{CachedUsage, CursorIdeIdentity, USAGE_CACHE_TTL},
     model_info,
     stream_state::StreamStateStore,
@@ -173,13 +174,14 @@ async fn stream_composer(
             state.seqno,
         )
     };
+    let blob_key = BlobEncryptionKey::from_stored(&encryption_key)?;
     let (payload, next_seqno) = build_stream_request(
         &request,
         &conversation_id,
         &idempotency_key,
         seqno,
         &identity,
-        &encryption_key,
+        &blob_key,
     );
     if let Ok(mut guard) = provider.stream_state.lock() {
         guard.update_seqno(&session_key, next_seqno);
@@ -196,7 +198,11 @@ async fn stream_composer(
     );
     headers.insert(
         reqwest::header::HeaderName::from_static("x-idempotent-encryption-key"),
-        reqwest::header::HeaderValue::from_str(&encryption_key).unwrap(),
+        reqwest::header::HeaderValue::from_str(&blob_key.idempotent_header_b64()).unwrap(),
+    );
+    headers.insert(
+        reqwest::header::HeaderName::from_static("x-blob-encryption-key"),
+        reqwest::header::HeaderValue::from_str(&blob_key.blob_header_hex()).unwrap(),
     );
 
     let response = provider

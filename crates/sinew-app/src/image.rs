@@ -39,6 +39,9 @@ pub struct CreateImageTool {
     workspace_root: PathBuf,
     image_provider: ImageProvider,
     openai_image_use_subscription: bool,
+    gemini_image_use_subscription: bool,
+    openai_image_model: String,
+    gemini_image_model: String,
     openai_api_key: Option<String>,
     nano_banana_api_key: Option<String>,
     write_lock: Option<Arc<Semaphore>>,
@@ -62,6 +65,9 @@ impl CreateImageTool {
             workspace_root,
             ImageProvider::GptImage2,
             false,
+            false,
+            None,
+            None,
             api_key,
             None,
         )
@@ -71,9 +77,18 @@ impl CreateImageTool {
         workspace_root: impl Into<PathBuf>,
         image_provider: ImageProvider,
         openai_image_use_subscription: bool,
+        gemini_image_use_subscription: bool,
+        openai_image_model: Option<String>,
+        gemini_image_model: Option<String>,
         openai_api_key: Option<String>,
         nano_banana_api_key: Option<String>,
     ) -> Self {
+        let openai_model = openai_image_model
+            .filter(|m| !m.trim().is_empty())
+            .unwrap_or_else(|| "gpt-image-2".to_string());
+        let gemini_model = gemini_image_model
+            .filter(|m| !m.trim().is_empty())
+            .unwrap_or_else(|| "gemini-3.1-flash-image-preview".to_string());
         Self {
             http: reqwest::Client::builder()
                 .timeout(REQUEST_TIMEOUT)
@@ -83,6 +98,9 @@ impl CreateImageTool {
             workspace_root: workspace_root.into(),
             image_provider,
             openai_image_use_subscription,
+            gemini_image_use_subscription,
+            openai_image_model: openai_model,
+            gemini_image_model: gemini_model,
             openai_api_key: normalize_configured_key(openai_api_key),
             nano_banana_api_key: normalize_configured_key(nano_banana_api_key),
             write_lock: None,
@@ -235,7 +253,7 @@ impl CreateImageTool {
         }
 
         let mut body = Map::new();
-        body.insert("model".into(), json!(GPT_IMAGE_MODEL));
+        body.insert("model".into(), json!(self.openai_image_model));
         body.insert("prompt".into(), json!(prompt));
         body.insert("size".into(), json!(size));
         body.insert("quality".into(), json!(quality));
@@ -316,7 +334,8 @@ impl CreateImageTool {
         }
 
         let mut output = format!(
-            "model: {GPT_IMAGE_MODEL}\nimages: {}\nsize: {size}\nquality: {quality}\nformat: {output_format}",
+            "model: {}\nimages: {}\nsize: {size}\nquality: {quality}\nformat: {output_format}",
+            self.openai_image_model,
             images.len()
         );
         if let Some(request_id) = request_id {
@@ -424,7 +443,8 @@ impl CreateImageTool {
         }
 
         let mut output = format!(
-            "model: {GPT_IMAGE_MODEL}\nsource: OpenAI subscription\nimages: {}\nsize: {size}\nquality: {quality}\nformat: {output_format}",
+            "model: {}\nsource: OpenAI subscription\nimages: {}\nsize: {size}\nquality: {quality}\nformat: {output_format}",
+            self.openai_image_model,
             images.len()
         );
         let request_ids = generated
@@ -547,9 +567,18 @@ impl CreateImageTool {
             bail!("prompt is required");
         }
 
-        let api_key = load_nano_banana_api_key(self.nano_banana_api_key.as_deref())?;
         let aspect_ratio = normalize_aspect_ratio(parsed.aspect_ratio.as_deref())?;
         let image_size = normalize_image_size(parsed.image_size.as_deref())?;
+
+        let model = if self.gemini_image_model.is_empty() {
+            "gemini-3.1-flash-image-preview"
+        } else {
+            &self.gemini_image_model
+        };
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+            model
+        );
 
         let body = json!({
             "contents": [{
@@ -567,16 +596,34 @@ impl CreateImageTool {
                 }
             }
         });
-        let response = self
-            .http
-            .post(NANO_BANANA_URL)
-            .header("x-goog-api-key", api_key)
-            .header(CONTENT_TYPE, "application/json")
-            .header(ACCEPT, "application/json")
-            .json(&body)
-            .send()
-            .await
-            .context("Nano Banana 2 image request failed")?;
+        let response = if self.gemini_image_use_subscription {
+            let credential = sinew_google::Credential::load_default()?.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Gemini subscription image generation requires Google to be connected in Settings > Providers."
+                )
+            })?;
+            let token = credential.bearer(&self.http).await?;
+            self.http
+                .post(&url)
+                .bearer_auth(token)
+                .header(CONTENT_TYPE, "application/json")
+                .header(ACCEPT, "application/json")
+                .json(&body)
+                .send()
+                .await
+                .context("Nano Banana 2 subscription image request failed")?
+        } else {
+            let api_key = load_nano_banana_api_key(self.nano_banana_api_key.as_deref())?;
+            self.http
+                .post(&url)
+                .header("x-goog-api-key", api_key)
+                .header(CONTENT_TYPE, "application/json")
+                .header(ACCEPT, "application/json")
+                .json(&body)
+                .send()
+                .await
+                .context("Nano Banana 2 image request failed")?
+        };
 
         let status = response.status();
         let request_id = response
@@ -653,7 +700,8 @@ impl CreateImageTool {
         }
 
         let mut output = format!(
-            "model: {NANO_BANANA_MODEL}\nimages: {}\naspect_ratio: {aspect_ratio}\nimage_size: {image_size}\nthinking_level: high",
+            "model: {}\nimages: {}\naspect_ratio: {aspect_ratio}\nimage_size: {image_size}\nthinking_level: high",
+            self.gemini_image_model,
             images.len()
         );
         if let Some(request_id) = request_id {

@@ -260,6 +260,44 @@ pub(super) fn remove_openrouter_provider(
     Ok(())
 }
 
+pub(super) fn install_deepseek_provider(
+    providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
+) -> std::result::Result<(), String> {
+    let provider = DeepSeekProvider::from_default_sources().map_err(error_to_string)?;
+    providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?
+        .insert(
+            DEEPSEEK_PROVIDER_ID.into(),
+            Arc::new(provider) as Arc<dyn Provider>,
+        );
+    Ok(())
+}
+
+pub(super) fn remove_deepseek_provider(
+    providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
+) -> std::result::Result<(), String> {
+    providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?
+        .remove(DEEPSEEK_PROVIDER_ID);
+    Ok(())
+}
+
+pub(super) fn deepseek_provider_status_from_auth(
+    auth: DeepSeekAuthStatus,
+    connection_state: &str,
+    error: Option<String>,
+) -> DeepSeekProviderStatus {
+    DeepSeekProviderStatus {
+        connected: auth.connected && connection_state == "connected",
+        connection_state: connection_state.to_string(),
+        key_preview: auth.key_preview,
+        last_validated_ms: auth.last_validated_ms,
+        error,
+    }
+}
+
 pub(super) fn openai_provider_status_from_auth(
     auth: OpenAiAuthStatus,
     connection_state: &str,
@@ -1743,6 +1781,14 @@ pub(super) async fn disconnect_google_provider(
     }
     delete_default_google_auth().map_err(error_to_string)?;
     remove_google_provider(&state.providers)?;
+    let mut tool_settings = state.store.load_tool_settings().map_err(error_to_string)?;
+    if tool_settings.gemini_image_use_subscription {
+        tool_settings.gemini_image_use_subscription = false;
+        state
+            .store
+            .save_tool_settings(&tool_settings)
+            .map_err(error_to_string)?;
+    }
     Ok(google_provider_status_from_auth(
         GoogleAuthStatus::disconnected(),
         "disconnected",
@@ -2032,6 +2078,87 @@ pub(super) async fn disconnect_openrouter_provider(
         OpenRouterAuthStatus::disconnected(),
         "disconnected",
         model_count,
+        None,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ValidateDeepSeekApiKeyInput {
+    pub(super) api_key: String,
+}
+
+#[tauri::command]
+pub(super) async fn get_deepseek_provider_status(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<DeepSeekProviderStatus, String> {
+    let auth = load_default_deepseek_auth_status().map_err(error_to_string)?;
+    let Some(api_key) = load_default_deepseek_api_key().map_err(error_to_string)? else {
+        remove_deepseek_provider(&state.providers)?;
+        return Ok(deepseek_provider_status_from_auth(
+            auth,
+            "disconnected",
+            None,
+        ));
+    };
+
+    match validate_deepseek_api_key_remote(&api_key).await {
+        Ok(()) => {
+            let auth = touch_default_deepseek_auth_validation().map_err(error_to_string)?;
+            install_deepseek_provider(&state.providers)?;
+            Ok(deepseek_provider_status_from_auth(
+                auth,
+                "connected",
+                None,
+            ))
+        }
+        Err(err) => {
+            remove_deepseek_provider(&state.providers)?;
+            Ok(deepseek_provider_status_from_auth(
+                auth,
+                "error",
+                Some(err.to_string()),
+            ))
+        }
+    }
+}
+
+#[tauri::command]
+pub(super) async fn validate_deepseek_api_key(
+    state: State<'_, DesktopState>,
+    input: ValidateDeepSeekApiKeyInput,
+) -> std::result::Result<DeepSeekProviderStatus, String> {
+    let api_key = input.api_key.trim().to_string();
+    if api_key.is_empty() {
+        return Ok(deepseek_provider_status_from_auth(
+            DeepSeekAuthStatus::disconnected(),
+            "disconnected",
+            None,
+        ));
+    }
+
+    validate_deepseek_api_key_remote(&api_key)
+        .await
+        .map_err(error_to_string)?;
+    let auth = save_default_deepseek_api_key(&api_key).map_err(error_to_string)?;
+    install_deepseek_provider(&state.providers)?;
+    Ok(deepseek_provider_status_from_auth(
+        auth,
+        "connected",
+        None,
+    ))
+}
+
+#[tauri::command]
+pub(super) async fn disconnect_deepseek_provider(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<DeepSeekProviderStatus, String> {
+    cancel_active_turns_for_provider(&state, DEEPSEEK_PROVIDER_ID).await;
+    delete_default_deepseek_auth().map_err(error_to_string)?;
+    remove_deepseek_provider(&state.providers)?;
+    Ok(deepseek_provider_status_from_auth(
+        DeepSeekAuthStatus::disconnected(),
+        "disconnected",
         None,
     ))
 }

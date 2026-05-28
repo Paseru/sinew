@@ -6,6 +6,7 @@ use sinew_core::{Effort, Part, ProviderRequest, Role, ServiceTier, ToolDescripto
 
 use crate::{
     context_injection::append_local_index_excerpts,
+    encryption::BlobEncryptionKey,
     identity::CursorIdeIdentity,
     images::message_images,
     sanitize::{sanitize_outbound_json, sanitize_outbound_text},
@@ -21,7 +22,7 @@ pub fn build_stream_request(
     idempotency_key: &str,
     seqno: u32,
     identity: &CursorIdeIdentity,
-    encryption_key: &str,
+    encryption_key: &BlobEncryptionKey,
 ) -> (Vec<u8>, u32) {
     if is_tool_result_continuation(request) {
         let (mut framed, seqno) = build_tool_result_frames(request, idempotency_key, seqno);
@@ -44,8 +45,9 @@ fn build_full_request(
     request: &ProviderRequest,
     conversation_id: &str,
     identity: &CursorIdeIdentity,
-    encryption_key: &str,
+    encryption_key: &BlobEncryptionKey,
 ) -> Value {
+    let body_key = encryption_key.body_json_string();
     let workspace = request
         .workspace_root
         .as_deref()
@@ -74,8 +76,8 @@ fn build_full_request(
             "shouldDisableTools": false,
             "allowModelFallbacks": false,
             "mcpTools": build_mcp_tools(&request.tools),
-            "blobEncryptionKey": encryption_key,
-            "speculativeSummarizationEncryptionKey": encryption_key,
+            "blobEncryptionKey": body_key,
+            "speculativeSummarizationEncryptionKey": body_key,
         }
     });
     if let Some(level) = thinking_level {

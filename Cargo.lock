@@ -22,6 +22,7 @@ dependencies = [
  "sinew-app",
  "sinew-core",
  "sinew-cursor",
+ "sinew-deepseek",
  "sinew-google",
  "sinew-index",
  "sinew-kimi",
@@ -4993,6 +4994,7 @@ dependencies = [
  "sha2",
  "similar",
  "sinew-core",
+ "sinew-google",
  "sinew-index",
  "sinew-openai",
  "tokio",
@@ -5034,6 +5036,23 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "sinew-deepseek"
+version = "0.1.25"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "directories",
+ "eventsource-stream",
+ "futures",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sinew-core",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

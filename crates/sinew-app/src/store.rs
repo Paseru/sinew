@@ -211,6 +211,12 @@ pub struct ToolSettings {
     #[serde(default)]
     pub openai_image_use_subscription: bool,
     #[serde(default)]
+    pub gemini_image_use_subscription: bool,
+    #[serde(default)]
+    pub openai_image_model: String,
+    #[serde(default)]
+    pub gemini_image_model: String,
+    #[serde(default)]
     pub openai_image_api_key: String,
     #[serde(default)]
     pub nano_banana_api_key: String,
@@ -260,6 +266,9 @@ pub struct ToolSettingsView {
     pub default_plan_mode_prompt: String,
     pub image_provider: ImageProvider,
     pub openai_image_use_subscription: bool,
+    pub gemini_image_use_subscription: bool,
+    pub openai_image_model: String,
+    pub gemini_image_model: String,
     pub openai_image_api_key: String,
     pub nano_banana_api_key: String,
     pub web_search_provider: WebSearchProvider,
@@ -319,6 +328,14 @@ impl ToolSettings {
         self.openai_image_api_key = self.openai_image_api_key.trim().to_string();
         self.nano_banana_api_key = self.nano_banana_api_key.trim().to_string();
         self.linkup_api_key = self.linkup_api_key.trim().to_string();
+        self.openai_image_model = self.openai_image_model.trim().to_string();
+        if self.openai_image_model.is_empty() {
+            self.openai_image_model = "gpt-image-2".to_string();
+        }
+        self.gemini_image_model = self.gemini_image_model.trim().to_string();
+        if self.gemini_image_model.is_empty() {
+            self.gemini_image_model = "gemini-3.1-flash-image-preview".to_string();
+        }
         self.tools = self
             .tools
             .into_iter()
@@ -454,6 +471,9 @@ pub fn tool_settings_view(settings: &ToolSettings, catalog: &[ToolDescriptor]) -
         default_plan_mode_prompt: DEFAULT_PLAN_MODE_PROMPT.to_string(),
         image_provider: settings.image_provider,
         openai_image_use_subscription: settings.openai_image_use_subscription,
+        gemini_image_use_subscription: settings.gemini_image_use_subscription,
+        openai_image_model: settings.openai_image_model.clone(),
+        gemini_image_model: settings.gemini_image_model.clone(),
         openai_image_api_key: settings.openai_image_api_key.clone(),
         nano_banana_api_key: settings.nano_banana_api_key.clone(),
         web_search_provider: settings.web_search_provider,

@@ -7,7 +7,7 @@ import type {
 } from "../types";
 
 export type ModelId = string;
-export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter" | "cursor";
+export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter" | "cursor" | "deepseek";
 export type ModeModelSelection = { model: ModelId; thinking: ThinkingLevel };
 export type ModeModelSelections = Record<AgentMode, ModeModelSelection>;
 
@@ -50,6 +50,11 @@ export const PROVIDERS: {
     value: "cursor",
     label: "Cursor",
     icon: "local:cursor",
+  },
+  {
+    value: "deepseek",
+    label: "DeepSeek",
+    icon: "simple-icons:deepseek",
   },
   {
     value: "openrouter",
@@ -185,6 +190,20 @@ export const MODELS: ModelEntry[] = [
     provider: "kimi",
     label: "Kimi 2.6",
     thinking: ["off", "high"],
+    defaultThinking: "high",
+  },
+  {
+    value: "deepseek:deepseek-chat",
+    provider: "deepseek",
+    label: "DeepSeek V3",
+    thinking: [],
+    defaultThinking: "off",
+  },
+  {
+    value: "deepseek:deepseek-reasoner",
+    provider: "deepseek",
+    label: "DeepSeek R1",
+    thinking: ["high"],
     defaultThinking: "high",
   },
   {
@@ -340,6 +359,10 @@ export function thinkingFromRef(
     if (model.effort === "none") return "off";
     return "high";
   }
+  if (model?.provider === "deepseek") {
+    if (model.name === "deepseek-reasoner") return "high";
+    return "off";
+  }
   if (model?.provider === "openrouter") {
     if (model.effort === "none") return "off";
     if (
@@ -397,6 +420,10 @@ export function modelRefWithThinking(
   }
   if (thinking === "off") return { ...model, effort: "none" };
   if (model.provider === "kimi") return { ...model, effort: "high" };
+  if (model.provider === "deepseek") {
+    if (model.name === "deepseek-reasoner") return { ...model, effort: "high" };
+    return { ...model, effort: "none" };
+  }
   if (model.provider === "openrouter" && (thinking === "xhigh" || thinking === "max")) {
     return { ...model, effort: "high" };
   }

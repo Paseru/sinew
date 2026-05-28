@@ -33,6 +33,7 @@ import type {
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
+  DeepSeekProviderStatus,
   PlanControl,
   QuestionAnswer,
   SavedConversation,
@@ -477,6 +478,9 @@ export const api = {
   getOpenRouterProviderStatus() {
     return invoke<OpenRouterProviderStatus>("get_openrouter_provider_status");
   },
+  getDeepSeekProviderStatus() {
+    return invoke<DeepSeekProviderStatus>("get_deepseek_provider_status");
+  },
   getOpenRouterKeyDetails() {
     return invoke<any>("get_openrouter_key_details");
   },
@@ -485,8 +489,16 @@ export const api = {
       input: { apiKey },
     });
   },
+  validateDeepSeekApiKey(apiKey: string) {
+    return invoke<DeepSeekProviderStatus>("validate_deepseek_api_key", {
+      input: { apiKey },
+    });
+  },
   disconnectOpenRouterProvider() {
     return invoke<OpenRouterProviderStatus>("disconnect_openrouter_provider");
+  },
+  disconnectDeepSeekProvider() {
+    return invoke<DeepSeekProviderStatus>("disconnect_deepseek_provider");
   },
   listOpenRouterModels() {
     return invoke<OpenRouterModel[]>("list_openrouter_models");

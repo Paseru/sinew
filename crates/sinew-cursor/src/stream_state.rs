@@ -5,8 +5,9 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use base64::Engine as _;
 use serde::{Deserialize, Serialize};
+
+use crate::encryption::BlobEncryptionKey;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct PersistedStateFile {
@@ -43,11 +44,11 @@ impl StreamStateStore {
                 file.conversations
                     .into_iter()
                     .map(|(key, value)| {
-                        let encryption_key = value.encryption_key.unwrap_or_else(|| {
-                            let mut raw_key = [0u8; 32];
-                            rand::RngCore::fill_bytes(&mut rand::rng(), &mut raw_key);
-                            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_key)
-                        });
+                        let encryption_key = value
+                            .encryption_key
+                            .and_then(|stored| BlobEncryptionKey::from_stored(&stored).ok())
+                            .unwrap_or_else(BlobEncryptionKey::random)
+                            .persist_standard_b64();
                         (
                             key,
                             ConversationStreamState {
@@ -67,9 +68,7 @@ impl StreamStateStore {
         self.conversations
             .entry(cache_key.to_string())
             .or_insert_with(|| {
-                let mut raw_key = [0u8; 32];
-                rand::RngCore::fill_bytes(&mut rand::rng(), &mut raw_key);
-                let encryption_key = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_key);
+                let encryption_key = BlobEncryptionKey::random().persist_standard_b64();
                 ConversationStreamState {
                     idempotency_key: uuid::Uuid::new_v4().to_string(),
                     encryption_key,
