@@ -109,7 +109,21 @@ fn check_binary(name: &str) -> Value {
     let mut error = None;
 
     if let Some(ref p) = path {
+        #[cfg(windows)]
+        let mut cmd = {
+            let is_batch = p.extension().map_or(false, |ext| ext == "cmd" || ext == "bat");
+            if is_batch {
+                let mut c = StdCommand::new("cmd");
+                c.arg("/C").arg(p);
+                c
+            } else {
+                StdCommand::new(p)
+            }
+        };
+
+        #[cfg(not(windows))]
         let mut cmd = StdCommand::new(p);
+
         cmd.arg("--version");
         #[cfg(windows)]
         {
@@ -146,14 +160,19 @@ fn check_binary(name: &str) -> Value {
 
 fn find_in_path(name: &str) -> Option<PathBuf> {
     let paths = std::env::var_os("PATH")?;
-    let mut names = vec![name.to_string()];
+    let mut names = vec![];
     #[cfg(windows)]
     {
-        if !name.ends_with(".exe") {
+        if !name.ends_with(".exe") && !name.ends_with(".cmd") && !name.ends_with(".bat") {
             names.push(format!("{name}.exe"));
             names.push(format!("{name}.cmd"));
             names.push(format!("{name}.bat"));
         }
+        names.push(name.to_string());
+    }
+    #[cfg(not(windows))]
+    {
+        names.push(name.to_string());
     }
     std::env::split_paths(&paths)
         .flat_map(|path| names.iter().map(move |n| path.join(n)))
