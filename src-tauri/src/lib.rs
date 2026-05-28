@@ -443,8 +443,6 @@ fn set_multi_pc_sync_enabled(enabled: bool) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    sync_onedrive_db_on_startup();
-
     let file = directories::ProjectDirs::from("dev", "hyrak", "sinew").and_then(|dirs| {
         let log_dir = dirs.data_local_dir();
         let _ = fs::create_dir_all(log_dir);
@@ -468,6 +466,8 @@ pub fn run() {
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("debug")),
         )
         .try_init();
+
+    sync_onedrive_db_on_startup();
 
     let store = AppStore::open_default().expect("unable to open app store");
     let openrouter_models = store.load_openrouter_models().unwrap_or_default();
