@@ -81,6 +81,7 @@ let lockFd = null;
 let lockPayloadBase = null;
 let runAsBridgeClientOnly = false;
 let extensionSocket = null;
+let nativeStdinClosed = false;
 
 function isPidRunning(pid) {
   const n = Number(pid);
@@ -237,6 +238,9 @@ const pendingRequests = new Map(); // bridgeMsgId -> { playwrightSocket, origina
 
 function isExtensionConnected() {
   if (isNativeMode && !runAsBridgeClientOnly) {
+    if (nativeStdinClosed) {
+      return !!(extensionSocket && typeof extensionSocket.send === 'function' && extensionSocket.readyState === WebSocket.OPEN && !extensionSocket.isNative);
+    }
     return !!(extensionSocket && extensionSocket.isNative === true);
   }
   return !!(extensionSocket && typeof extensionSocket.send === 'function' && extensionSocket.readyState === WebSocket.OPEN);
@@ -2192,10 +2196,18 @@ if (isNativeMode && !runAsBridgeClientOnly) {
     }
   });
 
-  process.stdin.on('end', () => {
+  const handleStdinClose = () => {
+    if (nativeStdinClosed) return;
+    nativeStdinClosed = true;
     console.error("🧬 [Proxy] process.stdin closed. Keeping HTTP bridge alive for reconnectable local control.");
+    if (extensionSocket === virtualSocket) {
+      extensionSocket = null;
+    }
     updateHeartbeatAfterNativeDisconnect();
-  });
+  };
+
+  process.stdin.on('end', handleStdinClose);
+  process.stdin.on('close', handleStdinClose);
 
   function updateHeartbeatAfterNativeDisconnect() {
     try {
@@ -2225,13 +2237,17 @@ wss.on('connection', (ws, req) => {
   // ============================================
   if (pathname === '/extension') {
     const isBridgeClient = parsedUrl.query.nativeBridge === 'true';
-    if (isNativeMode && !runAsBridgeClientOnly && extensionSocket?.isNative) {
+    if (isNativeMode && !runAsBridgeClientOnly && extensionSocket?.isNative && !nativeStdinClosed) {
       console.error("🧬 [Proxy] WebSocket tunnel connected but Native Messaging is already active. Rejecting to keep native session authoritative.");
       ws.close(1008, "Native Messaging is active");
       return;
     }
 
-    console.log("ðŸ§¬ [Proxy] Chrome Extension connected successfully via WebSocket fallback!");
+    if (isBridgeClient) {
+      console.log("🧬 [Proxy] Chrome Extension connected successfully via WebSocket native bridge tunnel!");
+    } else {
+      console.log("🧬 [Proxy] Chrome Extension connected successfully via WebSocket fallback!");
+    }
     extensionSocket = ws;
 
     ws.on('message', (message) => {
@@ -2239,16 +2255,16 @@ wss.on('connection', (ws, req) => {
         const msg = JSON.parse(message);
         handleExtensionMessage(msg);
       } catch (err) {
-        console.error("ðŸ§¬ [Proxy] WebSocket fallback parse error:", err);
+        console.error("🧬 [Proxy] WebSocket fallback parse error:", err);
       }
     });
 
     ws.on('close', () => {
-    console.log("ðŸ§¬ [Proxy] Chrome Extension WebSocket disconnected.");
-    if (extensionSocket === ws && (!isNativeMode || runAsBridgeClientOnly)) {
-      extensionSocket = null;
-    }
-  });
+      console.log("🧬 [Proxy] Chrome Extension WebSocket disconnected.");
+      if (extensionSocket === ws) {
+        extensionSocket = null;
+      }
+    });
   } 
   
   // ============================================
