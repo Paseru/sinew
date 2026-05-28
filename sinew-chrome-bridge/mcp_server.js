@@ -1437,7 +1437,25 @@ rl.on('line', async (line) => {
         const resultText = await executeStructuredDomAction('wait_selector', args);
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'evaluate') {
-        const resultText = await executeStructuredDomAction('evaluate', args);
+        let resultText;
+        const tab = await getReadyTab(null).catch(() => null);
+        if (!tab) {
+          resultText = JSON.stringify({ success: false, error: "No active tab found" });
+        } else {
+          const cdp = cdpConnect(tab.id);
+          try {
+            const result = await cdp.send('Runtime.evaluate', {
+              expression: args.expression,
+              returnByValue: true
+            });
+            cdp.close();
+            const value = result?.result?.value !== undefined ? result.result.value : (result?.value !== undefined ? result.value : null);
+            resultText = JSON.stringify({ success: true, tab: compactTab(tab), result: { ok: true, success: true, value } });
+          } catch (err) {
+            cdp.close();
+            resultText = JSON.stringify({ success: false, tab: compactTab(tab), error: err.message });
+          }
+        }
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'screenshot') {
         const resultText = await executeScreenshot(args.format || 'jpeg', args.quality || 70);
