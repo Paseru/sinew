@@ -25,10 +25,6 @@ use crate::tool_run::{FileChange, FileChangeKind, ToolRunImage, ToolRunResult};
 
 const OPENAI_IMAGES_URL: &str = "https://api.openai.com/v1/images/generations";
 const OPENAI_CODEX_RESPONSES_URL: &str = "https://chatgpt.com/backend-api/codex/responses";
-const GPT_IMAGE_MODEL: &str = "gpt-image-2";
-const NANO_BANANA_MODEL: &str = "gemini-3.1-flash-image-preview";
-const NANO_BANANA_URL: &str =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent";
 const OPENAI_SUBSCRIPTION_IMAGE_INSTRUCTIONS: &str = "You are Sinew, a concise coding assistant. When the user asks for an image, immediately call the image_generation tool with their prompt. Do not reply with text.";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const USER_AGENT: &str = "sinew/0.1";

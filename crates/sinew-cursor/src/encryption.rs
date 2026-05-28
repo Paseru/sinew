@@ -13,6 +13,7 @@ use sinew_core::{AppError, Result};
 pub struct BlobEncryptionKey([u8; 32]);
 
 impl BlobEncryptionKey {
+    #[allow(dead_code)]
     pub fn from_raw(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
