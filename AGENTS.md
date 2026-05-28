@@ -11,6 +11,7 @@
 ├── GLOB_HARNESS_COMPARISON.md
 ├── GREP_HARNESS_COMPARISON.md
 ├── index.html
+├── launch-sinew-dev.bat
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
@@ -21,6 +22,11 @@
 │       └── browser
 │           └── SKILL.md
 ├── scripts
+│   ├── mitm
+│   │   ├── check-mitm.ps1
+│   │   ├── install-mitmproxy.ps1
+│   │   ├── README.md
+│   │   └── start-mitmweb.ps1
 │   └── prepare-sidecars.mjs
 ├── tsconfig.json
 ├── tsconfig.node.json
@@ -304,3 +310,4 @@
         ├── Cargo.toml
         └── src
             └── main.rs
+
