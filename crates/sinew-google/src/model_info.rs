@@ -145,8 +145,9 @@ pub fn capabilities(model: &ModelRef) -> ModelCapabilities {
     let model = canonical_model(model);
     let info = model_info(&model.name);
     let is_gpt_oss = model.name == "gpt-oss-120b";
+    let is_flash = model.name.contains("flash") || model.name.contains("lite");
     let supports_tools = !is_gpt_oss;
-    let supports_thinking = !is_gpt_oss;
+    let supports_thinking = !is_gpt_oss && !is_flash;
     ModelCapabilities {
         model,
         context_window: info.context_window,
