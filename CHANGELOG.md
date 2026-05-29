@@ -59,6 +59,12 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:04:26
+
+### Changed
+- **Globalisation du Système d'Apprentissage** : Déplacement de la mémoire d'apprentissage (`errors_raw.json` et `instructions_consolidated.md`) dans le dossier de configuration global de la machine (`%LOCALAPPDATA%\Sinew\`). Cela permet d'avoir un système d'apprentissage partagé et partagé sur tous les projets et espaces de travail ouverts sur cet ordinateur.
+- **Règles d'agent (`AGENTS.md`)** : Mise à jour des règles d'instructions globales pour forcer la lecture et l'alimentation de la base d'apprentissage globale à chaque début de session.
+
 ## [Unreleased] - 2026-05-29 15:57:18
 
 ### Added
