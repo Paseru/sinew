@@ -427,9 +427,28 @@ pub(super) async fn resolve_terminal_path_command(
 
 #[tauri::command]
 pub(super) async fn read_external_file_command(
+    app: tauri::AppHandle,
     input: AbsolutePathInput,
 ) -> std::result::Result<sinew_app::FileDocument, String> {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+
     let path = std::path::PathBuf::from(&input.path);
+
+    // Ask user for permission to read external files outside the workspace
+    let confirmed = app.dialog()
+        .message(format!(
+            "Sinew souhaite lire un fichier externe situé en dehors de votre espace de travail.\n\nFichier : {}\n\nAutoriser la lecture de ce fichier ?",
+            path.display()
+        ))
+        .title("Autorisation de lecture de fichier externe")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::YesNo)
+        .blocking_show();
+
+    if !confirmed {
+        return Err("Lecture du fichier externe refusée par l'utilisateur".to_string());
+    }
+
     read_external_file(&path).map_err(error_to_string)
 }
 
@@ -503,9 +522,28 @@ pub(super) async fn open_external_url_command(
 
 #[tauri::command]
 pub(super) async fn open_path_with_default_app_command(
+    app: tauri::AppHandle,
     input: AbsolutePathInput,
 ) -> std::result::Result<(), String> {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+
     let path = std::path::PathBuf::from(&input.path);
+
+    // Ask user for permission to launch/open an external path with the default application
+    let confirmed = app.dialog()
+        .message(format!(
+            "Sinew souhaite ouvrir le fichier ou dossier suivant avec l'application par défaut de votre système :\n\nChemin : {}\n\nAutoriser l'ouverture ?",
+            path.display()
+        ))
+        .title("Autorisation d'ouverture système")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::YesNo)
+        .blocking_show();
+
+    if !confirmed {
+        return Err("Ouverture système refusée par l'utilisateur".to_string());
+    }
+
     open_with_default_app(&path).map_err(error_to_string)
 }
 

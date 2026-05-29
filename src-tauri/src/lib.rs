@@ -301,11 +301,18 @@ pub(crate) fn is_sync_enabled() -> bool {
     false
 }
 
+#[cfg(target_os = "windows")]
+fn new_hidden_cmd() -> std::process::Command {
+    use std::os::windows::process::CommandExt;
+    let mut cmd = std::process::Command::new("cmd");
+    cmd.creation_flags(0x08000000);
+    cmd
+}
+
 pub(crate) fn has_uncommitted_changes(path: &std::path::Path) -> bool {
     #[cfg(target_os = "windows")]
     {
-        use std::process::Command;
-        if let Ok(output) = Command::new("cmd")
+        if let Ok(output) = new_hidden_cmd()
             .args(&["/C", "git status --porcelain"])
             .current_dir(path)
             .output()
@@ -354,7 +361,6 @@ pub(crate) fn load_last_workspace_path() -> Option<String> {
 pub(crate) fn run_git_auto_pull(workspace_path: &str) {
     #[cfg(target_os = "windows")]
     {
-        use std::process::Command;
         let path = std::path::Path::new(workspace_path);
         if !path.exists() {
             return;
@@ -365,21 +371,21 @@ pub(crate) fn run_git_auto_pull(workspace_path: &str) {
         // 1. If there are uncommitted changes, commit them first to avoid pull blockages
         if has_uncommitted_changes(path) {
             tracing::info!("Uncommitted changes detected. Auto-committing before pulling.");
-            let _ = Command::new("cmd")
+            let _ = new_hidden_cmd()
                 .args(&["/C", "git add ."])
                 .current_dir(path)
                 .status();
             
             let computer_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Sinew Client".to_string());
             let commit_msg = format!("chore: auto-commit local changes before sync on {}", computer_name);
-            let _ = Command::new("cmd")
+            let _ = new_hidden_cmd()
                 .args(&["/C", "git", "commit", "-m", &commit_msg])
                 .current_dir(path)
                 .status();
         }
 
         // 2. Perform pull with rebase
-        let status = Command::new("cmd")
+        let status = new_hidden_cmd()
             .args(&["/C", "git pull --rebase"])
             .current_dir(path)
             .status();
@@ -391,7 +397,7 @@ pub(crate) fn run_git_auto_pull(workspace_path: &str) {
             _ => {
                 tracing::warn!("Git pull --rebase failed or had conflicts. Aborting rebase to keep local repository safe.");
                 // Abort the rebase if it got stuck in a conflict state
-                let _ = Command::new("cmd")
+                let _ = new_hidden_cmd()
                     .args(&["/C", "git rebase --abort"])
                     .current_dir(path)
                     .status();
@@ -404,7 +410,6 @@ pub(crate) fn run_git_auto_pull(workspace_path: &str) {
 pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
     #[cfg(target_os = "windows")]
     {
-        use std::process::Command;
         let path = std::path::Path::new(workspace_path);
         if !path.exists() {
             return;
@@ -414,21 +419,21 @@ pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
 
         // 1. If there are changes, commit them
         if has_uncommitted_changes(path) {
-            let _ = Command::new("cmd")
+            let _ = new_hidden_cmd()
                 .args(&["/C", "git add ."])
                 .current_dir(path)
                 .status();
 
             let computer_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Sinew Client".to_string());
             let commit_msg = format!("chore: auto-sync from {} on exit", computer_name);
-            let _ = Command::new("cmd")
+            let _ = new_hidden_cmd()
                 .args(&["/C", "git", "commit", "-m", &commit_msg])
                 .current_dir(path)
                 .status();
         }
 
         // 2. Pull first with rebase to ensure we are up to date before pushing
-        let pull_status = Command::new("cmd")
+        let pull_status = new_hidden_cmd()
             .args(&["/C", "git pull --rebase"])
             .current_dir(path)
             .status();
@@ -436,7 +441,7 @@ pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
         match pull_status {
             Ok(s) if s.success() => {
                 // 3. Rebase succeeded, we can push!
-                let push_status = Command::new("cmd")
+                let push_status = new_hidden_cmd()
                     .args(&["/C", "git push"])
                     .current_dir(path)
                     .status();
@@ -452,7 +457,7 @@ pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
             }
             _ => {
                 tracing::warn!("Git pull --rebase on exit failed. Aborting rebase to keep local work safe.");
-                let _ = Command::new("cmd")
+                let _ = new_hidden_cmd()
                     .args(&["/C", "git rebase --abort"])
                     .current_dir(path)
                     .status();

@@ -96,13 +96,19 @@ pub async fn stream_via_node_bridge(
         }
     }
 
-    let mut child = Command::new(&tsx)
-        .arg(&script)
+    let mut cmd = Command::new(&tsx);
+    cmd.arg(&script)
         .current_dir(&bridge_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stderr(Stdio::piped());
+
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(0x08000000);
+    }
+
+    let mut child = cmd.spawn()
         .map_err(|err| {
             AppError::Provider(format!(
                 "failed to spawn agent bridge (tsx): {err}. Vérifiez Node/npm (diagnostic SOTA)."

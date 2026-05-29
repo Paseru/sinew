@@ -351,7 +351,10 @@ pub(super) async fn register_chrome_bridge(
             None => return Err("Le script d'enregistrement register.ps1 est introuvable. Veuillez vous assurer que le dossier sinew-chrome-bridge est présent dans vos ressources ou votre espace de travail.".to_string()),
         };
 
-        let output = Command::new("powershell")
+        use std::os::windows::process::CommandExt;
+        let mut cmd = Command::new("powershell");
+        cmd.creation_flags(0x08000000);
+        let output = cmd
             .arg("-ExecutionPolicy")
             .arg("Bypass")
             .arg("-File")
