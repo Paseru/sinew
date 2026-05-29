@@ -74,9 +74,16 @@ impl CheckSotaTool {
         let npm_status = check_binary("npm");
         results.insert("npm".into(), npm_status);
 
+        // 7. Sinew Browser Extension
+        let extension_status = check_sinew_chrome_bridge();
+        results.insert("sinew-extension".into(), extension_status);
+
         // Compute overall SOTA status
         let mut overall_ok = true;
-        for (_, val) in results.iter() {
+        for (key, val) in results.iter() {
+            if key == "sinew-extension" {
+                continue;
+            }
             if let Some(available) = val.get("available").and_then(|a| a.as_bool()) {
                 if !available {
                     overall_ok = false;
@@ -99,6 +106,124 @@ impl CheckSotaTool {
             Vec::new(),
         )
     }
+}
+
+fn check_sinew_chrome_bridge() -> Value {
+    let mut available = false;
+    let mut path = None;
+    let mut version = None;
+    let mut error = None;
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let mut cmd = StdCommand::new("reg");
+        cmd.args(&["query", "HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.sinew.chrome_bridge", "/ve"]);
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        match cmd.output() {
+            Ok(output) => {
+                if output.status.success() {
+                    let out_str = String::from_utf8_lossy(&output.stdout);
+                    if let Some(pos) = out_str.find("REG_SZ") {
+                        let p = out_str[pos + 6..].trim().to_string();
+                        let p_buf = PathBuf::from(&p);
+                        path = Some(p.clone());
+                        if p_buf.is_file() {
+                            available = true;
+                            // Check package.json in the same directory for version
+                            let pkg_json_path = p_buf.parent().map(|parent| parent.join("package.json"));
+                            if let Some(pkg_path) = pkg_json_path {
+                                if pkg_path.is_file() {
+                                    if let Ok(content) = std::fs::read_to_string(pkg_path) {
+                                        if let Ok(pkg) = serde_json::from_str::<Value>(&content) {
+                                            if let Some(v) = pkg.get("version").and_then(|v| v.as_str()) {
+                                                version = Some(v.to_string());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if version.is_none() {
+                                version = Some("1.0.0".into());
+                            }
+                        } else {
+                            error = Some("Fichier manifeste de l'extension introuvable".to_string());
+                        }
+                    } else {
+                        error = Some("Impossible de lire le chemin dans la base de registre".to_string());
+                    }
+                } else {
+                    error = Some("Extension Sinew non enregistrée ou non installée".to_string());
+                }
+            }
+            Err(e) => {
+                error = Some(e.to_string());
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var("HOME").unwrap_or_default();
+        let p_buf = PathBuf::from(home).join("Library/Application Support/Google/Chrome/NativeMessagingHosts/com.sinew.chrome_bridge.json");
+        if p_buf.is_file() {
+            available = true;
+            path = Some(p_buf.display().to_string());
+            // Try package.json in same directory
+            let pkg_json_path = p_buf.parent().map(|parent| parent.join("package.json"));
+            if let Some(pkg_path) = pkg_json_path {
+                if pkg_path.is_file() {
+                    if let Ok(content) = std::fs::read_to_string(pkg_path) {
+                        if let Ok(pkg) = serde_json::from_str::<Value>(&content) {
+                            if let Some(v) = pkg.get("version").and_then(|v| v.as_str()) {
+                                version = Some(v.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            if version.is_none() {
+                version = Some("1.0.0".into());
+            }
+        } else {
+            error = Some("Extension Sinew non configurée ou non installée".to_string());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let home = std::env::var("HOME").unwrap_or_default();
+        let p_buf = PathBuf::from(home).join(".config/google-chrome/NativeMessagingHosts/com.sinew.chrome_bridge.json");
+        if p_buf.is_file() {
+            available = true;
+            path = Some(p_buf.display().to_string());
+            // Try package.json in same directory
+            let pkg_json_path = p_buf.parent().map(|parent| parent.join("package.json"));
+            if let Some(pkg_path) = pkg_json_path {
+                if pkg_path.is_file() {
+                    if let Ok(content) = std::fs::read_to_string(pkg_path) {
+                        if let Ok(pkg) = serde_json::from_str::<Value>(&content) {
+                            if let Some(v) = pkg.get("version").and_then(|v| v.as_str()) {
+                                version = Some(v.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            if version.is_none() {
+                version = Some("1.0.0".into());
+            }
+        } else {
+            error = Some("Extension Sinew non configurée ou non installée".to_string());
+        }
+    }
+
+    json!({
+        "available": available,
+        "path": path,
+        "version": version,
+        "error": error
+    })
 }
 
 fn check_binary(name: &str) -> Value {

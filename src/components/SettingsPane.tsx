@@ -3035,6 +3035,16 @@ function OptionsSection({
                     const name = entry[0];
                     const info = entry[1] as any;
                     const isAvailable = info.available;
+                    let displayName = name;
+                    if (name === "sinew-extension") {
+                      displayName = locale === "fr" ? "Extension Sinew Browser" : "Sinew Browser Extension";
+                    } else if (name === "ripgrep") {
+                      displayName = "Ripgrep";
+                    } else if (name === "rustc") {
+                      displayName = "Rustc";
+                    } else {
+                      displayName = name.charAt(0).toUpperCase() + name.slice(1);
+                    }
                     return (
                       <div
                         key={name}
@@ -3049,8 +3059,8 @@ function OptionsSection({
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontWeight: 600, textTransform: "capitalize", fontSize: "14px" }}>
-                            {name}
+                          <span style={{ fontWeight: 600, fontSize: "14px" }}>
+                            {displayName}
                           </span>
                           <span style={{
                             fontSize: "11px",
