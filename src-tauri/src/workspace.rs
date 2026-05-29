@@ -623,3 +623,13 @@ pub(super) async fn push_editor_diagnostics(
     store.replace(input.diagnostics);
     Ok(())
 }
+
+#[tauri::command]
+pub async fn set_semantic_embeddings_enabled(enabled: bool) -> std::result::Result<(), String> {
+    if enabled {
+        std::env::set_var("SINEW_INDEX_EMBEDDINGS", "1");
+    } else {
+        std::env::remove_var("SINEW_INDEX_EMBEDDINGS");
+    }
+    Ok(())
+}

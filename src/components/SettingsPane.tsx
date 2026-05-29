@@ -1980,6 +1980,23 @@ function OptionsSection({
     }
   });
 
+  const [semanticEmbeddings, setSemanticEmbeddings] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.semantic-embeddings") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSemanticEmbeddings = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.semantic-embeddings", enabled ? "true" : "false");
+    } catch {}
+    setSemanticEmbeddings(enabled);
+    api.setSemanticEmbeddingsEnabled(enabled).catch(() => {});
+    window.dispatchEvent(new CustomEvent("sinew:semantic-embeddings-changed", { detail: enabled }));
+  };
+
   const toggleAutosave = (enabled: boolean) => {
     try {
       localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
@@ -2120,6 +2137,12 @@ function OptionsSection({
     api.isMultiPcSyncEnabled().then((enabled) => {
       setMultiPcSync(enabled);
     }).catch(() => {});
+
+    // Initialiser la variable d'environnement de recherche sémantique côté Rust
+    try {
+      const saved = localStorage.getItem("sinew.semantic-embeddings") === "true";
+      api.setSemanticEmbeddingsEnabled(saved).catch(() => {});
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -2636,6 +2659,41 @@ function OptionsSection({
                 aria-checked={!multiPcSync}
                 data-active={!multiPcSync ? "true" : "false"}
                 onClick={() => toggleMultiPcSync(false)}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
+            </div>
+          </div>
+
+          {/* Recherche Sémantique Vectorielle (BETA) */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>
+                <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧠</span>
+                {locale === "fr" ? "Recherche Sémantique Vectorielle (BETA)" : "Vector Semantic Search (BETA)"}
+              </h2>
+              <p>
+                {locale === "fr"
+                  ? "Active l'indexation par concepts (fastembed). Permet de rechercher vos fichiers par leur sens général plutôt que par mot-clé exact (100% local)."
+                  : "Enable concept-based indexing (fastembed). Allows searching files by their general meaning instead of exact keywords (100% local)."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Semantic Search">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={semanticEmbeddings}
+                data-active={semanticEmbeddings ? "true" : "false"}
+                onClick={() => toggleSemanticEmbeddings(true)}
+              >
+                {locale === "fr" ? "Activé" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!semanticEmbeddings}
+                data-active={!semanticEmbeddings ? "true" : "false"}
+                onClick={() => toggleSemanticEmbeddings(false)}
               >
                 {locale === "fr" ? "Désactivé" : "Disabled"}
               </button>

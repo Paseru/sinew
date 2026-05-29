@@ -876,6 +876,7 @@ pub fn run() {
             workspace::save_clipboard_image_attachment_command,
             workspace::read_clipboard_file_paths_command,
             workspace::push_editor_diagnostics,
+            workspace::set_semantic_embeddings_enabled,
             conversations::list_conversations,
             conversations::create_conversation,
             conversations::load_conversation,
