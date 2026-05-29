@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:24:18
+
+### Added
+- **Bouton de synchronisation forcée dans les paramètres (`src/components/SettingsPane.tsx`)** : Ajout d'un bouton "Synchroniser maintenant" sous l'option de synchronisation Multi-PC dans `OptionsSection` pour permettre à l'utilisateur de déclencher manuellement et à tout moment la synchronisation bidirectionnelle OneDrive et Git.
+- **Commande Tauri de synchronisation forcée (`src-tauri/src/lib.rs`, `src/lib/ipc.ts`)** : Ajout de la commande `force_multi_pc_sync` dans Rust et exposition dans le pont IPC frontend pour permettre à l'utilisateur de déclencher manuellement une synchronisation bidirectionnelle complète des bases de données et des dépôts Git avec OneDrive à la demande.
+
+### Changed
+- **Correction de la synchronisation Git Multi-PC (`src-tauri/src/lib.rs`)** : Suppression du préfixe UNC `\\?\` des chemins locaux de l'espace de travail avant de définir le répertoire de travail (`current_dir`) pour les commandes Git (`git status`, `git pull`, `git commit`, `git push`). Cela résout l'erreur `CMD ne prend pas les chemins UNC comme répertoires en cours` (code d'erreur 128) et rétablit la synchronisation automatique transparente entre les différents ordinateurs.
+
 ## [Unreleased] - 2026-05-29 23:20:51
 
 ### Changed

@@ -902,6 +902,9 @@ export const api = {
   setMultiPcSyncEnabled(enabled: boolean) {
     return invoke<void>("set_multi_pc_sync_enabled", { enabled });
   },
+  forceMultiPcSync() {
+    return invoke<void>("force_multi_pc_sync");
+  },
   setSemanticEmbeddingsEnabled(enabled: boolean) {
     return invoke<void>("set_semantic_embeddings_enabled", { enabled });
   },

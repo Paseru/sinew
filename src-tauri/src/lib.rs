@@ -686,6 +686,101 @@ fn set_multi_pc_sync_enabled(enabled: bool) -> Result<(), String> {
     Err("Not supported on this platform".to_string())
 }
 
+#[tauri::command]
+fn force_multi_pc_sync() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // 1. Local AppData path
+        let localappdata = match std::env::var("LOCALAPPDATA") {
+            Ok(val) => val,
+            Err(_) => return Err("LOCALAPPDATA env var not found".to_string()),
+        };
+
+        // 2. OneDrive path
+        let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
+            std::env::var("USERPROFILE")
+                .map(|u| format!("{}\\OneDrive", u))
+                .unwrap_or_default()
+        });
+        if onedrive.is_empty() {
+            return Err("OneDrive directory not found".to_string());
+        }
+
+        let local_db = PathBuf::from(&localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("desktop-state.sqlite3");
+
+        let onedrive_db_dir = PathBuf::from(&onedrive).join("Documents").join("Sinew");
+        let onedrive_db = onedrive_db_dir.join("desktop-state.sqlite3");
+
+        // Sync from OneDrive to Local
+        if onedrive_db.exists() {
+            if let Some(parent) = local_db.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+
+            if local_db.exists() {
+                let backup_path = local_db.with_extension("sqlite3.bak");
+                let _ = fs::copy(&local_db, &backup_path);
+
+                // Perform differential merge
+                if let Err(e) = merge_databases(&local_db, &onedrive_db) {
+                    tracing::error!("Force sync: Differential merge from OneDrive failed: {:?}", e);
+                }
+            } else {
+                let _ = fs::copy(&onedrive_db, &local_db);
+            }
+        }
+
+        // Sync from Local to OneDrive
+        if local_db.exists() {
+            let _ = fs::create_dir_all(&onedrive_db_dir);
+            if onedrive_db.exists() {
+                // Perform differential merge into OneDrive so no data is lost
+                if let Err(e) = merge_databases(&onedrive_db, &local_db) {
+                    tracing::error!("Force sync: Differential merge into OneDrive failed: {:?}", e);
+                    let _ = fs::copy(&local_db, &onedrive_db);
+                }
+            } else {
+                let _ = fs::copy(&local_db, &onedrive_db);
+            }
+
+            // Sync global learning files to OneDrive
+            let global_errors_local = PathBuf::from(&localappdata)
+                .join("Sinew")
+                .join("errors_raw.json");
+            let global_rules_local = PathBuf::from(&localappdata)
+                .join("Sinew")
+                .join("instructions_consolidated.md");
+
+            let global_errors_onedrive = onedrive_db_dir.join("errors_raw.json");
+            let global_rules_onedrive = onedrive_db_dir.join("instructions_consolidated.md");
+
+            if global_errors_local.exists() {
+                let _ = fs::copy(&global_errors_local, &global_errors_onedrive);
+            }
+            if global_rules_local.exists() {
+                let _ = fs::copy(&global_rules_local, &global_rules_onedrive);
+            }
+        }
+
+        // Git auto commit/push & pull
+        if let Some(workspace_path) = load_last_workspace_path() {
+            run_git_auto_pull(&workspace_path);
+            run_git_auto_commit_and_push(&workspace_path);
+        }
+
+        return Ok(());
+    }
+    #[cfg(not(target_os = "windows"))]
+    Err("Not supported on this platform".to_string())
+}
+
 fn configure_agent_bridge_paths(app: &AppHandle) {
     if let Ok(resource_dir) = app.path().resource_dir() {
         let bundled = resource_dir.join("agent-bridge");
@@ -1028,6 +1123,7 @@ pub fn run() {
             updater::updater_current_version,
             is_multi_pc_sync_enabled,
             set_multi_pc_sync_enabled,
+            force_multi_pc_sync,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")

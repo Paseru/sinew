@@ -1895,6 +1895,22 @@ function OptionsSection({
   });
 
   const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
+  const [syncingMultiPc, setSyncingMultiPc] = useState(false);
+
+  const handleForceMultiPcSync = () => {
+    setSyncingMultiPc(true);
+    api.forceMultiPcSync()
+      .then(() => {
+        alert(locale === "fr" ? "Synchronisation réussie !" : "Synchronization successful!");
+        window.location.reload();
+      })
+      .catch((err) => {
+        alert((locale === "fr" ? "Échec de la synchronisation : " : "Synchronization failed: ") + err);
+      })
+      .finally(() => {
+        setSyncingMultiPc(false);
+      });
+  };
 
   const [autosave, setAutosave] = useState<boolean>(() => {
     try {
@@ -2633,35 +2649,61 @@ function OptionsSection({
           </div>
 
           {/* Synchronisation Multi-PC (OneDrive) */}
-          <div className="settings-pane__about-card">
-            <div className="settings-pane__about-card-copy">
-              <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
-              <p>
-                {locale === "fr"
-                  ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
-                  : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
-              </p>
+          <div className="settings-pane__about-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
+                    : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync" style={{ flexShrink: 0 }}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={multiPcSync}
+                  data-active={multiPcSync ? "true" : "false"}
+                  onClick={() => toggleMultiPcSync(true)}
+                >
+                  {locale === "fr" ? "Activé" : "Enabled"}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!multiPcSync}
+                  data-active={!multiPcSync ? "true" : "false"}
+                  onClick={() => toggleMultiPcSync(false)}
+                >
+                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                </button>
+              </div>
             </div>
-            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={multiPcSync}
-                data-active={multiPcSync ? "true" : "false"}
-                onClick={() => toggleMultiPcSync(true)}
-              >
-                {locale === "fr" ? "Activé" : "Enabled"}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={!multiPcSync}
-                data-active={!multiPcSync ? "true" : "false"}
-                onClick={() => toggleMultiPcSync(false)}
-              >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
-              </button>
-            </div>
+            {multiPcSync && (
+              <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+                <button
+                  type="button"
+                  className="settings-pane__button"
+                  onClick={handleForceMultiPcSync}
+                  disabled={syncingMultiPc}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                    color: "var(--text-0, #fff)",
+                    border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                  }}
+                >
+                  {syncingMultiPc
+                    ? (locale === "fr" ? "Synchronisation en cours..." : "Syncing...")
+                    : (locale === "fr" ? "Synchroniser maintenant" : "Sync Now")}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Recherche Sémantique Vectorielle (BETA) */}
