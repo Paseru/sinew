@@ -4102,8 +4102,8 @@ function QuotaInlinePanel({ quota, compact, showLabel = true }: { quota: QuotaIn
       style={{
         marginTop: "12px",
         padding: "10px",
-        background: "var(--bg-1)",
-        border: "1px solid var(--border-3, var(--line-1))",
+        background: "rgba(0, 0, 0, 0.15)",
+        border: "1px solid rgba(255, 255, 255, 0.04)",
         borderRadius: "6px",
         display: "flex",
         flexDirection: "column",

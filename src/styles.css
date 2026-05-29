@@ -4045,17 +4045,37 @@ textarea {
   justify-content: space-between;
   gap: 18px;
   padding: 18px;
-  border: 1px solid var(--line-1);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--r-med);
-  background: var(--bg-1);
+  background: rgba(20, 21, 24, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.settings-pane__provider-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(20, 21, 24, 0.55);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .settings-pane__provider-card--compact {
   padding: 10px 12px;
   gap: 8px;
-  border: 1px solid var(--line-1);
-  background: var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(20, 21, 24, 0.35);
   border-radius: var(--r-med);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.settings-pane__provider-card--compact:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(20, 21, 24, 0.45);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 }
 
 .settings-pane__provider-card--compact .settings-pane__provider-main {
@@ -7010,11 +7030,21 @@ textarea {
   mask-image: none;
 }
 .thinking-block__content {
-  max-height: 150px;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border-left: 2.5px solid var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  color: var(--text-2);
+  background: rgba(8, 9, 11, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-left: 2.5px solid var(--accent);
+  border-radius: var(--r-med);
+  max-height: 200px;
   overflow: auto;
-  padding: 8px 12px;
-  scroll-behavior: auto;
-  scrollbar-width: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .thinking-block__content::-webkit-scrollbar { width: 0; height: 0; }
 .thinking-block__fade[data-streaming="true"] .thinking-block__content {
@@ -7041,15 +7071,21 @@ textarea {
 /* Tool card */
 .tool-card {
   border-radius: var(--r-card);
-  background: var(--bg-2);
+  background: rgba(20, 21, 24, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: hidden;
-  transition: background 150ms ease;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .tool-card:not(:has(.tool-card__body)):hover {
-  background: var(--bg-3);
+  background: rgba(20, 21, 24, 0.55);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
 }
 .tool-card:has(.tool-card__body) .tool-card__head:hover {
-  background: var(--bg-3);
+  background: rgba(255, 255, 255, 0.03);
 }
 .tool-card__head {
   display: flex;
@@ -8169,9 +8205,19 @@ textarea {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--bg-2);
+  background: rgba(20, 21, 24, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--r-card);
-  transition: background 150ms ease;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.composer__box:focus-within {
+  background: rgba(24, 26, 31, 0.6);
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
 }
 
 .mention-popover {
@@ -9835,14 +9881,22 @@ textarea {
   right: 0;
   z-index: 25;
   display: flex;
-  background: var(--bg-1); /* Theme-aware background */
-  border-left: 3px solid var(--text-2); /* Clean, modern light gray border on the left */
-  border-bottom: 1px solid var(--line-strong);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  background: rgba(15, 16, 19, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-left: 3px solid var(--accent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   animation: slide-down 180ms cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   padding: 10px 14px;
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+.chat-sticky-question:hover {
+  background: rgba(20, 21, 24, 0.75);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
 }
 
 html[data-theme="light"] .chat-sticky-question {
