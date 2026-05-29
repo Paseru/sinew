@@ -1947,6 +1947,7 @@ function OptionsSection({
   const changeEditorFontSize = (size: number) => {
     try {
       localStorage.setItem("sinew.editor-font-size", size.toString());
+      document.documentElement.style.setProperty("--editor-font-size", `${size}px`);
     } catch {}
     setEditorFontSize(size);
     window.dispatchEvent(new CustomEvent("sinew:editor-font-size-changed", { detail: size }));
@@ -2075,6 +2076,14 @@ function OptionsSection({
     api.isMultiPcSyncEnabled().then((enabled) => {
       setMultiPcSync(enabled);
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sinew.editor-font-size");
+      const size = saved ? parseInt(saved, 10) : 12;
+      document.documentElement.style.setProperty("--editor-font-size", `${size}px`);
+    } catch {}
   }, []);
 
   const changePowerUserMaster = (value: "enabled" | "disabled" | "custom") => {
@@ -2477,6 +2486,38 @@ function OptionsSection({
             </div>
           </div>
 
+          {/* Synchronisation Multi-PC (OneDrive) */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
+                  : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={multiPcSync}
+                data-active={multiPcSync ? "true" : "false"}
+                onClick={() => toggleMultiPcSync(true)}
+              >
+                {locale === "fr" ? "Activé" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!multiPcSync}
+                data-active={!multiPcSync ? "true" : "false"}
+                onClick={() => toggleMultiPcSync(false)}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
+            </div>
+          </div>
+
           {/* Grille des 8 sous-cartes de comportements de l'agent */}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
             
@@ -2785,42 +2826,10 @@ function OptionsSection({
       <div className="options-category-group">
         <h3 className="options-category-title">
           <Icon icon="solar:settings-bold-duotone" className="options-category-icon" style={{ color: "#3b82f6" }} />
-          {locale === "fr" ? "Système & Synchronisation" : "System & Synchronization"}
+          {locale === "fr" ? "Diagnostics & Outils Système" : "Diagnostics & System Tools"}
         </h3>
         <div className="options-category-grid">
           
-          {/* Synchronisation Multi-PC */}
-          <div className="settings-pane__about-card">
-            <div className="settings-pane__about-card-copy">
-              <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
-              <p>
-                {locale === "fr"
-                  ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
-                  : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
-              </p>
-            </div>
-            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={multiPcSync}
-                data-active={multiPcSync ? "true" : "false"}
-                onClick={() => toggleMultiPcSync(true)}
-              >
-                {locale === "fr" ? "Activé" : "Enabled"}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={!multiPcSync}
-                data-active={!multiPcSync ? "true" : "false"}
-                onClick={() => toggleMultiPcSync(false)}
-              >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
-              </button>
-            </div>
-          </div>
-
           {/* Diagnostic Système SOTA */}
           <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
             <div className="settings-pane__about-card-header-flex">
@@ -3904,7 +3913,7 @@ function ProviderCard({
 
   const isQuotaExhausted = connected && quota && quota.kind !== "unavailable" && (
     quota.kind === "credits"
-      ? (quota.creditRemaining !== null && quota.creditRemaining <= 0)
+      ? (quota.creditRemaining != null && quota.creditRemaining <= 0)
       : (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).some(
           (w) => w.remainingPercent !== null && w.remainingPercent <= 0
         )
@@ -4374,7 +4383,7 @@ function OpenRouterProviderCard({
 
   const isQuotaExhausted = connected && quota && quota.kind !== "unavailable" && (
     quota.kind === "credits"
-      ? (quota.creditRemaining !== null && quota.creditRemaining <= 0)
+      ? (quota.creditRemaining != null && quota.creditRemaining <= 0)
       : (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).some(
           (w) => w.remainingPercent !== null && w.remainingPercent <= 0
         )
@@ -7159,7 +7168,7 @@ function DeepSeekProviderCard({
 
   const isQuotaExhausted = connected && quota && quota.kind !== "unavailable" && (
     quota.kind === "credits"
-      ? (quota.creditRemaining !== null && quota.creditRemaining <= 0)
+      ? (quota.creditRemaining != null && quota.creditRemaining <= 0)
       : (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).some(
           (w) => w.remainingPercent !== null && w.remainingPercent <= 0
         )

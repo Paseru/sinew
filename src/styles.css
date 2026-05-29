@@ -81,11 +81,11 @@
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo,
                Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  --fs-base: 13px;
-  --fs-sm: 12px;
-  --fs-xs: 11px;
-  --fs-mono: 12px;
-  --fs-mono-sm: 11.5px;
+  --fs-base: calc(var(--editor-font-size, 12px) + 1px);
+  --fs-sm: var(--editor-font-size, 12px);
+  --fs-xs: calc(var(--editor-font-size, 12px) - 1px);
+  --fs-mono: var(--editor-font-size, 12px);
+  --fs-mono-sm: calc(var(--editor-font-size, 12px) - 0.5px);
 
   /* radius — rounder than before, matches designsystem 10/14/20 */
   --r-micro: 3px;
@@ -10481,3 +10481,25 @@ html[data-theme="ai"] .img-preview-lightbox__btn-close:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* S'assurer que tous les textes de conversation et messages du chat changent de taille en temps réel */
+.msg__body, 
+.msg__body p, 
+.msg__body li, 
+.msg__body span, 
+.msg__body div,
+.user-text,
+.chat-body,
+.todo-strip__message-text,
+.team-message__text,
+.question-tool__prompt,
+.questionnaire__custom-input,
+.question-tool__option-label {
+  font-size: var(--chat-font-size, var(--fs-sm)) !important;
+}
+
+/* Rendre les titres du chat relatifs à la taille de police choisie */
+.md h1 { font-size: 1.25em !important; }
+.md h2 { font-size: 1.15em !important; }
+.md h3 { font-size: 1.05em !important; }
+.md h4 { font-size: 0.95em !important; }

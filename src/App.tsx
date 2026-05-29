@@ -27,9 +27,14 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("sinew.chat-font-size");
-      const size = saved ? parseInt(saved, 10) : 13;
-      document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
+      const savedChat = localStorage.getItem("sinew.chat-font-size");
+      const sizeChat = savedChat ? parseInt(savedChat, 10) : 13;
+      document.documentElement.style.setProperty("--chat-font-size", `${sizeChat}px`);
+    } catch {}
+    try {
+      const savedEditor = localStorage.getItem("sinew.editor-font-size");
+      const sizeEditor = savedEditor ? parseInt(savedEditor, 10) : 12;
+      document.documentElement.style.setProperty("--editor-font-size", `${sizeEditor}px`);
     } catch {}
     try {
       const savedTheme = localStorage.getItem("sinew.theme") || "dark";
