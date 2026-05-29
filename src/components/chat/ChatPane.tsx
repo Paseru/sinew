@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { Icon } from "@iconify/react";
+import { createPortal } from "react-dom";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { AIThinkingBlock } from "./AIThinkingBlock";
@@ -3224,7 +3225,7 @@ export function ChatPane({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {previewImage && (
+      {previewImage && createPortal(
         <div
           className="img-preview-lightbox"
           onClick={() => setPreviewImage(null)}
@@ -3311,7 +3312,8 @@ export function ChatPane({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {dropActive && !viewingSubAgent && (
         <div className="chat-drop-overlay" aria-hidden>

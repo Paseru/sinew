@@ -59,6 +59,11 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 15:46:39
+
+### Fixed
+- **Correction et universalisation des lightboxes (`src/components/chat/ChatPane.tsx`, `src/components/chat/MermaidDiagram.tsx`, `src/styles.css`)** : Passage des zooms d'image et de diagrammes Mermaid sous forme de Portails React (`createPortal`) attachés à `document.body`. Cela corrige définitivement le problème de rognage/masquage causé par les empilements CSS (stacking contexts) des colonnes du chat et des options. De plus, augmentation de la priorité d'affichage (`z-index: 99999`) et intégration des styles sombres néon haut de gamme pour les schémas en mode IA afin qu'ils s'affichent magnifiquement dans tous les thèmes.
+
 ## [Unreleased] - 2026-05-29 15:52:23
 
 ### Added

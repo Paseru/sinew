@@ -1,4 +1,5 @@
 import { Icon } from "@iconify/react";
+import { createPortal } from "react-dom";
 import {
   memo,
   useCallback,
@@ -286,7 +287,7 @@ function MermaidLightbox({ svg, onClose }: LightboxProps) {
 
   const stop = (event: ReactMouseEvent) => event.stopPropagation();
 
-  return (
+  return createPortal(
     <div
       className="mermaid-zoom"
       role="dialog"
@@ -331,6 +332,7 @@ function MermaidLightbox({ svg, onClose }: LightboxProps) {
       <div className="mermaid-zoom__hint" onClick={stop}>
         Scroll to zoom · drag to pan · Esc to close
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
