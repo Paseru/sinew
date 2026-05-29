@@ -489,12 +489,6 @@ fn sync_onedrive_db_on_startup() {
             return;
         }
 
-        let local_db = PathBuf::from(localappdata)
-            .join("hyrak")
-            .join("sinew")
-            .join("data")
-            .join("desktop-state.sqlite3");
-
         // 2. OneDrive path
         let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
             std::env::var("USERPROFILE")
@@ -504,7 +498,39 @@ fn sync_onedrive_db_on_startup() {
         if onedrive.is_empty() {
             return;
         }
-        let onedrive_db = PathBuf::from(onedrive)
+
+        // Sync global learning files from OneDrive if present
+        let global_errors_local = PathBuf::from(&localappdata)
+            .join("Sinew")
+            .join("errors_raw.json");
+        let global_rules_local = PathBuf::from(&localappdata)
+            .join("Sinew")
+            .join("instructions_consolidated.md");
+
+        let onedrive_dir = PathBuf::from(&onedrive).join("Documents").join("Sinew");
+        let global_errors_onedrive = onedrive_dir.join("errors_raw.json");
+        let global_rules_onedrive = onedrive_dir.join("instructions_consolidated.md");
+
+        if global_errors_onedrive.exists() {
+            if let Some(parent) = global_errors_local.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::copy(&global_errors_onedrive, &global_errors_local);
+        }
+        if global_rules_onedrive.exists() {
+            if let Some(parent) = global_rules_local.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let _ = fs::copy(&global_rules_onedrive, &global_rules_local);
+        }
+
+        let local_db = PathBuf::from(&localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("desktop-state.sqlite3");
+
+        let onedrive_db = PathBuf::from(&onedrive)
             .join("Documents")
             .join("Sinew")
             .join("desktop-state.sqlite3");
@@ -562,7 +588,7 @@ pub(crate) fn backup_onedrive_db_on_exit() {
             return;
         }
 
-        let local_db = PathBuf::from(localappdata)
+        let local_db = PathBuf::from(&localappdata)
             .join("hyrak")
             .join("sinew")
             .join("data")
@@ -590,6 +616,24 @@ pub(crate) fn backup_onedrive_db_on_exit() {
                 }
             } else {
                 let _ = fs::copy(&local_db, &onedrive_db);
+            }
+
+            // Sync global learning files to OneDrive on exit
+            let global_errors_local = PathBuf::from(&localappdata)
+                .join("Sinew")
+                .join("errors_raw.json");
+            let global_rules_local = PathBuf::from(&localappdata)
+                .join("Sinew")
+                .join("instructions_consolidated.md");
+
+            let global_errors_onedrive = onedrive_db_dir.join("errors_raw.json");
+            let global_rules_onedrive = onedrive_db_dir.join("instructions_consolidated.md");
+
+            if global_errors_local.exists() {
+                let _ = fs::copy(&global_errors_local, &global_errors_onedrive);
+            }
+            if global_rules_local.exists() {
+                let _ = fs::copy(&global_rules_local, &global_rules_onedrive);
             }
         }
 

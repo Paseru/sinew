@@ -59,6 +59,11 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:15:36
+
+### Added
+- **Synchronisation OneDrive du Système d'Apprentissage (`src-tauri/src/lib.rs`)** : Ajout de la synchronisation bidirectionnelle automatique des fichiers d'apprentissage globaux (`errors_raw.json` et `instructions_consolidated.md`) via OneDrive. Lorsque l'option de synchronisation Multi-PC est active, ces fichiers sont fusionnés et sauvegardés sur OneDrive à la fermeture de l'application, et restaurés au démarrage sur vos autres ordinateurs.
+
 ## [Unreleased] - 2026-05-29 16:06:04
 
 ### Fixed
