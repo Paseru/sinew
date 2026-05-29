@@ -479,6 +479,21 @@ const server = http.createServer((req, res) => {
     pathname = pathname.slice(0, -1);
   }
 
+  const origin = req.headers.origin;
+  if (origin) {
+    const isSafe = origin.startsWith('chrome-extension://') ||
+                   origin.startsWith('tauri://') ||
+                   origin.startsWith('http://localhost:') ||
+                   origin.startsWith('https://localhost:');
+    if (!isSafe) {
+      console.error(`🧬 [Proxy] HTTP request rejected: Unsafe origin ${origin}`);
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(403);
+      res.end(JSON.stringify({ error: "Forbidden: Unsafe origin" }));
+      return;
+    }
+  }
+
   const clientToken = parsedUrl.query.token || req.headers['x-sinew-token'];
   const isProtectedPath = pathname.startsWith('/api/') || pathname.startsWith('/json') || pathname.startsWith('/devtools/');
   if (isProtectedPath && clientToken !== BRIDGE_SECRET) {
@@ -2274,6 +2289,19 @@ wss.on('connection', (ws, req) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
   const clientToken = parsedUrl.query.token;
+
+  const origin = req.headers.origin;
+  if (origin) {
+    const isSafe = origin.startsWith('chrome-extension://') ||
+                   origin.startsWith('tauri://') ||
+                   origin.startsWith('http://localhost:') ||
+                   origin.startsWith('https://localhost:');
+    if (!isSafe) {
+      console.error(`🧬 [Proxy] WebSocket connection rejected: Unsafe origin ${origin}`);
+      ws.close(4002, "Forbidden: Unsafe origin");
+      return;
+    }
+  }
 
   if (clientToken !== BRIDGE_SECRET) {
     console.error(`🧬 [Proxy] WebSocket connection rejected: Unauthorized token for ${pathname}`);
