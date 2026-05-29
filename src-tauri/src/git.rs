@@ -1474,6 +1474,18 @@ fn same_path(left: &Path, right: &Path) -> bool {
     canonical_or_original(left) == canonical_or_original(right)
 }
 
+pub(crate) fn get_git_remote_url(workspace_path: &Path) -> Option<String> {
+    if let Ok(output) = git_checked(workspace_path, &["config", "--get", "remote.origin.url"]) {
+        if output.success {
+            let url = output.stdout.trim().to_string();
+            if !url.is_empty() {
+                return Some(url);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
