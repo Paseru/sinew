@@ -65,10 +65,13 @@ impl ReadTool {
     }
 
     pub async fn run(&self, input: Value) -> ToolRunResult {
-        match self.read(input) {
+        let tool = self.clone();
+        tokio::task::spawn_blocking(move || match tool.read(input) {
             Ok(output) => output,
             Err(err) => ToolRunResult::err(err.to_string(), Vec::new()),
-        }
+        })
+        .await
+        .unwrap_or_else(|err| ToolRunResult::err(format!("blocking thread panicked: {err}"), Vec::new()))
     }
 
     pub fn normalize_path(&self, raw: &str) -> Result<String> {

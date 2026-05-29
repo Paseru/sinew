@@ -83,6 +83,7 @@ export function EditorPane({
   onSettingsClose,
 }: Props) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<any>(null);
   const searchDecorationsRef =
     useRef<Monaco.editor.IEditorDecorationsCollection | null>(null);
   const onSaveRef = useRef(onSave);
@@ -131,16 +132,47 @@ export function EditorPane({
     }
   });
 
+  const [systemPrefersLight, setSystemPrefersLight] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.matchMedia("(prefers-color-scheme: light)").matches;
+    } catch {
+      return false;
+    }
+  });
+
   const getMonacoTheme = (themeName: string) => {
     if (themeName === "light") return "sinew-light";
     if (themeName === "ai") return "sinew-ai";
     if (themeName === "system") {
-      if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: light)").matches) {
-        return "sinew-light";
-      }
+      return systemPrefersLight ? "sinew-light" : "sinew-cool";
     }
     return "sinew-cool";
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+      const handler = (e: MediaQueryListEvent) => {
+        setSystemPrefersLight(e.matches);
+      };
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    } catch (e) {
+      console.error("Failed to setup prefers-color-scheme listener:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (monacoRef.current) {
+      try {
+        monacoRef.current.editor.setTheme(getMonacoTheme(appTheme));
+      } catch (e) {
+        console.error("Failed to update editor theme:", e);
+      }
+    }
+  }, [appTheme, systemPrefersLight]);
 
   useEffect(() => {
     const handleFont = (event: Event) => {
