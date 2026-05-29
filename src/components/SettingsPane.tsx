@@ -6879,6 +6879,7 @@ function settingsToJson(settings: McpSettings): string {
     if (server.cwd) entry.cwd = server.cwd;
     if (server.env.length) entry.env = envToObject(server.env);
     if (!server.enabled) entry.disabled = true;
+    if (server.autoLoad) entry.autoLoad = true;
     mcpServers[server.name || server.id] = entry;
   }
 
