@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 17:20:18
+
+### Added
+- **Outil d'inspection de base de données (`check_db.py`)** : Ajout d'un script Python pour inspecter et comparer de façon robuste les bases de données SQLite locale et OneDrive de Sinew, mis à jour avec le comptage des messages basé sur `conversation_id`.
+
 ## [Unreleased] - 2026-05-29 17:17:36
 
 ### Changed
