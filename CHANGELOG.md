@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:45:15
+
+### Added
+- **Identifiant de projet universel par fichier caché (`crates/sinew-app/src/store.rs`, `src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`, `src-tauri/Cargo.toml`)** : Introduction d'un identifiant unique de projet (UUID) généré automatiquement dans le fichier caché `.sinew/project_id.txt` à la racine de chaque projet (qu'il utilise Git ou non). Ce fichier se synchronise automatiquement via OneDrive/Git, ce qui permet à l'application de lier instantanément vos conversations d'un ordinateur à l'autre sans action manuelle, même si les chemins ou les noms des dossiers diffèrent.
+
 ## [Unreleased] - 2026-05-29 23:42:04
 
 ### Added

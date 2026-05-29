@@ -25,9 +25,10 @@ pub(super) async fn estimate_context(
     let effective_system_prompt =
         with_display_mode_prompt(&effective_system_prompt, input.display_mode);
 
+    let project_id = crate::workspace::resolve_project_id_str(&workspace_id);
     let mut conversation = state
         .store
-        .load_conversation(&workspace_id, &input.conversation_id)
+        .load_conversation(&project_id, &input.conversation_id)
         .map_err(error_to_string)?
         .ok_or_else(|| "conversation not found".to_string())?;
 

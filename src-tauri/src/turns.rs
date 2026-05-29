@@ -43,9 +43,10 @@ pub(super) async fn send_message(
         return Err("a turn is already running for this conversation".into());
     }
 
+    let project_id = crate::workspace::resolve_project_id_str(&workspace_id);
     let mut conversation = state
         .store
-        .load_conversation(&workspace_id, &input.conversation_id)
+        .load_conversation(&project_id, &input.conversation_id)
         .map_err(error_to_string)?
         .ok_or_else(|| "conversation not found".to_string())?;
 
@@ -490,9 +491,10 @@ pub(super) async fn compact_conversation(
         return Err("a turn is already running for this conversation".into());
     }
 
+    let project_id = crate::workspace::resolve_project_id_str(&workspace_id);
     let mut conversation = state
         .store
-        .load_conversation(&workspace_id, &input.conversation_id)
+        .load_conversation(&project_id, &input.conversation_id)
         .map_err(error_to_string)?
         .ok_or_else(|| "conversation not found".to_string())?;
     if conversation.history.is_empty() {

@@ -26,10 +26,11 @@ pub(super) async fn open_workspace(
         crate::run_git_auto_pull(&input.workspace_path);
     }
 
+    let project_id = get_or_create_project_id(&workspace_root)?;
     let git_remote_url = crate::git::get_git_remote_url(&workspace_root);
     let mut bootstrap = state
         .store
-        .bootstrap_workspace(&workspace_root, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(&workspace_root, &project_id, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
         .map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let active_conversation_id = state.active_turn_details.lock().ok().and_then(|active| {
@@ -40,11 +41,12 @@ pub(super) async fn open_workspace(
             .map(|record| record.conversation_id.clone())
     });
     if let Some(conversation_id) = active_conversation_id {
-        if let Some(active_conversation) = state
+        if let Some(mut active_conversation) = state
             .store
-            .load_conversation(&workspace_id, &conversation_id)
+            .load_conversation(&project_id, &conversation_id)
             .map_err(error_to_string)?
         {
+            active_conversation.workspace_id = workspace_id;
             bootstrap.active_conversation = active_conversation;
         }
     }
@@ -633,4 +635,31 @@ pub async fn set_semantic_embeddings_enabled(enabled: bool) -> std::result::Resu
         std::env::remove_var("SINEW_INDEX_EMBEDDINGS");
     }
     Ok(())
+}
+
+pub(crate) fn get_or_create_project_id(workspace_root: &std::path::Path) -> std::result::Result<String, String> {
+    let sinew_dir = workspace_root.join(".sinew");
+    let id_file = sinew_dir.join("project_id.txt");
+
+    if id_file.exists() {
+        if let Ok(id) = std::fs::read_to_string(&id_file) {
+            let trimmed = id.trim();
+            if !trimmed.is_empty() {
+                return Ok(trimmed.to_string());
+            }
+        }
+    }
+
+    // Generate a new UUID
+    let new_id = uuid::Uuid::new_v4().to_string();
+    let _ = std::fs::create_dir_all(&sinew_dir);
+    if let Err(e) = std::fs::write(&id_file, &new_id) {
+        return Err(format!("Impossible d'écrire l'identifiant du projet : {}", e));
+    }
+    Ok(new_id)
+}
+
+pub(crate) fn resolve_project_id_str(workspace_path_str: &str) -> String {
+    let path = std::path::Path::new(workspace_path_str);
+    get_or_create_project_id(path).unwrap_or_else(|_| workspace_path_str.to_string())
 }

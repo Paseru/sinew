@@ -7,10 +7,15 @@ pub(super) async fn list_conversations(
 ) -> std::result::Result<Vec<ConversationSummary>, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
+    let absolute_path = workspace_root.display().to_string();
+    let lowercase_path = absolute_path.to_lowercase();
+    let _ = state.store.migrate_conversations(&absolute_path, &project_id);
+    let _ = state.store.migrate_conversations(&lowercase_path, &project_id);
     let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
-        .list_conversations(&workspace_root.display().to_string(), git_remote_url.as_deref())
+        .list_conversations(&project_id, git_remote_url.as_deref())
         .map_err(error_to_string)
 }
 
@@ -21,11 +26,12 @@ pub(super) async fn create_conversation(
 ) -> std::result::Result<WorkspaceBootstrap, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
         .create_conversation(
-            &workspace_root.display().to_string(),
+            &project_id,
             git_remote_url.as_deref(),
             &state.default_model,
             &state.system_prompt,
@@ -38,7 +44,7 @@ pub(super) async fn create_conversation(
 
     state
         .store
-        .bootstrap_workspace(&workspace_root, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(&workspace_root, &project_id, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
         .map_err(error_to_string)
 }
 
@@ -49,13 +55,18 @@ pub(super) async fn load_conversation(
 ) -> std::result::Result<SavedConversation, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     state
         .store
         .load_conversation(
-            &workspace_root.display().to_string(),
+            &project_id,
             &input.conversation_id,
         )
         .map_err(error_to_string)?
+        .map(|mut conv| {
+            conv.workspace_id = input.workspace_path.clone();
+            conv
+        })
         .ok_or_else(|| "conversation not found".to_string())
 }
 
@@ -70,10 +81,10 @@ pub(super) async fn rename_conversation(
     if title.is_empty() {
         return Err("title cannot be empty".into());
     }
-    let workspace_id = workspace_root.display().to_string();
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     state
         .store
-        .rename_conversation(&workspace_id, &input.conversation_id, title)
+        .rename_conversation(&project_id, &input.conversation_id, title)
         .map_err(error_to_string)?;
 
     std::thread::spawn(|| {
@@ -83,7 +94,7 @@ pub(super) async fn rename_conversation(
     let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
-        .list_conversations(&workspace_id, git_remote_url.as_deref())
+        .list_conversations(&project_id, git_remote_url.as_deref())
         .map_err(error_to_string)
 }
 
@@ -94,7 +105,7 @@ pub(super) async fn delete_conversation(
 ) -> std::result::Result<WorkspaceBootstrap, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    let workspace_id = workspace_root.display().to_string();
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     {
         let active_turns = state.active_turns.lock().await;
         if active_turns.contains_key(&input.conversation_id) {
@@ -103,7 +114,7 @@ pub(super) async fn delete_conversation(
     }
     state
         .store
-        .delete_conversation(&workspace_id, &input.conversation_id)
+        .delete_conversation(&project_id, &input.conversation_id)
         .map_err(error_to_string)?;
 
     std::thread::spawn(|| {
@@ -113,7 +124,7 @@ pub(super) async fn delete_conversation(
     let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
-        .bootstrap_workspace(&workspace_root, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(&workspace_root, &project_id, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
         .map_err(error_to_string)
 }
 
@@ -124,7 +135,7 @@ pub(super) async fn set_conversation_mode(
 ) -> std::result::Result<SavedConversation, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    let workspace_id = workspace_root.display().to_string();
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     {
         let active_turns = state.active_turns.lock().await;
         if active_turns.contains_key(&input.conversation_id) {
@@ -134,7 +145,7 @@ pub(super) async fn set_conversation_mode(
 
     let mut conversation = state
         .store
-        .load_conversation(&workspace_id, &input.conversation_id)
+        .load_conversation(&project_id, &input.conversation_id)
         .map_err(error_to_string)?
         .ok_or_else(|| "conversation not found".to_string())?;
 
@@ -160,6 +171,7 @@ pub(super) async fn set_conversation_mode(
         .store
         .save_conversation(&conversation)
         .map_err(error_to_string)?;
+    conversation.workspace_id = input.workspace_path.clone(); // Keep absolute path for frontend
     Ok(conversation)
 }
 
@@ -170,7 +182,7 @@ pub(super) async fn set_conversation_model_preference(
 ) -> std::result::Result<ModeModelSettings, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    let workspace_id = workspace_root.display().to_string();
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     let conversation_id = input.conversation_id;
     let mode = AgentMode::from(input.mode);
 
@@ -183,7 +195,7 @@ pub(super) async fn set_conversation_model_preference(
 
     let mut conversation = state
         .store
-        .load_conversation(&workspace_id, &conversation_id)
+        .load_conversation(&project_id, &conversation_id)
         .map_err(error_to_string)?
         .ok_or_else(|| "conversation not found".to_string())?;
     let selected = model_with_optional_selection(

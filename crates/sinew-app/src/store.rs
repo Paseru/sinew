@@ -603,21 +603,24 @@ impl AppStore {
     pub fn bootstrap_workspace(
         &self,
         workspace_root: &Path,
+        project_id: &str,
         git_remote_url: Option<&str>,
         default_model: &ModelRef,
         default_system: &str,
     ) -> Result<WorkspaceBootstrap> {
-        let workspace_id = workspace_root.display().to_string();
         let mode_model_settings = self.load_mode_model_settings(default_model)?;
-        let mut conversations = self.list_conversations(&workspace_id, git_remote_url)?;
-        let active_conversation = if let Some(first) = conversations.first() {
-            self.load_conversation(&workspace_id, &first.id)?
+        let mut conversations = self.list_conversations(project_id, git_remote_url)?;
+        let mut active_conversation = if let Some(first) = conversations.first() {
+            self.load_conversation(project_id, &first.id)?
                 .context("conversation listed in index but missing from store")?
         } else {
-            let created = self.create_conversation(&workspace_id, git_remote_url, default_model, default_system)?;
-            conversations = self.list_conversations(&workspace_id, git_remote_url)?;
+            let created = self.create_conversation(project_id, git_remote_url, default_model, default_system)?;
+            conversations = self.list_conversations(project_id, git_remote_url)?;
             created
         };
+
+        // Keep absolute path for frontend to be happy
+        active_conversation.workspace_id = workspace_root.display().to_string();
 
         Ok(WorkspaceBootstrap {
             workspace: workspace_info(workspace_root),
@@ -904,6 +907,8 @@ impl AppStore {
             &conversation.history,
         );
 
+        let db_workspace_id = self.resolve_db_workspace_id(&conversation.workspace_id);
+
         tx.execute(
             "update conversations
              set title = ?2, model_json = ?3, system_prompt = ?4, updated_at_ms = ?5, todo_list_json = ?6, plan_workflow_json = ?7, mode_model_settings_json = ?8, goal_workflow_json = ?9, title_initialized = ?10, git_remote_url = ?11, workspace_id = ?12
@@ -920,7 +925,7 @@ impl AppStore {
                 goal_workflow_json,
                 title_state.initialized as i64,
                 &conversation.git_remote_url,
-                &conversation.workspace_id,
+                &db_workspace_id,
             ],
         )
         .context("unable to update conversation")?;
@@ -973,6 +978,8 @@ impl AppStore {
             &conversation.history,
         );
 
+        let db_workspace_id = self.resolve_db_workspace_id(&conversation.workspace_id);
+
         tx.execute(
             "update conversations
              set title = ?2, model_json = ?3, system_prompt = ?4, updated_at_ms = ?5, todo_list_json = ?6, plan_workflow_json = ?7, mode_model_settings_json = ?8, goal_workflow_json = ?9, title_initialized = ?10, git_remote_url = ?11, workspace_id = ?12
@@ -989,7 +996,7 @@ impl AppStore {
                 goal_workflow_json,
                 title_state.initialized as i64,
                 &conversation.git_remote_url,
-                &conversation.workspace_id,
+                &db_workspace_id,
             ],
         )
         .context("unable to update conversation")?;
@@ -1513,6 +1520,22 @@ impl AppStore {
         conn.pragma_update(None, "user_version", 11)
             .context("unable to set sqlite schema version")?;
         Ok(())
+    }
+
+    fn resolve_db_workspace_id(&self, workspace_id: &str) -> String {
+        if workspace_id.contains('/') || workspace_id.contains('\\') {
+            let path = std::path::Path::new(workspace_id);
+            let id_file = path.join(".sinew").join("project_id.txt");
+            if id_file.exists() {
+                if let Ok(id) = std::fs::read_to_string(&id_file) {
+                    let trimmed = id.trim();
+                    if !trimmed.is_empty() {
+                        return trimmed.to_string();
+                    }
+                }
+            }
+        }
+        workspace_id.to_string()
     }
 
     fn connection(&self) -> Result<Connection> {

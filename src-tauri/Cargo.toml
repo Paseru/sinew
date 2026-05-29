@@ -27,6 +27,7 @@ sinew-cursor = { workspace = true }
 sinew-index = { workspace = true }
 directories = { workspace = true }
 rusqlite = { workspace = true }
+uuid = { workspace = true }
 
 anyhow = { workspace = true }
 base64 = { workspace = true }
