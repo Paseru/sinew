@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:20:51
+
+### Changed
+- **Correction de la synchronisation Git Multi-PC (`src-tauri/src/lib.rs`)** : Suppression du préfixe UNC `\\?\` des chemins locaux de l'espace de travail avant de définir le répertoire de travail (`current_dir`) pour les commandes Git (`git status`, `git pull`, `git commit`, `git push`). Cela résout l'erreur `CMD ne prend pas les chemins UNC comme répertoires en cours` (code d'erreur 128) et rétablit la synchronisation automatique transparente entre les différents ordinateurs.
+
 ## [Unreleased] - 2026-05-29 23:20:17
 
 ### Changed
