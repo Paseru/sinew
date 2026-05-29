@@ -5182,6 +5182,7 @@ dependencies = [
  "directories",
  "fastembed",
  "notify",
+ "rayon",
  "regex",
  "rusqlite",
  "serde",

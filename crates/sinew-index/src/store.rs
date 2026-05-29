@@ -1,9 +1,38 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    ffi::OsString,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection};
 
 use crate::chunk::FileChunk;
+
+#[derive(Debug, Clone)]
+pub struct FileSignature {
+    pub content_hash: String,
+    pub mtime_ms: i64,
+    pub size_bytes: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct IndexFileMetadata {
+    pub path: String,
+    pub content_hash: String,
+    pub mtime_ms: i64,
+    pub size_bytes: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct IndexFileData {
+    pub path: String,
+    pub content_hash: String,
+    pub mtime_ms: i64,
+    pub size_bytes: i64,
+    pub chunks: Vec<FileChunk>,
+}
 
 pub struct IndexStore {
     path: PathBuf,
@@ -12,6 +41,7 @@ pub struct IndexStore {
 impl IndexStore {
     pub fn open(workspace_root: &Path) -> Result<Self> {
         let path = index_db_path(workspace_root)?;
+        migrate_legacy_index_db(workspace_root, &path)?;
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .with_context(|| format!("unable to create index dir {}", parent.display()))?;
@@ -24,11 +54,15 @@ impl IndexStore {
     pub(crate) fn connection(&self) -> Result<Connection> {
         let conn =
             Connection::open(&self.path).context("unable to open codebase index database")?;
+        let _ = conn.busy_timeout(Duration::from_secs(10));
         let _ = conn.execute_batch(
             "PRAGMA journal_mode = WAL;
              PRAGMA synchronous = NORMAL;
-             PRAGMA cache_size = -2000;
-             PRAGMA temp_store = MEMORY;",
+             PRAGMA cache_size = -262144;
+             PRAGMA mmap_size = 536870912;
+             PRAGMA temp_store = MEMORY;
+             PRAGMA cache_spill = FALSE;
+             PRAGMA busy_timeout = 10000;",
         );
         Ok(conn)
     }
@@ -41,6 +75,7 @@ impl IndexStore {
                 path TEXT PRIMARY KEY,
                 content_hash TEXT NOT NULL,
                 mtime_ms INTEGER NOT NULL,
+                size_bytes INTEGER NOT NULL DEFAULT 0,
                 indexed_at_ms INTEGER NOT NULL
             );
             CREATE TABLE IF NOT EXISTS chunks (
@@ -74,18 +109,34 @@ impl IndexStore {
             );
             ",
         )?;
+        let _ = conn.execute(
+            "ALTER TABLE files ADD COLUMN size_bytes INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
         let _ = conn.execute("ALTER TABLE chunks ADD COLUMN embedding BLOB", []);
         Ok(())
     }
 
-    pub fn file_hash(&self, path: &str) -> Result<Option<String>> {
+    pub fn file_signatures(&self) -> Result<HashMap<String, FileSignature>> {
         let conn = self.connection()?;
-        let mut stmt = conn.prepare("SELECT content_hash FROM files WHERE path = ?1")?;
-        let mut rows = stmt.query(params![path])?;
-        if let Some(row) = rows.next()? {
-            return Ok(Some(row.get(0)?));
+        let mut stmt = conn.prepare("SELECT path, content_hash, mtime_ms, size_bytes FROM files")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                FileSignature {
+                    content_hash: row.get(1)?,
+                    mtime_ms: row.get(2)?,
+                    size_bytes: row.get(3)?,
+                },
+            ))
+        })?;
+
+        let mut signatures = HashMap::new();
+        for row in rows {
+            let (path, signature) = row?;
+            signatures.insert(path, signature);
         }
-        Ok(None)
+        Ok(signatures)
     }
 
     pub fn list_files(&self) -> Result<Vec<String>> {
@@ -96,49 +147,99 @@ impl IndexStore {
             .context("unable to list indexed files")
     }
 
-    pub fn replace_file(
-        &self,
-        path: &str,
-        content_hash: &str,
-        mtime_ms: i64,
-        chunks: &[FileChunk],
-    ) -> Result<()> {
+    pub fn replace_files(&self, files: &[IndexFileData]) -> Result<()> {
+        if files.is_empty() {
+            return Ok(());
+        }
+
         let conn = self.connection()?;
         let tx = conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM chunks WHERE path = ?1", params![path])?;
-        tx.execute("DELETE FROM files WHERE path = ?1", params![path])?;
         let now = now_ms();
-        tx.execute(
-            "INSERT INTO files (path, content_hash, mtime_ms, indexed_at_ms) VALUES (?1, ?2, ?3, ?4)",
-            params![path, content_hash, mtime_ms, now],
-        )?;
-        for chunk in chunks {
-            let embedding = chunk
-                .embedding
-                .as_ref()
-                .map(|values| crate::embeddings::vector_to_bytes(values));
-            tx.execute(
-                "INSERT INTO chunks (path, start_line, end_line, content, embedding) VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![
-                    path,
-                    chunk.start_line,
-                    chunk.end_line,
-                    chunk.content,
-                    embedding
-                ],
+
+        {
+            let mut delete_chunks = tx.prepare("DELETE FROM chunks WHERE path = ?1")?;
+            let mut delete_file = tx.prepare("DELETE FROM files WHERE path = ?1")?;
+            let mut insert_file = tx.prepare(
+                "INSERT INTO files (path, content_hash, mtime_ms, size_bytes, indexed_at_ms) VALUES (?1, ?2, ?3, ?4, ?5)",
             )?;
+            let mut insert_chunk = tx.prepare(
+                "INSERT INTO chunks (path, start_line, end_line, content, embedding) VALUES (?1, ?2, ?3, ?4, ?5)",
+            )?;
+
+            for file in files {
+                delete_chunks.execute(params![file.path.as_str()])?;
+                delete_file.execute(params![file.path.as_str()])?;
+                insert_file.execute(params![
+                    file.path.as_str(),
+                    file.content_hash.as_str(),
+                    file.mtime_ms,
+                    file.size_bytes,
+                    now
+                ])?;
+                for chunk in &file.chunks {
+                    let embedding = chunk
+                        .embedding
+                        .as_ref()
+                        .map(|values| crate::embeddings::vector_to_bytes(values));
+                    insert_chunk.execute(params![
+                        file.path.as_str(),
+                        chunk.start_line,
+                        chunk.end_line,
+                        chunk.content.as_str(),
+                        embedding
+                    ])?;
+                }
+            }
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn touch_file_metadata_batch(&self, files: &[IndexFileMetadata]) -> Result<()> {
+        if files.is_empty() {
+            return Ok(());
+        }
+
+        let conn = self.connection()?;
+        let tx = conn.unchecked_transaction()?;
+        let now = now_ms();
+        {
+            let mut update = tx.prepare(
+                "UPDATE files SET content_hash = ?2, mtime_ms = ?3, size_bytes = ?4, indexed_at_ms = ?5 WHERE path = ?1",
+            )?;
+            for file in files {
+                update.execute(params![
+                    file.path.as_str(),
+                    file.content_hash.as_str(),
+                    file.mtime_ms,
+                    file.size_bytes,
+                    now
+                ])?;
+            }
         }
         tx.commit()?;
         Ok(())
     }
 
-    pub fn remove_file(&self, path: &str) -> Result<()> {
+    pub fn remove_files(&self, paths: &[String]) -> Result<usize> {
+        if paths.is_empty() {
+            return Ok(0);
+        }
+
         let conn = self.connection()?;
         let tx = conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM chunks WHERE path = ?1", params![path])?;
-        tx.execute("DELETE FROM files WHERE path = ?1", params![path])?;
+        let mut removed = 0usize;
+        {
+            let mut delete_chunks = tx.prepare("DELETE FROM chunks WHERE path = ?1")?;
+            let mut delete_file = tx.prepare("DELETE FROM files WHERE path = ?1")?;
+            for path in paths {
+                delete_chunks.execute(params![path.as_str()])?;
+                removed += delete_file.execute(params![path.as_str()])?;
+            }
+        }
         tx.commit()?;
-        Ok(())
+        Ok(removed)
     }
 
     pub fn update_chunk_embedding(&self, chunk_id: i64, embedding: &[f32]) -> Result<()> {
@@ -195,14 +296,57 @@ impl IndexStore {
 }
 
 pub fn index_db_path(workspace_root: &Path) -> Result<PathBuf> {
-    let workspace_id = sha256_hex(workspace_root.display().to_string().as_bytes());
     let dirs = directories::ProjectDirs::from("dev", "hyrak", "sinew")
         .context("unable to resolve Sinew data directory")?;
-    Ok(dirs
-        .data_dir()
-        .join("codebase-index")
-        .join(workspace_id)
-        .join("index.db"))
+    Ok(index_db_path_under(dirs.data_local_dir(), workspace_root))
+}
+
+fn legacy_index_db_path(workspace_root: &Path) -> Result<Option<PathBuf>> {
+    let dirs = directories::ProjectDirs::from("dev", "hyrak", "sinew")
+        .context("unable to resolve Sinew data directory")?;
+    if dirs.data_dir() == dirs.data_local_dir() {
+        return Ok(None);
+    }
+    Ok(Some(index_db_path_under(dirs.data_dir(), workspace_root)))
+}
+
+fn index_db_path_under(base: &Path, workspace_root: &Path) -> PathBuf {
+    let workspace_id = sha256_hex(workspace_root.display().to_string().as_bytes());
+    base.join("codebase-index").join(workspace_id).join("index.db")
+}
+
+fn migrate_legacy_index_db(workspace_root: &Path, local_path: &Path) -> Result<()> {
+    let Some(legacy_path) = legacy_index_db_path(workspace_root)? else {
+        return Ok(());
+    };
+    if !legacy_path.exists() || local_path.exists() {
+        return Ok(());
+    }
+    if let Some(parent) = local_path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("unable to create local index dir {}", parent.display()))?;
+    }
+
+    for suffix in ["", "-wal", "-shm"] {
+        let source = sqlite_sibling_path(&legacy_path, suffix);
+        if !source.exists() {
+            continue;
+        }
+        let target = sqlite_sibling_path(local_path, suffix);
+        if !target.exists() {
+            let _ = std::fs::copy(source, target);
+        }
+    }
+    Ok(())
+}
+
+fn sqlite_sibling_path(path: &Path, suffix: &str) -> PathBuf {
+    if suffix.is_empty() {
+        return path.to_path_buf();
+    }
+    let mut value = OsString::from(path.as_os_str());
+    value.push(suffix);
+    PathBuf::from(value)
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {

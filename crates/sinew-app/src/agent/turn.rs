@@ -276,7 +276,32 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             )
         };
 
-        if auto_compact {
+        let current_provider_name = provider.name();
+        let last_assistant_provider = history
+            .iter()
+            .rev()
+            .filter(|msg| msg.role == Role::Assistant)
+            .flat_map(|msg| &msg.parts)
+            .find_map(|part| {
+                let meta = match part {
+                    Part::Text { meta, .. } => meta,
+                    Part::Thinking { meta, .. } => meta,
+                    Part::ToolCall { meta, .. } => meta,
+                    _ => &None,
+                };
+                meta.as_ref()
+                    .and_then(|m| m.get("provider"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            });
+
+        let provider_changed = if let Some(prev) = last_assistant_provider {
+            prev != current_provider_name
+        } else {
+            false
+        };
+
+        if auto_compact || provider_changed {
             match maybe_auto_compact_history(
                 &provider,
                 &model,
@@ -291,6 +316,9 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 event_scope.as_ref(),
                 &mut cmd_rx,
                 &mut auto_compaction_attempts,
+                &workspace_root,
+                &read_lints,
+                &todo_list,
             )
             .await
             {
@@ -390,6 +418,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                             event_scope.as_ref(),
                             &mut cmd_rx,
                             &mut auto_compaction_attempts,
+                            &workspace_root,
+                            &read_lints,
+                            &todo_list,
+                            None,
                         )
                         .await
                         {
@@ -622,6 +654,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         event_scope.as_ref(),
                         &mut cmd_rx,
                         &mut auto_compaction_attempts,
+                        &workspace_root,
+                        &read_lints,
+                        &todo_list,
+                        None,
                     )
                     .await
                     {

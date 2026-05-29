@@ -1,4 +1,12 @@
 # Changelog
+## [Unreleased] - 2026-05-30 00:48:09
+
+### Improved
+- **Indexation locale parallele (`crates/sinew-index/src/indexer.rs`)** : preparation des fichiers en parallele sur les coeurs disponibles, saut immediat des fichiers inchanges grace a leur date et leur taille, et limitation des relectures inutiles pour mieux exploiter le CPU et le SSD.
+- **Base d'index mieux adaptee au SSD et a la RAM (`crates/sinew-index/src/store.rs`)** : ecritures groupees dans SQLite, cache RAM elargi, lecture memoire SSD, delai d'attente renforce et stockage prioritaire dans le dossier local rapide de la machine avec migration douce de l'ancien cache.
+- **Repartition CPU ajoutee (`Cargo.toml`, `crates/sinew-index/Cargo.toml`, `Cargo.lock`)** : ajout de Rayon pour distribuer le travail d'indexation sur plusieurs coeurs.
+- **Nettoyage de validation (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : retrait des fonctions devenues inutiles et des importations superflues pour garder les tests sans avertissements.
+- **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter les optimisations de performance demandees.
 
 ## [Unreleased] - 2026-05-30 00:54:00
 

@@ -1,17 +1,22 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     io::Read,
     path::{Component, Path, PathBuf},
     time::SystemTime,
 };
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
-use crate::{chunk::chunk_file_content, store::IndexStore, SKIP_DIRS, TEXT_EXTENSIONS};
+use crate::{
+    chunk::chunk_file_content,
+    store::{FileSignature, IndexFileData, IndexFileMetadata, IndexStore},
+    SKIP_DIRS, TEXT_EXTENSIONS,
+};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct IndexStats {
@@ -21,45 +26,41 @@ pub struct IndexStats {
     pub embeddings_backfilled: usize,
 }
 
+#[derive(Debug, Clone)]
+struct FileCandidate {
+    path: PathBuf,
+    relative: String,
+    mtime_ms: i64,
+    size_bytes: i64,
+}
+
+#[derive(Debug)]
+enum PreparedIndexChange {
+    Unchanged,
+    Touch(IndexFileMetadata),
+    Replace(IndexFileData),
+    Remove(String),
+}
+
 pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
     let store = IndexStore::open(workspace_root)?;
     let mut stats = IndexStats::default();
-    let mut seen = HashSet::<String>::new();
+    let signatures = store.file_signatures()?;
+    let candidates = collect_workspace_candidates(workspace_root, workspace_root, None);
+    let seen = candidates
+        .iter()
+        .map(|candidate| candidate.relative.clone())
+        .collect::<HashSet<_>>();
 
-    for entry in WalkDir::new(workspace_root)
-        .follow_links(false)
+    let changes = prepare_index_changes(&candidates, &signatures)?;
+    apply_prepared_changes(&store, changes, &mut stats)?;
+
+    let stale_paths = store
+        .list_files()?
         .into_iter()
-        .filter_entry(|entry| !should_skip_entry(entry.path(), workspace_root))
-    {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(_) => continue,
-        };
-        if !entry.file_type().is_file() {
-            continue;
-        }
-        let path = entry.path();
-        if !is_text_candidate(path) {
-            continue;
-        }
-        let relative = normalize_relative_path(workspace_root, path);
-        seen.insert(relative);
-
-        if index_one_file(
-            &store,
-            workspace_root,
-            path,
-            crate::embeddings::is_available(),
-        )? {
-            stats.files_updated += 1;
-        }
-    }
-
-    for path in store.list_files()? {
-        if !seen.contains(&path) {
-            store.remove_file(&path)?;
-        }
-    }
+        .filter(|path| !seen.contains(path))
+        .collect::<Vec<_>>();
+    store.remove_files(&stale_paths)?;
 
     let (files, chunks) = store.stats()?;
     stats.files_indexed = files;
@@ -77,6 +78,8 @@ pub fn sync_changed_paths(
     let store = IndexStore::open(workspace_root)?;
     let mut stats = IndexStats::default();
     let mut unique = HashSet::<String>::new();
+    let mut candidates = Vec::<FileCandidate>::new();
+    let mut removals = HashSet::<String>::new();
 
     for path in paths {
         let path = normalize_absolute_path(&path);
@@ -85,27 +88,14 @@ pub fn sync_changed_paths(
         }
 
         if path.is_dir() {
-            let mut indexed = 0usize;
-            for entry in WalkDir::new(&path)
-                .follow_links(false)
-                .into_iter()
-                .filter_entry(|entry| !should_skip_entry(entry.path(), workspace_root))
-            {
-                if indexed >= MAX_DIRECTORY_FILES_PER_EVENT {
-                    break;
+            for candidate in collect_workspace_candidates(
+                workspace_root,
+                &path,
+                Some(MAX_DIRECTORY_FILES_PER_EVENT),
+            ) {
+                if unique.insert(candidate.relative.clone()) {
+                    candidates.push(candidate);
                 }
-                let Ok(entry) = entry else { continue };
-                if !entry.file_type().is_file() || !is_text_candidate(entry.path()) {
-                    continue;
-                }
-                let relative = normalize_relative_path(workspace_root, entry.path());
-                if !unique.insert(relative) {
-                    continue;
-                }
-                if index_one_file(&store, workspace_root, entry.path(), false)? {
-                    stats.files_updated += 1;
-                }
-                indexed += 1;
             }
             continue;
         }
@@ -116,14 +106,20 @@ pub fn sync_changed_paths(
         }
 
         if path.exists() && is_text_candidate(&path) {
-            if index_one_file(&store, workspace_root, &path, false)? {
-                stats.files_updated += 1;
+            if let Some(candidate) = candidate_from_path(workspace_root, &path) {
+                candidates.push(candidate);
             }
         } else {
-            store.remove_file(&relative)?;
-            stats.files_updated += 1;
+            removals.insert(relative);
         }
     }
+
+    let signatures = store.file_signatures()?;
+    let changes = prepare_index_changes(&candidates, &signatures)?;
+    apply_prepared_changes(&store, changes, &mut stats)?;
+
+    let removals = removals.into_iter().collect::<Vec<_>>();
+    stats.files_updated += store.remove_files(&removals)?;
 
     let (files, chunks) = store.stats()?;
     stats.files_indexed = files;
@@ -140,6 +136,135 @@ pub fn index_stats(workspace_root: &Path) -> Result<IndexStats> {
         files_updated: 0,
         embeddings_backfilled: 0,
     })
+}
+
+fn collect_workspace_candidates(
+    workspace_root: &Path,
+    scan_root: &Path,
+    max_files: Option<usize>,
+) -> Vec<FileCandidate> {
+    let mut candidates = Vec::new();
+
+    for entry in WalkDir::new(scan_root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|entry| !should_skip_entry(entry.path(), workspace_root))
+    {
+        if max_files.is_some_and(|max| candidates.len() >= max) {
+            break;
+        }
+
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        if !entry.file_type().is_file() || !is_text_candidate(entry.path()) {
+            continue;
+        }
+        if let Some(candidate) = candidate_from_path(workspace_root, entry.path()) {
+            candidates.push(candidate);
+        }
+    }
+
+    candidates
+}
+
+fn candidate_from_path(workspace_root: &Path, path: &Path) -> Option<FileCandidate> {
+    let metadata = fs::metadata(path).ok()?;
+    if !metadata.is_file() {
+        return None;
+    }
+    let mtime_ms = metadata
+        .modified()
+        .ok()
+        .and_then(system_time_to_ms)
+        .unwrap_or(0);
+    Some(FileCandidate {
+        path: path.to_path_buf(),
+        relative: normalize_relative_path(workspace_root, path),
+        mtime_ms,
+        size_bytes: metadata.len().min(i64::MAX as u64) as i64,
+    })
+}
+
+fn prepare_index_changes(
+    candidates: &[FileCandidate],
+    signatures: &HashMap<String, FileSignature>,
+) -> Result<Vec<PreparedIndexChange>> {
+    let prepared = candidates
+        .par_iter()
+        .map(|candidate| prepare_index_change(candidate, signatures.get(&candidate.relative)))
+        .collect::<Vec<_>>();
+    prepared.into_iter().collect()
+}
+
+fn prepare_index_change(
+    candidate: &FileCandidate,
+    existing: Option<&FileSignature>,
+) -> Result<PreparedIndexChange> {
+    if existing
+        .map(|signature| {
+            signature.mtime_ms == candidate.mtime_ms && signature.size_bytes == candidate.size_bytes
+        })
+        .unwrap_or(false)
+    {
+        return Ok(PreparedIndexChange::Unchanged);
+    }
+
+    if candidate.size_bytes > MAX_TEXT_FILE_BYTES as i64 {
+        return Ok(PreparedIndexChange::Remove(candidate.relative.clone()));
+    }
+
+    let content = match read_text_file_limited(&candidate.path) {
+        Ok(content) => content,
+        Err(_) => return Ok(PreparedIndexChange::Remove(candidate.relative.clone())),
+    };
+    let hash = sha256_hex(content.as_bytes());
+
+    if existing
+        .map(|signature| signature.content_hash.as_str() == hash.as_str())
+        .unwrap_or(false)
+    {
+        return Ok(PreparedIndexChange::Touch(IndexFileMetadata {
+            path: candidate.relative.clone(),
+            content_hash: hash,
+            mtime_ms: candidate.mtime_ms,
+            size_bytes: candidate.size_bytes,
+        }));
+    }
+
+    Ok(PreparedIndexChange::Replace(IndexFileData {
+        path: candidate.relative.clone(),
+        content_hash: hash,
+        mtime_ms: candidate.mtime_ms,
+        size_bytes: candidate.size_bytes,
+        chunks: chunk_file_content(&content, &candidate.relative),
+    }))
+}
+
+fn apply_prepared_changes(
+    store: &IndexStore,
+    changes: Vec<PreparedIndexChange>,
+    stats: &mut IndexStats,
+) -> Result<()> {
+    let mut replacements = Vec::new();
+    let mut metadata_updates = Vec::new();
+    let mut removals = Vec::new();
+
+    for change in changes {
+        match change {
+            PreparedIndexChange::Unchanged => {}
+            PreparedIndexChange::Touch(metadata) => metadata_updates.push(metadata),
+            PreparedIndexChange::Replace(file) => replacements.push(file),
+            PreparedIndexChange::Remove(path) => removals.push(path),
+        }
+    }
+
+    store.replace_files(&replacements)?;
+    stats.files_updated += replacements.len();
+    store.touch_file_metadata_batch(&metadata_updates)?;
+    stats.files_updated += store.remove_files(&removals)?;
+    Ok(())
 }
 
 fn should_skip_entry(path: &Path, workspace_root: &Path) -> bool {
@@ -168,49 +293,6 @@ fn is_under_workspace(workspace_root: &Path, path: &Path) -> bool {
     path.starts_with(&root) || path.starts_with(workspace_root)
 }
 
-fn index_one_file(
-    store: &IndexStore,
-    workspace_root: &Path,
-    path: &Path,
-    include_embeddings: bool,
-) -> Result<bool> {
-    if !is_text_candidate(path) {
-        return Ok(false);
-    }
-    let relative = normalize_relative_path(workspace_root, path);
-    let metadata = fs::metadata(path).with_context(|| format!("stat {}", path.display()))?;
-    let mtime_ms = metadata
-        .modified()
-        .ok()
-        .and_then(system_time_to_ms)
-        .unwrap_or(0);
-    let content = match read_text_file_limited(path) {
-        Ok(content) => content,
-        Err(_) => {
-            store.remove_file(&relative)?;
-            return Ok(true);
-        }
-    };
-    let hash = sha256_hex(content.as_bytes());
-    if store.file_hash(&relative)?.as_deref() == Some(hash.as_str()) {
-        return Ok(false);
-    }
-    let mut chunks = chunk_file_content(&content, &relative);
-    if include_embeddings && crate::embeddings::is_available() {
-        let texts = chunks
-            .iter()
-            .map(|chunk| chunk.content.clone())
-            .collect::<Vec<_>>();
-        if let Ok(vectors) = crate::embeddings::embed_passages(&texts) {
-            for (chunk, vector) in chunks.iter_mut().zip(vectors) {
-                chunk.embedding = Some(vector);
-            }
-        }
-    }
-    store.replace_file(&relative, &hash, mtime_ms, &chunks)?;
-    Ok(true)
-}
-
 fn is_text_candidate(path: &Path) -> bool {
     let Some(ext) = path.extension().and_then(|value| value.to_str()) else {
         return false;
@@ -218,14 +300,15 @@ fn is_text_candidate(path: &Path) -> bool {
     TEXT_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str())
 }
 
+const MAX_TEXT_FILE_BYTES: u64 = 512 * 1024;
+
 fn read_text_file_limited(path: &Path) -> Result<String> {
-    const MAX_BYTES: u64 = 512 * 1024;
     let metadata = fs::metadata(path)?;
-    if metadata.len() > MAX_BYTES {
+    if metadata.len() > MAX_TEXT_FILE_BYTES {
         anyhow::bail!("file too large");
     }
     let mut file = fs::File::open(path)?;
-    let mut buffer = Vec::new();
+    let mut buffer = Vec::with_capacity(metadata.len().min(MAX_TEXT_FILE_BYTES) as usize);
     file.read_to_end(&mut buffer)?;
     if buffer.iter().take(8192).any(|byte| *byte == 0) {
         anyhow::bail!("binary file");
@@ -245,7 +328,7 @@ fn system_time_to_ms(value: SystemTime) -> Option<i64> {
         .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
 }
 
-const EMBEDDING_BACKFILL_BATCH: usize = 32;
+const EMBEDDING_BACKFILL_BATCH: usize = 64;
 
 fn backfill_missing_embeddings(store: &IndexStore) -> Result<usize> {
     if !crate::embeddings::is_available() {
@@ -296,6 +379,22 @@ mod tests {
         let stats = sync_changed_paths(&dir, vec![file]).unwrap();
         assert_eq!(stats.files_indexed, 0);
         assert_eq!(stats.files_updated, 1);
+
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn unchanged_files_are_skipped_after_initial_index() {
+        let dir = std::env::temp_dir().join(format!("sinew-index-skip-test-{}", unique_id()));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("alpha.rs"), "pub fn stable_name() {}\n").unwrap();
+
+        let first = ensure_workspace_index(&dir).unwrap();
+        assert_eq!(first.files_updated, 1);
+
+        let second = ensure_workspace_index(&dir).unwrap();
+        assert_eq!(second.files_indexed, 1);
+        assert_eq!(second.files_updated, 0);
 
         let _ = fs::remove_dir_all(dir);
     }

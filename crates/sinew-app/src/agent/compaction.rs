@@ -8,7 +8,7 @@ use sinew_core::{
     AppError, ChatMessage, ModelRef, Part, Provider, ProviderRequest, Role, ServiceTier, ToolDescriptor,
 };
 
-use crate::compact_conversation_history;
+use crate::{compact_conversation_history, ReadLintsTool, TodoListState};
 
 use super::{
     cancel::EngineCommand,
@@ -34,6 +34,9 @@ pub(super) async fn maybe_auto_compact_history(
     event_scope: Option<&AgentEventScope>,
     cmd_rx: &mut mpsc::UnboundedReceiver<EngineCommand>,
     auto_compaction_attempts: &mut usize,
+    workspace_root: &std::path::Path,
+    read_lints: &Arc<ReadLintsTool>,
+    todo_list: &TodoListState,
 ) -> std::result::Result<bool, String> {
     if !can_auto_compact_history(history, *auto_compaction_attempts) {
         return Ok(false);
@@ -71,8 +74,37 @@ pub(super) async fn maybe_auto_compact_history(
         false
     };
 
-    let should_compact = if provider_changed {
-        true
+    let (should_compact, user_instruction) = if provider_changed {
+        let mut custom_instruction = String::from("We are transitioning from another AI model to you. Here is the structural state of the workspace to help you resume the task cleanly:\n\n");
+
+        if let Ok(git_output) = run_git_status(workspace_root) {
+            let trimmed = git_output.trim();
+            if !trimmed.is_empty() {
+                custom_instruction.push_str("### 📂 Modified Files (Git Status):\n");
+                custom_instruction.push_str(trimmed);
+                custom_instruction.push_str("\n\n");
+            }
+        }
+
+        if let Some(todo_str) = todo_list.system_block() {
+            let trimmed = todo_str.trim();
+            if !trimmed.is_empty() {
+                custom_instruction.push_str("### 📋 Relay of Checklist/Tasks:\n");
+                custom_instruction.push_str(trimmed);
+                custom_instruction.push_str("\n\n");
+            }
+        }
+
+        if let Ok(lints_output) = run_linter_checks(read_lints).await {
+            let trimmed = lints_output.trim();
+            if !trimmed.is_empty() {
+                custom_instruction.push_str("### 🛡️ Code Health (Linter diagnostics):\n");
+                custom_instruction.push_str(trimmed);
+                custom_instruction.push_str("\n\n");
+            }
+        }
+
+        (true, Some(custom_instruction))
     } else {
         let request_history =
             history_with_current_tool_result_ids(history, current_turn_tool_result_ids);
@@ -87,14 +119,15 @@ pub(super) async fn maybe_auto_compact_history(
             request = request.with_service_tier(service_tier);
         }
 
-        match provider.estimate_tokens(request).await {
+        let threshold_exceeded = match provider.estimate_tokens(request).await {
             Ok(estimate) => {
                 let threshold = auto_compact_threshold(caps.context_window, caps.max_output_tokens);
                 estimate.input_tokens >= threshold
             }
             Err(err) if is_context_length_error(&err) => true,
             Err(_) => false,
-        }
+        };
+        (threshold_exceeded, None)
     };
 
     if !should_compact {
@@ -114,6 +147,10 @@ pub(super) async fn maybe_auto_compact_history(
         event_scope,
         cmd_rx,
         auto_compaction_attempts,
+        workspace_root,
+        read_lints,
+        todo_list,
+        user_instruction,
     )
     .await?;
     Ok(true)
@@ -132,6 +169,10 @@ pub(super) async fn run_auto_compaction(
     event_scope: Option<&AgentEventScope>,
     cmd_rx: &mut mpsc::UnboundedReceiver<EngineCommand>,
     auto_compaction_attempts: &mut usize,
+    _workspace_root: &std::path::Path,
+    _read_lints: &Arc<ReadLintsTool>,
+    _todo_list: &TodoListState,
+    user_instruction: Option<String>,
 ) -> std::result::Result<(), String> {
     if !can_auto_compact_history(history, *auto_compaction_attempts) {
         return Err("context is still too large, but there is no new content to compact".into());
@@ -181,7 +222,7 @@ pub(super) async fn run_auto_compaction(
         cache_key.cloned(),
         *cache_stable_message_count,
         service_tier,
-        None,
+        user_instruction,
         cmd_rx,
         Some(summary_delta_tx),
     )
@@ -311,5 +352,33 @@ fn part_meta(part: &Part) -> Option<&Value> {
         | Part::Thinking { meta, .. }
         | Part::ToolCall { meta, .. }
         | Part::ToolResult { meta, .. } => meta.as_ref(),
+    }
+}
+
+
+fn run_git_status(workspace_root: &std::path::Path) -> std::result::Result<String, String> {
+    use std::process::Command;
+    let mut cmd = Command::new("git");
+    cmd.arg("status").arg("--short");
+    cmd.current_dir(workspace_root);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    let output = cmd.output().map_err(|err| err.to_string())?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).into_owned())
+    }
+}
+
+async fn run_linter_checks(read_lints: &Arc<ReadLintsTool>) -> std::result::Result<String, String> {
+    let result = read_lints.run(serde_json::json!({})).await;
+    if result.is_error {
+        Err(result.content)
+    } else {
+        Ok(result.content)
     }
 }
