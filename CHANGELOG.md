@@ -59,6 +59,11 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:06:04
+
+### Fixed
+- **Correction de la visibilité de l'indicateur de contexte en mode IA (`src/styles.css`)** : Augmentation de la priorité d'empilement (z-index) de la zone de saisie (`.composer`) à 10 pour s'assurer que le volet volant affichant l'utilisation du contexte s'affiche par-dessus les messages du chat et la liste des tâches, évitant qu'il ne soit masqué ou flouté par les effets de transparence premium du mode IA.
+
 ## [Unreleased] - 2026-05-29 16:11:45
 
 ### Added

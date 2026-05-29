@@ -8396,7 +8396,7 @@ textarea {
   flex-direction: column;
   gap: 8px;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .chips {
