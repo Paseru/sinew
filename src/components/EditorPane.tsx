@@ -353,41 +353,41 @@ export function EditorPane({
       }
     });
 
-    // 3. sinew-ai (AI Neon Cyberpunk Theme)
+    // 3. sinew-ai (✨ AI Modern Glass Theme)
     monaco.editor.defineTheme("sinew-ai", {
       base: "vs-dark",
       inherit: true,
       rules: [
-        { token: "comment", foreground: "6d5a8c" },
-        { token: "keyword", foreground: "ff007f" },
-        { token: "string", foreground: "00ffff" },
-        { token: "number", foreground: "ffff00" },
-        { token: "type", foreground: "ffaa00" },
-        { token: "function", foreground: "a855f7" },
-        { token: "variable", foreground: "ffffff" },
-        { token: "constant", foreground: "ffff00" },
-        { token: "regexp", foreground: "00ffff" },
-        { token: "tag", foreground: "ff007f" },
-        { token: "attribute.name", foreground: "00ffff" },
+        { token: "comment", foreground: "636f88" },
+        { token: "keyword", foreground: "ab7cf6" }, // Elegant Gemini purple
+        { token: "string", foreground: "86efac" }, // Calm green
+        { token: "number", foreground: "9fc2ff" }, // Soft blue
+        { token: "type", foreground: "c4b5fd" },
+        { token: "function", foreground: "ab7cf6" },
+        { token: "variable", foreground: "e8e9ec" },
+        { token: "constant", foreground: "9fc2ff" },
+        { token: "regexp", foreground: "86efac" },
+        { token: "tag", foreground: "ab7cf6" },
+        { token: "attribute.name", foreground: "9fc2ff" },
       ],
       colors: {
-        "editor.background": "#050014",
-        "editor.foreground": "#ffffff",
-        "editor.lineHighlightBackground": "#150030",
-        "editorLineNumber.foreground": "#4d3080",
-        "editorLineNumber.activeForeground": "#00ffff",
-        "editorCursor.foreground": "#00ffff",
-        "editor.selectionBackground": "#ff007f55",
-        "editor.inactiveSelectionBackground": "#00ffff22",
-        "editorIndentGuide.background1": "#150030",
-        "editorIndentGuide.activeBackground1": "#26086f",
-        "editorGutter.background": "#050014",
-        "editorWidget.background": "#0a0024",
-        "editorWidget.border": "#ff007f",
-        "editorHoverWidget.background": "#0a0024",
-        "editorHoverWidget.border": "#ff007f",
-        "editorSuggestWidget.background": "#0a0024",
-        "editorSuggestWidget.border": "#ff007f",
+        "editor.background": "#0b0b0d", // Dark slate background matching Night base
+        "editor.foreground": "#e8e9ec",
+        "editor.lineHighlightBackground": "#141518",
+        "editorLineNumber.foreground": "#52555c",
+        "editorLineNumber.activeForeground": "#9b51e0",
+        "editorCursor.foreground": "#9b51e0",
+        "editor.selectionBackground": "#9b51e033",
+        "editor.inactiveSelectionBackground": "#9b51e015",
+        "editorIndentGuide.background1": "#181a1f",
+        "editorIndentGuide.activeBackground1": "#23252b",
+        "editorGutter.background": "#0b0b0d",
+        "editorWidget.background": "#0f1013",
+        "editorWidget.border": "#9b51e055",
+        "editorHoverWidget.background": "#0f1013",
+        "editorHoverWidget.border": "#9b51e055",
+        "editorSuggestWidget.background": "#0f1013",
+        "editorSuggestWidget.border": "#9b51e055",
       }
     });
     try {

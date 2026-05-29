@@ -288,6 +288,7 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Connect a secondary OpenAI ChatGPT account.": "Connectez un compte ChatGPT OpenAI secondaire.",
   "Connecting": "Connexion en cours",
   "Connected": "Connecté",
+  "Limit reached": "Limite atteinte",
   "Needs attention": "Attention requise",
   "Not connected": "Non connecté",
   "Add account": "Ajouter un compte",

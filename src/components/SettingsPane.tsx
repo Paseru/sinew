@@ -2284,11 +2284,11 @@ function OptionsSection({
                 data-active={theme === "ai" ? "true" : "false"}
                 onClick={() => changeTheme("ai")}
                 style={{
-                  border: theme === "ai" ? "1px solid #ff007f" : "none",
-                  color: theme === "ai" ? "#00ffff" : "var(--text-0)"
+                  border: theme === "ai" ? "1px solid var(--accent)" : "none",
+                  color: theme === "ai" ? "var(--accent-hi)" : "var(--text-0)"
                 }}
               >
-                {locale === "fr" ? "🤖 IA (Néon / Animé)" : "🤖 AI (Neon / Anim)"}
+                {locale === "fr" ? "✨ IA (Moderne / Verre)" : "✨ AI (Modern / Glass)"}
               </button>
             </div>
           </div>
@@ -3900,21 +3900,35 @@ function ProviderCard({
   const connected = Boolean(status?.connected);
   const connecting = state === "connecting";
   const error = state === "error" ? status?.error : null;
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+
+  const isQuotaExhausted = connected && quota && quota.kind !== "unavailable" && (
+    quota.kind === "credits"
+      ? (quota.creditRemaining !== null && quota.creditRemaining <= 0)
+      : (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).some(
+          (w) => w.remainingPercent !== null && w.remainingPercent <= 0
+        )
+  );
+
   const statusLabel = connecting
     ? "Connecting"
-    : connected
-      ? "Connected"
-      : state === "error"
-        ? "Needs attention"
-        : "Not connected";
+    : isQuotaExhausted
+      ? "Limit reached"
+      : connected
+        ? "Connected"
+        : state === "error"
+          ? "Needs attention"
+          : "Not connected";
+
   const statusTone = connecting
     ? "pending"
-    : connected
-      ? "ok"
-      : state === "error"
-        ? "error"
-        : "off";
-  const [quota, setQuota] = useState<QuotaInfo | null>(null);
+    : isQuotaExhausted
+      ? "error"
+      : connected
+        ? "ok"
+        : state === "error"
+          ? "error"
+          : "off";
 
   useEffect(() => {
     if (!connected || !providerId) {
@@ -4357,20 +4371,34 @@ function OpenRouterProviderCard({
 
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
+
+  const isQuotaExhausted = connected && quota && quota.kind !== "unavailable" && (
+    quota.kind === "credits"
+      ? (quota.creditRemaining !== null && quota.creditRemaining <= 0)
+      : (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).some(
+          (w) => w.remainingPercent !== null && w.remainingPercent <= 0
+        )
+  );
+
   const statusLabel = connecting
     ? "Connecting"
-    : connected
-      ? "Connected"
-      : state === "error"
-        ? "Needs attention"
-        : "Not connected";
+    : isQuotaExhausted
+      ? "Limit reached"
+      : connected
+        ? "Connected"
+        : state === "error"
+          ? "Needs attention"
+          : "Not connected";
+
   const statusTone = connecting
     ? "pending"
-    : connected
-      ? "ok"
-      : state === "error"
-        ? "error"
-        : "off";
+    : isQuotaExhausted
+      ? "error"
+      : connected
+        ? "ok"
+        : state === "error"
+          ? "error"
+          : "off";
   const modelIds = useMemo(() => new Set(models.map((model) => model.id)), [models]);
   const searchEnabled = connected && !validating;
 
@@ -7128,20 +7156,34 @@ function DeepSeekProviderCard({
 
   const connecting = state === "connecting";
   const error = validationError ?? (state === "error" ? displayStatus.error : null);
+
+  const isQuotaExhausted = connected && quota && quota.kind !== "unavailable" && (
+    quota.kind === "credits"
+      ? (quota.creditRemaining !== null && quota.creditRemaining <= 0)
+      : (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).some(
+          (w) => w.remainingPercent !== null && w.remainingPercent <= 0
+        )
+  );
+
   const statusLabel = connecting
     ? "Connecting"
-    : connected
-      ? "Connected"
-      : state === "error"
-        ? "Needs attention"
-        : "Not connected";
+    : isQuotaExhausted
+      ? "Limit reached"
+      : connected
+        ? "Connected"
+        : state === "error"
+          ? "Needs attention"
+          : "Not connected";
+
   const statusTone = connecting
     ? "pending"
-    : connected
-      ? "ok"
-      : state === "error"
-        ? "error"
-        : "off";
+    : isQuotaExhausted
+      ? "error"
+      : connected
+        ? "ok"
+        : state === "error"
+          ? "error"
+          : "off";
 
   useEffect(() => {
     const key = apiKey.trim();

@@ -281,119 +281,137 @@ html[data-theme="light"] {
   }
 }
 
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes spin-border {
+  0% {
+    --border-angle: 0deg;
+  }
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+@keyframes gemini-ambient {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 50% 150%;
+  }
+}
+
 html[data-theme="ai"] {
-  /* Surfaces */
-  --bg-canvas: #030008;
-  --bg-0: #050014;
-  --bg-1: #0a0024;
-  --bg-2: #0f0230;
-  --bg-3: #180447;
-  --bg-4: #26086f;
-  --bg-5: #380a9c;
-  --bg-hi: #0f0230;
+  /* Surfaces — based on Night mode but with ultra-refined deep slate glass foundation */
+  --bg-canvas: #090a0f;
+  --bg-0: #0b0b0d;
+  --bg-1: #0f1013;
+  --bg-2: #141518;
+  --bg-3: #181a1f;
+  --bg-4: #1e2025;
+  --bg-5: #23252b;
+  --bg-hi: #141518;
   --bg-pure: #000000;
 
-  /* Editor surface */
-  --editor-bg: #050014;
-  --editor-bg-2: #0a0024;
-  --editor-bg-3: #0f0230;
-  --editor-fg: #ffffff;
-  --editor-fg-dim: #c0a9f0;
+  /* Editor surface — slate matching */
+  --editor-bg: #08090b;
+  --editor-bg-2: #0f1013;
+  --editor-bg-3: #141518;
+  --editor-fg: #e8e9ec;
+  --editor-fg-dim: #9aa0a8;
 
-  /* Lines / borders */
-  --line-soft:   rgba(0, 255, 255, 0.08);
-  --line:        rgba(0, 255, 255, 0.15);
-  --line-strong: rgba(255, 0, 127, 0.4);
-  --line-bold:   rgba(255, 0, 127, 0.8);
-  --divider:     rgba(0, 255, 255, 0.15);
+  /* Lines / borders — extremely subtle glass borders */
+  --line-soft:   rgba(232, 233, 236, 0.03);
+  --line:        rgba(232, 233, 236, 0.06);
+  --line-strong: rgba(232, 233, 236, 0.12);
+  --line-bold:   rgba(232, 233, 236, 0.25);
+  --divider:     rgba(232, 233, 236, 0.06);
 
-  /* Text */
-  --text-0: #ffffff;
-  --text-1: #e0d5ff;
-  --text-2: #00ffff;
-  --text-3: #ff007f;
-  --text-muted: #8a6ab8;
-  --text-faint: #503080;
+  /* Text — cool light grey Geist-spec */
+  --text-0: #e8e9ec;
+  --text-1: #d2d4d9;
+  --text-2: #9aa0a8;
+  --text-3: #6b6f78;
+  --text-muted: #52555c;
+  --text-faint: #3a3d44;
 
-  /* Accents */
-  --accent:      #ff007f;          /* Neon pink */
-  --accent-hi:   #ff55aa;
-  --accent-dim:  #cc0066;
-  --accent-deep: #880044;
-  --accent-glow: rgba(255, 0, 127, 0.6);
-  --accent-soft: rgba(255, 0, 127, 0.2);
+  /* Accents — modern Gemini violet/indigo spectrum */
+  --accent:      #9b51e0;          /* Gemini purple */
+  --accent-hi:   #b07cf6;
+  --accent-dim:  #7c3aed;
+  --accent-deep: #5b21b6;
+  --accent-glow: rgba(155, 81, 224, 0.35);
+  --accent-soft: rgba(155, 81, 224, 0.1);
 
-  --accent-2:      #00ffff;        /* Neon cyan */
-  --accent-2-soft: rgba(0, 255, 255, 0.2);
+  --accent-2:      #00e5ff;        /* Gemini cyan/teal */
+  --accent-2-soft: rgba(0, 229, 255, 0.12);
 
-  --hover-shift: #ffffff;
+  --hover-shift: var(--text-0);
 
   /* timeline (tool) colors */
-  --tone-thinking: #ffff00;
-  --tone-grep:     #00ffff;
-  --tone-read:     #00ff00;
-  --tone-edit:     #ff007f;
+  --tone-thinking: #f5a683;
+  --tone-grep:     #86efac;
+  --tone-read:     #9fc2ff;
+  --tone-edit:     #9b51e0;
 
-  --diff-add-bg: rgba(0, 255, 255, 0.2);
-  --diff-add-fg: #00ffff;
-  --diff-rem-bg: rgba(255, 0, 127, 0.2);
-  --diff-rem-fg: #ff007f;
+  /* diff */
+  --diff-add-bg: rgba(34, 197, 94, 0.12);
+  --diff-add-fg: #86efac;
+  --diff-rem-bg: rgba(245, 115, 127, 0.12);
+  --diff-rem-fg: #f5a1ab;
 
   /* elements */
-  --line-1: rgba(0, 255, 255, 0.2);
-  --line-2: rgba(255, 0, 127, 0.3);
-  --line-3: rgba(0, 255, 255, 0.5);
+  --line-1: rgba(232, 233, 236, 0.06);
+  --line-2: rgba(232, 233, 236, 0.12);
+  --line-3: rgba(232, 233, 236, 0.2);
 
   /* Theme-specific Component Colors */
-  --composer-bg: rgba(5, 0, 20, 0.6);
-  --composer-bg-focus: rgba(10, 0, 36, 0.85);
-  --composer-border: rgba(0, 255, 255, 0.15);
-  --composer-border-focus: rgba(0, 255, 255, 0.6);
-  --composer-shadow: 0 4px 12px rgba(255, 0, 127, 0.2);
-  --composer-shadow-focus: 0 4px 20px rgba(255, 0, 127, 0.4);
+  --composer-bg: rgba(20, 21, 24, 0.55);
+  --composer-bg-focus: rgba(24, 26, 31, 0.75);
+  --composer-border: rgba(255, 255, 255, 0.06);
+  --composer-border-focus: rgba(155, 81, 224, 0.45);
+  --composer-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --composer-shadow-focus: 0 0 12px rgba(155, 81, 224, 0.25);
 
-  --card-bg: rgba(10, 0, 36, 0.4);
-  --card-bg-hover: rgba(10, 0, 36, 0.65);
-  --card-border: rgba(0, 255, 255, 0.15);
-  --card-border-hover: rgba(255, 0, 127, 0.4);
+  --card-bg: rgba(20, 21, 24, 0.4);
+  --card-bg-hover: rgba(20, 21, 24, 0.55);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --card-border-hover: rgba(255, 255, 255, 0.1);
 
-  --sticky-bg: rgba(10, 0, 36, 0.65);
-  --sticky-bg-hover: rgba(15, 2, 48, 0.75);
-  --sticky-border: rgba(0, 255, 255, 0.15);
-}
-
-/* Animations and glassmorphic layout overlays for the AI theme */
-@keyframes neonFlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes gridScroll {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(40px); }
+  --sticky-bg: rgba(15, 16, 19, 0.7);
+  --sticky-bg-hover: rgba(20, 21, 24, 0.85);
+  --sticky-border: rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="ai"] body {
-  background: linear-gradient(135deg, #030008 0%, #0c0024 35%, #050014 70%, #150030 100%);
-  background-size: 400% 400%;
-  animation: neonFlow 15s ease infinite;
+  background: #090a0f !important; /* Base slate background */
   position: relative;
+  overflow: hidden;
 }
 
 html[data-theme="ai"] body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
   background: 
-    linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: center;
-  z-index: 0;
-  animation: gridScroll 12s linear infinite;
-  opacity: 0.7;
+    radial-gradient(circle at 20% 30%, rgba(66, 133, 244, 0.15) 0%, rgba(66, 133, 244, 0) 50%),
+    radial-gradient(circle at 80% 20%, rgba(155, 81, 224, 0.18) 0%, rgba(155, 81, 224, 0) 50%),
+    radial-gradient(circle at 40% 80%, rgba(233, 72, 138, 0.12) 0%, rgba(233, 72, 138, 0) 50%),
+    radial-gradient(circle at 70% 70%, rgba(0, 229, 255, 0.12) 0%, rgba(0, 229, 255, 0) 50%) !important;
+  filter: blur(80px) !important;
+  z-index: 0 !important;
+  animation: gemini-ambient 25s ease infinite alternate !important;
+  opacity: 1 !important;
+  background-size: 200% 200% !important;
+  transform: translate3d(0, 0, 0);
 }
 
 /* Glassmorphism overlays on top of the moving space background */
@@ -406,20 +424,38 @@ html[data-theme="ai"] .workbench-center,
 html[data-theme="ai"] .sidebar-tab-pane,
 html[data-theme="ai"] .settings-pane,
 html[data-theme="ai"] .chat-footer {
-  background: rgba(10, 0, 36, 0.6) !important;
-  backdrop-filter: blur(20px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  background: rgba(15, 16, 19, 0.72) !important; /* Elegant slate glass matching Night base */
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
 }
 
 html[data-theme="ai"] .chat-col {
   background: transparent !important;
+  border: none !important;
+}
+
+html[data-theme="ai"] .chat-col::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  padding: 1.5px !important; /* Border thickness */
+  background: conic-gradient(from var(--border-angle), #4285f4 0%, #9b51e0 25%, #e9488a 50%, #00e5ff 75%, #4285f4 100%) !important;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask-composite: exclude !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  animation: spin-border 6s linear infinite !important;
+  filter: drop-shadow(0 0 8px rgba(155, 81, 224, 0.3));
 }
 
 html[data-theme="ai"] .todo-strip {
   background: rgba(15, 2, 48, 0.6) !important;
   backdrop-filter: blur(20px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
-  border: 1px solid rgba(0, 255, 255, 0.15) !important;
+  border: 1px solid rgba(155, 81, 224, 0.25) !important;
 }
 
 html[data-theme="ai"] .welcome-pane {
@@ -434,8 +470,8 @@ html[data-theme="ai"] button[aria-checked="true"] {
 }
 
 html[data-theme="ai"] .composer__box:focus-within {
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 5px rgba(0, 255, 255, 0.1);
-  border-color: #00ffff !important;
+  box-shadow: 0 0 15px rgba(155, 81, 224, 0.4), inset 0 0 5px rgba(155, 81, 224, 0.1) !important;
+  border-color: #ab7cf6 !important;
 }
 
 * {
