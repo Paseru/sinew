@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     collections::{HashMap, HashSet},
     fs,
     io::{Read, Write},
@@ -527,6 +527,7 @@ fn sync_auth_files(localappdata: &str, onedrive_db_dir: &std::path::Path, to_one
 fn consolidate_global_learning_once() {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         use std::path::PathBuf;
         use std::process::Command;
 
@@ -881,7 +882,7 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
         let bundled = resource_dir.join("agent-bridge");
         if bundled.join("run-stream.mjs").is_file() {
             set_bridge_directory(bundled.clone());
-            tracing::info!(path = %bundled.display(), "agent-bridge: bundle embarqué");
+            tracing::info!(path = %bundled.display(), "agent-bridge: bundle embarquÃ©");
         }
     }
     let _ = sinew_cursor::agent::bridge_directory();
@@ -891,9 +892,9 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
             if sinew_cursor::agent::transport::should_prepare_node_bridge_at_startup() {
                 match ensure_agent_bridge_ready().await {
                     Ok(dir) => {
-                        tracing::info!(path = %dir.display(), "agent-bridge: deps installées (SINEW_CURSOR_BRIDGE=node)")
+                        tracing::info!(path = %dir.display(), "agent-bridge: deps installÃ©es (SINEW_CURSOR_BRIDGE=node)")
                     }
-                    Err(err) => tracing::warn!(error = %err, "agent-bridge: install Node échouée"),
+                    Err(err) => tracing::warn!(error = %err, "agent-bridge: install Node Ã©chouÃ©e"),
                 }
             }
         });
@@ -932,7 +933,7 @@ pub fn run() {
         .with_writer(make_writer)
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // `debug` par défaut gonfle la RAM (ort/hyper/reqwest) et produit des logs énormes.
+                // `debug` par dÃ©faut gonfle la RAM (ort/hyper/reqwest) et produit des logs Ã©normes.
                 tracing_subscriber::EnvFilter::new(
                     "info,sinew_app=debug,sinew_cursor=info,ort=warn,hyper=warn,reqwest=warn,h2=warn",
                 )
@@ -1241,3 +1242,5 @@ pub fn run() {
             }
         })
 }
+
+
