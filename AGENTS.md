@@ -5,6 +5,8 @@
 ├── .gitignore
 ├── AGENTS.md
 ├── CHANGELOG.md
+├── errors_raw.json
+├── instructions_consolidated.md
 ├── Cargo.lock
 ├── Cargo.toml
 ├── index.html
@@ -432,3 +434,7 @@ Si vous êtes un agent d'IA qui intervient sur ce dépôt, **lisez très attenti
 
 ### 4. 🎛️ MCP & Settings Pane (autoLoad)
 * Lors de la modification de la sérialisation des serveurs MCP dans `src/components/SettingsPane.tsx` (`settingsToJson`), n'oubliez jamais de conserver la variable `autoLoad` en écrivant : `if (server.autoLoad) entry.autoLoad = true;`. Si vous l'omettez, l'interface utilisateur supprimera silencieusement le choix de l'utilisateur à chaque modification ou fermeture des options.
+
+### 5. 🗃️ Système d'Apprentissage Automatique Global
+* **MANDATOIRE** : L'agent doit impérativement lire et respecter les règles de `instructions_consolidated.md` à chaque début de session.
+* **MANDATOIRE** : À chaque erreur commise par l'agent et corrigée (ex: "Je me suis trompé et j'ai recommencé"), l'agent doit incrémenter le compteur de cette erreur dans `errors_raw.json`. Si le compteur d'une erreur atteint **3**, l'agent doit consolider et écrire cette règle dans `instructions_consolidated.md` pour qu'elle devienne une instruction prioritaire et permanente.
