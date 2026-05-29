@@ -742,7 +742,7 @@ fn to_contents(
                     if !supports_tools {
                         continue;
                     }
-                    let (name, raw_id) = split_prefixed_tool_id(tool_call_id);
+                    let (name, raw_id) = resolve_tool_result_name_and_id(tool_call_id, transcript);
                     let mut response = json!({
                         "output": content,
                     });
@@ -823,6 +823,23 @@ fn split_prefixed_tool_id(id: &str) -> (String, String) {
         }
     }
     ("generic_tool".into(), id.to_string())
+}
+
+fn resolve_tool_result_name_and_id(
+    tool_call_id: &str,
+    transcript: &[ChatMessage],
+) -> (String, String) {
+    for message in transcript {
+        for part in &message.parts {
+            if let Part::ToolCall { id, name, .. } = part {
+                if id == tool_call_id {
+                    let (_, raw_id) = split_tool_id(name, id);
+                    return (name.clone(), raw_id);
+                }
+            }
+        }
+    }
+    split_prefixed_tool_id(tool_call_id)
 }
 
 fn thought_signature(meta: &Option<Value>) -> Option<String> {

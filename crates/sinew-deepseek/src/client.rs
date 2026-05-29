@@ -142,7 +142,7 @@ impl Provider for DeepSeekProvider {
 
         let body = wire::ChatCompletionsRequest {
             model: &request.model.name,
-            messages: to_wire_messages(&request)?,
+            messages: to_wire_messages(&request, caps.supports_thinking)?,
             tools: if caps.supports_tools {
                 request.tools.iter().map(to_wire_tool).collect()
             } else {
@@ -195,7 +195,10 @@ fn to_wire_tool(tool: &ToolDescriptor) -> wire::WireTool<'_> {
     }
 }
 
-fn to_wire_messages<'a>(request: &'a ProviderRequest) -> Result<Vec<wire::WireMessage<'a>>> {
+fn to_wire_messages<'a>(
+    request: &'a ProviderRequest,
+    supports_thinking: bool,
+) -> Result<Vec<wire::WireMessage<'a>>> {
     let mut messages = Vec::new();
     if let Some(system) = request
         .system_prompt
@@ -211,7 +214,7 @@ fn to_wire_messages<'a>(request: &'a ProviderRequest) -> Result<Vec<wire::WireMe
     for message in &request.transcript {
         match message.role {
             Role::User => push_user_messages(message, &mut messages),
-            Role::Assistant => push_assistant_message(message, &mut messages),
+            Role::Assistant => push_assistant_message(message, &mut messages, supports_thinking),
         }
     }
 
@@ -258,7 +261,11 @@ fn flush_user_builder<'a>(builder: &mut ContentBuilder, messages: &mut Vec<wire:
     }
 }
 
-fn push_assistant_message<'a>(message: &'a ChatMessage, messages: &mut Vec<wire::WireMessage<'a>>) {
+fn push_assistant_message<'a>(
+    message: &'a ChatMessage,
+    messages: &mut Vec<wire::WireMessage<'a>>,
+    supports_thinking: bool,
+) {
     let mut text = String::new();
     let mut reasoning = String::new();
     let mut tool_calls = Vec::new();
@@ -289,7 +296,14 @@ fn push_assistant_message<'a>(message: &'a ChatMessage, messages: &mut Vec<wire:
     }
 
     let content = (!text.is_empty()).then_some(wire::WireContent::Text(text));
-    let reasoning_content = (!reasoning.is_empty()).then_some(reasoning);
+    let reasoning_content = if supports_thinking {
+        Some(reasoning)
+    } else if !reasoning.is_empty() {
+        Some(reasoning)
+    } else {
+        None
+    };
+
     messages.push(wire::WireMessage::Assistant {
         role: "assistant",
         content,

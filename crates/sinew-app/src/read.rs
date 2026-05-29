@@ -259,8 +259,11 @@ fn fingerprint_for_bytes(
 }
 
 fn relative_from_root(root: &Path, path: &Path) -> Result<String> {
+    let root = root
+        .canonicalize()
+        .unwrap_or_else(|_| root.to_path_buf());
     let relative = path
-        .strip_prefix(root)
+        .strip_prefix(&root)
         .with_context(|| format!("{} is outside the workspace", path.display()))?;
     Ok(relative
         .components()

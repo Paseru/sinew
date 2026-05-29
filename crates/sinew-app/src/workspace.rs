@@ -1268,7 +1268,10 @@ fn workspace_entry_from_path(root: &Path, path: &Path) -> Result<WorkspaceEntry>
 }
 
 fn ensure_within_root(root: &Path, path: &Path) -> Result<()> {
-    if path.starts_with(root) {
+    let canonical_root = root
+        .canonicalize()
+        .unwrap_or_else(|_| root.to_path_buf());
+    if path.starts_with(&canonical_root) {
         Ok(())
     } else {
         bail!("path escapes workspace")
