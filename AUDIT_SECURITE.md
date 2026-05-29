@@ -10,18 +10,18 @@ Le diagramme suivant montre comment un site web malveillant ou une faille visuel
 
 ```mermaid
 flowchart TD
-    subgraph Menaces Externes
+    subgraph "Menaces Externes"
         MalWeb[Site Web Malveillant] -- 1. Connexion non autorisée --> BridgePort[WebSocket Local : Port 29002]
         MalWeb2[XSS / Dépendance Frontend Corrompue] -- 2. Code injecté dans l'app --> FrontTauri[Frontend React de l'App]
     end
 
-    subgraph Pont Chrome & Navigateur
+    subgraph "Pont Chrome et Navigateur"
         BridgePort -- 3. Commandes CDP non vérifiées --> Extension[Extension Chrome Bridge]
         Extension -- 4. Attachement Débogueur caché --> UserTabs[Onglets ouverts : Comptes, Mails, Banque]
-        UserTabs -- 5. Vol de données & Actions physiques simulées --> MalWeb
+        UserTabs -- 5. Vol de données et Actions physiques simulées --> MalWeb
     end
 
-    subgraph Sécurité Tauri
+    subgraph "Sécurité Tauri"
         FrontTauri -- 6. Lit n'importe quel fichier via protocole d'actifs --> AssetProto[Tauri Asset Protocol: **/*]
         FrontTauri -- 7. Commande directe sans restriction --> ExtFileCmd[read_external_file_command]
         FrontTauri -- 8. Lance des fichiers arbitraires --> AppCmd[open_path_with_default_app]

@@ -10,11 +10,11 @@ Le diagramme suivant illustre comment le code Rust reçoit vos demandes depuis l
 
 ```mermaid
 flowchart TD
-    subgraph Écran & Interface (Frontend)
+    subgraph "Écran et Interface (Frontend)"
         UI[Interface React/TS] -- 1. Demande de modification de fichier --> TauriCmd[Commandes Tauri src-tauri]
     end
 
-    subgraph Gardes-fous & Sécurité (crates/sinew-app)
+    subgraph "Gardes-fous et Sécurité (crates/sinew-app)"
         TauriCmd -- 2. Vérification d'empreinte --> Fingerprint{Empreinte identique à la lecture ?}
         Fingerprint -- Non : Fichier modifié ailleurs --> Refus[Refus de modification sécurisé]
         Fingerprint -- Oui : Conforme --> PathCheck{Le chemin reste dans le projet ?}
@@ -22,7 +22,7 @@ flowchart TD
         PathCheck -- Dans le projet --> ExecuteEdit[Exécution de la modification physique]
     end
 
-    subgraph Connexions IA & Réseau (crates/sinew-cursor et autres)
+    subgraph "Connexions IA et Réseau (crates/sinew-cursor et autres)"
         TauriCmd -- 3. Requête asynchrone --> Swarm[Gestionnaire Multi-Agent]
         Swarm -- 4. Tunnel sécurisé --> H2Bridge[Pont HTTP/2 Prost-Reflect]
         H2Bridge -- 5. Flux de jetons chiffrés --> CursorAI[Serveurs d'IA Cursor / Autre fournisseur]
