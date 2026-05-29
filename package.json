@@ -12,8 +12,7 @@
     "prepare-agent-bridge": "node scripts/prepare-agent-bridge.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
-    "compil": "powershell -ExecutionPolicy Bypass -File ./scripts/compil.ps1",
-    "postinstall": "npm --prefix sinew-chrome-bridge install && npm --prefix scripts/agent-bridge install"
+    "compil": "powershell -ExecutionPolicy Bypass -File ./scripts/compil.ps1"
   },
   "dependencies": {
     "@iconify-json/solar": "1.2.5",
