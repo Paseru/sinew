@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-29 16:29:00
+
+### Added
+- **Compilation de l'installateur v0.1.26 et copie sur OneDrive** : Lancement réussi de la compilation Tauri en mode NSIS et copie de l'installateur généré (`Sinew_0.1.26_x64-setup.exe`) sur le bureau OneDrive (`C:\Users\julie\OneDrive\Bureau`) pour un déploiement instantané.
+
 ## 2026-05-29
 - Fusion (merge) des mises à jour du dépôt d'origine (upstream/main) pour synchroniser l'historique Git
 - Mise à jour du fichier `afaire.md` avec l'analyse complète du projet : problématiques, priorités, et plan d'amélioration
