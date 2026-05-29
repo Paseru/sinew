@@ -2,11 +2,12 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 use rusqlite::params;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::{embeddings, store::IndexStore};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodebaseHit {
     pub path: String,
     pub start_line: i64,
@@ -36,12 +37,7 @@ pub fn search_workspace(
         return Ok(Vec::new());
     }
     let candidate_limit = (limit.max(1).min(50) * 4).max(8) as i64;
-    let mut hits = search_fts_candidates(
-        &store,
-        &fts_query,
-        path_prefix,
-        candidate_limit,
-    )?;
+    let mut hits = search_fts_candidates(&store, &fts_query, path_prefix, candidate_limit)?;
     if hits.is_empty() {
         return Ok(Vec::new());
     }
@@ -70,7 +66,10 @@ fn search_fts_candidates(
     limit: i64,
 ) -> Result<Vec<RawHit>> {
     let conn = store.connection()?;
-    let sql = if path_prefix.filter(|value| !value.trim().is_empty()).is_some() {
+    let sql = if path_prefix
+        .filter(|value| !value.trim().is_empty())
+        .is_some()
+    {
         search_sql_with_prefix()
     } else {
         search_sql()

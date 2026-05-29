@@ -6,6 +6,9 @@ use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 static EMBEDDER: OnceLock<Mutex<Option<TextEmbedding>>> = OnceLock::new();
 
 pub fn is_available() -> bool {
+    if std::env::var_os("SINEW_INDEX_EMBEDDINGS").is_none() {
+        return false;
+    }
     embedder().is_ok()
 }
 
@@ -14,9 +17,7 @@ pub fn embed_query(text: &str) -> Result<Vec<f32>> {
     let mut guard = model
         .lock()
         .map_err(|_| anyhow::anyhow!("embedding model lock poisoned"))?;
-    let embedder = guard
-        .as_mut()
-        .context("embedding model unavailable")?;
+    let embedder = guard.as_mut().context("embedding model unavailable")?;
     let prefixed = format!("query: {}", text.trim());
     let vectors = embedder
         .embed(vec![prefixed], None)
@@ -35,9 +36,7 @@ pub fn embed_passages(texts: &[String]) -> Result<Vec<Vec<f32>>> {
     let mut guard = model
         .lock()
         .map_err(|_| anyhow::anyhow!("embedding model lock poisoned"))?;
-    let embedder = guard
-        .as_mut()
-        .context("embedding model unavailable")?;
+    let embedder = guard.as_mut().context("embedding model unavailable")?;
     let prefixed = texts
         .iter()
         .map(|text| format!("passage: {}", text.trim()))

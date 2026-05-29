@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sinew_core::ToolDescriptor;
-use sinew_index::{ensure_workspace_index, search_workspace};
+use sinew_index::{index_and_search_workspace_isolated, process_isolation_enabled};
 
 use crate::{tool_names, tool_run::ToolRunResult};
 
@@ -26,7 +26,9 @@ impl CodebaseSearchTool {
     pub fn descriptor(&self) -> ToolDescriptor {
         ToolDescriptor {
             name: tool_names::CODEBASE_SEARCH.into(),
-            description: "Search the local workspace index for relevant code chunks by meaning or keywords.".into(),
+            description:
+                "Search the local workspace index for relevant code chunks by meaning or keywords."
+                    .into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -73,14 +75,15 @@ impl CodebaseSearchTool {
             .map(str::trim)
             .filter(|value| !value.is_empty());
 
-        let stats = ensure_workspace_index(&self.workspace_root)?;
-        let hits = search_workspace(&self.workspace_root, query, path_prefix, limit)?;
+        let (stats, hits) =
+            index_and_search_workspace_isolated(&self.workspace_root, query, path_prefix, limit)?;
 
         let mut output = format!(
-            "index: {} files, {} chunks (updated {} files this sync)\nresults: {}\n\n",
+            "index: {} files, {} chunks (updated {} files this sync, process isolation {})\nresults: {}\n\n",
             stats.files_indexed,
             stats.chunks_indexed,
             stats.files_updated,
+            if process_isolation_enabled() { "on" } else { "off" },
             hits.len()
         );
         if hits.is_empty() {
@@ -90,7 +93,11 @@ impl CodebaseSearchTool {
         for hit in hits {
             output.push_str(&format!(
                 "{}:{}-{} (score {:.2})\n{}\n\n",
-                hit.path, hit.start_line, hit.end_line, hit.score, hit.snippet.trim()
+                hit.path,
+                hit.start_line,
+                hit.end_line,
+                hit.score,
+                hit.snippet.trim()
             ));
         }
         Ok(output.trim_end().to_string())

@@ -167,16 +167,20 @@ pub fn workspace_info(root: &Path) -> WorkspaceInfo {
 }
 
 pub fn codebase_index_status(root: &Path) -> CodebaseIndexStatus {
-    let stats = sinew_index::index_stats(root).unwrap_or_default();
+    let stats = sinew_index::index_stats_isolated(root).unwrap_or_default();
+    let isolated = sinew_index::process_isolation_enabled();
+    let semantic_enabled = isolated || std::env::var_os("SINEW_INDEX_EMBEDDINGS").is_some();
     CodebaseIndexStatus {
         files_indexed: stats.files_indexed,
         chunks_indexed: stats.chunks_indexed,
-        engine: if sinew_index::semantic_search_enabled() {
+        engine: if isolated {
+            "isolated-helper+embeddings".into()
+        } else if semantic_enabled {
             "fts+embeddings".into()
         } else {
             "fts".into()
         },
-        semantic_enabled: sinew_index::semantic_search_enabled(),
+        semantic_enabled,
     }
 }
 

@@ -5183,7 +5183,10 @@ dependencies = [
  "notify",
  "regex",
  "rusqlite",
+ "serde",
+ "serde_json",
  "sha2",
+ "tracing",
  "walkdir",
 ]
 

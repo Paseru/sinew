@@ -6,16 +6,13 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
-use crate::{
-    chunk::chunk_file_content,
-    store::IndexStore,
-    SKIP_DIRS, TEXT_EXTENSIONS,
-};
+use crate::{chunk::chunk_file_content, store::IndexStore, SKIP_DIRS, TEXT_EXTENSIONS};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct IndexStats {
     pub files_indexed: usize,
     pub chunks_indexed: usize,

@@ -145,6 +145,17 @@
 │   │       ├── model_info.rs
 │   │       ├── stream.rs
 │   │       └── wire.rs
+│   ├── sinew-index
+│   │   ├── Cargo.toml
+│   │   └── src
+│   │       ├── background.rs
+│   │       ├── chunk.rs
+│   │       ├── embeddings.rs
+│   │       ├── indexer.rs
+│   │       ├── lib.rs
+│   │       ├── process.rs
+│   │       ├── search.rs
+│   │       └── store.rs
 │   ├── sinew-kimi
 │   │   ├── Cargo.toml
 │   │   └── src

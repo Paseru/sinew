@@ -13,7 +13,10 @@ directories = { workspace = true }
 fastembed = "4"
 notify = { workspace = true }
 rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 sha2 = { workspace = true }
+tracing = { workspace = true }
 walkdir = { workspace = true }
 
 [lints]

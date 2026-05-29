@@ -5,5 +5,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    if sinew_index::run_helper_if_requested() {
+        return;
+    }
     sinew_desktop_lib::run()
 }

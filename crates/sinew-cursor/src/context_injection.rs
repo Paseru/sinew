@@ -23,8 +23,9 @@ pub fn append_local_index_excerpts(request: &ProviderRequest, context: &mut Stri
     }
 
     let root = Path::new(workspace_root);
-    let _ = sinew_index::ensure_workspace_index(root);
-    let Ok(hits) = sinew_index::search_workspace(root, &query, None, INJECT_CHUNK_LIMIT) else {
+    let Ok((_stats, hits)) =
+        sinew_index::index_and_search_workspace_isolated(root, &query, None, INJECT_CHUNK_LIMIT)
+    else {
         return;
     };
     if hits.is_empty() {
@@ -90,7 +91,10 @@ fn is_tool_result_continuation(request: &ProviderRequest) -> bool {
     };
     last.role == Role::User
         && !last.parts.is_empty()
-        && last.parts.iter().all(|part| matches!(part, Part::ToolResult { .. }))
+        && last
+            .parts
+            .iter()
+            .all(|part| matches!(part, Part::ToolResult { .. }))
 }
 
 #[cfg(test)]
