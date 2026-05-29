@@ -151,6 +151,14 @@ pub fn normalize_workspace_root(path: impl AsRef<Path>) -> Result<PathBuf> {
         bail!("workspace must be a directory");
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, normalize the path to lowercase to prevent case mismatch bugs
+        // across different computers (e.g. C:\Dev\Sinew vs C:\Dev\sinew).
+        let lower_str = canonical.to_string_lossy().to_lowercase();
+        Ok(PathBuf::from(lower_str))
+    }
+    #[cfg(not(target_os = "windows"))]
     Ok(canonical)
 }
 

@@ -1365,7 +1365,7 @@ impl AppStore {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap_or(0);
 
-        if version >= 9 {
+        if version >= 10 {
             return Ok(());
         }
 
@@ -1419,7 +1419,10 @@ impl AppStore {
             conn.execute("delete from turn_checkpoints", [])
                 .context("unable to clear legacy turn checkpoints")?;
         }
-        conn.pragma_update(None, "user_version", 9)
+        if version < 10 {
+            let _ = conn.execute("UPDATE conversations SET workspace_id = LOWER(workspace_id)", []);
+        }
+        conn.pragma_update(None, "user_version", 10)
             .context("unable to set sqlite schema version")?;
         Ok(())
     }

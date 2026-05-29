@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-05-29 23:24:18
 
+### Fixed
+- **Sensibilité à la casse des chemins de projet sous Windows (`crates/sinew-app/src/workspace.rs`, `crates/sinew-app/src/store.rs`)** : Normalisation en minuscules de l'identifiant unique du dossier de projet (`workspace_id`) sur Windows. Ajout d'une migration SQLite pour mettre à jour automatiquement les anciennes entrées de la base de données. Cela corrige le bug où les discussions créées au travail dans un dossier (ex: `C:\Dev\Sinew`) n'étaient pas affichées à la maison si le dossier avait une casse légèrement différente (ex: `C:\Dev\sinew`).
+
 ### Added
 - **Bouton de synchronisation forcée dans les paramètres (`src/components/SettingsPane.tsx`)** : Ajout d'un bouton "Synchroniser maintenant" sous l'option de synchronisation Multi-PC dans `OptionsSection` pour permettre à l'utilisateur de déclencher manuellement et à tout moment la synchronisation bidirectionnelle OneDrive et Git.
 - **Commande Tauri de synchronisation forcée (`src-tauri/src/lib.rs`, `src/lib/ipc.ts`)** : Ajout de la commande `force_multi_pc_sync` dans Rust et exposition dans le pont IPC frontend pour permettre à l'utilisateur de déclencher manuellement une synchronisation bidirectionnelle complète des bases de données et des dépôts Git avec OneDrive à la demande.
