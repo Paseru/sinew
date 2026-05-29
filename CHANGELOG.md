@@ -1,96 +1,428 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2026-05-30 01:40:19
+## 🚀 Présentation des Fonctionnalités Majeures (Fork Premium julienpiron.fr)
 
-### Fixed
-- **Vérifications de chemins (crates/sinew-app/src/workspace.rs)** : correction de la détection de dépassement de l'espace de travail sur Windows en nettoyant les préfixes UNC (\\?\) et en unifiant la casse.
+Cette version a été optimisée en profondeur pour offrir une expérience utilisateur haut de gamme (SOTA), une autonomie maximale en arrière-plan, et des intégrations d'intelligence artificielle inégalées.
 
-## [Unreleased] - 2026-05-30 01:33:13
+### 🎨 Interface, Confort & Ergonomie (Premium UI)
+* **Animation de démarrage premium :** Une animation de boot moderne, fluide et élégante à l'ouverture de l'application.
+* **3 niveaux de réflexion :** Choix entre Détaillé, Compact ou Très compact pour configurer précisément la verbosité de l'IA et le masquage des détails techniques dans le chat.
+* **Question collante (Sticky Question) :** La question en cours de traitement reste épinglée en haut de l'écran pendant que vous faites défiler le fil de discussion.
+* **Menu clic droit interactif sur les onglets de l'éditeur :** Clic droit (ou `F10`) sur les onglets pour fermer l'onglet (raccourci `Ctrl+F4`), les autres, à sa droite ou tous, copier le chemin (absolu ou relatif) et révéler dans le Finder/Explorateur.
+* **Menu clic droit d'exécution :** Clic droit sur les fichiers dans le chat et l'arbre des fichiers pour les ouvrir, les révéler ou les exécuter directement.
+* **Polices dynamiques ajustables :** Boutons tactiles réactifs (`+` et `-`) dans les options pour ajuster instantanément à chaud la taille du texte de l'éditeur Monaco et du chat.
+* **Version française complète :** L'interface entière et toutes les actions de l'application s'adaptent automatiquement en français ou en anglais.
+* **Sélection et copie libre :** Déblocage de la sélection et copie de texte directement dans le fil de discussion du chat.
+* **Démarcation visuelle :** Ligne de séparation verticale élégante à gauche du panneau de configuration des paramètres.
+* **Découpage du bundle Vite (-80% de taille) :** Monaco Editor et xterm.js sont isolés dans des sous-lots séparés pour un chargement instantanél'interface utilisateur.
+* **Visualisation du plan d'action (Planning Board) :** Intégration d'un bloc dynamique interactif (`PlanningNextMoveBlock`) montrant en temps réel les prochaines étapes planifiées par le Swarm d'agents.
+* **Aperçu d'image immersif (Lightbox) :** Visionneuse d'images de discussion immersive avec zoom à la molette de souris, déplacement panoramique, rotation, téléchargement et fermeture par clic extérieur.
 
-### Removed
-- **Changelog** : suppression de la phrase promotionnelle sur l'optimisation en profondeur.
+### 💾 Autonomie, Sauvegarde & Robustesse Système
+* **Sauvegarde automatique (Auto-Save SOTA) :** Enregistrement automatique et transparent en arrière-plan 1,5 seconde après l'arrêt de la frappe. Activable ou désactivable d'un clic dans vos options.
+* **Mode Sandbox :** Lancement de l'application en un clic sans aucun projet ouvert pour tester l'IA ou utiliser les outils MCP de manière isolée.
+* **Synchro OneDrive & SQLite automatique :** Synchronisation transparente de vos conversations, configurations de projets, jetons de connexion/clés d'authentification (`*-auth.json`, `*-device.json`, `*-stream-state.json`), fichiers d'apprentissage globaux (`errors_raw.json` et `instructions_consolidated.md`), et bases de données SQLite entre vos différents ordinateurs.
+* **Zéro popup console Windows :** Lancement asynchrone et silencieux de tous les outils, serveurs MCP, commandes Git et diagnostics SOTA en arrière-plan sans aucune ouverture de fenêtres d'invite de commandes.
+* **Préfixe PC réel automatique :** Identification automatique du nom de la machine physique pour typer et sécuriser les configurations de conversation multi-PC.
+* **Diagnostic Windows OAuth résilient :** Capture robuste de l'erreur réseau typique sous Windows (code 10013) et conseils clairs pour débloquer la connexion (WinNAT/HNS).
+* **Diagnostic SOTA :** Vérification en un clic de l'état de santé, du PATH et des versions de tous vos outils de développement (Git, Python, Node, Cargo, etc.).
+* **Écran de mises à jour sécurisé (`UpdaterLockScreen`) :** Verrouillage de l'interface pendant l'application des correctifs système pour éviter tout conflit de fichiers ou corruption de base de données.
+* **Script de compilation OneDrive (`compil.ps1`) :** Automatisation de la génération de l'application et copie immédiate sur OneDrive pour un déploiement instantané sur vos PC.
+* **Active Turn Registry :** Moteur intelligent Rust qui suit les turns de l'agent en cours et assure une reprise instantanée du streaming.
+* **Fiche de transmission structurée (Compaction d'IA) :** Compactage automatique du contexte lors du changement de fournisseur d'IA dans une fiche structurée reprenant le statut des fichiers modifiés, le relais des tâches et les diagnostics du linter.
+* **Mode plein gaz adaptatif (`crates/sinew-index/src/store.rs`) :** Optimisation dynamique des performances de l'indexeur augmentant le cache et la lecture en mémoire lorsque la machine dispose d'un stockage SSD/NVMe.
+* **Indexation locale parallèle SOTA :** Préparation et analyse des fichiers en parallèle répartie sur tous les coeurs de CPU disponibles via Rayon, avec détection immédiate et saut des fichiers inchangés grâce à leurs empreintes de taille et date.
+* **Identification de projet universelle :** Association automatique des conversations au dépôt Git distant (remote origin URL) ou via un fichier d'identifiant unique `.sinew/project_id.txt` pour lier instantanément vos conversations d'un PC à un autre sans aucune action manuelle, avec détection, liaison et rafraîchissement dynamique des conversations provenant de PC alternatifs depuis les paramètres.
+* **Gestion des mises à jour configurables :** Option à 3 choix (Bloquant, Notification, Désactivé) pour décider précisément du niveau de vérification des nouvelles versions de Sinew et empêcher l'écrasement de vos modifications.
+* **Script de contrôle qualité unifié (`scripts/check.ps1`) :** Commande unique `npm run check` exécutant le build frontend, `cargo check`, les tests, `clippy` et les audits de dépendances en une seule opération.
+* **Système d'apprentissage global transparent :** Chargement et injection automatique de la base d'instructions centralisées de l'utilisateur (`%LOCALAPPDATA%\Sinew\instructions_consolidated.md`) dans le prompt système de tous les agents pour l'ensemble des projets ouverts sur la machine.
+* **Consolidation automatique de la mémoire :** Mécanisme au démarrage transformant automatiquement les erreurs répétées enregistrées dans `errors_raw.json` en règles d'apprentissage globales permanentes dans `instructions_consolidated.md` avec nettoyage du compteur d'erreurs.
+* **Bouton de synchronisation forcée :** Ajout d'un bouton de synchronisation immédiate à la demande dans les paramètres pour déclencher manuellement la synchronisation bidirectionnelle OneDrive et Git.
 
-## [Unreleased] - 2026-05-30 01:22:35
+### 🤖 Modèles d'IA, Comptes & Furtivité (AI Engine)
+* **Gestion Multi-comptes OpenAI & Google Gemini :** Connexion simultanée de plusieurs profils OpenAI et Google Gemini secondaires avec bascule instantanée entre vos différentes clés, comptes et abonnements.
+* **Quotas en temps réel :** Visualisation dynamique de votre consommation (crédits / balance restante) sous forme de barres de progression colorées adaptatives dans les options, et pastille live dans le chat.
+* **Routage & Résilience Google Antigravity SOTA :** Réparation, de-surcharge réseau (erreur 503), routeurs de secours et transition transparente entre modèles avec résolution dynamique des identifiants d'appels d'outils (tool_call_id).
+* **Optimisation de vitesse Gemini :** Streaming et requêtes ultra-rapides pour les modèles Gemini.
+* **Incorporation de Claude Opus 4.8 & 4.6 :** Intégration complète de Claude Opus 4.8 (contexte 1M natif) et Claude Opus 4.6 via les abonnements professionnels Google.
+* **Système Pending/Steering pour Influencer :** Un vrai système d'interception et de guidage pour orienter, corriger ou ajouter des instructions en temps réel sans blocage du flux de l'IA.
+* **Indexation sémantique locale vectorielle :** Indexation et recherche vectorielle haute-performance effectuée localement sur votre machine avec commutateur d'activation directe (BETA) dans le panneau d'options.
+* **Intégration de DeepSeek R1 & V3 :** Support complet de **DeepSeek V3** et de **DeepSeek R1** avec capture et rendu en temps réel du bloc de réflexion (*reasoning*) grâce à l'extraction du champ `reasoning_content` dans le chat.
+* **Pont Cursor Composer 2.5 (agent.v1) :** Moteur haute-performance autonome sur connexions HTTP/2 persistantes gérant toutes les modifications chirurgicales de fichiers, avec installation automatique et invisible en arrière-plan, et masquage du sélecteur d'intelligence inutile.
+* **Sécurité & Furtivité WebSocket :** Spoofing d'empreinte réseau avancé pour éliminer tout risque de détection ou de blocage sur les flux de ChatGPT.
+* **WebSocket OpenAI :** Transport temps-réel haute performance basé sur WebSocket pour des réponses fluides et à latence minimale avec OpenAI.
 
-### Added
-- **Règles anti-boucle locales (AGENTS.md)** : ajout de consignes explicites pour garder `cwd` dans le workspace, relire `CHANGELOG.md` juste avant chaque modification et utiliser les chemins Windows absolus afin d'éviter les erreurs répétées vues avec OpenAI.
-- **Traçabilité (CHANGELOG.md)** : ajout de cette entrée pour documenter la nouvelle règle de prévention.
-
-### Improved
-- **Performance globale adaptative (`crates/sinew-app/src/store.rs`)** : la base principale de conversations utilise un cache adapte aux coeurs disponibles, la lecture memoire SQLite et un delai d'attente plus robuste pour mieux exploiter les PC puissants sans reglage fixe.
-- **Recherche de fichiers plus rapide (`crates/sinew-app/src/workspace.rs`)** : la recherche dans l'espace de travail se repartit maintenant sur les coeurs CPU disponibles afin de reduire les temps d'attente sur les gros projets.
-- **Interface plus fluide pendant les grosses lectures (`src-tauri/src/workspace.rs`)** : les listes de fichiers, recherches et lectures de fichiers passent sur un couloir de travail separe pour eviter de figer l'application pendant les operations disque lourdes.
-- **Indexation semantique plus legere (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : la creation des empreintes vectorielles est limitee par lots pour eviter qu'une grosse premiere indexation monopolise trop longtemps le processeur et le disque.
-- **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter les optimisations globales demandees.
-
-## ðŸš€ PrÃ©sentation des FonctionnalitÃ©s Majeures (Fork Premium julienpiron.fr)
-
-### ðŸŽ¨ Interface, Confort & Ergonomie (Premium UI)
-* **Animation de dÃ©marrage premium :** Une animation de boot moderne, fluide et Ã©lÃ©gante Ã  l'ouverture de l'application.
-* **3 niveaux de rÃ©flexion :** Choix entre DÃ©taillÃ©, Compact ou TrÃ¨s compact pour configurer prÃ©cisÃ©ment la verbositÃ© de l'IA et le masquage des dÃ©tails techniques dans le chat.
-* **Question collante (Sticky Question) :** La question en cours de traitement reste Ã©pinglÃ©e en haut de l'Ã©cran pendant que vous faites dÃ©filer le fil de discussion.
-* **Menu clic droit interactif sur les onglets de l'Ã©diteur :** Clic droit (ou `F10`) sur les onglets pour fermer l'onglet (raccourci `Ctrl+F4`), les autres, Ã  sa droite ou tous, copier le chemin (absolu ou relatif) et rÃ©vÃ©ler dans le Finder/Explorateur.
-* **Menu clic droit d'exÃ©cution :** Clic droit sur les fichiers dans le chat et l'arbre des fichiers pour les ouvrir, les rÃ©vÃ©ler ou les exÃ©cuter directement.
-* **Polices dynamiques ajustables :** Boutons tactiles rÃ©actifs (`+` et `-`) dans les options pour ajuster instantanÃ©ment Ã  chaud la taille du texte de l'Ã©diteur Monaco et du chat.
-* **Version franÃ§aise complÃ¨te :** L'interface entiÃ¨re et toutes les actions de l'application s'adaptent automatiquement en franÃ§ais ou en anglais.
-* **SÃ©lection et copie libre :** DÃ©blocage de la sÃ©lection et copie de texte directement dans le fil de discussion du chat.
-* **DÃ©marcation visuelle :** Ligne de sÃ©paration verticale Ã©lÃ©gante Ã  gauche du panneau de configuration des paramÃ¨tres.
-* **DÃ©coupage du bundle Vite (-80% de taille) :** Monaco Editor et xterm.js sont isolÃ©s dans des sous-lots sÃ©parÃ©s pour un chargement instantanÃ©l'interface utilisateur.
-* **Visualisation du plan d'action (Planning Board) :** IntÃ©gration d'un bloc dynamique interactif (`PlanningNextMoveBlock`) montrant en temps rÃ©el les prochaines Ã©tapes planifiÃ©es par le Swarm d'agents.
-* **AperÃ§u d'image immersif (Lightbox) :** Visionneuse d'images de discussion immersive avec zoom Ã  la molette de souris, dÃ©placement panoramique, rotation, tÃ©lÃ©chargement et fermeture par clic extÃ©rieur.
-
-### ðŸ’¾ Autonomie, Sauvegarde & Robustesse SystÃ¨me
-* **Sauvegarde automatique (Auto-Save SOTA) :** Enregistrement automatique et transparent en arriÃ¨re-plan 1,5 seconde aprÃ¨s l'arrÃªt de la frappe. Activable ou dÃ©sactivable d'un clic dans vos options.
-* **Mode Sandbox :** Lancement de l'application en un clic sans aucun projet ouvert pour tester l'IA ou utiliser les outils MCP de maniÃ¨re isolÃ©e.
-* **Synchro OneDrive & SQLite automatique :** Synchronisation transparente de vos conversations, configurations de projets, jetons de connexion/clÃ©s d'authentification (`*-auth.json`, `*-device.json`, `*-stream-state.json`), fichiers d'apprentissage globaux (`errors_raw.json` et `instructions_consolidated.md`), et bases de donnÃ©es SQLite entre vos diffÃ©rents ordinateurs.
-* **ZÃ©ro popup console Windows :** Lancement asynchrone et silencieux de tous les outils, serveurs MCP, commandes Git et diagnostics SOTA en arriÃ¨re-plan sans aucune ouverture de fenÃªtres d'invite de commandes.
-* **PrÃ©fixe PC rÃ©el automatique :** Identification automatique du nom de la machine physique pour typer et sÃ©curiser les configurations de conversation multi-PC.
-* **Diagnostic Windows OAuth rÃ©silient :** Capture robuste de l'erreur rÃ©seau typique sous Windows (code 10013) et conseils clairs pour dÃ©bloquer la connexion (WinNAT/HNS).
-* **Diagnostic SOTA :** VÃ©rification en un clic de l'Ã©tat de santÃ©, du PATH et des versions de tous vos outils de dÃ©veloppement (Git, Python, Node, Cargo, etc.).
-* **Ã‰cran de mises Ã  jour sÃ©curisÃ© (`UpdaterLockScreen`) :** Verrouillage de l'interface pendant l'application des correctifs systÃ¨me pour Ã©viter tout conflit de fichiers ou corruption de base de donnÃ©es.
-* **Script de compilation OneDrive (`compil.ps1`) :** Automatisation de la gÃ©nÃ©ration de l'application et copie immÃ©diate sur OneDrive pour un dÃ©ploiement instantanÃ© sur vos PC.
-* **Active Turn Registry :** Moteur intelligent Rust qui suit les turns de l'agent en cours et assure une reprise instantanÃ©e du streaming.
-* **Fiche de transmission structurÃ©e (Compaction d'IA) :** Compactage automatique du contexte lors du changement de fournisseur d'IA dans une fiche structurÃ©e reprenant le statut des fichiers modifiÃ©s, le relais des tÃ¢ches et les diagnostics du linter.
-* **Mode plein gaz adaptatif (`crates/sinew-index/src/store.rs`) :** Optimisation dynamique des performances de l'indexeur augmentant le cache et la lecture en mÃ©moire lorsque la machine dispose d'un stockage SSD/NVMe.
-* **Indexation locale parallÃ¨le SOTA :** PrÃ©paration et analyse des fichiers en parallÃ¨le rÃ©partie sur tous les coeurs de CPU disponibles via Rayon, avec dÃ©tection immÃ©diate et saut des fichiers inchangÃ©s grÃ¢ce Ã  leurs empreintes de taille et date.
-* **Identification de projet universelle :** Association automatique des conversations au dÃ©pÃ´t Git distant (remote origin URL) ou via un fichier d'identifiant unique `.sinew/project_id.txt` pour lier instantanÃ©ment vos conversations d'un PC Ã  un autre sans aucune action manuelle, avec dÃ©tection, liaison et rafraÃ®chissement dynamique des conversations provenant de PC alternatifs depuis les paramÃ¨tres.
-* **Gestion des mises Ã  jour configurables :** Option Ã  3 choix (Bloquant, Notification, DÃ©sactivÃ©) pour dÃ©cider prÃ©cisÃ©ment du niveau de vÃ©rification des nouvelles versions de Sinew et empÃªcher l'Ã©crasement de vos modifications.
-* **Script de contrÃ´le qualitÃ© unifiÃ© (`scripts/check.ps1`) :** Commande unique `npm run check` exÃ©cutant le build frontend, `cargo check`, les tests, `clippy` et les audits de dÃ©pendances en une seule opÃ©ration.
-* **SystÃ¨me d'apprentissage global transparent :** Chargement et injection automatique de la base d'instructions centralisÃ©es de l'utilisateur (`%LOCALAPPDATA%\Sinew\instructions_consolidated.md`) dans le prompt systÃ¨me de tous les agents pour l'ensemble des projets ouverts sur la machine.
-* **Consolidation automatique de la mÃ©moire :** MÃ©canisme au dÃ©marrage transformant automatiquement les erreurs rÃ©pÃ©tÃ©es enregistrÃ©es dans `errors_raw.json` en rÃ¨gles d'apprentissage globales permanentes dans `instructions_consolidated.md` avec nettoyage du compteur d'erreurs.
-* **Bouton de synchronisation forcÃ©e :** Ajout d'un bouton de synchronisation immÃ©diate Ã  la demande dans les paramÃ¨tres pour dÃ©clencher manuellement la synchronisation bidirectionnelle OneDrive et Git.
-
-### ðŸ¤– ModÃ¨les d'IA, Comptes & FurtivitÃ© (AI Engine)
-* **Gestion Multi-comptes OpenAI & Google Gemini :** Connexion simultanÃ©e de plusieurs profils OpenAI et Google Gemini secondaires avec bascule instantanÃ©e entre vos diffÃ©rentes clÃ©s, comptes et abonnements.
-* **Quotas en temps rÃ©el :** Visualisation dynamique de votre consommation (crÃ©dits / balance restante) sous forme de barres de progression colorÃ©es adaptatives dans les options, et pastille live dans le chat.
-* **Routage & RÃ©silience Google Antigravity SOTA :** RÃ©paration, de-surcharge rÃ©seau (erreur 503), routeurs de secours et transition transparente entre modÃ¨les avec rÃ©solution dynamique des identifiants d'appels d'outils (tool_call_id).
-* **Optimisation de vitesse Gemini :** Streaming et requÃªtes ultra-rapides pour les modÃ¨les Gemini.
-* **Incorporation de Claude Opus 4.8 & 4.6 :** IntÃ©gration complÃ¨te de Claude Opus 4.8 (contexte 1M natif) et Claude Opus 4.6 via les abonnements professionnels Google.
-* **SystÃ¨me Pending/Steering pour Influencer :** Un vrai systÃ¨me d'interception et de guidage pour orienter, corriger ou ajouter des instructions en temps rÃ©el sans blocage du flux de l'IA.
-* **Indexation sÃ©mantique locale vectorielle :** Indexation et recherche vectorielle haute-performance effectuÃ©e localement sur votre machine avec commutateur d'activation directe (BETA) dans le panneau d'options.
-* **IntÃ©gration de DeepSeek R1 & V3 :** Support complet de **DeepSeek V3** et de **DeepSeek R1** avec capture et rendu en temps rÃ©el du bloc de rÃ©flexion (*reasoning*) grÃ¢ce Ã  l'extraction du champ `reasoning_content` dans le chat.
-* **Pont Cursor Composer 2.5 (agent.v1) :** Moteur haute-performance autonome sur connexions HTTP/2 persistantes gÃ©rant toutes les modifications chirurgicales de fichiers, avec installation automatique et invisible en arriÃ¨re-plan, et masquage du sÃ©lecteur d'intelligence inutile.
-* **SÃ©curitÃ© & FurtivitÃ© WebSocket :** Spoofing d'empreinte rÃ©seau avancÃ© pour Ã©liminer tout risque de dÃ©tection ou de blocage sur les flux de ChatGPT.
-* **WebSocket OpenAI :** Transport temps-rÃ©el haute performance basÃ© sur WebSocket pour des rÃ©ponses fluides et Ã  latence minimale avec OpenAI.
-
-### ðŸ”Œ Extensions & Ponts locaux (MCP & Bridge)
-* **Extension Chrome nouvelle gÃ©nÃ©ration :** Pilotage d'actions de navigation ultra-stables en natif Rust avec mouvements et clics Ã  vitesse humaine (mouvements Beziers, physique fluide) et mode silencieux.
-* **RÃ©paration Chrome en un clic :** Bouton bleu de configuration automatique si le pont Chrome ne rÃ©pond pas sur un nouveau PC.
-* **Empaquetage des ressources Tauri :** Le pont local et l'extension Chrome sont intÃ©grÃ©s directement au sein de l'installateur compilÃ© (MSI/EXE).
-* **Outils Rust & ripgrep Sidecar :** IntÃ©gration de Ripgrep en binaire natif sidecar et de nouveaux outils (`list_dir`, `delete_file`) pour accÃ©lÃ©rer la recherche et la gestion des fichiers par 10x.
-* **Diagnostics Monaco en temps rÃ©el :** RemontÃ©e automatique des lints et erreurs de compilation de l'Ã©diteur de code Ã  l'IA en temps rÃ©el.
-* **Logs ultra-compacts :** Nettoyage automatique du contexte de discussion pour Ã©liminer le bruit et optimiser la consommation de jetons.
-* **Laboratoire rÃ©seau MITM :** Outils de dÃ©bogage et d'ingÃ©nierie inverse intÃ©grÃ©s pour inspecter le trafic chiffrÃ©s des outils IA.
-* **Moteur de remplacement intelligent (Search/Replace) :** SystÃ¨me d'auto-correction Ã  8 couches (Unicode, indentations, etc.) garantissant que les modifications de l'IA s'insÃ¨rent correctement dans vos fichiers mÃªme en cas de lÃ©gÃ¨res erreurs d'espaces.
-* **Outils MCP de diagnostics Chrome avancÃ©s :** IntÃ©gration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basÃ©s sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mÃ©moire en local.
+### 🔌 Extensions & Ponts locaux (MCP & Bridge)
+* **Extension Chrome nouvelle génération :** Pilotage d'actions de navigation ultra-stables en natif Rust avec mouvements et clics à vitesse humaine (mouvements Beziers, physique fluide) et mode silencieux.
+* **Réparation Chrome en un clic :** Bouton bleu de configuration automatique si le pont Chrome ne répond pas sur un nouveau PC.
+* **Empaquetage des ressources Tauri :** Le pont local et l'extension Chrome sont intégrés directement au sein de l'installateur compilé (MSI/EXE).
+* **Outils Rust & ripgrep Sidecar :** Intégration de Ripgrep en binaire natif sidecar et de nouveaux outils (`list_dir`, `delete_file`) pour accélérer la recherche et la gestion des fichiers par 10x.
+* **Diagnostics Monaco en temps réel :** Remontée automatique des lints et erreurs de compilation de l'éditeur de code à l'IA en temps réel.
+* **Logs ultra-compacts :** Nettoyage automatique du contexte de discussion pour éliminer le bruit et optimiser la consommation de jetons.
+* **Laboratoire réseau MITM :** Outils de débogage et d'ingénierie inverse intégrés pour inspecter le trafic chiffrés des outils IA.
+* **Moteur de remplacement intelligent (Search/Replace) :** Système d'auto-correction à 8 couches (Unicode, indentations, etc.) garantissant que les modifications de l'IA s'insèrent correctement dans vos fichiers même en cas de légères erreurs d'espaces.
+* **Outils MCP de diagnostics Chrome avancés :** Intégration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mémoire en local.
 
 ---
 
-## [Unreleased] - 2026-05-30 01:24:40
+## 📜 Historique des Versions
+
+## [Unreleased] - 2026-05-30 01:05:32
+
+### Added
+- **Consolidation automatique de la mémoire au démarrage (`src-tauri/src/lib.rs`)** : Préparation du mécanisme de consolidation automatique pour transformer les erreurs répétées de `errors_raw.json` en règles globales et nettoyer leur compteur.
+
+### Changed
+- **Script de consolidation plus robuste (`consolidate_rules.py`)** : Remplacement du simple détecteur d'alertes par un consolidateur complet avec lecture multi-encodage, reconnaissance des règles déjà couvertes, création de règles globales génériques pour les nouveaux cas répétés et remise à zéro des erreurs traitées.
+- **Synchronisation forcée plus propre (`sync_now.py`)** : Lancement de la consolidation de mémoire avant la copie OneDrive afin de synchroniser une mémoire déjà nettoyée entre les PC.
+- **Carte des fichiers (`AGENTS.md`)** : Ajout de `consolidate_rules.py` et `sync_now.py` à la carte du projet pour refléter les scripts racine suivis.
+- **Journal des changements (`CHANGELOG.md`)** : Documentation de l'automatisation de consolidation et de son objectif : réduire les erreurs répétées sans intervention manuelle.
+
+## [Unreleased] - 2026-05-29 16:18:48
+
+### Added
+- **Rapport d'analyse et d'améliorations (`afaire.md`)** : Création d'un document récapitulatif listant les principaux axes d'amélioration du projet (performances de l'interface, organisation du moteur Rust, et sécurité des dépendances).
+
+
+## [Unreleased] - 2026-05-29 16:16:37
+
+### Added
+- **Prise en charge de Claude Opus 4.8 (`crates/sinew-anthropic/src/client.rs`, `crates/sinew-anthropic/src/model_info.rs`, `src/lib/models.ts`)** : Intégration du nouveau modèle phare de la gamme d'intelligence artificielle d'Anthropic (Claude Opus 4.8) doté d'une fenêtre de contexte native de 1 million de jetons et des niveaux de réflexion configurables dans l'interface utilisateur.
+
+### Changed
+- **Mise à jour de la configuration de compilation (`Cargo.toml`, `Cargo.lock`)** : Synchronisation des versions des dépendances et du système de compilation avec la version de référence 0.1.26 de la branche parente.
+
+## [Unreleased] - 2026-05-29 16:21:45
+
+### Removed
+- **Nettoyage complet du fichier `AGENTS.md` local** : Suppression définitive de toute trace ou consigne relative au système d'apprentissage automatique dans le fichier `AGENTS.md` de ce projet. L'injection et la gestion de la mémoire globale sont désormais entièrement intégrées de manière native au sein de l'application (côté Rust) pour tous les projets ouverts sur cette machine.
+
+## [Unreleased] - 2026-05-29 16:15:36
+
+### Added
+- **Synchronisation OneDrive du Système d'Apprentissage (`src-tauri/src/lib.rs`)** : Ajout de la synchronisation bidirectionnelle automatique des fichiers d'apprentissage globaux (`errors_raw.json` et `instructions_consolidated.md`) via OneDrive. Lorsque l'option de synchronisation Multi-PC est active, ces fichiers sont fusionnés et sauvegardés sur OneDrive à la fermeture de l'application, et restaurés au démarrage sur vos autres ordinateurs.
+
+## [Unreleased] - 2026-05-29 16:06:04
 
 ### Fixed
-- **Mémoire de l'indexeur local (`crates/sinew-index/src/store.rs`)** : Réduction du cache SQLite et de la mémoire mappée pour éviter qu'un helper d'indexation Sinew gonfle jusqu'à plusieurs dizaines de Go.
-- **Remplissage sémantique progressif (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : Limitation du nombre de morceaux vectorisés par passage afin d'éviter les pics mémoire lors des recherches dans le code.
+- **Correction de la visibilité de l'indicateur de contexte en mode IA (`src/styles.css`)** : Augmentation de la priorité d'empilement (z-index) de la zone de saisie (`.composer`) à 10 pour s'assurer que le volet volant affichant l'utilisation du contexte s'affiche par-dessus les messages du chat et la liste des tâches, évitant qu'il ne soit masqué ou flouté par les effets de transparence premium du mode IA.
 
+## [Unreleased] - 2026-05-29 16:11:45
+
+### Added
+- **Intégration du système d'apprentissage global côté Rust (`src-tauri/src/turns.rs`)** : Modification du backend Rust de l'application pour charger et injecter automatiquement et de manière transparente le fichier d'instructions consolidées global (`%LOCALAPPDATA%\Sinew\instructions_consolidated.md`) dans le prompt système de tous les agents pour l'ensemble des projets ouverts sur cet ordinateur. Les agents bénéficient désormais de cette base d'apprentissage universelle sans dépendre d'un fichier local `AGENTS.md`.
+
+## [Unreleased] - 2026-05-29 16:06:07
+
+### Changed
+- **Décentralisation complète des descriptions d'erreurs (`AGENTS.md`)** : Suppression définitive des descriptions locales d'erreurs dans `AGENTS.md` pour éviter toute duplication. Désormais, `AGENTS.md` ne contient que le pointeur d'instructions globales pour forcer la lecture de la base d'apprentissage centralisée dans `%LOCALAPPDATA%\Sinew\`.
+- **Base de connaissances globale (`%LOCALAPPDATA%\Sinew\`)** : Migration de toutes les anciennes règles d'erreurs (Git, Windows, npm, MCP) directement dans le fichier d'apprentissage consolidé de la machine.
+
+## [Unreleased] - 2026-05-29 16:04:26
+
+### Changed
+- **Globalisation du Système d'Apprentissage** : Déplacement de la mémoire d'apprentissage (`errors_raw.json` et `instructions_consolidated.md`) dans le dossier de configuration global de la machine (`%LOCALAPPDATA%\Sinew\`). Cela permet d'avoir un système d'apprentissage partagé et partagé sur tous les projets et espaces de travail ouverts sur cet ordinateur.
+- **Règles d'agent (`AGENTS.md`)** : Mise à jour des règles d'instructions globales pour forcer la lecture et l'alimentation de la base d'apprentissage globale à chaque début de session.
+
+## [Unreleased] - 2026-05-29 15:57:18
+
+### Added
+- **Intégration d'outils de diagnostic et d'émulation hybrides (`sinew-chrome-bridge/mcp_server.js` et `.sinew/skills/browser/SKILL.md`)** : Ajout de trois nouveaux outils structurés MCP (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP brute de Google Chrome pour tester la compatibilité mobile (taille, touch events), évaluer les performances et diagnostics de qualité Lighthouse en local, et analyser la consommation de mémoire (JS heap et DOM nodes count).
+- **Mise à jour de la compétence Browser (`.sinew/skills/browser/SKILL.md`)** : Ajout d'une section de documentation claire guidant l'IA à utiliser ces nouveaux pouvoirs de diagnostic en mode hybride tout en préservant le simulateur biologique humain furtif de Sinew Chrome.
+
+## [Unreleased] - 2026-05-29 15:46:39
+
+### Fixed
+- **Correction et universalisation des lightboxes (`src/components/chat/ChatPane.tsx`, `src/components/chat/MermaidDiagram.tsx`, `src/styles.css`)** : Passage des zooms d'image et de diagrammes Mermaid sous forme de Portails React (`createPortal`) attachés à `document.body`. Cela corrige définitivement le problème de rognage/masquage causé par les empilements CSS (stacking contexts) des colonnes du chat et des options. De plus, augmentation de la priorité d'affichage (`z-index: 99999`) et intégration des styles sombres néon haut de gamme pour les schémas en mode IA afin qu'ils s'affichent magnifiquement dans tous les thèmes.
+
+## [Unreleased] - 2026-05-29 15:52:23
+
+### Added
+- **Étude d'impact sur la sécurité, l'anti-détection et la discrétion (`ETUDE_IMPACT_SECURITE.md`)** : Rapport d'analyse complet évaluant les risques de détection des fonctionnalités de DevTools for Agents 1.0 (émulation, auto-connect, audits) et concevant une synergie d'interception avec notre simulateur biologique humain.
+- **Rapport d'analyse et d'intégration DevTools (`ANALYSE_DEVTOOLS_MCP.md`)** : Création d'une analyse technique poussée évaluant la faisabilité et l'impact de l'intégration des fonctionnalités de Chrome DevTools for Agents 1.0 (Lighthouse, émulation, fuites mémoire, auto-connect) tout en conservant le simulateur biologique humain furtif unique de Sinew Chrome.
+- **Rapport d'évaluation de la pertinence des outils de diagnostic Google (`ANALYSE_DIAGNOSTIC_GOOGLE.md`)** : Analyse de pertinence des outils de diagnostic avancés de Google (Lighthouse, émulation, fuites mémoire, auto-connect) du point de vue de l'audit et du contrôle qualité, avec métaphores simples et plan d'action d'adaptation pour notre simulateur biologique.
+
+### Changed
+- **Mise à jour de la carte du code (`AGENTS.md`)** : Enregistrement des rapports d'analyse de l'équipe (sécurité, architecture, intégration, diagnostic) dans la carte des fichiers du projet.
+
+## [Unreleased] - 2026-05-29 15:48:14
+
+### Added
+- **Option de Recherche Sémantique Vectorielle (`src/components/SettingsPane.tsx` & `src-tauri/src/workspace.rs` & `src-tauri/src/lib.rs` & `src/lib/ipc.ts`)** : Ajout d'une nouvelle option SOTA « Recherche Sémantique Vectorielle (BETA) » dans les paramètres (Apparence & Interface). Liaison avec un nouveau handler Tauri Rust `set_semantic_embeddings_enabled` pour activer/désactiver dynamiquement la variable d'environnement `SINEW_INDEX_EMBEDDINGS` à la volée.
+
+## [Unreleased] - 2026-05-29 15:47:36
+
+### Added
+- **Script d'installation automatisé (`package.json`)** : Ajout d'un script `postinstall` pour installer automatiquement les dépendances des extensions locales (`sinew-chrome-bridge` et `scripts/agent-bridge`) lors du lancement initial de `npm install` par n'importe quel développeur ou serveur de compilation.
+
+## [Unreleased] - 2026-05-29 15:43:42
+
+### Changed
+- **Exclusion de dossiers (`.gitignore`)** : Ajout du répertoire `/build/` dans les règles d'exclusion de Git pour éviter de traquer les binaires et installateurs compilés localement.
+
+### Removed
+- **Nettoyage de l'historique Git** : Retrait du suivi de version Git pour les gros fichiers d'installation d'anciennes versions (`build/Sinew.exe`, `build/Sinew_0.1.25_x64-setup.exe` et `build/Sinew_0.1.25_x64_en-US.msi`) ainsi que pour le dossier de dépendances obsolètes (`sinew-chrome-bridge/node_modules/`), tout en conservant ces fichiers intacts sur les disques durs locaux.
+
+## [Unreleased] - 2026-05-29 15:40:51
+
+### Added
+- **Rapport d'analyse et d'idées SOTA (`RAPPORT_OUTILS.md`)** : Création d'un rapport consolidé présentant la vérification des outils et détaillant les 3 pistes d'améliorations SOTA validées et sécurisées.
+
+## [Unreleased] - 2026-05-29 15:39:58
+
+### Changed
+- **Intégration du Changelog (`CHANGELOG.md`)** : Déplacement et intégration de la documentation des fonctionnalités majeures du fork (anciennement `README-FORK.md`) directement en en-tête du journal pour une meilleure visibilité.
+
+### Removed
+- **Nettoyage général des vestiges et rapports** : Suppression définitive de 12 fichiers d'audits, de rapports et de scripts de test obsolètes (`AUDIT_PERFORMANCE_SOTA.md`, `AUDIT_RUST.md`, `AUDIT_SECURITE.md`, `RAPPORT_OUTILS.md`, `RAPPORT_VERIFICATION.md`, `RAPPORT_VERIFICATION_FINAL.md`, `README-FORK.md`, `scripts/AGENT-SPIKE-DESIGN.md`, `scripts/CAPTURE-MITM.md`, `scripts/probe_agent_run.py`, `scripts/probe_idempotent_crypto.py`, `scripts/verify_all.py` et le cache `__pycache__`) pour nettoyer totalement l'arborescence du projet.
+
+## [Unreleased] - 2026-05-29 15:33:18
+
+### Added
+- **Rapport d'analyse des outils (`RAPPORT_OUTILS.md`)** : Création d'un rapport complet sur l'état des outils système, de l'indexeur et de l'intégration du navigateur Sinew pour répondre aux interrogations de l'utilisateur.
+
+## [Unreleased] - 2026-05-29 15:31:31
+
+### Fixed
+- **Settings Pane (`src/components/SettingsPane.tsx`)** : Correction de la persistence de l'option « Exposer tous les outils au démarrage » (`autoLoad`) pour les serveurs MCP. L'option était omise lors de la sérialisation des paramètres en JSON (`settingsToJson`), ce qui entraînait sa réinitialisation à chaque rechargement ou modification de la configuration. Ajout de la sérialisation de `autoLoad` dans le JSON exporté.
+
+## [Unreleased] - 2026-05-29 15:28:08
+
+### Fixed
+- **Styles CSS (`src/styles.css`)** : Correction du problème d'affichage du menu déroulant (popover) de sélection des modèles en mode/thème IA. Remplacement de `overflow: hidden` par `overflow: visible !important` pour la boîte de composition `.composer__box` sous le sélecteur `html[data-theme="ai"]`, évitant ainsi le masquage ou le rognage des options du menu au-delà des bordures du conteneur.
+
+---
+
+
+
+## [Unreleased] - 2026-05-30 01:25:20
+
+### Added
+- **Script d'auto-consolidation de la mémoire (consolidate_rules.py)** : Ajout d'un script d'automatisation pour analyser les erreurs répétitives du fichier errors_raw.json et les nettoyer si une règle globale correspondante est présente dans instructions_consolidated.md.
+
+### Improved
+- **Réglages adaptés à chaque ordinateur & stockage (crates/sinew-index/src/store.rs)** : Remplacement des tailles fixes de cache SQLite par un calcul dynamique basé sur les coeurs de CPU disponibles et adaptation pleine puissance selon le type de stockage pour une performance SOTA optimale.
+
+### Changed
+- **Changelog (CHANGELOG.md)** : Restauration de la section de présentation des fonctionnalités majeures du fork premium (version améliorée d'origine) et de l'historique complet des versions, avec nettoyage des encodages corrompus.
+
+## [Unreleased] - 2026-05-30 00:46:40
+
+### Fixed
+- **Ouverture des fichiers dans l'éditeur (src/components/Workspace.tsx)** : Correction du problème d'ouverture des fichiers où l'éditeur restait vide ("Aucun fichier ouvert") lors du clic. Remplacement de la modification de l'index de l'onglet actif effectuée à tort au sein de la fonction de mise à jour de l'état des onglets (`setTabs`), évitant ainsi les effets de bord incompatibles avec le cycle de rendu de React 18. Utilisation également de la référence stable `tabsRef` pour éviter la recréation répétée de la fonction d'ouverture.
+- **Normalisation des chemins sous Windows (crates/sinew-app/src/workspace.rs, crates/sinew-app/src/read.rs)** : Correction du bug d'indexation et de comparaison de chemin où la casse ou le préfixe UNC (\\?\) différait entre les outils de lecture et d'édition, provoquant de fausses erreurs d'évasion de l'espace de travail et bloquant la modification de fichiers. Nettoyage de l'importation inutilisée dans `read.rs`.
+
+
+## [Unreleased] - 2026-05-30 00:34:25
+
+### Added
+- **Fiche de transmission structurée (Ancrage, Tâches et diagnostics) (crates/sinew-app/src/agent/compaction.rs)** : Amélioration SOTA de la transition d'IA. Lorsque vous changez de fournisseur d'IA au cours d'une conversation, le contexte est compacté automatiquement avec une fiche structurée contenant : l'état des fichiers modifiés (Git status), le relais des tâches de la todo-list, et les diagnostics de santé du code (linter).
+
+## [Unreleased] - 2026-05-30 00:48:09
+
+### Improved
+- **Indexation locale parallele (`crates/sinew-index/src/indexer.rs`)** : preparation des fichiers en parallele sur les coeurs disponibles, saut immediat des fichiers inchanges grace a leur date et leur taille, et limitation des relectures inutiles pour mieux exploiter le CPU et le SSD.
+- **Base d'index mieux adaptee au SSD et a la RAM (`crates/sinew-index/src/store.rs`)** : ecritures groupees dans SQLite, cache RAM elargi, lecture memoire SSD, delai d'attente renforce et stockage prioritaire dans le dossier local rapide de la machine avec migration douce de l'ancien cache.
+- **Repartition CPU ajoutee (`Cargo.toml`, `crates/sinew-index/Cargo.toml`, `Cargo.lock`)** : ajout de Rayon pour distribuer le travail d'indexation sur plusieurs coeurs.
+- **Nettoyage de validation (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : retrait des fonctions devenues inutiles et des importations superflues pour garder les tests sans avertissements.
+- **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter les optimisations de performance demandees.
+
+## [Unreleased] - 2026-05-30 00:54:00
+
+### Added
+- **Synchronisation automatique des jetons de connexion (OAuth/clés) via OneDrive (`src-tauri/src/lib.rs`)** : Ajout de la copie automatique des fichiers de connexion (*-auth.json, *-device.json, *-stream-state.json) lors du démarrage, de la fermeture et de la synchronisation forcée. Cela permet de conserver la connexion aux comptes d'IA (Claude, ChatGPT, etc.) identique sur les deux ordinateurs sans devoir se réauthentifier manuellement.
+- **Identification universelle par Git remote URL (`src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`)** : Priorisation de l'URL distante Git comme identifiant de projet unique universel pour une synchronisation 100% automatique et transparente.
+## [Unreleased] - 2026-05-30 00:42:23
+
+### Changed
+- **Réorientation du plan d'action (faire.md)** : Nouvelle stratégie respectant la frontière upstream/fork. Priorité aux modules qui nous appartiennent (chrome-bridge, scripts, correctifs propres) pour éviter les conflits avec l'upstream actif (Paseru/sinew, release tous les 2-3 jours). Les refactorings lourds du code upstream sont exclus.
+- **Journal des changements (CHANGELOG.md)** : Ajout de cette entrée.
+
+## [Unreleased] - 2026-05-30 00:34:25
+
+### Added
+- **Compaction automatique lors du changement d'IA (crates/sinew-app/src/agent/compaction.rs)** : Détection intelligente du changement de fournisseur d'IA au sein d'une discussion pour déclencher une compaction automatique du contexte de manière proactive. Cela résume le travail précédent et présente une fiche de transmission propre au nouveau modèle, évitant de perdre en cohérence.
+
+### Fixed
+
+### Fixed
+- **Normalisation des chemins sous Windows (crates/sinew-app/src/read.rs, crates/sinew-app/src/workspace.rs)** : Résolution du problème de casse/normalisation UNC (\\?\) qui empêchait la correspondance des empreintes de fichiers lus/écrits lors des opérations edit_file et write_file, causant des erreurs erronées indiquant que le fichier n'avait pas été lu.
+- **Compatibilité de la reprise de conversation Codex avec Google Gemini (crates/sinew-google/src/client.rs)** : Résolution du problème d'identifiants d'appels d'outils (tool_call_id) qui causait l'erreur INVALID_ARGUMENT (400) lors de la reprise d'une session commencée avec Codex en basculant vers Google. Les noms des appels d'outils sont désormais recherchés et résolus dynamiquement dans l'historique pour garantir leur correspondance exacte.
+- **Compatibilité de la reprise de conversation avec DeepSeek en mode pensée (crates/sinew-deepseek/src/client.rs)** : Correction de l'erreur 400: The reasoning_content in the thinking mode must be passed back to the API lors du basculement vers DeepSeek. Le champ reasoning_content est désormais round-trippé et inclus (même vide si aucun raisonnement n'a eu lieu) pour tous les messages de l'assistant dans l'historique.
+
+
+## [Unreleased] - 2026-05-30 00:36:50
+
+### Changed
+- **Rapport d'analyse complet (faire.md)** : Réécriture intégrale avec analyse approfondie de l'architecture (5 god files), qualité (250+ tests, 0 frontend), sécurité (Tauri, terminal, Chrome), dettes techniques (clippy, CHANGELOG, dépendances) et plan d'action priorisé.
+- **Journal des changements (CHANGELOG.md)** : Ajout de cette entrée.
+
+## [Unreleased] - 2026-05-30 00:45:00
+
+### Changed
+- **Identification universelle par Git remote URL (`src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`)** : Priorisation de l'URL distante Git (config remote.origin.url) comme identifiant de projet unique universel. Si un dépôt Git est présent, les deux ordinateurs partagent le même identifiant de projet sans générer d'UUIDs locaux différents, rendant la synchronisation 100% automatique sans devoir lier manuellement. Migration automatique des anciennes conversations stockées sous le chemin ou sous l'UUID local vers ce nouvel identifiant.
+
+## [Unreleased] - 2026-05-30 00:32:00
+
+### Fixed
+- **Normalisation et exclusion de l'UUID du projet actuel dans la liste des autres workspaces (`crates/sinew-app/src/store.rs`, `src-tauri/src/conversations.rs`)** : Correction du bug où l'identifiant unique (UUID) du projet actuel s'affichait comme un autre projet dans la liste de détection. Amélioration de la robustesse de la migration de chemin en ignorant la casse et la forme des slashes (Windows).
+
+## [Unreleased] - 2026-05-30 00:13:17
+
+### Changed
+- **Fermeture de la lightbox d'image au clic extérieur (`src/components/chat/ChatPane.tsx`)** : Permet de fermer l'aperçu de l'image (lightbox) en cliquant n'importe où autour de celle-ci, tout en empêchant la fermeture accidentelle lors d'un clic sur l'image elle-même ou sur les boutons de la barre d'outils.
+
+## [Unreleased] - 2026-05-30 00:11:30
+
+### Changed
+- **Comportement et description des Maquettes Visuelles (`src-tauri/src/turns.rs`, `src/components/SettingsPane.tsx`)** : Ajustement de la consigne et de la description de l'option « Maquettes Visuelles Automatiques ». Désormais, la maquette Mermaid n'est plus obligatoire à chaque changement d'interface ; elle n'est générée que si vous en faites la demande expresse ou si je l'estime nécessaire pour un changement complexe.
+
+## [Unreleased] - 2026-05-30 00:09:19
+
+### Changed
+- **Description de l'Autonomie de l'Agent (`src/components/SettingsPane.tsx`)** : Clarification de la description de l'option « Autonomie de l'Agent » en français et en anglais pour mieux expliquer que son but est de m'obliger à agir directement avec mes outils de codage plutôt que de lister des instructions manuelles à faire vous-même.
+
+## [Unreleased] - 2026-05-30 00:03:14
+
+### Changed
+- **Mode de recherche de mise à jour à 3 options (`src/components/SettingsPane.tsx`, `src/App.tsx`, `src/components/UpdateBadge.tsx`)** : Évolution de l'option de mise à jour pour proposer trois choix : "Bloquant" (vérifie et force la mise à jour au démarrage), "Notification uniquement" (démarre normalement et alerte discrètement via un badge interne), et "Désactivé" (ne vérifie jamais les mises à jour automatiquement).
+
+## [Unreleased] - 2026-05-29 23:59:57
+
+### Added
+- **Option de recherche de mise à jour automatique (`src/components/SettingsPane.tsx`, `src/App.tsx`, `src/components/UpdateBadge.tsx`)** : Ajout d'une option dans le panneau de configuration pour activer/désactiver la recherche de mise à jour automatique. Si désactivée, l'application ne recherche plus de nouvelles versions au démarrage (ce qui évite de bloquer l'interface utilisateur avec l'écran "Mise à jour requise") ni périodiquement en arrière-plan.
+
+## [Unreleased] - 2026-05-29 23:45:15
+
+### Added
+- **Identifiant de projet universel par fichier caché (`crates/sinew-app/src/store.rs`, `src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`, `src-tauri/Cargo.toml`)** : Introduction d'un identifiant unique de projet (UUID) généré automatiquement dans le fichier caché `.sinew/project_id.txt` à la racine de chaque projet (qu'il utilise Git ou non). Ce fichier se synchronise automatiquement via OneDrive/Git, ce qui permet à l'application de lier instantanément vos conversations d'un ordinateur à l'autre sans action manuelle, même si les chemins ou les noms des dossiers diffèrent.
+
+## [Unreleased] - 2026-05-29 23:42:04
+
+### Added
+- **Synchronisation automatique par URL Git (`crates/sinew-app/src/store.rs`, `src-tauri/src/git.rs`, `src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`, `src-tauri/src/turns.rs`, `src-tauri/src/swarm.rs`)** : Les conversations sont désormais associées au dépôt Git distant (remote origin URL). Lorsque vous ouvrez un dépôt Git, l'application détecte automatiquement les conversations correspondantes issues d'autres PC/dossiers (synchronisés par OneDrive) et les lie automatiquement à votre dossier de projet actuel, éliminant tout besoin d'action manuelle.
+
+## [Unreleased] - 2026-05-29 23:36:07
+
+### Added
+- **Association de conversations de projets / PC alternatifs (`crates/sinew-app/src/store.rs`, `src-tauri/src/conversations.rs`, `src/lib/ipc.ts`, `src/components/SettingsPane.tsx`)** : Ajout de la possibilité de détecter et de lier des conversations provenant d'autres dossiers de projets (comme vos dossiers de travail synchronisés par OneDrive) directement depuis les paramètres.
+- **Rafraîchissement dynamique des conversations (`src/components/Workspace.tsx`)** : Écouteur d'événement global pour rafraîchir instantanément la liste des conversations du projet actif lors d'une migration ou synchronisation.
+
+## [Unreleased] - 2026-05-29 23:34:58
+
+### Changed
+- **Options d'affichage du démarrage des serveurs MCP (`src/components/SettingsPane.tsx`, `src/styles.css`)** : Alignement de l'option "Exposer tous les outils au démarrage" sur une seule ligne avec le bouton de bascule (toggle switch) aligné à droite, au lieu d'être compressé sur une largeur étroite de 28px.
+- **Correction des types TypeScript dans le panneau des options (`src/components/SettingsPane.tsx`)** : Passage de `workspacePath` à `OptionsSection` pour corriger les erreurs de compilation liées à la migration des conversations entre projets.
+
+## [Unreleased] - 2026-05-29 23:34:08
+
+### Changed
+- **Comportement des blocs d'outils en erreur en mode très compact (`src/components/chat/ToolCard.tsx`)** : En mode très compact, les cartes d'outils ayant échoué (comme l'exécution de scripts Bash ou Python) démarrent désormais repliées (fermées) par défaut au lieu de s'ouvrir automatiquement. L'utilisateur peut toujours cliquer dessus pour les déplier et voir les détails de l'erreur.
+
+
+## [Unreleased] - 2026-05-29 23:24:18
+
+### Fixed
+- **Sensibilité à la casse des chemins de projet sous Windows (`crates/sinew-app/src/workspace.rs`, `crates/sinew-app/src/store.rs`)** : Normalisation en minuscules de l'identifiant unique du dossier de projet (`workspace_id`) sur Windows. Ajout d'une migration SQLite pour mettre à jour automatiquement les anciennes entrées de la base de données. Cela corrige le bug où les discussions créées au travail dans un dossier (ex: `C:\Dev\Sinew`) n'étaient pas affichées à la maison si le dossier avait une casse légèrement différente (ex: `C:\Dev\sinew`).
+
+### Added
+- **Bouton de synchronisation forcée dans les paramètres (`src/components/SettingsPane.tsx`)** : Ajout d'un bouton "Synchroniser maintenant" sous l'option de synchronisation Multi-PC dans `OptionsSection` pour permettre à l'utilisateur de déclencher manuellement et à tout moment la synchronisation bidirectionnelle OneDrive et Git.
+- **Commande Tauri de synchronisation forcée (`src-tauri/src/lib.rs`, `src/lib/ipc.ts`)** : Ajout de la commande `force_multi_pc_sync` dans Rust et exposition dans le pont IPC frontend pour permettre à l'utilisateur de déclencher manuellement une synchronisation bidirectionnelle complète des bases de données et des dépôts Git avec OneDrive à la demande.
+
+### Changed
+- **Correction de la synchronisation Git Multi-PC (`src-tauri/src/lib.rs`)** : Suppression du préfixe UNC `\\?\` des chemins locaux de l'espace de travail avant de définir le répertoire de travail (`current_dir`) pour les commandes Git (`git status`, `git pull`, `git commit`, `git push`). Cela résout l'erreur `CMD ne prend pas les chemins UNC comme répertoires en cours` (code d'erreur 128) et rétablit la synchronisation automatique transparente entre les différents ordinateurs.
+
+## [Unreleased] - 2026-05-29 23:20:51
+
+### Changed
+- **Correction de la synchronisation Git Multi-PC (`src-tauri/src/lib.rs`)** : Suppression du préfixe UNC `\\?\` des chemins locaux de l'espace de travail avant de définir le répertoire de travail (`current_dir`) pour les commandes Git (`git status`, `git pull`, `git commit`, `git push`). Cela résout l'erreur `CMD ne prend pas les chemins UNC comme répertoires en cours` (code d'erreur 128) et rétablit la synchronisation automatique transparente entre les différents ordinateurs.
+
+## [Unreleased] - 2026-05-29 23:20:17
+
+### Changed
+- **Ignorer définitivement la demande de mise à jour au démarrage (`src/App.tsx`)** : Permet de ne plus afficher l'écran de mise à jour bloquante pour une version spécifique lorsque l'utilisateur clique sur "Skip". Le choix est sauvegardé localement, et l'application charge directement le dernier dossier ouvert.
+
+## [Unreleased] - 2026-05-29 17:20:18
+
+### Added
+- **Script de synchronisation forcée (`sync_now.py`)** : Ajout d'un script robuste en Python permettant de fusionner à la demande et en toute sécurité les bases de données locale et OneDrive de Sinew, de copier les fichiers d'apprentissage globaux, et de pousser le dépôt Git vers GitHub pour garantir une sauvegarde multi-PC à 100% sans risque de perte.
+- **Mise à jour du plan d'action (`afaire.md`)** : Ajout de la confirmation de mise en place de la synchronisation forcée à la demande.
+
+## [Unreleased] - 2026-05-29 17:17:36
+
+### Changed
+- **Horodatage du plan d'action (`afaire.md`)** : Mise à jour de l'heure de synthèse après validation du contrôle unique complet.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter cette mise à jour finale.
+
+### Changed
+- **Contrôle unique sans blocage live (`crates/sinew-cursor/src/tests.rs`, `scripts/check.ps1`, `scripts/agent-bridge/test-live-rust.ps1`)** : Les tests Cursor dépendants d'un compte et du réseau sont ignorés par défaut dans les contrôles courants, le script principal précise qu'ils restent séparés, et le script dédié sait les lancer explicitement.
+- **Plan d'action mis à jour (`afaire.md`)** : Ajout de l'état confirmé sur la séparation des tests live pour garder le contrôle courant fiable.
+- **Changelog (`CHANGELOG.md`)** : Restauration du titre principal et ajout de cette entrée pour documenter les ajustements de validation.
+
+## [Unreleased] - 2026-05-29 16:51:36
+
+### Improved
+- **Index local plus rapide sur CPU, RAM et SSD (`crates/sinew-index/src/indexer.rs`)** : Préparation des fichiers en parallèle sur tous les cœurs disponibles, saut des fichiers inchangés grâce à leur date et leur taille, et écriture par lots pour mieux nourrir le SSD sans gonfler inutilement la mémoire.
+- **Base d'index optimisée pour le SSD local (`crates/sinew-index/src/store.rs`)** : Déplacement du cache d'index vers le dossier local de la machine, hausse du cache en RAM, lecture mémoire SSD, délai d'attente robuste et écritures groupées.
+- **Dépendance de parallélisation (`Cargo.toml`, `crates/sinew-index/Cargo.toml`, `Cargo.lock`)** : Ajout de Rayon pour répartir le travail lourd de préparation d'index sur plusieurs cœurs.
+- **Journal des changements (`CHANGELOG.md`)** : Documentation de ces optimisations de performance et de leur raison.
+
+
+
+## [Unreleased] - 2026-05-29 16:43:13
+
+### Added
+- **Script de contrôle unique (`scripts/check.ps1`, `package.json`)** : Ajout de `npm run check` pour lancer en une seule commande le build frontend, les contrôles Rust, `clippy`, les tests Rust, les audits npm et l'audit Rust si l'outil est installé. `clippy` tourne en mode rapport par défaut et peut devenir strict avec `SINEW_STRICT_CLIPPY=1`.
+
+### Changed
+- **Stabilisation du test terminal (`crates/sinew-app/src/bash.rs`)** : Le test interactif attend maintenant correctement la fin de la session Windows au lieu d'échouer sur une réponse encore en cours.
+- **Premières corrections `clippy` (`crates/sinew-index/src/background.rs`, `crates/sinew-index/src/process.rs`, `crates/sinew-index/src/search.rs`, `crates/sinew-openai/src/auth.rs`, `crates/sinew-google/src/auth.rs`)** : Correction de petites alertes de qualité signalées pendant le branchement du contrôle.
+- **Nettoyage du plan d'action (`afaire.md`)** : Retrait des trois priorités terminées et recentrage sur les actions restantes.
+- **Mise à jour de la carte des fichiers (`AGENTS.md`)** : Ajout du nouveau script `scripts/check.ps1` dans la carte du projet.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter les modifications demandées.
+
+## [Unreleased] - 2026-05-29 16:42:57
+
+### Changed
+- **Statut de quota précis pour OpenAI (`src/lib/quotas.ts`)** : Correction du calcul du pourcentage de quota restant pour OpenAI. Le pourcentage prend désormais en compte le minimum de toutes les fenêtres de limite (fenêtre courte et longue) au lieu de masquer un épuisement de quota sur la fenêtre longue lorsque la fenêtre courte est à 100%. Cela garantit que le voyant de statut du modèle (pastille) passe bien au rouge lorsque le compte est en limite atteinte.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter la correction du bug d'affichage des pastilles de statut.
+
+
+## [Unreleased] - 2026-05-29 16:39:35
+
+### Removed
+- **Badge numérique sur l'onglet Options (`src/components/SettingsPane.tsx`)** : Retrait du badge dynamique codé en dur affichant un chiffre "5" injustifié sur l'onglet de configuration générale des Options pour un visuel plus propre et professionnel.
+
+## [Unreleased] - 2026-05-29 16:36:20
+
+### Changed
+- **Nettoyage du plan d'amélioration (`afaire.md`)** : Réécriture complète du rapport pour ne garder que les constats vérifiés et les actions à fort impact : test Rust bloquant, contrôles locaux, gros fichiers à découper, zones sensibles à auditer, dépendances à surveiller et création de `DESIGN.md`.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter la réécriture demandée du fichier de suivi.
+
+## [Unreleased] - 2026-05-29 16:31:40
+
+### Added
+- **Mise à jour du rapport d'analyse (`afaire.md`)** : Ajout d'une synthèse vérifiée de l'état actuel du projet avec les contrôles passés, le test Rust bloquant, les outils Rust manquants, les gros fichiers à découper et les surfaces sensibles à auditer.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour consigner la modification documentaire demandée par l'utilisateur.
+
+## [Unreleased] - 2026-05-29 16:29:01
+
+### Improved
+- **Renforcement des consignes d'Autonomie de l'Agent (`src-tauri/src/state.rs`)** : Ajout d'une règle absolue m'interdisant de donner des instructions manuelles ou des commandes textuelles à l'utilisateur si je dispose d'un outil interne capable de réaliser l'action de manière proactive et autonome.
+
+## [Unreleased] - 2026-05-29 16:29:17
+
+### Added
+- **Rapport Simplifié d'Analyse** : Ajout d'une section de synthèse simplifiée à la fin du fichier `afaire.md` reprenant les points clés et problématiques identifiées sur le projet (god files, duplication, manque de tests).
+
+## [Unreleased] - 2026-05-29 16:29:00
+
+### Added
+- **Compilation de l'installateur v0.1.26 et copie sur OneDrive** : Lancement réussi de la compilation Tauri en mode NSIS et copie de l'installateur généré (`Sinew_0.1.26_x64-setup.exe`) sur le bureau OneDrive (`C:\Users\julie\OneDrive\Bureau`) pour un déploiement instantané.
+
+## 2026-05-29
+- Fusion (merge) des mises à jour du dépôt d'origine (upstream/main) pour synchroniser l'historique Git
+- Mise à jour du fichier `afaire.md` avec l'analyse complète du projet : problématiques, priorités, et plan d'amélioration
+- Ajout de `afaire.md` dans la carte des fichiers de `AGENTS.md`
