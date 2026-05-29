@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
+    thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -614,7 +615,12 @@ impl AppStore {
             self.load_conversation(project_id, &first.id)?
                 .context("conversation listed in index but missing from store")?
         } else {
-            let created = self.create_conversation(project_id, git_remote_url, default_model, default_system)?;
+            let created = self.create_conversation(
+                project_id,
+                git_remote_url,
+                default_model,
+                default_system,
+            )?;
             conversations = self.list_conversations(project_id, git_remote_url)?;
             created
         };
@@ -693,9 +699,13 @@ impl AppStore {
         })
     }
 
-    pub fn list_conversations(&self, workspace_id: &str, git_remote_url: Option<&str>) -> Result<Vec<ConversationSummary>> {
+    pub fn list_conversations(
+        &self,
+        workspace_id: &str,
+        git_remote_url: Option<&str>,
+    ) -> Result<Vec<ConversationSummary>> {
         let conn = self.connection()?;
-        
+
         // Auto-migrate any conversations that share the same git_remote_url to the current workspace_id!
         if let Some(remote_url) = git_remote_url {
             let _ = conn.execute(
@@ -729,14 +739,18 @@ impl AppStore {
         Ok(conversations)
     }
 
-    pub fn list_other_workspaces(&self, current_workspace_id: &str, current_project_id: Option<&str>) -> Result<Vec<OtherWorkspaceSummary>> {
+    pub fn list_other_workspaces(
+        &self,
+        current_workspace_id: &str,
+        current_project_id: Option<&str>,
+    ) -> Result<Vec<OtherWorkspaceSummary>> {
         let conn = self.connection()?;
-        
-        // Clean both paths by converting them to lowercase and replacing forward/backward slashes 
+
+        // Clean both paths by converting them to lowercase and replacing forward/backward slashes
         // to minimize slight path formatting differences
         let normalized_current = current_workspace_id.replace('\\', "/").to_lowercase();
         let normalized_project = current_project_id.map(|p| p.to_lowercase());
-        
+
         let mut statement = conn
             .prepare(
                 "select workspace_id, count(*) from conversations
@@ -758,7 +772,9 @@ impl AppStore {
             let (workspace_id, count) = row.context("bad workspace summary row")?;
             let normalized_db = workspace_id.replace('\\', "/").to_lowercase();
             // Exclude current workspace and current project UUID from other workspaces list
-            if normalized_db != normalized_current && Some(&normalized_db) != normalized_project.as_ref() {
+            if normalized_db != normalized_current
+                && Some(&normalized_db) != normalized_project.as_ref()
+            {
                 list.push(OtherWorkspaceSummary {
                     workspace_id,
                     count,
@@ -768,11 +784,15 @@ impl AppStore {
         Ok(list)
     }
 
-    pub fn migrate_conversations(&self, src_workspace_id: &str, dest_workspace_id: &str) -> Result<()> {
+    pub fn migrate_conversations(
+        &self,
+        src_workspace_id: &str,
+        dest_workspace_id: &str,
+    ) -> Result<()> {
         let conn = self.connection()?;
         // Normalize slashes and use case-insensitive matching for paths
         let src_norm = src_workspace_id.replace('\\', "/").to_lowercase();
-        
+
         // Find all distinct workspace_ids in the database that normalize to the same path
         let mut stmt = conn.prepare("select distinct workspace_id from conversations")?;
         let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
@@ -784,7 +804,7 @@ impl AppStore {
                 }
             }
         }
-        
+
         for id in ids_to_migrate {
             conn.execute(
                 "update conversations set workspace_id = ?2 where workspace_id = ?1",
@@ -916,8 +936,7 @@ impl AppStore {
         let tx = conn
             .transaction()
             .context("unable to open sqlite transaction")?;
-        let current_title_state =
-            load_conversation_title_state(&tx, &conversation.id)?;
+        let current_title_state = load_conversation_title_state(&tx, &conversation.id)?;
         let title_state = resolve_title_for_save(
             current_title_state.as_ref(),
             &conversation.title,
@@ -987,8 +1006,7 @@ impl AppStore {
         let tx = conn
             .transaction()
             .context("unable to open sqlite transaction")?;
-        let current_title_state =
-            load_conversation_title_state(&tx, &conversation.id)?;
+        let current_title_state = load_conversation_title_state(&tx, &conversation.id)?;
         let title_state = resolve_title_for_save(
             current_title_state.as_ref(),
             &conversation.title,
@@ -1529,10 +1547,16 @@ impl AppStore {
                 .context("unable to clear legacy turn checkpoints")?;
         }
         if version < 10 {
-            let _ = conn.execute("UPDATE conversations SET workspace_id = LOWER(workspace_id)", []);
+            let _ = conn.execute(
+                "UPDATE conversations SET workspace_id = LOWER(workspace_id)",
+                [],
+            );
         }
         if version < 11 {
-            let _ = conn.execute("alter table conversations add column git_remote_url text", []);
+            let _ = conn.execute(
+                "alter table conversations add column git_remote_url text",
+                [],
+            );
         }
         conn.pragma_update(None, "user_version", 11)
             .context("unable to set sqlite schema version")?;
@@ -1557,16 +1581,29 @@ impl AppStore {
 
     fn connection(&self) -> Result<Connection> {
         let conn = Connection::open(&self.path).context("unable to open sqlite database")?;
-        conn.execute_batch(
+        let cache_kib = app_sqlite_cache_kib();
+        let pragmas = format!(
             "pragma foreign_keys = on;
              pragma journal_mode = WAL;
              pragma synchronous = NORMAL;
-             pragma cache_size = -2000;
-             pragma temp_store = MEMORY;"
-        )
-        .context("unable to enable foreign keys and performance pragmas")?;
+             pragma cache_size = -{};
+             pragma mmap_size = {};
+             pragma temp_store = MEMORY;
+             pragma busy_timeout = 10000;",
+            cache_kib,
+            cache_kib * 1024
+        );
+        conn.execute_batch(&pragmas)
+            .context("unable to enable foreign keys and performance pragmas")?;
         Ok(conn)
     }
+}
+
+fn app_sqlite_cache_kib() -> i64 {
+    let parallelism = thread::available_parallelism()
+        .map(|value| value.get() as i64)
+        .unwrap_or(4);
+    (parallelism * 8 * 1024).clamp(32 * 1024, 512 * 1024)
 }
 
 fn ensure_conversations_todo_column(conn: &Connection) -> Result<()> {
@@ -1960,7 +1997,8 @@ mod tests {
         let result = (|| -> Result<()> {
             store.migrate()?;
             let model = ModelRef::new("test", "model");
-            let mut conversation = store.create_conversation("workspace", None, &model, "system")?;
+            let mut conversation =
+                store.create_conversation("workspace", None, &model, "system")?;
             conversation
                 .history
                 .push(message(Role::User, "First request", None));

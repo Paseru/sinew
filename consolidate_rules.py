@@ -1,83 +1,152 @@
-﻿import os
 import json
+import os
+import re
 import sys
+from datetime import datetime
+from pathlib import Path
 
-# Forcer la sortie standard en UTF-8 si nécessaire
-if sys.platform.startswith('win'):
+if sys.platform.startswith("win"):
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding="utf-8")
     except AttributeError:
         pass
 
-def load_json_file(path):
-    encodings = ["utf-8", "cp1252", "latin-1"]
-    for encoding in encodings:
+ALIASES = {
+    "git_exclusions_build_node_modules": ["node_modules", "build/", ".exe", ".msi"],
+    "spawn_einval_windows": ["spawn einval", "shell: true"],
+    "recursive_postinstall_npm": ["postinstall", "npm install"],
+    "mcp_autoload_serialization": ["autoload", "settingstojson"],
+    "absolute_paths_windows": ["chemins de fichiers absolus", "chemins relatifs"],
+}
+
+
+def load_text(path: Path):
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
         try:
-            with open(path, "r", encoding=encoding) as f:
-                return json.load(f), encoding
-        except (UnicodeDecodeError, json.JSONDecodeError):
+            return path.read_text(encoding=encoding), encoding
+        except UnicodeDecodeError:
             continue
-    # Fallback
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        return json.load(f), "utf-8"
+    return path.read_text(encoding="utf-8", errors="replace"), "utf-8"
+
+
+def load_json_file(path: Path):
+    text, encoding = load_text(path)
+    return json.loads(text), encoding
+
+
+def normalized(value: str) -> str:
+    value = value.lower().replace("_", " ").replace("-", " ")
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def rule_covers_error(rules_text: str, error_id: str) -> bool:
+    rules = normalized(rules_text)
+    error_key = normalized(error_id)
+    if error_key and error_key in rules:
+        return True
+    aliases = ALIASES.get(error_id, [])
+    if aliases and all(normalized(alias) in rules for alias in aliases[:2]):
+        return True
+    return False
+
+
+def next_rule_number(rules_text: str) -> int:
+    numbers = []
+    for line in rules_text.splitlines():
+        match = re.match(r"^###\s+(\d+)\.", line.strip())
+        if match:
+            numbers.append(int(match.group(1)))
+    return max(numbers, default=0) + 1
+
+
+def title_from_error_id(error_id: str) -> str:
+    return " ".join(part.capitalize() for part in error_id.split("_") if part)
+
+
+def build_rule(number: int, error: dict) -> str:
+    error_id = str(error.get("id", "erreur_repetee"))
+    description = str(error.get("description", "Erreur répétitive sans description.")).strip()
+    description = re.sub(r"\s+", " ", description)
+    return (
+        f"\n\n### {number}. 🧠 Règle auto-consolidée — {title_from_error_id(error_id)}\n"
+        f"* **Règle** : Cette erreur répétée a été détectée automatiquement : {description}. "
+        "À chaque occurrence similaire, l'agent doit s'arrêter, identifier la cause générale, "
+        "appliquer ou créer une règle globale adaptée, puis éviter de répéter la même tentative ciblée."
+    )
+
 
 def main():
     local_app_data = os.getenv("LOCALAPPDATA")
     if not local_app_data:
-        print("Erreur: LOCALAPPDATA non trouve.")
+        print("LOCALAPPDATA introuvable : consolidation ignorée.")
         return
 
-    sinew_dir = os.path.join(local_app_data, "Sinew")
-    errors_path = os.path.join(sinew_dir, "errors_raw.json")
-    rules_path = os.path.join(sinew_dir, "instructions_consolidated.md")
+    sinew_dir = Path(local_app_data) / "Sinew"
+    errors_path = sinew_dir / "errors_raw.json"
+    rules_path = sinew_dir / "instructions_consolidated.md"
 
-    if not os.path.exists(errors_path):
-        print("Aucun fichier d'erreurs brutes trouve.")
+    if not errors_path.exists():
+        print("Aucun fichier errors_raw.json trouvé : rien à consolider.")
         return
 
     try:
-        errors, encoding = load_json_file(errors_path)
-    except Exception as e:
-        print(f"Erreur lors de la lecture des erreurs : {e}")
+        errors, errors_encoding = load_json_file(errors_path)
+    except Exception as exc:
+        print(f"Lecture impossible de errors_raw.json : {exc}")
         return
 
-    # Charger les regles existantes
-    rules_content = ""
-    if os.path.exists(rules_path):
-        try:
-            for enc in ["utf-8", "cp1252", "latin-1"]:
-                try:
-                    with open(rules_path, "r", encoding=enc) as f:
-                        rules_content = f.read()
-                        break
-                except UnicodeDecodeError:
-                    continue
-        except Exception as e:
-            print(f"Erreur lors de la lecture des regles : {e}")
+    if not isinstance(errors, list):
+        print("Format errors_raw.json inattendu : la consolidation attend une liste.")
+        return
 
-    cleaned_any = False
+    if rules_path.exists():
+        rules_text, _ = load_text(rules_path)
+    else:
+        rules_text = (
+            "# 🛡️ Instructions Globales Consolidées (Règles anti-erreurs répétitives)\n\n"
+            "Ces instructions ont été validées et consolidées après avoir été rencontrées au moins 3 fois. "
+            "Tout agent intervenant sur ce projet doit les respecter à la lettre."
+        )
+
+    changed_errors = False
+    changed_rules = False
+    created_rules = 0
+    cleaned_errors = 0
+    number = next_rule_number(rules_text)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     for error in errors:
-        error_id = error.get("id", "")
-        count = error.get("count", 0)
+        if not isinstance(error, dict):
+            continue
+        error_id = str(error.get("id", "")).strip()
+        count = int(error.get("count") or 0)
+        if count < 3 or not error_id:
+            continue
 
-        # Si l'erreur a ete integree dans le fichier MD de regles, on remet son compteur a 0
-        keyword = error_id.replace("_", " ").lower()
-        if keyword and keyword in rules_content.lower():
-            if count > 0:
-                print(f"Nettoyage : L'erreur '{error_id}' a ete identifiee comme resolue par une regle globale. Reinitialisation.")
-                error["count"] = 0
-                cleaned_any = True
-        elif count >= 3:
-            print(f"[ALERTE] L'erreur '{error_id}' est apparue {count} fois et necessite une regle globale.")
+        if rule_covers_error(rules_text, error_id):
+            cleaned_errors += 1
+        else:
+            rules_text += build_rule(number, error)
+            number += 1
+            created_rules += 1
+            changed_rules = True
 
-    if cleaned_any:
-        try:
-            with open(errors_path, "w", encoding=encoding) as f:
-                json.dump(errors, f, ensure_ascii=False, indent=4)
-            print("Fichier errors_raw.json mis a jour avec succes.")
-        except Exception as e:
-            print(f"Erreur lors de l'ecriture des erreurs : {e}")
+        error["count"] = 0
+        error["consolidated_at"] = now
+        changed_errors = True
+
+    if changed_rules:
+        rules_path.parent.mkdir(parents=True, exist_ok=True)
+        rules_path.write_text(rules_text.rstrip() + "\n", encoding="utf-8")
+
+    if changed_errors:
+        errors_path.write_text(json.dumps(errors, ensure_ascii=False, indent=4) + "\n", encoding=errors_encoding)
+
+    print(
+        f"Consolidation terminée : {created_rules} règle(s) créée(s), "
+        f"{cleaned_errors} erreur(s) déjà couvertes nettoyée(s)."
+    )
+
 
 if __name__ == "__main__":
     main()

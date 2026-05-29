@@ -524,6 +524,45 @@ fn sync_auth_files(localappdata: &str, onedrive_db_dir: &std::path::Path, to_one
     }
 }
 
+fn consolidate_global_learning_once() {
+    #[cfg(target_os = "windows")]
+    {
+        use std::path::PathBuf;
+        use std::process::Command;
+
+        let Ok(current_exe) = std::env::current_exe() else {
+            return;
+        };
+        let Some(mut dir) = current_exe.parent().map(|value| value.to_path_buf()) else {
+            return;
+        };
+
+        for _ in 0..6 {
+            let script = dir.join("consolidate_rules.py");
+            if script.is_file() {
+                let _ = Command::new("python")
+                    .arg(script)
+                    .creation_flags(0x08000000)
+                    .status();
+                return;
+            }
+            if !dir.pop() {
+                break;
+            }
+        }
+
+        let fallback = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .map(|root| root.join("consolidate_rules.py"));
+        if let Some(script) = fallback.filter(|path| path.is_file()) {
+            let _ = Command::new("python")
+                .arg(script)
+                .creation_flags(0x08000000)
+                .status();
+        }
+    }
+}
+
 fn sync_onedrive_db_on_startup() {
     #[cfg(target_os = "windows")]
     {
@@ -902,6 +941,7 @@ pub fn run() {
         .try_init();
 
     sync_onedrive_db_on_startup();
+    consolidate_global_learning_once();
 
     let store = AppStore::open_default().expect("unable to open app store");
     let openrouter_models = store.load_openrouter_models().unwrap_or_default();

@@ -2,6 +2,7 @@ import os
 import shutil
 import sqlite3
 import subprocess
+import sys
 
 local_db = os.path.expandvars(r'%LOCALAPPDATA%\hyrak\sinew\data\desktop-state.sqlite3')
 onedrive_dir = os.path.expandvars(r'%USERPROFILE%\OneDrive\Documents\Sinew')
@@ -134,6 +135,14 @@ def sync():
             print(f"Error: Initial copy failed: {e}")
             
     # 2. Sync global learning files
+    print("Consolidating global learning rules before OneDrive copy...")
+    try:
+        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'consolidate_rules.py')
+        if os.path.exists(script_path):
+            subprocess.run([sys.executable, script_path], check=False)
+    except Exception as e:
+        print(f"Warning: Failed to consolidate global learning rules: {e}")
+
     local_learning_dir = os.path.expandvars(r'%LOCALAPPDATA%\Sinew')
     errors_local = os.path.join(local_learning_dir, 'errors_raw.json')
     rules_local = os.path.join(local_learning_dir, 'instructions_consolidated.md')

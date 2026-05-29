@@ -8,12 +8,14 @@
 ├── CHANGELOG.md
 ├── Cargo.lock
 ├── Cargo.toml
+├── consolidate_rules.py
 ├── index.html
 ├── launch-sinew-dev.bat
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
 ├── README.md
+├── sync_now.py
 ├── .sinew
 │   └── skills
 │       └── browser
