@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use sinew_core::{
-    AppError, ChatMessage, ModelRef, Part, Provider, ProviderRequest, ServiceTier, ToolDescriptor,
+    AppError, ChatMessage, ModelRef, Part, Provider, ProviderRequest, Role, ServiceTier, ToolDescriptor,
 };
 
 use crate::compact_conversation_history;
@@ -46,26 +46,55 @@ pub(super) async fn maybe_auto_compact_history(
         return Ok(false);
     }
 
-    let request_history =
-        history_with_current_tool_result_ids(history, current_turn_tool_result_ids);
-    let mut request = ProviderRequest::new(model.clone(), request_history)
-        .with_system(system_prompt.to_string())
-        .with_tools(tool_descriptors.to_vec())
-        .with_cache_stable_message_count(*cache_stable_message_count);
-    if let Some(cache_key) = cache_key {
-        request = request.with_cache_key(cache_key.clone());
-    }
-    if let Some(service_tier) = service_tier {
-        request = request.with_service_tier(service_tier);
-    }
+    let current_provider_name = provider.name();
+    let last_assistant_provider = history
+        .iter()
+        .rev()
+        .filter(|msg| msg.role == Role::Assistant)
+        .flat_map(|msg| &msg.parts)
+        .find_map(|part| {
+            let meta = match part {
+                Part::Text { meta, .. } => meta,
+                Part::Thinking { meta, .. } => meta,
+                Part::ToolCall { meta, .. } => meta,
+                _ => &None,
+            };
+            meta.as_ref()
+                .and_then(|m| m.get("provider"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        });
 
-    let should_compact = match provider.estimate_tokens(request).await {
-        Ok(estimate) => {
-            let threshold = auto_compact_threshold(caps.context_window, caps.max_output_tokens);
-            estimate.input_tokens >= threshold
+    let provider_changed = if let Some(prev) = last_assistant_provider {
+        prev != current_provider_name
+    } else {
+        false
+    };
+
+    let should_compact = if provider_changed {
+        true
+    } else {
+        let request_history =
+            history_with_current_tool_result_ids(history, current_turn_tool_result_ids);
+        let mut request = ProviderRequest::new(model.clone(), request_history)
+            .with_system(system_prompt.to_string())
+            .with_tools(tool_descriptors.to_vec())
+            .with_cache_stable_message_count(*cache_stable_message_count);
+        if let Some(cache_key) = cache_key {
+            request = request.with_cache_key(cache_key.clone());
         }
-        Err(err) if is_context_length_error(&err) => true,
-        Err(_) => false,
+        if let Some(service_tier) = service_tier {
+            request = request.with_service_tier(service_tier);
+        }
+
+        match provider.estimate_tokens(request).await {
+            Ok(estimate) => {
+                let threshold = auto_compact_threshold(caps.context_window, caps.max_output_tokens);
+                estimate.input_tokens >= threshold
+            }
+            Err(err) if is_context_length_error(&err) => true,
+            Err(_) => false,
+        }
     };
 
     if !should_compact {

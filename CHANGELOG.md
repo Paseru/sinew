@@ -1,6 +1,18 @@
 # Changelog
 
+
+## [Unreleased] - 2026-05-30 00:42:23
+
+### Changed
+- **R�orientation du plan d'action (faire.md)** : Nouvelle strat�gie respectant la fronti�re upstream/fork. Priorit� aux modules qui nous appartiennent (chrome-bridge, scripts, correctifs propres) pour �viter les conflits avec l'upstream actif (Paseru/sinew, release tous les 2-3 jours). Les refactorings lourds du code upstream sont exclus.
+- **Journal des changements (CHANGELOG.md)** : Ajout de cette entr�e.
+
 ## [Unreleased] - 2026-05-30 00:34:25
+
+### Added
+- **Compaction automatique lors du changement d'IA (crates/sinew-app/src/agent/compaction.rs)** : Détection intelligente du changement de fournisseur d'IA au sein d'une discussion pour déclencher une compaction automatique du contexte de manière proactive. Cela résume le travail précédent et présente une fiche de transmission propre au nouveau modèle, évitant de perdre en cohérence.
+
+### Fixed
 
 ### Fixed
 - **Normalisation des chemins sous Windows (crates/sinew-app/src/read.rs, crates/sinew-app/src/workspace.rs)** : Résolution du problème de casse/normalisation UNC (\\?\) qui empêchait la correspondance des empreintes de fichiers lus/écrits lors des opérations edit_file et write_file, causant des erreurs erronées indiquant que le fichier n'avait pas été lu.
