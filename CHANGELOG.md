@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:45:00
+
+### Changed
+- **Identification universelle par Git remote URL (`src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`)** : Priorisation de l'URL distante Git (config remote.origin.url) comme identifiant de projet unique universel. Si un dépôt Git est présent, les deux ordinateurs partagent le même identifiant de projet sans générer d'UUIDs locaux différents, rendant la synchronisation 100% automatique sans devoir lier manuellement. Migration automatique des anciennes conversations stockées sous le chemin ou sous l'UUID local vers ce nouvel identifiant.
+
 ## [Unreleased] - 2026-05-30 00:32:00
 
 ### Fixed

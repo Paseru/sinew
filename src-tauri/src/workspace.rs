@@ -28,6 +28,9 @@ pub(super) async fn open_workspace(
 
     let project_id = get_or_create_project_id(&workspace_root)?;
     let git_remote_url = crate::git::get_git_remote_url(&workspace_root);
+    // Run path-based and UUID-based migrations
+    migrate_workspace_conversations(&state.store, &workspace_root, &project_id);
+
     let mut bootstrap = state
         .store
         .bootstrap_workspace(&workspace_root, &project_id, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
@@ -638,6 +641,15 @@ pub async fn set_semantic_embeddings_enabled(enabled: bool) -> std::result::Resu
 }
 
 pub(crate) fn get_or_create_project_id(workspace_root: &std::path::Path) -> std::result::Result<String, String> {
+    // 1. Prioritize Git remote URL if it exists
+    if let Some(git_url) = crate::git::get_git_remote_url(workspace_root) {
+        let normalized = git_url.trim().to_lowercase();
+        if !normalized.is_empty() {
+            return Ok(normalized);
+        }
+    }
+
+    // 2. Fallback to .sinew/project_id.txt
     let sinew_dir = workspace_root.join(".sinew");
     let id_file = sinew_dir.join("project_id.txt");
 
@@ -657,6 +669,31 @@ pub(crate) fn get_or_create_project_id(workspace_root: &std::path::Path) -> std:
         return Err(format!("Impossible d'écrire l'identifiant du projet : {}", e));
     }
     Ok(new_id)
+}
+
+pub(crate) fn migrate_workspace_conversations(
+    store: &sinew_app::AppStore,
+    workspace_root: &std::path::Path,
+    project_id: &str,
+) {
+    let absolute_path = workspace_root.display().to_string();
+    let lowercase_path = absolute_path.to_lowercase();
+    
+    // Migrate from paths
+    let _ = store.migrate_conversations(&absolute_path, project_id);
+    let _ = store.migrate_conversations(&lowercase_path, project_id);
+    
+    // Migrate from local UUID if it exists and is different
+    let sinew_dir = workspace_root.join(".sinew");
+    let id_file = sinew_dir.join("project_id.txt");
+    if id_file.exists() {
+        if let Ok(id) = std::fs::read_to_string(&id_file) {
+            let trimmed = id.trim();
+            if !trimmed.is_empty() && trimmed != project_id {
+                let _ = store.migrate_conversations(trimmed, project_id);
+            }
+        }
+    }
 }
 
 pub(crate) fn resolve_project_id_str(workspace_path_str: &str) -> String {

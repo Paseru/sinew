@@ -8,10 +8,8 @@ pub(super) async fn list_conversations(
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let project_id = workspace::get_or_create_project_id(&workspace_root)?;
-    let absolute_path = workspace_root.display().to_string();
-    let lowercase_path = absolute_path.to_lowercase();
-    let _ = state.store.migrate_conversations(&absolute_path, &project_id);
-    let _ = state.store.migrate_conversations(&lowercase_path, &project_id);
+    // Run path-based and UUID-based migrations
+    workspace::migrate_workspace_conversations(&state.store, &workspace_root, &project_id);
     let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
@@ -27,6 +25,10 @@ pub(super) async fn create_conversation(
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let project_id = workspace::get_or_create_project_id(&workspace_root)?;
+    
+    // Run path-based and UUID-based migrations
+    workspace::migrate_workspace_conversations(&state.store, &workspace_root, &project_id);
+
     let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
