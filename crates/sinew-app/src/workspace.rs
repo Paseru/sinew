@@ -1271,10 +1271,23 @@ fn ensure_within_root(root: &Path, path: &Path) -> Result<()> {
     let canonical_root = root
         .canonicalize()
         .unwrap_or_else(|_| root.to_path_buf());
-    if path.starts_with(&canonical_root) {
-        Ok(())
-    } else {
-        bail!("path escapes workspace")
+    #[cfg(target_os = "windows")]
+    {
+        let root_str = canonical_root.to_string_lossy().to_lowercase();
+        let path_str = path.to_string_lossy().to_lowercase();
+        if path_str.starts_with(&root_str) {
+            Ok(())
+        } else {
+            bail!("path escapes workspace")
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        if path.starts_with(&canonical_root) {
+            Ok(())
+        } else {
+            bail!("path escapes workspace")
+        }
     }
 }
 

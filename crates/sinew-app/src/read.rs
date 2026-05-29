@@ -259,20 +259,42 @@ fn fingerprint_for_bytes(
 }
 
 fn relative_from_root(root: &Path, path: &Path) -> Result<String> {
-    let root = root
+    let root_canonical = root
         .canonicalize()
         .unwrap_or_else(|_| root.to_path_buf());
-    let relative = path
-        .strip_prefix(&root)
-        .with_context(|| format!("{} is outside the workspace", path.display()))?;
-    Ok(relative
-        .components()
-        .filter_map(|component| match component {
-            Component::Normal(value) => Some(value.to_string_lossy().into_owned()),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-        .join("/"))
+    let path_canonical = path
+        .canonicalize()
+        .unwrap_or_else(|_| path.to_path_buf());
+
+    #[cfg(target_os = "windows")]
+    {
+        let root_str = root_canonical.to_string_lossy().replace('\\', "/");
+        let path_str = path_canonical.to_string_lossy().replace('\\', "/");
+        let root_lower = root_str.to_lowercase();
+        let path_lower = path_str.to_lowercase();
+        
+        if path_lower.starts_with(&root_lower) {
+            let relative_part = &path_str[root_lower.len()..];
+            let trimmed = relative_part.trim_start_matches('/');
+            Ok(trimmed.to_string())
+        } else {
+            bail!("{} is outside the workspace", path.display());
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let relative = path_canonical
+            .strip_prefix(&root_canonical)
+            .with_context(|| format!("{} is outside the workspace", path.display()))?;
+        Ok(relative
+            .components()
+            .filter_map(|component| match component {
+                Component::Normal(value) => Some(value.to_string_lossy().into_owned()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("/"))
+    }
 }
 
 #[cfg(test)]

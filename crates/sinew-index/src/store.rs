@@ -119,7 +119,8 @@ impl IndexStore {
 
     pub fn file_signatures(&self) -> Result<HashMap<String, FileSignature>> {
         let conn = self.connection()?;
-        let mut stmt = conn.prepare("SELECT path, content_hash, mtime_ms, size_bytes FROM files")?;
+        let mut stmt =
+            conn.prepare("SELECT path, content_hash, mtime_ms, size_bytes FROM files")?;
         let rows = stmt.query_map([], |row| {
             Ok((
                 row.get::<_, String>(0)?,
@@ -312,7 +313,9 @@ fn legacy_index_db_path(workspace_root: &Path) -> Result<Option<PathBuf>> {
 
 fn index_db_path_under(base: &Path, workspace_root: &Path) -> PathBuf {
     let workspace_id = sha256_hex(workspace_root.display().to_string().as_bytes());
-    base.join("codebase-index").join(workspace_id).join("index.db")
+    base.join("codebase-index")
+        .join(workspace_id)
+        .join("index.db")
 }
 
 fn migrate_legacy_index_db(workspace_root: &Path, local_path: &Path) -> Result<()> {

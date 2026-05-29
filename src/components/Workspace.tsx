@@ -502,7 +502,8 @@ export function Workspace({
           relativePath: entry.relativePath,
         });
       };
-      const existing = tabs.findIndex(
+      const currentTabs = tabsRef.current;
+      const existing = currentTabs.findIndex(
         (t) => t.relativePath === entry.relativePath,
       );
       if (existing >= 0) {
@@ -524,21 +525,18 @@ export function Workspace({
             (t) => t.relativePath === entry.relativePath,
           );
           if (existingIndex >= 0) {
-            setActiveTabIndex(existingIndex);
-            setSettingsActive(false);
             return prev;
           }
-          const next = [...prev, newTab];
-          setActiveTabIndex(next.length - 1);
-          setSettingsActive(false);
-          return next;
+          return [...prev, newTab];
         });
+        setActiveTabIndex(currentTabs.length);
+        setSettingsActive(false);
         queueReveal();
       } catch (err) {
         console.error(err);
       }
     },
-    [workspacePath, tabs],
+    [workspacePath],
   );
 
   const activateFileTab = useCallback((index: number) => {
@@ -599,7 +597,8 @@ export function Workspace({
           query: "",
         });
       };
-      const existing = tabsRef.current.findIndex(
+      const currentTabs = tabsRef.current;
+      const existing = currentTabs.findIndex(
         (t) => t.relativePath === absolutePath,
       );
       if (existing >= 0) {
@@ -622,15 +621,12 @@ export function Workspace({
             (t) => t.relativePath === absolutePath,
           );
           if (existingIndex >= 0) {
-            setActiveTabIndex(existingIndex);
-            setSettingsActive(false);
             return prev;
           }
-          const next = [...prev, newTab];
-          setActiveTabIndex(next.length - 1);
-          setSettingsActive(false);
-          return next;
+          return [...prev, newTab];
         });
+        setActiveTabIndex(currentTabs.length);
+        setSettingsActive(false);
         queueReveal();
       } catch (err) {
         console.error("Unable to open external file", absolutePath, err);

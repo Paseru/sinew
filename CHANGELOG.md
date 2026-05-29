@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:46:40
+
+### Fixed
+- **Ouverture des fichiers dans l'éditeur (src/components/Workspace.tsx)** : Correction du problème d'ouverture des fichiers où l'éditeur restait vide ("Aucun fichier ouvert") lors du clic. Remplacement de la modification de l'index de l'onglet actif effectuée à tort au sein de la fonction de mise à jour de l'état des onglets (`setTabs`), évitant ainsi les effets de bord incompatibles avec le cycle de rendu de React 18. Utilisation également de la référence stable `tabsRef` pour éviter la recréation répétée de la fonction d'ouverture.
+- **Normalisation des chemins sous Windows (crates/sinew-app/src/workspace.rs, crates/sinew-app/src/read.rs)** : Correction du bug d'indexation et de comparaison de chemin où la casse ou le préfixe UNC (\\?\) différait entre les outils de lecture et d'édition, provoquant de fausses erreurs d'évasion de l'espace de travail et bloquant la modification de fichiers.
+
+
 ## [Unreleased] - 2026-05-30 00:34:25
 
 ### Added
