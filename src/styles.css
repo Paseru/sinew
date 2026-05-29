@@ -422,7 +422,6 @@ html[data-theme="ai"] .terminal-shell,
 html[data-theme="ai"] .titlebar,
 html[data-theme="ai"] .workbench-center,
 html[data-theme="ai"] .sidebar-tab-pane,
-html[data-theme="ai"] .settings-pane,
 html[data-theme="ai"] .chat-footer {
   background: rgba(15, 16, 19, 0.72) !important; /* Elegant slate glass matching Night base */
   backdrop-filter: blur(20px) saturate(160%) !important;
@@ -430,6 +429,21 @@ html[data-theme="ai"] .chat-footer {
   border: 1px solid rgba(255, 255, 255, 0.04) !important;
   /* SOTA 3: Frosted Noise Texture */
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E") !important;
+}
+
+/* Translucent panel styling for Settings page in AI theme */
+html[data-theme="ai"] .settings-pane {
+  background: transparent !important;
+  border: none !important;
+}
+
+html[data-theme="ai"] .settings-pane__nav {
+  background: rgba(15, 16, 19, 0.4) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+html[data-theme="ai"] .settings-pane__main {
+  background: transparent !important;
 }
 
 html[data-theme="ai"] .chat-col {
@@ -485,7 +499,15 @@ html[data-theme="ai"] .settings-pane__provider-card--compact:hover::after {
 
 /* SOTA 2: Spring Physics for bouncy click/hover feel in AI mode */
 html[data-theme="ai"] .tool-card,
-html[data-theme="ai"] .composer__box,
+html[data-theme="ai"] .composer__box {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              background-color 0.3s ease, 
+              border-color 0.3s ease, 
+              box-shadow 0.3s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
 html[data-theme="ai"] .settings-pane__provider-card,
 html[data-theme="ai"] .settings-pane__provider-card--compact {
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
@@ -493,7 +515,7 @@ html[data-theme="ai"] .settings-pane__provider-card--compact {
               border-color 0.3s ease, 
               box-shadow 0.3s ease !important;
   position: relative;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
 html[data-theme="ai"] .tool-card:hover,
