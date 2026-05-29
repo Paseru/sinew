@@ -1,7 +1,6 @@
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    process::Child,
     sync::{Mutex, OnceLock},
     thread,
     time::Duration,
@@ -12,9 +11,12 @@ use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use crate::indexer::ensure_workspace_index;
 
 static ACTIVE: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-static HELPERS: OnceLock<Mutex<Vec<Child>>> = OnceLock::new();
 
 pub fn start_background_indexing(workspace_root: PathBuf) {
+    if !background_indexing_enabled() {
+        return;
+    }
+
     let key = workspace_root.display().to_string();
     let active = ACTIVE.get_or_init(|| Mutex::new(HashSet::new()));
     let mut guard = match active.lock() {
@@ -25,22 +27,6 @@ pub fn start_background_indexing(workspace_root: PathBuf) {
         return;
     }
     drop(guard);
-
-    if crate::process::process_isolation_enabled() && !crate::process::helper_child() {
-        match crate::process::spawn_background_indexer(&workspace_root) {
-            Ok(child) => {
-                HELPERS
-                    .get_or_init(|| Mutex::new(Vec::new()))
-                    .lock()
-                    .map(|mut helpers| helpers.push(child))
-                    .ok();
-                return;
-            }
-            Err(err) => {
-                tracing::warn!(error = %err, "unable to start isolated codebase index helper; falling back in-process");
-            }
-        }
-    }
 
     thread::spawn(move || run_background_indexing_loop(workspace_root, None));
 }
@@ -88,6 +74,17 @@ fn is_indexable_event(kind: &EventKind) -> bool {
     matches!(
         kind,
         EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) | EventKind::Any
+    )
+}
+
+fn background_indexing_enabled() -> bool {
+    matches!(
+        std::env::var("SINEW_INDEX_BACKGROUND")
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "1" | "true" | "on" | "yes"
     )
 }
 

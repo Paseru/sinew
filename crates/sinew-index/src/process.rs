@@ -2,7 +2,7 @@ use std::{
     env,
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Command, Stdio},
 };
 
 use anyhow::{bail, Context, Result};
@@ -127,13 +127,6 @@ pub fn ensure_workspace_index_isolated(workspace_root: &Path) -> Result<IndexSta
 }
 
 pub fn index_stats_isolated(workspace_root: &Path) -> Result<IndexStats> {
-    if should_use_process_helper() {
-        if let Ok(response) = request_helper(&HelperRequest::Stats {
-            workspace_root: workspace_root.display().to_string(),
-        }) {
-            return response_to_stats(response);
-        }
-    }
     index_stats(workspace_root)
 }
 
@@ -159,23 +152,6 @@ pub fn index_and_search_workspace_isolated(
     Ok((stats, hits))
 }
 
-pub(crate) fn spawn_background_indexer(workspace_root: &Path) -> Result<Child> {
-    if !should_use_process_helper() {
-        bail!("index helper is disabled");
-    }
-    let mut command = helper_command(false)?;
-    command
-        .arg(WATCH_HELPER)
-        .arg(workspace_root)
-        .arg(std::process::id().to_string())
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    command
-        .spawn()
-        .context("unable to spawn Sinew codebase index helper")
-}
-
 pub(crate) fn parent_is_alive(parent_pid: Option<u32>) -> bool {
     match parent_pid {
         Some(pid) => process_is_alive(pid),
@@ -188,7 +164,8 @@ fn should_use_process_helper() -> bool {
 }
 
 fn request_helper(request: &HelperRequest) -> Result<HelperResponse> {
-    let mut command = helper_command(true)?;
+    let enable_embeddings = matches!(request, HelperRequest::IndexAndSearch { .. });
+    let mut command = helper_command(enable_embeddings)?;
     command
         .arg(REQUEST_HELPER)
         .stdin(Stdio::piped())
