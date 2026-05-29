@@ -2932,7 +2932,7 @@ dependencies = [
 
 [[package]]
 name = "native-host-wrapper"
-version = "0.1.25"
+version = "0.1.26"
 
 [[package]]
 name = "native-tls"
@@ -5101,7 +5101,7 @@ dependencies = [
 
 [[package]]
 name = "sinew-cursor"
-version = "0.1.25"
+version = "0.1.26"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -5136,7 +5136,7 @@ dependencies = [
 
 [[package]]
 name = "sinew-deepseek"
-version = "0.1.25"
+version = "0.1.26"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5175,7 +5175,7 @@ dependencies = [
 
 [[package]]
 name = "sinew-index"
-version = "0.1.25"
+version = "0.1.26"
 dependencies = [
  "anyhow",
  "directories",
