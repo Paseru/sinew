@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-29 16:31:40
+
+### Added
+- **Mise à jour du rapport d'analyse (`afaire.md`)** : Ajout d'une synthèse vérifiée de l'état actuel du projet avec les contrôles passés, le test Rust bloquant, les outils Rust manquants, les gros fichiers à découper et les surfaces sensibles à auditer.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour consigner la modification documentaire demandée par l'utilisateur.
+
 ## [Unreleased] - 2026-05-29 16:29:01
 
 ### Improved

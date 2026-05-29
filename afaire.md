@@ -2,6 +2,35 @@
 
 > Rapport généré le 2026-05-29
 
+## ✅ Mise à jour vérifiée — 2026-05-29 16:31
+
+### Santé actuelle
+
+- Git est à jour avec `origin/main`.
+- Construction frontend validée : `npm run build` passe.
+- Construction Rust validée : `cargo check --workspace --all-targets` passe.
+- Audit npm validé sur les 3 paquets (`racine`, `sinew-chrome-bridge`, `scripts/agent-bridge`) : aucune vulnérabilité détectée.
+- Diagnostics éditeur : aucune erreur détectée.
+
+### À corriger en priorité
+
+- [ ] **Test Rust instable / bloquant** — `bash::tests::interactive_session_accepts_input` échoue sur Windows et la suite de tests peut rester bloquée. C'est le point le plus urgent.
+- [ ] **Installer les contrôles Rust manquants** — `cargo clippy` et `cargo audit` ne sont pas disponibles localement, alors qu'ils sont nécessaires pour vérifier la qualité et la sécurité Rust.
+- [ ] **Découper les très gros fichiers** :
+  - `src/components/SettingsPane.tsx` — environ 7138 lignes
+  - `src/components/chat/ChatPane.tsx` — environ 6501 lignes
+  - `sinew-chrome-bridge/server.js` — environ 2788 lignes
+  - `src-tauri/src/providers.rs` — environ 2455 lignes
+  - `src/components/Workspace.tsx` — environ 2226 lignes
+- [ ] **Resserrer la surface sensible** — terminal intégré, pont Chrome local, ouverture de liens, lecture de fichiers externes et protocole asset Tauri très large (`**/*`) doivent être audités et limités progressivement.
+- [ ] **Surveiller les dépendances** — plusieurs dépendances Rust existent en double et plusieurs paquets npm ont des versions majeures plus récentes.
+
+### Améliorations rapides proposées
+
+- [ ] Créer un script unique `check` lançant : build frontend, cargo check, tests Rust, audits npm, puis audit Rust quand `cargo-audit` sera installé.
+- [ ] Remplacer l'entrée `npm audit fix` des anciennes notes par un suivi simple, car l'audit npm actuel ne signale aucune vulnérabilité.
+- [ ] Prioriser le découpage de `SettingsPane.tsx` et `ChatPane.tsx` en petits panneaux/composants, comme ranger un gros classeur en dossiers séparés.
+
 ## 🟢 Points forts (à préserver)
 
 - Architecture propre : `sinew-core` → crates fournisseurs → `sinew-app` → `src-tauri` → UI React
