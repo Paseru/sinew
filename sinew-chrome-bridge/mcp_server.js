@@ -41,7 +41,12 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function requestJSON(url, timeoutMs = 3000) {
+function requestJSON(rawUrl, timeoutMs = 3000) {
+  let url = rawUrl;
+  if (BRIDGE_SECRET) {
+    const connector = url.includes('?') ? '&' : '?';
+    url += `${connector}token=${encodeURIComponent(BRIDGE_SECRET)}`;
+  }
   return new Promise((resolve, reject) => {
     const req = http.get(url, (res) => {
       let data = '';
@@ -386,7 +391,11 @@ function buildActionTasks(task) {
 }
 
 function cdpConnect(tabId) {
-  const endpoint = cdpEndpointByTabId.get(String(tabId)) || `${BRIDGE_WS_ORIGIN}/devtools/page/${tabId}`;
+  let endpoint = cdpEndpointByTabId.get(String(tabId)) || `${BRIDGE_WS_ORIGIN}/devtools/page/${tabId}`;
+  if (BRIDGE_SECRET && !endpoint.includes('token=')) {
+    const connector = endpoint.includes('?') ? '&' : '?';
+    endpoint += `${connector}token=${encodeURIComponent(BRIDGE_SECRET)}`;
+  }
   const ws = new WebSocket(endpoint);
   let nextId = 1;
   const pending = new Map();

@@ -1,9 +1,25 @@
 const http = require('http');
 const WebSocket = require('./node_modules/ws');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const STATE_DIR = process.env.SINEW_CHROME_BRIDGE_DIR || path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Sinew', 'ChromeBridge');
+let BRIDGE_SECRET = '';
+try {
+  const secretPath = path.join(STATE_DIR, 'bridge-secret.txt');
+  if (fs.existsSync(secretPath)) {
+    BRIDGE_SECRET = fs.readFileSync(secretPath, 'utf8').trim();
+  }
+} catch (e) {}
 
 function getActiveTab() {
   return new Promise((resolve, reject) => {
-    http.get('http://localhost:29002/json', (res) => {
+    let url = 'http://localhost:29002/json';
+    if (BRIDGE_SECRET) {
+      url += `?token=${encodeURIComponent(BRIDGE_SECRET)}`;
+    }
+    http.get(url, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
