@@ -271,3 +271,39 @@ fn backfill_missing_embeddings(store: &IndexStore) -> Result<usize> {
     }
     Ok(updated)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sync_changed_paths_updates_and_removes_one_file() {
+        let dir = std::env::temp_dir().join(format!("sinew-index-sync-test-{}", unique_id()));
+        fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("alpha.rs");
+        fs::write(&file, "pub fn first_name() {}\n").unwrap();
+
+        let stats = sync_changed_paths(&dir, vec![file.clone()]).unwrap();
+        assert_eq!(stats.files_indexed, 1);
+        assert_eq!(stats.files_updated, 1);
+
+        fs::write(&file, "pub fn second_name() {}\n").unwrap();
+        let stats = sync_changed_paths(&dir, vec![file.clone()]).unwrap();
+        assert_eq!(stats.files_indexed, 1);
+        assert_eq!(stats.files_updated, 1);
+
+        fs::remove_file(&file).unwrap();
+        let stats = sync_changed_paths(&dir, vec![file]).unwrap();
+        assert_eq!(stats.files_indexed, 0);
+        assert_eq!(stats.files_updated, 1);
+
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    fn unique_id() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64
+    }
+}
