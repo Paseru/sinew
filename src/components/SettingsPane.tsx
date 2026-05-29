@@ -3888,14 +3888,32 @@ function ProviderCard({
             </span>
           </div>
           {!compact && <p>{description}</p>}
-          <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "4px" : "8px" }}>
+          <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "4px" : "8px", alignItems: "center" }}>
             {connected && meta.map((item) => (
               <span key={item}>{item}</span>
             ))}
+            {connected && quota && quota.kind !== "unavailable" && (
+              <>
+                {quota.kind === "credits" ? (
+                  <>
+                    <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+                    <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+                  </>
+                ) : (
+                  (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
+                    <QuotaBar inline key={item.label} item={item} />
+                  ))
+                )}
+              </>
+            )}
           </div>
+          {connected && quota && quota.kind === "unavailable" && (
+            <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: 0.7 }}>
+              {quota.label ?? "Quota non disponible"}
+            </div>
+          )}
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {children}
-          {connected && quota && <QuotaInlinePanel quota={quota} compact={compact} showLabel={false} />}
         </div>
       </div>
       <div className="settings-pane__provider-actions">
@@ -4002,11 +4020,24 @@ function ProviderCard({
   );
 }
 
-function formatResetLabel(value: number | string | null | undefined) {
+function formatResetLabelForWindow(item: { label: string; resetAt?: number | null; resetTime?: string | null }) {
+  const value = item.resetAt ?? item.resetTime ?? null;
   if (value == null) return null;
   const targetMs = typeof value === "number" ? value * 1000 : Date.parse(value);
   if (!Number.isFinite(targetMs)) return null;
   const deltaMs = Math.max(0, targetMs - Date.now());
+  const lowerLabel = item.label.toLowerCase();
+  
+  if (lowerLabel.includes("fenetre courte") || lowerLabel.includes("fenêtre courte")) {
+    const totalMinutes = Math.max(0, Math.round(deltaMs / 60_000));
+    return `reset ${totalMinutes}m`;
+  }
+  
+  if (lowerLabel.includes("fenetre longue") || lowerLabel.includes("fenêtre longue")) {
+    const totalHours = Math.max(0, Math.round(deltaMs / 3_600_000));
+    return `reset ${totalHours}h`;
+  }
+  
   const totalMinutes = Math.max(0, Math.round(deltaMs / 60_000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -4015,6 +4046,13 @@ function formatResetLabel(value: number | string | null | undefined) {
 }
 
 function formatWindowLabel(window: { label: string; windowMinutes?: number | null }) {
+  const lowerLabel = window.label.toLowerCase();
+  if (lowerLabel.includes("fenetre courte") || lowerLabel.includes("fenêtre courte")) {
+    return "5h";
+  }
+  if (lowerLabel.includes("fenetre longue") || lowerLabel.includes("fenêtre longue")) {
+    return "Semaine";
+  }
   if (!window.windowMinutes) return window.label;
   const hours = Math.round(window.windowMinutes / 60);
   if (hours >= 1 && window.windowMinutes % 60 === 0) return `${window.label} (${hours}h)`;
@@ -4023,7 +4061,7 @@ function formatWindowLabel(window: { label: string; windowMinutes?: number | nul
 
 function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: number | null; windowMinutes?: number | null; resetAt?: number | null; resetTime?: string | null }; inline?: boolean }) {
   const percent = item.remainingPercent;
-  const reset = formatResetLabel(item.resetAt ?? item.resetTime ?? null);
+  const reset = formatResetLabelForWindow(item);
   
   if (inline) {
     return (
@@ -7074,7 +7112,25 @@ function DeepSeekProviderCard({
           </div>
           <p>Use DeepSeek models (V3 & R1) with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
-          {connected && quota && <QuotaInlinePanel quota={quota} />}
+          {connected && quota && quota.kind !== "unavailable" && (
+            <div className="settings-pane__provider-meta" style={{ marginTop: "8px", alignItems: "center" }}>
+              {quota.kind === "credits" ? (
+                <>
+                  <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+                  <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+                </>
+              ) : (
+                (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
+                  <QuotaBar inline key={item.label} item={item} />
+                ))
+              )}
+            </div>
+          )}
+          {connected && quota && quota.kind === "unavailable" && (
+            <div style={{ marginTop: "8px", color: "var(--text-3)", fontSize: "11px", opacity: 0.7 }}>
+              {quota.label ?? "Quota non disponible"}
+            </div>
+          )}
           {connected && displayStatus.models && displayStatus.models.length > 0 && (
             <div style={{ fontSize: "11px", opacity: 0.9, color: "var(--color-success)", marginTop: "10px" }}>
               <strong>✓ Modèles vérifiés sur votre clé :</strong>{" "}
