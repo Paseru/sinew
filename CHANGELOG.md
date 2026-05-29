@@ -59,6 +59,11 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:21:45
+
+### Removed
+- **Nettoyage complet du fichier `AGENTS.md` local** : Suppression définitive de toute trace ou consigne relative au système d'apprentissage automatique dans le fichier `AGENTS.md` de ce projet. L'injection et la gestion de la mémoire globale sont désormais entièrement intégrées de manière native au sein de l'application (côté Rust) pour tous les projets ouverts sur cette machine.
+
 ## [Unreleased] - 2026-05-29 16:15:36
 
 ### Added
