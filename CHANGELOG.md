@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-30 01:40:19
+
+### Fixed
+- **Vérifications de chemins (crates/sinew-app/src/workspace.rs)** : correction de la détection de dépassement de l'espace de travail sur Windows en nettoyant les préfixes UNC (\\?\) et en unifiant la casse.
+
 ## [Unreleased] - 2026-05-30 01:33:13
 
 ### Removed

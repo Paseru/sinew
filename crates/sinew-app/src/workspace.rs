@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     cmp::Ordering,
     fs,
     path::{Component, Path, PathBuf},
@@ -1281,13 +1281,24 @@ fn workspace_entry_from_path(root: &Path, path: &Path) -> Result<WorkspaceEntry>
     })
 }
 
+#[cfg(target_os = "windows")]
+fn clean_windows_path(path: &Path) -> String {
+    let s = path.to_string_lossy().replace('\\', "/");
+    let clean = if s.starts_with("//?/") {
+        s[4..].to_string()
+    } else {
+        s
+    };
+    clean.to_lowercase()
+}
+
 fn ensure_within_root(root: &Path, path: &Path) -> Result<()> {
     let canonical_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     #[cfg(target_os = "windows")]
     {
-        let root_str = canonical_root.to_string_lossy().to_lowercase();
-        let path_str = path.to_string_lossy().to_lowercase();
-        if path_str.starts_with(&root_str) {
+        let root_str = clean_windows_path(&canonical_root);
+        let path_str = clean_windows_path(path);
+        if path_str == root_str || path_str.starts_with(&format!("{}/", root_str)) {
             Ok(())
         } else {
             bail!("path escapes workspace")
