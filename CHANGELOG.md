@@ -22,8 +22,6 @@ All notable changes to this project will be documented in this file.
 
 ## ðŸš€ PrÃ©sentation des FonctionnalitÃ©s Majeures (Fork Premium julienpiron.fr)
 
-Cette version a Ã©tÃ© optimisÃ©e en profondeur pour offrir une expÃ©rience utilisateur haut de gamme (SOTA), une autonomie maximale en arriÃ¨re-plan, et des intÃ©grations d'intelligence artificielle inÃ©galÃ©es.
-
 ### ðŸŽ¨ Interface, Confort & Ergonomie (Premium UI)
 * **Animation de dÃ©marrage premium :** Une animation de boot moderne, fluide et Ã©lÃ©gante Ã  l'ouverture de l'application.
 * **3 niveaux de rÃ©flexion :** Choix entre DÃ©taillÃ©, Compact ou TrÃ¨s compact pour configurer prÃ©cisÃ©ment la verbositÃ© de l'IA et le masquage des dÃ©tails techniques dans le chat.
@@ -90,5 +88,4 @@ Cette version a Ã©tÃ© optimisÃ©e en profondeur pour offrir une expÃ©rien
 ### Fixed
 - **Mémoire de l'indexeur local (`crates/sinew-index/src/store.rs`)** : Réduction du cache SQLite et de la mémoire mappée pour éviter qu'un helper d'indexation Sinew gonfle jusqu'à plusieurs dizaines de Go.
 - **Remplissage sémantique progressif (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : Limitation du nombre de morceaux vectorisés par passage afin d'éviter les pics mémoire lors des recherches dans le code.
-
 
