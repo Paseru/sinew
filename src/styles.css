@@ -498,14 +498,22 @@ html[data-theme="ai"] .settings-pane__provider-card--compact:hover::after {
 }
 
 /* SOTA 2: Spring Physics for bouncy click/hover feel in AI mode */
-html[data-theme="ai"] .tool-card,
-html[data-theme="ai"] .composer__box {
+html[data-theme="ai"] .tool-card {
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
               background-color 0.3s ease, 
               border-color 0.3s ease, 
               box-shadow 0.3s ease !important;
   position: relative;
   overflow: hidden;
+}
+
+html[data-theme="ai"] .composer__box {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              background-color 0.3s ease, 
+              border-color 0.3s ease, 
+              box-shadow 0.3s ease !important;
+  position: relative;
+  overflow: visible !important;
 }
 
 html[data-theme="ai"] .settings-pane__provider-card,
