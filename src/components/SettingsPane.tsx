@@ -4047,8 +4047,23 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "11px", minWidth: 0 }}>
-        <span style={{ color: "var(--text-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{formatWindowLabel(item)}</span>
-        <span style={{ color: "var(--text-2)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }} title={percent == null ? "—" : `${percent.toFixed(0)}%${reset ? ` - ${reset}` : ""}`}>
+        <span style={{
+          color: "var(--text-3)",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          minWidth: 0,
+          flex: "1 1 auto"
+        }}>
+          {formatWindowLabel(item)}
+        </span>
+        <span style={{
+          color: "var(--text-2)",
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+          minWidth: 0,
+          flex: "0 0 auto"
+        }} title={percent == null ? "—" : `${percent.toFixed(0)}%${reset ? ` - ${reset}` : ""}`}>
           {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` - ${reset}` : ""}
         </span>
       </div>
@@ -4101,7 +4116,7 @@ function QuotaInlinePanel({ quota, compact, showLabel = true }: { quota: QuotaIn
           <QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: windows.length > 1 ? "repeat(auto-fill, minmax(260px, 1fr))" : "1fr", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : (windows.length > 1 ? "repeat(auto-fill, minmax(220px, 1fr))" : "1fr"), gap: "16px" }}>
           {windows.map((item) => (
             <QuotaBar key={item.label} item={item} />
           ))}
