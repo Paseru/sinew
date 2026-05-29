@@ -470,6 +470,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
                             let saved = SavedConversation {
                                 id: conversation_id_for_events.clone(),
                                 workspace_id: workspace_id.clone(),
+                                git_remote_url: crate::git::get_git_remote_url(std::path::Path::new(&workspace_id)),
                                 title: conversation_title.clone(),
                                 model: conversation_model.clone(),
                                 mode_model_settings: conversation_mode_model_settings.clone(),

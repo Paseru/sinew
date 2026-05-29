@@ -121,6 +121,7 @@ export type OtherWorkspaceSummary = {
 export type SavedConversation = {
   id: string;
   workspaceId: string;
+  gitRemoteUrl?: string | null;
   title: string;
   model: ModelRef;
   modeModelSettings: ModeModelSettings;

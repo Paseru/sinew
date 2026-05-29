@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:42:04
+
+### Added
+- **Synchronisation automatique par URL Git (`crates/sinew-app/src/store.rs`, `src-tauri/src/git.rs`, `src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`, `src-tauri/src/turns.rs`, `src-tauri/src/swarm.rs`)** : Les conversations sont désormais associées au dépôt Git distant (remote origin URL). Lorsque vous ouvrez un dépôt Git, l'application détecte automatiquement les conversations correspondantes issues d'autres PC/dossiers (synchronisés par OneDrive) et les lie automatiquement à votre dossier de projet actuel, éliminant tout besoin d'action manuelle.
+
 ## [Unreleased] - 2026-05-29 23:36:07
 
 ### Added

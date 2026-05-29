@@ -26,9 +26,10 @@ pub(super) async fn open_workspace(
         crate::run_git_auto_pull(&input.workspace_path);
     }
 
+    let git_remote_url = crate::git::get_git_remote_url(&workspace_root);
     let mut bootstrap = state
         .store
-        .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(&workspace_root, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
         .map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let active_conversation_id = state.active_turn_details.lock().ok().and_then(|active| {

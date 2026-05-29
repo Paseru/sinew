@@ -83,6 +83,7 @@ pub struct TurnCheckpointRecord {
 pub struct SavedConversation {
     pub id: String,
     pub workspace_id: String,
+    pub git_remote_url: Option<String>,
     pub title: String,
     pub model: ModelRef,
     pub mode_model_settings: ModeModelSettings,
@@ -602,18 +603,19 @@ impl AppStore {
     pub fn bootstrap_workspace(
         &self,
         workspace_root: &Path,
+        git_remote_url: Option<&str>,
         default_model: &ModelRef,
         default_system: &str,
     ) -> Result<WorkspaceBootstrap> {
         let workspace_id = workspace_root.display().to_string();
         let mode_model_settings = self.load_mode_model_settings(default_model)?;
-        let mut conversations = self.list_conversations(&workspace_id)?;
+        let mut conversations = self.list_conversations(&workspace_id, git_remote_url)?;
         let active_conversation = if let Some(first) = conversations.first() {
             self.load_conversation(&workspace_id, &first.id)?
                 .context("conversation listed in index but missing from store")?
         } else {
-            let created = self.create_conversation(&workspace_id, default_model, default_system)?;
-            conversations = self.list_conversations(&workspace_id)?;
+            let created = self.create_conversation(&workspace_id, git_remote_url, default_model, default_system)?;
+            conversations = self.list_conversations(&workspace_id, git_remote_url)?;
             created
         };
 
@@ -628,6 +630,7 @@ impl AppStore {
     pub fn create_conversation(
         &self,
         workspace_id: &str,
+        git_remote_url: Option<&str>,
         default_model: &ModelRef,
         default_system: &str,
     ) -> Result<SavedConversation> {
@@ -653,11 +656,12 @@ impl AppStore {
         let mode_model_settings_json = serde_json::to_string(&mode_model_settings)?;
         let conn = self.connection()?;
         conn.execute(
-            "insert into conversations (id, workspace_id, title, title_initialized, model_json, mode_model_settings_json, system_prompt, todo_list_json, plan_workflow_json, goal_workflow_json, created_at_ms, updated_at_ms)
-             values (?1, ?2, ?3, 0, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "insert into conversations (id, workspace_id, git_remote_url, title, title_initialized, model_json, mode_model_settings_json, system_prompt, todo_list_json, plan_workflow_json, goal_workflow_json, created_at_ms, updated_at_ms)
+             values (?1, ?2, ?3, ?4, 0, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 &id,
                 workspace_id,
+                git_remote_url,
                 &title,
                 serde_json::to_string(&conversation_model)?,
                 mode_model_settings_json,
@@ -674,6 +678,7 @@ impl AppStore {
         Ok(SavedConversation {
             id,
             workspace_id: workspace_id.to_string(),
+            git_remote_url: git_remote_url.map(|s| s.to_string()),
             title,
             model: conversation_model,
             mode_model_settings,
@@ -685,8 +690,17 @@ impl AppStore {
         })
     }
 
-    pub fn list_conversations(&self, workspace_id: &str) -> Result<Vec<ConversationSummary>> {
+    pub fn list_conversations(&self, workspace_id: &str, git_remote_url: Option<&str>) -> Result<Vec<ConversationSummary>> {
         let conn = self.connection()?;
+        
+        // Auto-migrate any conversations that share the same git_remote_url to the current workspace_id!
+        if let Some(remote_url) = git_remote_url {
+            let _ = conn.execute(
+                "update conversations set workspace_id = ?1 where git_remote_url = ?2 and workspace_id != ?1",
+                params![workspace_id, remote_url],
+            );
+        }
+
         let mut statement = conn
             .prepare(
                 "select id, title, updated_at_ms from conversations
@@ -768,8 +782,8 @@ impl AppStore {
         let conn = self.connection()?;
         let conversation = conn
             .query_row(
-                "select title, model_json, system_prompt, todo_list_json, plan_workflow_json, mode_model_settings_json, goal_workflow_json from conversations where workspace_id = ?1 and id = ?2",
-                params![workspace_id, id],
+                "select title, model_json, system_prompt, todo_list_json, plan_workflow_json, mode_model_settings_json, goal_workflow_json, git_remote_url, workspace_id from conversations where id = ?1",
+                params![id],
                 |row| {
                     let model_json: String = row.get(1)?;
                     let todo_list_json: String = row.get(3)?;
@@ -799,11 +813,13 @@ impl AppStore {
                             .unwrap_or_default(),
                         serde_json::from_str::<GoalWorkflowState>(&goal_workflow_json)
                             .unwrap_or_default(),
+                        row.get::<_, Option<String>>(7)?,
+                        row.get::<_, String>(8)?,
                     ))
                 },
             )
             .optional()
-            .context("unable to load conversation metadata")?;
+            .context("unable to load conversation details")?;
 
         let Some((
             title,
@@ -813,10 +829,20 @@ impl AppStore {
             todo_list,
             plan_workflow,
             goal_workflow,
+            git_remote_url,
+            db_workspace_id,
         )) = conversation
         else {
             return Ok(None);
         };
+
+        // Auto-migrate workspace_id if it's different (e.g. workspace folder path changed across PCs)
+        if db_workspace_id != workspace_id {
+            let _ = conn.execute(
+                "update conversations set workspace_id = ?1 where id = ?2",
+                params![workspace_id, id],
+            );
+        }
 
         let mut statement = conn
             .prepare(
@@ -846,6 +872,7 @@ impl AppStore {
         Ok(Some(SavedConversation {
             id: id.to_string(),
             workspace_id: workspace_id.to_string(),
+            git_remote_url,
             title,
             model,
             mode_model_settings,
@@ -870,7 +897,7 @@ impl AppStore {
             .transaction()
             .context("unable to open sqlite transaction")?;
         let current_title_state =
-            load_conversation_title_state(&tx, &conversation.workspace_id, &conversation.id)?;
+            load_conversation_title_state(&tx, &conversation.id)?;
         let title_state = resolve_title_for_save(
             current_title_state.as_ref(),
             &conversation.title,
@@ -879,8 +906,8 @@ impl AppStore {
 
         tx.execute(
             "update conversations
-             set title = ?2, model_json = ?3, system_prompt = ?4, updated_at_ms = ?5, todo_list_json = ?6, plan_workflow_json = ?7, mode_model_settings_json = ?8, goal_workflow_json = ?9, title_initialized = ?10
-             where id = ?1 and workspace_id = ?11",
+             set title = ?2, model_json = ?3, system_prompt = ?4, updated_at_ms = ?5, todo_list_json = ?6, plan_workflow_json = ?7, mode_model_settings_json = ?8, goal_workflow_json = ?9, title_initialized = ?10, git_remote_url = ?11, workspace_id = ?12
+             where id = ?1",
             params![
                 &conversation.id,
                 &title_state.title,
@@ -892,6 +919,7 @@ impl AppStore {
                 mode_model_settings_json,
                 goal_workflow_json,
                 title_state.initialized as i64,
+                &conversation.git_remote_url,
                 &conversation.workspace_id,
             ],
         )
@@ -938,7 +966,7 @@ impl AppStore {
             .transaction()
             .context("unable to open sqlite transaction")?;
         let current_title_state =
-            load_conversation_title_state(&tx, &conversation.workspace_id, &conversation.id)?;
+            load_conversation_title_state(&tx, &conversation.id)?;
         let title_state = resolve_title_for_save(
             current_title_state.as_ref(),
             &conversation.title,
@@ -947,8 +975,8 @@ impl AppStore {
 
         tx.execute(
             "update conversations
-             set title = ?2, model_json = ?3, system_prompt = ?4, updated_at_ms = ?5, todo_list_json = ?6, plan_workflow_json = ?7, mode_model_settings_json = ?8, goal_workflow_json = ?9, title_initialized = ?10
-             where id = ?1 and workspace_id = ?11",
+             set title = ?2, model_json = ?3, system_prompt = ?4, updated_at_ms = ?5, todo_list_json = ?6, plan_workflow_json = ?7, mode_model_settings_json = ?8, goal_workflow_json = ?9, title_initialized = ?10, git_remote_url = ?11, workspace_id = ?12
+             where id = ?1",
             params![
                 &conversation.id,
                 &title_state.title,
@@ -960,6 +988,7 @@ impl AppStore {
                 mode_model_settings_json,
                 goal_workflow_json,
                 title_state.initialized as i64,
+                &conversation.git_remote_url,
                 &conversation.workspace_id,
             ],
         )
@@ -1420,7 +1449,7 @@ impl AppStore {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap_or(0);
 
-        if version >= 10 {
+        if version >= 11 {
             return Ok(());
         }
 
@@ -1430,6 +1459,7 @@ impl AppStore {
             create table if not exists conversations (
                 id text primary key,
                 workspace_id text not null,
+                git_remote_url text,
                 title text not null,
                 title_initialized integer not null default 0,
                 model_json text not null,
@@ -1477,7 +1507,10 @@ impl AppStore {
         if version < 10 {
             let _ = conn.execute("UPDATE conversations SET workspace_id = LOWER(workspace_id)", []);
         }
-        conn.pragma_update(None, "user_version", 10)
+        if version < 11 {
+            let _ = conn.execute("alter table conversations add column git_remote_url text", []);
+        }
+        conn.pragma_update(None, "user_version", 11)
             .context("unable to set sqlite schema version")?;
         Ok(())
     }
@@ -1701,12 +1734,11 @@ struct ConversationTitleState {
 
 fn load_conversation_title_state(
     conn: &Connection,
-    workspace_id: &str,
     id: &str,
 ) -> Result<Option<ConversationTitleState>> {
     conn.query_row(
-        "select title, title_initialized from conversations where workspace_id = ?1 and id = ?2",
-        params![workspace_id, id],
+        "select title, title_initialized from conversations where id = ?1",
+        params![id],
         |row| {
             let initialized: i64 = row.get(1)?;
             Ok(ConversationTitleState {
@@ -1888,7 +1920,7 @@ mod tests {
         let result = (|| -> Result<()> {
             store.migrate()?;
             let model = ModelRef::new("test", "model");
-            let mut conversation = store.create_conversation("workspace", &model, "system")?;
+            let mut conversation = store.create_conversation("workspace", None, &model, "system")?;
             conversation
                 .history
                 .push(message(Role::User, "First request", None));
@@ -1899,7 +1931,7 @@ mod tests {
                 .expect("conversation should exist");
             assert_eq!(loaded.title, "First request");
             assert_eq!(
-                store.list_conversations("workspace")?[0].title,
+                store.list_conversations("workspace", None)?[0].title,
                 "First request"
             );
 

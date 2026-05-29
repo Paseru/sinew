@@ -7,9 +7,10 @@ pub(super) async fn list_conversations(
 ) -> std::result::Result<Vec<ConversationSummary>, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
-        .list_conversations(&workspace_root.display().to_string())
+        .list_conversations(&workspace_root.display().to_string(), git_remote_url.as_deref())
         .map_err(error_to_string)
 }
 
@@ -20,10 +21,12 @@ pub(super) async fn create_conversation(
 ) -> std::result::Result<WorkspaceBootstrap, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
         .create_conversation(
             &workspace_root.display().to_string(),
+            git_remote_url.as_deref(),
             &state.default_model,
             &state.system_prompt,
         )
@@ -35,7 +38,7 @@ pub(super) async fn create_conversation(
 
     state
         .store
-        .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(&workspace_root, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
         .map_err(error_to_string)
 }
 
@@ -77,9 +80,10 @@ pub(super) async fn rename_conversation(
         crate::backup_onedrive_db_on_exit();
     });
 
+    let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
-        .list_conversations(&workspace_id)
+        .list_conversations(&workspace_id, git_remote_url.as_deref())
         .map_err(error_to_string)
 }
 
@@ -106,9 +110,10 @@ pub(super) async fn delete_conversation(
         crate::backup_onedrive_db_on_exit();
     });
 
+    let git_remote_url = git::get_git_remote_url(&workspace_root);
     state
         .store
-        .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(&workspace_root, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
         .map_err(error_to_string)
 }
 
