@@ -57,7 +57,91 @@ import type {
   WorkspaceSearchResult,
 } from "../types";
 
+interface ActiveSettings {
+  gitAutomation: boolean;
+  conciseAnswers: boolean;
+  agentAutonomy: boolean;
+  forceChangelog: boolean;
+  gitFrenchMessages: boolean;
+  autoMockups: boolean;
+}
+
+function readActiveSettings(): ActiveSettings {
+  let master = "enabled";
+  try {
+    master = localStorage.getItem("sinew.power-user-master") || "enabled";
+  } catch {}
+
+  if (master === "enabled") {
+    return {
+      gitAutomation: true,
+      conciseAnswers: true,
+      agentAutonomy: true,
+      forceChangelog: true,
+      gitFrenchMessages: true,
+      autoMockups: true,
+    };
+  } else if (master === "disabled") {
+    return {
+      gitAutomation: false,
+      conciseAnswers: false,
+      agentAutonomy: false,
+      forceChangelog: false,
+      gitFrenchMessages: false,
+      autoMockups: false,
+    };
+  }
+
+  // Custom mode: read individual settings
+  let gitAutomation = true;
+  try {
+    gitAutomation = localStorage.getItem("sinew.git-automation") !== "false";
+  } catch {}
+
+  let conciseAnswers = true;
+  try {
+    conciseAnswers = localStorage.getItem("sinew.concise-answers") !== "false";
+  } catch {}
+
+  let agentAutonomy = true;
+  try {
+    agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
+  } catch {}
+
+  let forceChangelog = false;
+  try {
+    forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
+  } catch {}
+
+  let gitFrenchMessages = true;
+  try {
+    gitFrenchMessages = localStorage.getItem("sinew.git-french-messages") !== "false";
+  } catch {}
+
+  let autoMockups = true;
+  try {
+    autoMockups = localStorage.getItem("sinew.auto-mockups") !== "false";
+  } catch {}
+
+  return {
+    gitAutomation,
+    conciseAnswers,
+    agentAutonomy,
+    forceChangelog,
+    gitFrenchMessages,
+    autoMockups,
+  };
+}
+
 function readDisplayMode(): DisplayMode {
+  let master = "enabled";
+  try {
+    master = localStorage.getItem("sinew.power-user-master") || "enabled";
+  } catch {}
+
+  if (master === "enabled") return "very-compact";
+  if (master === "disabled") return "disabled";
+
   try {
     const val = localStorage.getItem("sinew.compact-reasoning");
     if (val === "very-compact") return "very-compact";
@@ -574,35 +658,13 @@ export const api = {
     messageVisibility?: MessageVisibility,
     revertWorkspaceChanges?: boolean,
   ) {
-    let gitAutomation = true;
-    try {
-      gitAutomation = localStorage.getItem("sinew.git-automation") !== "false";
-    } catch {}
-
-    let conciseAnswers = true;
-    try {
-      conciseAnswers = localStorage.getItem("sinew.concise-answers") !== "false";
-    } catch {}
-
-    let agentAutonomy = true;
-    try {
-      agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
-    } catch {}
-
-    let forceChangelog = false;
-    try {
-      forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
-    } catch {}
-
-    let gitFrenchMessages = true;
-    try {
-      gitFrenchMessages = localStorage.getItem("sinew.git-french-messages") !== "false";
-    } catch {}
-
-    let autoMockups = true;
-    try {
-      autoMockups = localStorage.getItem("sinew.auto-mockups") !== "false";
-    } catch {}
+    const active = readActiveSettings();
+    const gitAutomation = active.gitAutomation;
+    const conciseAnswers = active.conciseAnswers;
+    const agentAutonomy = active.agentAutonomy;
+    const forceChangelog = active.forceChangelog;
+    const gitFrenchMessages = active.gitFrenchMessages;
+    const autoMockups = active.autoMockups;
 
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -667,35 +729,13 @@ export const api = {
     mode: AgentMode,
     rewriteFromHistoryIndex?: number,
   ) {
-    let gitAutomation = true;
-    try {
-      gitAutomation = localStorage.getItem("sinew.git-automation") !== "false";
-    } catch {}
-
-    let conciseAnswers = true;
-    try {
-      conciseAnswers = localStorage.getItem("sinew.concise-answers") !== "false";
-    } catch {}
-
-    let agentAutonomy = true;
-    try {
-      agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
-    } catch {}
-
-    let forceChangelog = false;
-    try {
-      forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
-    } catch {}
-
-    let gitFrenchMessages = true;
-    try {
-      gitFrenchMessages = localStorage.getItem("sinew.git-french-messages") !== "false";
-    } catch {}
-
-    let autoMockups = true;
-    try {
-      autoMockups = localStorage.getItem("sinew.auto-mockups") !== "false";
-    } catch {}
+    const active = readActiveSettings();
+    const gitAutomation = active.gitAutomation;
+    const conciseAnswers = active.conciseAnswers;
+    const agentAutonomy = active.agentAutonomy;
+    const forceChangelog = active.forceChangelog;
+    const gitFrenchMessages = active.gitFrenchMessages;
+    const autoMockups = active.autoMockups;
 
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');

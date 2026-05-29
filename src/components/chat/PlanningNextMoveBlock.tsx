@@ -3,6 +3,10 @@ import { DotmSquare5 } from "./DotmSquare5";
 
 function readCompactReasoning(): "disabled" | "compact" | "very-compact" {
   try {
+    const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+    if (master === "enabled") return "very-compact";
+    if (master === "disabled") return "disabled";
+
     const val = localStorage.getItem("sinew.compact-reasoning");
     if (val === "very-compact") return "very-compact";
     if (val === "compact" || val === "true") return "compact";

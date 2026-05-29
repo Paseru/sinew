@@ -1843,7 +1843,12 @@ function OptionsSection({
 
   const [powerUser, setPowerUser] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.power-user") !== "false";
+      const saved = localStorage.getItem("sinew.power-user");
+      if (saved !== null) return saved !== "false";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
     } catch {
       return true;
     }
@@ -1851,7 +1856,12 @@ function OptionsSection({
 
   const [gitAutomation, setGitAutomation] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.git-automation") !== "false";
+      const saved = localStorage.getItem("sinew.git-automation");
+      if (saved !== null) return saved !== "false";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
     } catch {
       return true;
     }
@@ -1859,7 +1869,12 @@ function OptionsSection({
 
   const [conciseAnswers, setConciseAnswers] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.concise-answers") !== "false";
+      const saved = localStorage.getItem("sinew.concise-answers");
+      if (saved !== null) return saved !== "false";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
     } catch {
       return true;
     }
@@ -1870,6 +1885,10 @@ function OptionsSection({
       const val = localStorage.getItem("sinew.compact-reasoning");
       if (val === "very-compact") return "very-compact";
       if (val === "compact" || val === "true") return "compact";
+      if (val === "disabled" || val === "false") return "disabled";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return "very-compact";
+      if (master === "disabled") return "disabled";
       return "disabled";
     } catch {
       return "disabled";
@@ -1880,7 +1899,12 @@ function OptionsSection({
 
   const [autosave, setAutosave] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.autosave") === "true";
+      const saved = localStorage.getItem("sinew.autosave");
+      if (saved !== null) return saved === "true";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return false;
     } catch {
       return false;
     }
@@ -1906,7 +1930,12 @@ function OptionsSection({
 
   const [agentAutonomy, setAgentAutonomy] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.agent-autonomy") !== "false";
+      const saved = localStorage.getItem("sinew.agent-autonomy");
+      if (saved !== null) return saved !== "false";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
     } catch {
       return true;
     }
@@ -1914,7 +1943,12 @@ function OptionsSection({
 
   const [forceChangelog, setForceChangelog] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.force-changelog") === "true";
+      const saved = localStorage.getItem("sinew.force-changelog");
+      if (saved !== null) return saved === "true";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return false;
     } catch {
       return false;
     }
@@ -1922,7 +1956,12 @@ function OptionsSection({
 
   const [gitFrenchMessages, setGitFrenchMessages] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.git-french-messages") !== "false";
+      const saved = localStorage.getItem("sinew.git-french-messages");
+      if (saved !== null) return saved !== "false";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
     } catch {
       return true;
     }
@@ -1930,7 +1969,12 @@ function OptionsSection({
 
   const [autoMockups, setAutoMockups] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("sinew.auto-mockups") !== "false";
+      const saved = localStorage.getItem("sinew.auto-mockups");
+      if (saved !== null) return saved !== "false";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
     } catch {
       return true;
     }
@@ -2086,6 +2130,71 @@ function OptionsSection({
     } catch {}
   }, []);
 
+  useEffect(() => {
+    const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+    if (master === "enabled") {
+      const keysToSet: Record<string, string> = {
+        "sinew.power-user": "true",
+        "sinew.git-automation": "true",
+        "sinew.concise-answers": "true",
+        "sinew.force-changelog": "true",
+        "sinew.git-french-messages": "true",
+        "sinew.auto-mockups": "true",
+        "sinew.autosave": "true",
+        "sinew.compact-reasoning": "very-compact",
+        "sinew.agent-autonomy": "true",
+      };
+      let changed = false;
+      for (const [key, value] of Object.entries(keysToSet)) {
+        if (localStorage.getItem(key) !== value) {
+          localStorage.setItem(key, value);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setPowerUser(true);
+        setGitAutomation(true);
+        setConciseAnswers(true);
+        setForceChangelog(true);
+        setGitFrenchMessages(true);
+        setAutoMockups(true);
+        setAutosave(true);
+        setCompactReasoning("very-compact");
+        setAgentAutonomy(true);
+      }
+    } else if (master === "disabled") {
+      const keysToSet: Record<string, string> = {
+        "sinew.power-user": "false",
+        "sinew.git-automation": "false",
+        "sinew.concise-answers": "false",
+        "sinew.force-changelog": "false",
+        "sinew.git-french-messages": "false",
+        "sinew.auto-mockups": "false",
+        "sinew.autosave": "false",
+        "sinew.compact-reasoning": "disabled",
+        "sinew.agent-autonomy": "false",
+      };
+      let changed = false;
+      for (const [key, value] of Object.entries(keysToSet)) {
+        if (localStorage.getItem(key) !== value) {
+          localStorage.setItem(key, value);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setPowerUser(false);
+        setGitAutomation(false);
+        setConciseAnswers(false);
+        setForceChangelog(false);
+        setGitFrenchMessages(false);
+        setAutoMockups(false);
+        setAutosave(false);
+        setCompactReasoning("disabled");
+        setAgentAutonomy(false);
+      }
+    }
+  }, []);
+
   const changePowerUserMaster = (value: "enabled" | "disabled" | "custom") => {
     try {
       localStorage.setItem("sinew.power-user-master", value);
@@ -2102,6 +2211,7 @@ function OptionsSection({
         localStorage.setItem("sinew.auto-mockups", "true");
         localStorage.setItem("sinew.autosave", "true");
         localStorage.setItem("sinew.compact-reasoning", "very-compact");
+        localStorage.setItem("sinew.agent-autonomy", "true");
       } catch {}
       setPowerUser(true);
       setGitAutomation(true);
@@ -2111,6 +2221,7 @@ function OptionsSection({
       setAutoMockups(true);
       setAutosave(true);
       setCompactReasoning("very-compact");
+      setAgentAutonomy(true);
 
       window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: true }));
@@ -2120,6 +2231,7 @@ function OptionsSection({
       window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "very-compact" }));
+      window.dispatchEvent(new CustomEvent("sinew:agent-autonomy-changed", { detail: true }));
     } else if (value === "disabled") {
       try {
         localStorage.setItem("sinew.power-user", "false");
@@ -2130,6 +2242,7 @@ function OptionsSection({
         localStorage.setItem("sinew.auto-mockups", "false");
         localStorage.setItem("sinew.autosave", "false");
         localStorage.setItem("sinew.compact-reasoning", "disabled");
+        localStorage.setItem("sinew.agent-autonomy", "false");
       } catch {}
       setPowerUser(false);
       setGitAutomation(false);
@@ -2139,6 +2252,7 @@ function OptionsSection({
       setAutoMockups(false);
       setAutosave(false);
       setCompactReasoning("disabled");
+      setAgentAutonomy(false);
 
       window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: false }));
@@ -2148,6 +2262,7 @@ function OptionsSection({
       window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "disabled" }));
+      window.dispatchEvent(new CustomEvent("sinew:agent-autonomy-changed", { detail: false }));
     }
   };
 
@@ -2202,6 +2317,15 @@ function OptionsSection({
       setMultiPcSync(enabled);
     }).catch(() => {});
   };
+
+  const activeGitAutomation = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : gitAutomation);
+  const activeConciseAnswers = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : conciseAnswers);
+  const activeForceChangelog = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : forceChangelog);
+  const activeGitFrenchMessages = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : gitFrenchMessages);
+  const activeAutoMockups = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : autoMockups);
+  const activeAutosave = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : autosave);
+  const activeCompactReasoning = powerUserMaster === "enabled" ? "very-compact" : (powerUserMaster === "disabled" ? "disabled" : compactReasoning);
+  const activeAgentAutonomy = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : agentAutonomy);
 
   return (
     <div className="settings-pane__body settings-pane__body--about" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -2537,8 +2661,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={gitAutomation}
-                    data-active={gitAutomation ? "true" : "false"}
+                    aria-checked={activeGitAutomation}
+                    data-active={activeGitAutomation ? "true" : "false"}
                     onClick={() => toggleGitAutomation(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2547,8 +2671,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!gitAutomation}
-                    data-active={!gitAutomation ? "true" : "false"}
+                    aria-checked={!activeGitAutomation}
+                    data-active={!activeGitAutomation ? "true" : "false"}
                     onClick={() => toggleGitAutomation(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2571,8 +2695,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={conciseAnswers}
-                    data-active={conciseAnswers ? "true" : "false"}
+                    aria-checked={activeConciseAnswers}
+                    data-active={activeConciseAnswers ? "true" : "false"}
                     onClick={() => toggleConciseAnswers(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2581,8 +2705,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!conciseAnswers}
-                    data-active={!conciseAnswers ? "true" : "false"}
+                    aria-checked={!activeConciseAnswers}
+                    data-active={!activeConciseAnswers ? "true" : "false"}
                     onClick={() => toggleConciseAnswers(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2608,8 +2732,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={gitFrenchMessages}
-                    data-active={gitFrenchMessages ? "true" : "false"}
+                    aria-checked={activeGitFrenchMessages}
+                    data-active={activeGitFrenchMessages ? "true" : "false"}
                     onClick={() => toggleGitFrenchMessages(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2618,8 +2742,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!gitFrenchMessages}
-                    data-active={!gitFrenchMessages ? "true" : "false"}
+                    aria-checked={!activeGitFrenchMessages}
+                    data-active={!activeGitFrenchMessages ? "true" : "false"}
                     onClick={() => toggleGitFrenchMessages(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2642,8 +2766,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={autoMockups}
-                    data-active={autoMockups ? "true" : "false"}
+                    aria-checked={activeAutoMockups}
+                    data-active={activeAutoMockups ? "true" : "false"}
                     onClick={() => toggleAutoMockups(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2652,8 +2776,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!autoMockups}
-                    data-active={!autoMockups ? "true" : "false"}
+                    aria-checked={!activeAutoMockups}
+                    data-active={!activeAutoMockups ? "true" : "false"}
                     onClick={() => toggleAutoMockups(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2679,8 +2803,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={agentAutonomy}
-                    data-active={agentAutonomy ? "true" : "false"}
+                    aria-checked={activeAgentAutonomy}
+                    data-active={activeAgentAutonomy ? "true" : "false"}
                     onClick={() => toggleAgentAutonomy(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2689,8 +2813,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!agentAutonomy}
-                    data-active={!agentAutonomy ? "true" : "false"}
+                    aria-checked={!activeAgentAutonomy}
+                    data-active={!activeAgentAutonomy ? "true" : "false"}
                     onClick={() => toggleAgentAutonomy(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2713,8 +2837,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={forceChangelog}
-                    data-active={forceChangelog ? "true" : "false"}
+                    aria-checked={activeForceChangelog}
+                    data-active={activeForceChangelog ? "true" : "false"}
                     onClick={() => toggleForceChangelog(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2723,8 +2847,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!forceChangelog}
-                    data-active={!forceChangelog ? "true" : "false"}
+                    aria-checked={!activeForceChangelog}
+                    data-active={!activeForceChangelog ? "true" : "false"}
                     onClick={() => toggleForceChangelog(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2750,8 +2874,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={autosave}
-                    data-active={autosave ? "true" : "false"}
+                    aria-checked={activeAutosave}
+                    data-active={activeAutosave ? "true" : "false"}
                     onClick={() => toggleAutosave(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2760,8 +2884,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={!autosave}
-                    data-active={!autosave ? "true" : "false"}
+                    aria-checked={!activeAutosave}
+                    data-active={!activeAutosave ? "true" : "false"}
                     onClick={() => toggleAutosave(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2784,8 +2908,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={compactReasoning === "very-compact"}
-                    data-active={compactReasoning === "very-compact" ? "true" : "false"}
+                    aria-checked={activeCompactReasoning === "very-compact"}
+                    data-active={activeCompactReasoning === "very-compact" ? "true" : "false"}
                     onClick={() => changeCompactReasoning("very-compact")}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2794,8 +2918,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={compactReasoning === "compact"}
-                    data-active={compactReasoning === "compact" ? "true" : "false"}
+                    aria-checked={activeCompactReasoning === "compact"}
+                    data-active={activeCompactReasoning === "compact" ? "true" : "false"}
                     onClick={() => changeCompactReasoning("compact")}
                     disabled={powerUserMaster !== "custom"}
                   >
@@ -2804,8 +2928,8 @@ function OptionsSection({
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={compactReasoning === "disabled"}
-                    data-active={compactReasoning === "disabled" ? "true" : "false"}
+                    aria-checked={activeCompactReasoning === "disabled"}
+                    data-active={activeCompactReasoning === "disabled" ? "true" : "false"}
                     onClick={() => changeCompactReasoning("disabled")}
                     disabled={powerUserMaster !== "custom"}
                   >

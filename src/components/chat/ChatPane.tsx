@@ -547,6 +547,10 @@ export function ChatPane({
   const [agentTeamsEnabled, setAgentTeamsEnabled] = useState(false);
   const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
     try {
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return "very-compact";
+      if (master === "disabled") return "disabled";
+
       const val = localStorage.getItem("sinew.compact-reasoning");
       if (val === "very-compact") return "very-compact";
       if (val === "compact" || val === "true") return "compact";
@@ -6172,6 +6176,10 @@ function BlockView({
 }) {
   const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
     try {
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return "very-compact";
+      if (master === "disabled") return "disabled";
+
       const val = localStorage.getItem("sinew.compact-reasoning");
       if (val === "very-compact") return "very-compact";
       if (val === "compact" || val === "true") return "compact";
