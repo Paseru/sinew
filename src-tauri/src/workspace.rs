@@ -9,6 +9,15 @@ pub(super) async fn open_workspace(
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
 
+    // If Multi-PC sync is enabled, save and push the previous workspace first before switching
+    if crate::is_sync_enabled() {
+        if let Some(prev_path) = crate::load_last_workspace_path() {
+            if prev_path != input.workspace_path {
+                crate::run_git_auto_commit_and_push(&prev_path);
+            }
+        }
+    }
+
     // Save last workspace path for Multi-PC sync
     crate::save_last_workspace_path(&input.workspace_path);
 
