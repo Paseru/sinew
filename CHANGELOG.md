@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:09:19
+
+### Changed
+- **Description de l'Autonomie de l'Agent (`src/components/SettingsPane.tsx`)** : Clarification de la description de l'option « Autonomie de l'Agent » en français et en anglais pour mieux expliquer que son but est de m'obliger à agir directement avec mes outils de codage plutôt que de lister des instructions manuelles à faire vous-même.
+
 ## [Unreleased] - 2026-05-30 00:03:14
 
 ### Changed

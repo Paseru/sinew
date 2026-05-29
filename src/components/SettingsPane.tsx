@@ -3070,8 +3070,8 @@ function OptionsSection({
                   <h2>{locale === "fr" ? "Autonomie de l'Agent" : "Agent Autonomy"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Autorise l'agent à effectuer des actions et lire des fichiers de façon totalement autonome."
-                      : "Allows the agent to perform actions and read files fully autonomously."}
+                      ? "Oblige l'agent à exécuter les tâches lui-même (coder, lire, tester) au lieu de vous lister des instructions textuelles."
+                      : "Forces the agent to perform tasks itself (write code, read, test) instead of giving you instructions to do them."}
                   </p>
                 </div>
                 <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Agent Autonomy">
