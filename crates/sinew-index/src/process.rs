@@ -78,11 +78,16 @@ pub fn run_helper_if_requested() -> bool {
     }
 
     env::set_var(CHILD_ENV, "1");
-    env::set_var(EMBEDDINGS_ENV, "1");
 
     let code = match args.next().and_then(|value| value.into_string().ok()) {
-        Some(kind) if kind == REQUEST_HELPER => run_request_helper(),
-        Some(kind) if kind == WATCH_HELPER => run_watch_helper(args.collect()),
+        Some(kind) if kind == REQUEST_HELPER => {
+            env::set_var(EMBEDDINGS_ENV, "1");
+            run_request_helper()
+        }
+        Some(kind) if kind == WATCH_HELPER => {
+            env::remove_var(EMBEDDINGS_ENV);
+            run_watch_helper(args.collect())
+        }
         Some(other) => {
             eprintln!("unknown Sinew helper: {other}");
             2
@@ -158,7 +163,7 @@ pub(crate) fn spawn_background_indexer(workspace_root: &Path) -> Result<Child> {
     if !should_use_process_helper() {
         bail!("index helper is disabled");
     }
-    let mut command = helper_command()?;
+    let mut command = helper_command(false)?;
     command
         .arg(WATCH_HELPER)
         .arg(workspace_root)
@@ -183,7 +188,7 @@ fn should_use_process_helper() -> bool {
 }
 
 fn request_helper(request: &HelperRequest) -> Result<HelperResponse> {
-    let mut command = helper_command()?;
+    let mut command = helper_command(true)?;
     command
         .arg(REQUEST_HELPER)
         .stdin(Stdio::piped())
@@ -218,13 +223,15 @@ fn request_helper(request: &HelperRequest) -> Result<HelperResponse> {
     Ok(response)
 }
 
-fn helper_command() -> Result<Command> {
+fn helper_command(enable_embeddings: bool) -> Result<Command> {
     let exe = env::current_exe().context("unable to resolve current Sinew executable")?;
     let mut command = Command::new(exe);
-    command
-        .arg(HELPER_ARG)
-        .env(CHILD_ENV, "1")
-        .env(EMBEDDINGS_ENV, "1");
+    command.arg(HELPER_ARG).env(CHILD_ENV, "1");
+    if enable_embeddings {
+        command.env(EMBEDDINGS_ENV, "1");
+    } else {
+        command.env_remove(EMBEDDINGS_ENV);
+    }
     hide_helper_window(&mut command);
     Ok(command)
 }

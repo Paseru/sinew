@@ -9,7 +9,7 @@ use std::{
 
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
-use crate::process::ensure_workspace_index_isolated;
+use crate::indexer::ensure_workspace_index;
 
 static ACTIVE: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 static HELPERS: OnceLock<Mutex<Vec<Child>>> = OnceLock::new();
@@ -46,7 +46,7 @@ pub fn start_background_indexing(workspace_root: PathBuf) {
 }
 
 pub(crate) fn run_background_indexing_loop(workspace_root: PathBuf, parent_pid: Option<u32>) {
-    let _ = ensure_workspace_index_isolated(&workspace_root);
+    let _ = ensure_workspace_index(&workspace_root);
     let (tx, rx) = std::sync::mpsc::channel();
     let watch_root = workspace_root.clone();
     let mut watcher = match RecommendedWatcher::new(
@@ -76,7 +76,7 @@ pub(crate) fn run_background_indexing_loop(workspace_root: PathBuf, parent_pid: 
         match rx.recv_timeout(Duration::from_secs(3)) {
             Ok(()) => {
                 while rx.recv_timeout(Duration::from_millis(400)).is_ok() {}
-                let _ = ensure_workspace_index_isolated(&workspace_root);
+                let _ = ensure_workspace_index(&workspace_root);
             }
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
