@@ -437,22 +437,6 @@ html[data-theme="ai"] .chat-col {
   border: none !important;
 }
 
-html[data-theme="ai"] .chat-col::before {
-  content: "" !important;
-  position: absolute !important;
-  inset: 0 !important;
-  border-radius: inherit !important;
-  padding: 1.5px !important; /* Border thickness */
-  background: conic-gradient(from var(--border-angle), #4285f4 0%, #9b51e0 25%, #e9488a 50%, #00e5ff 75%, #4285f4 100%) !important;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  -webkit-mask-composite: xor !important;
-  mask-composite: exclude !important;
-  pointer-events: none !important;
-  z-index: 10 !important;
-  animation: spin-border 6s linear infinite !important;
-  filter: drop-shadow(0 0 8px rgba(155, 81, 224, 0.3));
-}
-
 html[data-theme="ai"] .todo-strip {
   background: rgba(15, 2, 48, 0.6) !important;
   backdrop-filter: blur(20px) saturate(140%) !important;
