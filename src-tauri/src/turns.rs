@@ -1666,9 +1666,7 @@ pub(super) fn system_prompt_for_workspace(
     if auto_mockups {
         sections.push(format!(
             "# Automatic Visual Mockups\n\n\
-            IMPORTANT: Every single time the user asks for a visual, layout, design, frontend, or UI change:\n\
-            1. BEFORE writing any code or modifying any files, you MUST generate and display a visual mockup or flowchart using a Mermaid diagram (e.g. ````mermaid ... ````) or describe the proposed layout in extremely clear terms.\n\
-            2. Present this visual layout clearly to the user first so they can validate the design before you proceed with writing the code."
+            IMPORTANT: Only generate a visual mockup or flowchart (e.g. Mermaid diagram) if the user explicitly asks for a visual layout/report, or if you determine that drawing a visual plan is necessary to clarify a complex layout change. Do not block or ask for validation every single time a frontend file is edited."
         ));
     }
 

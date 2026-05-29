@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:11:30
+
+### Changed
+- **Comportement et description des Maquettes Visuelles (`src-tauri/src/turns.rs`, `src/components/SettingsPane.tsx`)** : Ajustement de la consigne et de la description de l'option « Maquettes Visuelles Automatiques ». Désormais, la maquette Mermaid n'est plus obligatoire à chaque changement d'interface ; elle n'est générée que si vous en faites la demande expresse ou si je l'estime nécessaire pour un changement complexe.
+
 ## [Unreleased] - 2026-05-30 00:09:19
 
 ### Changed
