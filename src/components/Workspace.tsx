@@ -1729,15 +1729,15 @@ export function Workspace({
   const [terminalHeight, setTerminalHeight] = useState(INITIAL_TERMINAL_HEIGHT);
 
   const clampColumn = useCallback((v: number) => {
-    if (typeof window === "undefined") return v;
+    if (typeof window === "undefined") return Math.round(v);
     const max = window.innerWidth * MAX_COL_RATIO;
-    return Math.max(MIN_COL, Math.min(max, v));
+    return Math.round(Math.max(MIN_COL, Math.min(max, v)));
   }, []);
 
   const clampTerminal = useCallback((v: number) => {
-    if (typeof window === "undefined") return v;
+    if (typeof window === "undefined") return Math.round(v);
     const max = Math.max(MIN_TERMINAL_HEIGHT, window.innerHeight * MAX_TERMINAL_RATIO);
-    return Math.max(MIN_TERMINAL_HEIGHT, Math.min(max, v));
+    return Math.round(Math.max(MIN_TERMINAL_HEIGHT, Math.min(max, v)));
   }, []);
 
   const showTerminal = useCallback(() => {

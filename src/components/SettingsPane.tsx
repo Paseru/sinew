@@ -1998,11 +1998,11 @@ function OptionsSection({
   useEffect(() => {
     const handleLeft = (event: Event) => {
       const w = (event as CustomEvent<number>).detail;
-      setLeftWidth(w);
+      setLeftWidth(Math.round(w));
     };
     const handleRight = (event: Event) => {
       const w = (event as CustomEvent<number>).detail;
-      setRightWidth(w);
+      setRightWidth(Math.round(w));
     };
     window.addEventListener("sinew:left-width-updated", handleLeft);
     window.addEventListener("sinew:right-width-updated", handleRight);
@@ -2013,13 +2013,15 @@ function OptionsSection({
   }, []);
 
   const changeLeftWidth = (size: number) => {
-    setLeftWidth(size);
-    window.dispatchEvent(new CustomEvent("sinew:left-width-changed", { detail: size }));
+    const rounded = Math.round(size);
+    setLeftWidth(rounded);
+    window.dispatchEvent(new CustomEvent("sinew:left-width-changed", { detail: rounded }));
   };
 
   const changeRightWidth = (size: number) => {
-    setRightWidth(size);
-    window.dispatchEvent(new CustomEvent("sinew:right-width-changed", { detail: size }));
+    const rounded = Math.round(size);
+    setRightWidth(rounded);
+    window.dispatchEvent(new CustomEvent("sinew:right-width-changed", { detail: rounded }));
   };
 
   const [theme, setTheme] = useState<"dark" | "light" | "system" | "ai">(() => {
@@ -2625,7 +2627,7 @@ function OptionsSection({
             -
           </button>
           <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
-            {rightWidth}px
+            {Math.round(rightWidth)}px
           </span>
           <button
             type="button"
@@ -2655,7 +2657,7 @@ function OptionsSection({
             -
           </button>
           <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
-            {leftWidth}px
+            {Math.round(leftWidth)}px
           </span>
           <button
             type="button"

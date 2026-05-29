@@ -14,6 +14,15 @@ const BRIDGE_WAIT_MS = 20000;
 const cursorStateByTabId = new Map();
 const cdpEndpointByTabId = new Map();
 const STATE_DIR = process.env.SINEW_CHROME_BRIDGE_DIR || path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Sinew', 'ChromeBridge');
+let BRIDGE_SECRET = '';
+try {
+  const secretPath = path.join(STATE_DIR, 'bridge-secret.txt');
+  if (fs.existsSync(secretPath)) {
+    BRIDGE_SECRET = fs.readFileSync(secretPath, 'utf8').trim();
+  }
+} catch (e) {
+  // Silent fallback
+}
 const CONTROLLED_TAB_PATH = path.join(STATE_DIR, 'controlled-tab.json');
 let controlledTabId = null;
 let controlledTabTouchedAt = 0;

@@ -69,7 +69,7 @@ fn search_fts_candidates(
     path_prefix: Option<&str>,
     limit: i64,
 ) -> Result<Vec<RawHit>> {
-    let conn = rusqlite::Connection::open(store.db_path())?;
+    let conn = store.connection()?;
     let sql = if path_prefix.filter(|value| !value.trim().is_empty()).is_some() {
         search_sql_with_prefix()
     } else {

@@ -21,12 +21,15 @@ impl IndexStore {
         Ok(store)
     }
 
-    pub fn db_path(&self) -> &Path {
-        &self.path
-    }
-
-    fn connection(&self) -> Result<Connection> {
-        Connection::open(&self.path).context("unable to open codebase index database")
+    pub(crate) fn connection(&self) -> Result<Connection> {
+        let conn = Connection::open(&self.path).context("unable to open codebase index database")?;
+        let _ = conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             PRAGMA synchronous = NORMAL;
+             PRAGMA cache_size = -2000;
+             PRAGMA temp_store = MEMORY;"
+        );
+        Ok(conn)
     }
 
     fn init_schema(&self) -> Result<()> {

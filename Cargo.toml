@@ -67,3 +67,11 @@ tauri-build = { version = "2.1" }
 tauri-plugin-dialog = "2.0"
 tauri-plugin-updater = "2.0"
 walkdir = "2.5"
+
+[profile.release]
+opt-level = 3        # Optimisation maximale du code
+lto = true           # Link-Time Optimization globale entre crates
+codegen-units = 1    # Génération de code unifiée pour de meilleures optimisations
+panic = "abort"      # Supprime la surcharge du déroulement de pile
+strip = true         # Retire les symboles de débogage (gains de 10 à 30 Mo sur le binaire)
+

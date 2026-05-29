@@ -6,6 +6,7 @@ let nativePort = null;
 let reconnectTimer = null;
 let lastNativeError = null;
 let lastConnectedAt = null;
+let bridgeSecret = '';
 
 // Registry of active attached debuggers
 const attachedTabs = new Set();
@@ -273,6 +274,11 @@ function connect() {
 async function handleMessage(msg) {
   try {
     if (msg.type === "pong") return;
+    if (msg.type === "init_secret") {
+      bridgeSecret = msg.token;
+      console.log("🧬 [Bridge background] Secure bridge secret initialized successfully!");
+      return;
+    }
     
     const { id, command, params } = msg;
     if (!command) return;
@@ -1021,7 +1027,8 @@ function updateStorageState() {
 function getDiagnosticsViaProxy() {
   return new Promise((resolve) => {
     try {
-      fetch('http://localhost:29002/api/diagnostics', { cache: 'no-store' })
+      const url = bridgeSecret ? `http://localhost:29002/api/diagnostics?token=${encodeURIComponent(bridgeSecret)}` : 'http://localhost:29002/api/diagnostics';
+      fetch(url, { cache: 'no-store' })
         .then(res => res.ok ? res.json() : null)
         .then(data => resolve(data || null))
         .catch(() => resolve(null));

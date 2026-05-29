@@ -235,6 +235,15 @@ export function EditorPane({
     editorRef.current = editor;
     setEditorReadySeq((value) => value + 1);
     
+    try {
+      editor.updateOptions({
+        fontSize: editorFontSize,
+        lineHeight: editorFontSize + 6,
+      });
+    } catch (e) {
+      console.error("Failed to set font size on editor mount:", e);
+    }
+    
     // 1. sinew-cool (Default Dark)
     monaco.editor.defineTheme("sinew-cool", {
       base: "vs-dark",

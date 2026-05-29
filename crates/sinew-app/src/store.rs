@@ -1426,8 +1426,14 @@ impl AppStore {
 
     fn connection(&self) -> Result<Connection> {
         let conn = Connection::open(&self.path).context("unable to open sqlite database")?;
-        conn.execute_batch("pragma foreign_keys = on;")
-            .context("unable to enable foreign keys")?;
+        conn.execute_batch(
+            "pragma foreign_keys = on;
+             pragma journal_mode = WAL;
+             pragma synchronous = NORMAL;
+             pragma cache_size = -2000;
+             pragma temp_store = MEMORY;"
+        )
+        .context("unable to enable foreign keys and performance pragmas")?;
         Ok(conn)
     }
 }

@@ -73,6 +73,35 @@ try {
   getFileSample = () => "";
 }
 
+const crypto = require('crypto');
+
+function loadOrCreateSecret() {
+  const secretPath = path.join(STATE_DIR, 'bridge-secret.txt');
+  try {
+    if (fs.existsSync(secretPath)) {
+      const secret = fs.readFileSync(secretPath, 'utf8').trim();
+      if (secret) return secret;
+    }
+  } catch (e) {
+    console.error("🧬 [Proxy] Failed to read secret from file:", e.message);
+  }
+
+  // Generate new secret
+  try {
+    const secret = crypto.randomUUID();
+    fs.writeFileSync(secretPath, secret, { encoding: 'utf8', mode: 0o600 });
+    console.log("🧬 [Proxy] Generated new secure bridge secret and saved to AppData.");
+    return secret;
+  } catch (e) {
+    // Return a random secret in-memory as safe fallback if disk is read-only
+    const fallback = crypto.randomBytes(16).toString('hex');
+    console.error("🧬 [Proxy] Failed to write secret to file. Using in-memory fallback:", e.message);
+    return fallback;
+  }
+}
+
+const BRIDGE_SECRET = loadOrCreateSecret();
+
 const PORT = Number(process.env.SINEW_CHROME_BRIDGE_PORT || 29002);
 
 const LOCK_DIR = path.join(process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'Sinew');
@@ -450,6 +479,16 @@ const server = http.createServer((req, res) => {
     pathname = pathname.slice(0, -1);
   }
 
+  const clientToken = parsedUrl.query.token || req.headers['x-sinew-token'];
+  const isProtectedPath = pathname.startsWith('/api/') || pathname.startsWith('/json') || pathname.startsWith('/devtools/');
+  if (isProtectedPath && clientToken !== BRIDGE_SECRET) {
+    console.error(`🧬 [Proxy] HTTP request rejected: Unauthorized token for ${pathname}`);
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(401);
+    res.end(JSON.stringify({ error: "Unauthorized: Invalid or missing token" }));
+    return;
+  }
+
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -462,7 +501,7 @@ const server = http.createServer((req, res) => {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       "V8-Version": "12.0.267",
       "WebKit-Version": "537.36 (@a06414a2754673bc28ea7c71d60dd4d9c7af4718)",
-      "webSocketDebuggerUrl": `ws://localhost:${PORT}/devtools/browser`
+      "webSocketDebuggerUrl": `ws://localhost:${PORT}/devtools/browser?token=${BRIDGE_SECRET}`
     };
     res.writeHead(200);
     res.end(JSON.stringify(versionInfo));
@@ -534,13 +573,13 @@ const server = http.createServer((req, res) => {
       const formatAndSend = (list) => {
         const cdpTabs = list.map(t => ({
           "description": "",
-          "devtoolsFrontendUrl": `devtools://devtools/bundled/js_app.html?experiments=true&v8only=true&ws=localhost:${PORT}/devtools/page/${t.id}`,
+          "devtoolsFrontendUrl": `devtools://devtools/bundled/js_app.html?experiments=true&v8only=true&ws=localhost:${PORT}/devtools/page/${t.id}&token=${BRIDGE_SECRET}`,
           "id": String(t.id),
           "title": t.title || "Chrome Tab",
           "type": "page",
           "url": t.url || "about:blank",
           "active": !!t.active,
-          "webSocketDebuggerUrl": `ws://localhost:${PORT}/devtools/page/${t.id}`
+          "webSocketDebuggerUrl": `ws://localhost:${PORT}/devtools/page/${t.id}?token=${BRIDGE_SECRET}`
         }));
         res.writeHead(200);
         res.end(JSON.stringify(cdpTabs));
@@ -2160,10 +2199,13 @@ if (isNativeMode && !runAsBridgeClientOnly) {
         const payload = typeof data === 'string' ? JSON.parse(data) : data;
         sendNativeMessage(payload);
       } catch (e) {
-        console.error("ðŸ§¬ [Proxy] Failed to encode Native Message output:", e);
+        console.error("🧬 [Proxy] Failed to encode Native Message output:", e);
       }
     }
   };
+
+  // Send the secret token immediately to Chrome Extension over stdin/stdout!
+  sendNativeMessage({ type: "init_secret", token: BRIDGE_SECRET });
 
   // The native virtual socket becomes active only after Chrome actually sends a native message.
   // This avoids false-positive connectivity when the bridge is launched manually for local HTTP control.
@@ -2231,6 +2273,13 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (ws, req) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
+  const clientToken = parsedUrl.query.token;
+
+  if (clientToken !== BRIDGE_SECRET) {
+    console.error(`🧬 [Proxy] WebSocket connection rejected: Unauthorized token for ${pathname}`);
+    ws.close(4001, "Unauthorized: Invalid or missing token");
+    return;
+  }
 
   // ============================================
   // 1. Chrome Extension WebSocket Tunnel (Fallback)
@@ -2888,7 +2937,7 @@ server.on('error', handleListenError);
 wss.on('error', handleListenError);
 
 function startBridgeClientMode() {
-  const ws = new WebSocket("ws://localhost:29002/extension?nativeBridge=true");
+  const ws = new WebSocket(`ws://localhost:29002/extension?nativeBridge=true&token=${encodeURIComponent(BRIDGE_SECRET)}`);
   
   const currentServerPid = lockState.current?.pid;
   ws.on('open', () => {
