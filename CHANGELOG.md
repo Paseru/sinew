@@ -1,15 +1,21 @@
 # Changelog
 
-## [Unreleased] - 2026-05-30 01:04:11
+## [Unreleased] - 2026-05-30 01:08:50
+
+### Added
+- **Script d'auto-consolidation de la mémoire (consolidate_rules.py)** : Ajout d'un script d'automatisation pour analyser les erreurs répétitives du fichier errors_raw.json et les nettoyer si une règle globale correspondante est présente dans instructions_consolidated.md.
+
+### Improved
+- **Réglages adaptés à chaque ordinateur (crates/sinew-index/src/store.rs)** : Remplacement des tailles fixes de cache SQLite par un calcul basé sur les coeurs disponibles. Sinew s'adapte ainsi automatiquement au PC fixe, au portable ou à une future machine sans viser une configuration précise.
 
 ### Changed
-- **Changelog (CHANGELOG.md)** : Restauration de l'historique complet des versions et correctifs à l'état d'il y a 20 minutes (depuis le commit `5a4cd15`) pour rétablir les détails des versions précédentes et corriger les encodages de caractères corrompus.
+- **Changelog (CHANGELOG.md)** : Restauration de la section de présentation des fonctionnalités majeures du fork premium et de l'historique complet des versions, avec nettoyage des encodages corrompus.
 
 ## [Unreleased] - 2026-05-30 00:46:40
 
 ### Fixed
 - **Ouverture des fichiers dans l'éditeur (src/components/Workspace.tsx)** : Correction du problème d'ouverture des fichiers où l'éditeur restait vide ("Aucun fichier ouvert") lors du clic. Remplacement de la modification de l'index de l'onglet actif effectuée à tort au sein de la fonction de mise à jour de l'état des onglets (`setTabs`), évitant ainsi les effets de bord incompatibles avec le cycle de rendu de React 18. Utilisation également de la référence stable `tabsRef` pour éviter la recréation répétée de la fonction d'ouverture.
-- **Normalisation des chemins sous Windows (crates/sinew-app/src/workspace.rs, crates/sinew-app/src/read.rs)** : Correction du bug d'indexation et de comparaison de chemin où la casse ou le préfixe UNC (\\?\) différait entre les outils de lecture et d'édition, provoquant de fausses erreurs d'évasion de l'espace de travail et bloquant la modification de fichiers.
+- **Normalisation des chemins sous Windows (crates/sinew-app/src/workspace.rs, crates/sinew-app/src/read.rs)** : Correction du bug d'indexation et de comparaison de chemin où la casse ou le préfixe UNC (\\?\) différait entre les outils de lecture et d'édition, provoquant de fausses erreurs d'évasion de l'espace de travail et bloquant la modification de fichiers. Nettoyage de l'importation inutilisée dans `read.rs`.
 
 
 ## [Unreleased] - 2026-05-30 00:34:25
