@@ -1846,6 +1846,97 @@ function OptionsSection({
 
   const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
 
+  const [autosave, setAutosave] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.autosave") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const [editorFontSize, setEditorFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.editor-font-size");
+      return saved ? parseInt(saved, 10) : 12;
+    } catch {
+      return 12;
+    }
+  });
+
+  const [chatFontSize, setChatFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.chat-font-size");
+      return saved ? parseInt(saved, 10) : 13;
+    } catch {
+      return 13;
+    }
+  });
+
+  const [agentAutonomy, setAgentAutonomy] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.agent-autonomy") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleAutosave = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
+    } catch {}
+    setAutosave(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: enabled }));
+  };
+
+  const changeEditorFontSize = (size: number) => {
+    try {
+      localStorage.setItem("sinew.editor-font-size", size.toString());
+    } catch {}
+    setEditorFontSize(size);
+    window.dispatchEvent(new CustomEvent("sinew:editor-font-size-changed", { detail: size }));
+  };
+
+  const changeChatFontSize = (size: number) => {
+    try {
+      localStorage.setItem("sinew.chat-font-size", size.toString());
+    } catch {}
+    setChatFontSize(size);
+    document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
+    window.dispatchEvent(new CustomEvent("sinew:chat-font-size-changed", { detail: size }));
+  };
+
+  const toggleAgentAutonomy = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.agent-autonomy", enabled ? "true" : "false");
+    } catch {}
+    setAgentAutonomy(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:agent-autonomy-changed", { detail: enabled }));
+  };
+
+  const [sotaData, setSotaData] = useState<any>(sotaCache.data);
+  const [loadingSota, setLoadingSota] = useState<boolean>(!sotaCache.data && !!sotaCache.promise);
+  const [sotaError, setSotaError] = useState<string | null>(sotaCache.error);
+
+  const runSotaDiagnostics = useCallback(async (force = false) => {
+    if (!force && sotaCache.data) {
+      setSotaData(sotaCache.data);
+      setSotaError(sotaCache.error);
+      setLoadingSota(false);
+      return;
+    }
+    setLoadingSota(true);
+    setSotaError(null);
+    try {
+      const parsed = await triggerSotaDiagnostics(force);
+      setSotaData(parsed);
+      setSotaError(null);
+    } catch (err: any) {
+      setSotaError(sotaCache.error || err.toString());
+    } finally {
+      setLoadingSota(false);
+    }
+  }, []);
+
   useEffect(() => {
     runSotaDiagnostics(false);
   }, [runSotaDiagnostics]);
@@ -1936,6 +2027,37 @@ function OptionsSection({
             aria-checked={!powerUser}
             data-active={!powerUser ? "true" : "false"}
             onClick={() => togglePowerUser(false)}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Autonomie de l'Agent" : "Agent Autonomy"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Force l'agent à être totalement autonome : s'il peut effectuer une action, lancer un outil ou lire un fichier lui-même, il le fera directement sans vous le demander."
+              : "Forces the agent to be fully autonomous: if it can perform an action, run a tool, or read a file itself, it will do so directly without asking you."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Agent Autonomy">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={agentAutonomy}
+            data-active={agentAutonomy ? "true" : "false"}
+            onClick={() => toggleAgentAutonomy(true)}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!agentAutonomy}
+            data-active={!agentAutonomy ? "true" : "false"}
+            onClick={() => toggleAgentAutonomy(false)}
           >
             {locale === "fr" ? "Désactivé" : "Disabled"}
           </button>

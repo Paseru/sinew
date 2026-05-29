@@ -111,7 +111,7 @@ use std::sync::Mutex as StdMutex;
 
 #[derive(Debug, Clone)]
 struct McpToolsCacheEntry {
-    tools: Vec<McpServerTool>,
+    result: Result<Vec<McpServerTool>, String>,
     fetched_at: Instant,
     config_hash: u64,
 }
@@ -128,26 +128,26 @@ fn calculate_config_hash(config: &McpServerConfig) -> u64 {
     hasher.finish()
 }
 
-async fn get_cached_mcp_tools(config: &McpServerConfig) -> Option<Vec<McpServerTool>> {
+async fn get_cached_mcp_tools(config: &McpServerConfig) -> Option<Result<Vec<McpServerTool>, String>> {
     let cache = get_mcp_tools_cache();
     let lock = cache.lock().ok()?;
     let entry = lock.get(&config.id)?;
     let hash = calculate_config_hash(config);
     if entry.config_hash == hash && entry.fetched_at.elapsed() < Duration::from_secs(30) {
-        Some(entry.tools.clone())
+        Some(entry.result.clone())
     } else {
         None
     }
 }
 
-async fn set_cached_mcp_tools(config: &McpServerConfig, tools: Vec<McpServerTool>) {
+async fn set_cached_mcp_tools(config: &McpServerConfig, result: Result<Vec<McpServerTool>, String>) {
     let cache = get_mcp_tools_cache();
     if let Ok(mut lock) = cache.lock() {
         let hash = calculate_config_hash(config);
         lock.insert(
             config.id.clone(),
             McpToolsCacheEntry {
-                tools,
+                result,
                 fetched_at: Instant::now(),
                 config_hash: hash,
             },
@@ -175,23 +175,28 @@ impl McpToolRegistry {
 
         for server in enabled_servers(&self.settings) {
             let tools = match get_cached_mcp_tools(server).await {
-                Some(tools) => tools,
+                Some(Ok(tools)) => tools,
+                Some(Err(_)) => continue,
                 None => {
                     let mut client = match McpStdioClient::connect(server).await {
                         Ok(client) => client,
                         Err(err) => {
-                            warn!("unable to connect MCP server {}: {err}", server.name);
+                            let err_msg = err.to_string();
+                            warn!("unable to connect MCP server {}: {err_msg}", server.name);
+                            set_cached_mcp_tools(server, Err(err_msg)).await;
                             continue;
                         }
                     };
 
                     match client.list_tools().await {
                         Ok(tools) => {
-                            set_cached_mcp_tools(server, tools.clone()).await;
+                            set_cached_mcp_tools(server, Ok(tools.clone())).await;
                             tools
                         }
                         Err(err) => {
-                            warn!("unable to list MCP tools for {}: {err}", server.name);
+                            let err_msg = err.to_string();
+                            warn!("unable to list MCP tools for {}: {err_msg}", server.name);
+                            set_cached_mcp_tools(server, Err(err_msg)).await;
                             continue;
                         }
                     }
@@ -504,13 +509,15 @@ pub async fn probe_mcp_servers(settings: &McpSettings) -> Vec<McpServerProbe> {
         let mut client = match McpStdioClient::connect(server).await {
             Ok(client) => client,
             Err(err) => {
+                let err_msg = err.to_string();
+                set_cached_mcp_tools(server, Err(err_msg.clone())).await;
                 probes.push(McpServerProbe {
                     server_id: server.id.clone(),
                     server_name: server.name.clone(),
                     enabled: true,
                     ok: false,
                     tools: Vec::new(),
-                    error: Some(err.to_string()),
+                    error: Some(err_msg),
                 });
                 continue;
             }
@@ -518,7 +525,7 @@ pub async fn probe_mcp_servers(settings: &McpSettings) -> Vec<McpServerProbe> {
 
         match client.list_tools().await {
             Ok(tools) => {
-                set_cached_mcp_tools(server, tools.clone()).await;
+                set_cached_mcp_tools(server, Ok(tools.clone())).await;
                 let mut infos = Vec::with_capacity(tools.len());
                 for tool in tools {
                     let tool_name = unique_tool_name(server, &tool.name, &known_names);
@@ -551,14 +558,18 @@ pub async fn probe_mcp_servers(settings: &McpSettings) -> Vec<McpServerProbe> {
                     error: None,
                 });
             }
-            Err(err) => probes.push(McpServerProbe {
-                server_id: server.id.clone(),
-                server_name: server.name.clone(),
-                enabled: true,
-                ok: false,
-                tools: Vec::new(),
-                error: Some(err.to_string()),
-            }),
+            Err(err) => {
+                let err_msg = err.to_string();
+                set_cached_mcp_tools(server, Err(err_msg.clone())).await;
+                probes.push(McpServerProbe {
+                    server_id: server.id.clone(),
+                    server_name: server.name.clone(),
+                    enabled: true,
+                    ok: false,
+                    tools: Vec::new(),
+                    error: Some(err_msg),
+                })
+            }
         }
     }
 
