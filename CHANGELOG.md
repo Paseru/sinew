@@ -78,4 +78,11 @@ Cette version a Ã©tÃ© optimisÃ©e en profondeur pour offrir une expÃ©rien
 
 ---
 
+## [Unreleased] - 2026-05-30 01:24:40
+
+### Fixed
+- **Mémoire de l'indexeur local (`crates/sinew-index/src/store.rs`)** : Réduction du cache SQLite et de la mémoire mappée pour éviter qu'un helper d'indexation Sinew gonfle jusqu'à plusieurs dizaines de Go.
+- **Remplissage sémantique progressif (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : Limitation du nombre de morceaux vectorisés par passage afin d'éviter les pics mémoire lors des recherches dans le code.
+
+
 

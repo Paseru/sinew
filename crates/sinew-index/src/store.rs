@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     collections::HashMap,
     ffi::OsString,
     path::{Path, PathBuf},
@@ -256,12 +256,16 @@ impl IndexStore {
         Ok(())
     }
 
-    pub fn list_chunks_without_embedding(&self) -> Result<Vec<(i64, String)>> {
+    pub fn list_chunks_without_embedding(&self, limit: usize) -> Result<Vec<(i64, String)>> {
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
+
         let conn = self.connection()?;
         let mut stmt = conn.prepare(
-            "SELECT id, content FROM chunks WHERE embedding IS NULL OR length(embedding) = 0",
+            "SELECT id, content FROM chunks WHERE embedding IS NULL OR length(embedding) = 0 ORDER BY id LIMIT ?1",
         )?;
-        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        let rows = stmt.query_map(params![limit as i64], |row| Ok((row.get(0)?, row.get(1)?)))?;
         rows.collect::<Result<Vec<_>, _>>()
             .context("unable to list chunks missing embeddings")
     }

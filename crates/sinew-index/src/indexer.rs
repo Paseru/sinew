@@ -1,4 +1,4 @@
-﻿use std::{
+use std::{
     collections::{HashMap, HashSet},
     fs,
     io::Read,
@@ -328,13 +328,14 @@ fn system_time_to_ms(value: SystemTime) -> Option<i64> {
         .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
 }
 
-const EMBEDDING_BACKFILL_BATCH: usize = 64;
+const EMBEDDING_BACKFILL_BATCH: usize = 16;
+const EMBEDDING_BACKFILL_MAX_PER_RUN: usize = 128;
 
 fn backfill_missing_embeddings(store: &IndexStore) -> Result<usize> {
     if !crate::embeddings::is_available() {
         return Ok(0);
     }
-    let pending = store.list_chunks_without_embedding()?;
+    let pending = store.list_chunks_without_embedding(EMBEDDING_BACKFILL_MAX_PER_RUN)?;
     if pending.is_empty() {
         return Ok(0);
     }
