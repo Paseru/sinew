@@ -304,58 +304,18 @@ pub fn search_workspace_files(root: &Path, query: &str) -> Result<WorkspaceSearc
         .split_whitespace()
         .filter(|term| !term.is_empty())
         .collect::<Vec<_>>();
-    let mut files_scanned = 0usize;
-    let mut total_matches = 0usize;
-    let mut results = Vec::<ScoredSearchFile>::new();
+    let entries = list_workspace_files(root)?;
+    let mut results = entries
+        .par_iter()
+        .filter_map(|entry| search_workspace_entry(root, entry, &query_lower, &terms))
+        .collect::<Vec<_>>();
 
-    for entry in list_workspace_files(root)? {
-        if results.len() >= MAX_SEARCH_FILES && total_matches >= MAX_SEARCH_MATCHES {
-            break;
-        }
-
-        let path_lower = entry.relative_path.to_lowercase();
-        let path_score = path_match_score(&query_lower, &terms, &path_lower);
-        let mut match_count = 0usize;
-        let mut matches = Vec::new();
-
-        if total_matches < MAX_SEARCH_MATCHES {
-            if let Ok(doc) = read_workspace_file(root, &entry.relative_path) {
-                if let Some(content) = doc.content {
-                    files_scanned += 1;
-                    for (index, raw_line) in content.lines().enumerate() {
-                        let Some(line_match) = line_match(&query_lower, &terms, raw_line) else {
-                            continue;
-                        };
-                        match_count += 1;
-                        total_matches += 1;
-                        if matches.len() < MAX_SEARCH_MATCHES_PER_FILE {
-                            matches.push(search_match_from_line(index + 1, raw_line, line_match));
-                        }
-                        if total_matches >= MAX_SEARCH_MATCHES {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if path_score.is_none() && matches.is_empty() {
-            continue;
-        }
-
-        let score = search_file_score(path_score, match_count, &entry.relative_path);
-        results.push(ScoredSearchFile {
-            score,
-            file: WorkspaceSearchFile {
-                name: entry.name,
-                relative_path: entry.relative_path,
-                absolute_path: entry.absolute_path,
-                path_match: path_score.is_some(),
-                match_count,
-                matches,
-            },
-        });
-    }
+    let files_scanned = results.iter().map(|result| result.files_scanned).sum();
+    let total_matches = results
+        .iter()
+        .map(|result| result.total_matches)
+        .sum::<usize>()
+        .min(MAX_SEARCH_MATCHES);
 
     results.sort_by(|left, right| {
         right
@@ -363,12 +323,63 @@ pub fn search_workspace_files(root: &Path, query: &str) -> Result<WorkspaceSearc
             .cmp(&left.score)
             .then_with(|| left.file.relative_path.cmp(&right.file.relative_path))
     });
+    results.truncate(MAX_SEARCH_FILES);
 
     Ok(WorkspaceSearchResult {
         query: query.to_string(),
         files_scanned,
         total_matches,
         files: results.into_iter().map(|result| result.file).collect(),
+    })
+}
+
+fn search_workspace_entry(
+    root: &Path,
+    entry: &WorkspaceEntry,
+    query_lower: &str,
+    terms: &[&str],
+) -> Option<ScoredSearchFile> {
+    let path_lower = entry.relative_path.to_lowercase();
+    let path_score = path_match_score(query_lower, terms, &path_lower);
+    let mut match_count = 0usize;
+    let mut matches = Vec::new();
+    let mut files_scanned = 0usize;
+
+    if let Ok(doc) = read_workspace_file(root, &entry.relative_path) {
+        if let Some(content) = doc.content {
+            files_scanned = 1;
+            for (index, raw_line) in content.lines().enumerate() {
+                let Some(line_match) = line_match(query_lower, terms, raw_line) else {
+                    continue;
+                };
+                match_count += 1;
+                if matches.len() < MAX_SEARCH_MATCHES_PER_FILE {
+                    matches.push(search_match_from_line(index + 1, raw_line, line_match));
+                }
+                if match_count >= MAX_SEARCH_MATCHES_PER_FILE {
+                    break;
+                }
+            }
+        }
+    }
+
+    if path_score.is_none() && matches.is_empty() {
+        return None;
+    }
+
+    let score = search_file_score(path_score, match_count, &entry.relative_path);
+    Some(ScoredSearchFile {
+        score,
+        files_scanned,
+        total_matches: match_count,
+        file: WorkspaceSearchFile {
+            name: entry.name.clone(),
+            relative_path: entry.relative_path.clone(),
+            absolute_path: entry.absolute_path.clone(),
+            path_match: path_score.is_some(),
+            match_count,
+            matches,
+        },
     })
 }
 
@@ -385,6 +396,8 @@ fn is_walk_ignored(entry: &walkdir::DirEntry) -> bool {
 
 struct ScoredSearchFile {
     score: i64,
+    files_scanned: usize,
+    total_matches: usize,
     file: WorkspaceSearchFile,
 }
 
@@ -1269,9 +1282,7 @@ fn workspace_entry_from_path(root: &Path, path: &Path) -> Result<WorkspaceEntry>
 }
 
 fn ensure_within_root(root: &Path, path: &Path) -> Result<()> {
-    let canonical_root = root
-        .canonicalize()
-        .unwrap_or_else(|_| root.to_path_buf());
+    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     #[cfg(target_os = "windows")]
     {
         let root_str = canonical_root.to_string_lossy().to_lowercase();

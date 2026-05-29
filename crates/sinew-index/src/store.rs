@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     collections::HashMap,
     ffi::OsString,
     path::{Path, PathBuf},
@@ -378,9 +378,9 @@ struct SqliteTuning {
 
 fn sqlite_tuning() -> SqliteTuning {
     let profile = MachinePowerProfile::current();
-    let cache_kib = (profile.parallelism * 24 * 1024).clamp(96 * 1024, 1536 * 1024);
+    let cache_kib = (profile.parallelism * 8 * 1024).clamp(32 * 1024, 256 * 1024);
     let mmap_bytes = (cache_kib * 1024 * profile.storage_multiplier())
-        .clamp(512 * 1024 * 1024, 4 * 1024 * 1024 * 1024);
+        .clamp(128 * 1024 * 1024, 1024 * 1024 * 1024);
     SqliteTuning {
         cache_kib,
         mmap_bytes,
@@ -435,3 +435,4 @@ fn high_throughput_storage_available() -> bool {
 fn high_throughput_storage_available() -> bool {
     true
 }
+

@@ -33,7 +33,13 @@ pub(super) async fn open_workspace(
 
     let mut bootstrap = state
         .store
-        .bootstrap_workspace(&workspace_root, &project_id, git_remote_url.as_deref(), &state.default_model, &state.system_prompt)
+        .bootstrap_workspace(
+            &workspace_root,
+            &project_id,
+            git_remote_url.as_deref(),
+            &state.default_model,
+            &state.system_prompt,
+        )
         .map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let active_conversation_id = state.active_turn_details.lock().ok().and_then(|active| {
@@ -174,7 +180,13 @@ pub(super) async fn list_workspace_entries_command(
 ) -> std::result::Result<Vec<sinew_app::WorkspaceEntry>, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    list_workspace_entries(&workspace_root, input.relative_path.as_deref()).map_err(error_to_string)
+    let relative_path = input.relative_path;
+    tauri::async_runtime::spawn_blocking(move || {
+        list_workspace_entries(&workspace_root, relative_path.as_deref())
+    })
+    .await
+    .map_err(error_to_string)?
+    .map_err(error_to_string)
 }
 
 #[tauri::command]
@@ -183,7 +195,10 @@ pub(super) async fn list_workspace_files_command(
 ) -> std::result::Result<Vec<sinew_app::WorkspaceEntry>, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    list_workspace_files(&workspace_root).map_err(error_to_string)
+    tauri::async_runtime::spawn_blocking(move || list_workspace_files(&workspace_root))
+        .await
+        .map_err(error_to_string)?
+        .map_err(error_to_string)
 }
 
 #[tauri::command]
@@ -192,7 +207,11 @@ pub(super) async fn search_workspace_files_command(
 ) -> std::result::Result<WorkspaceSearchResult, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    search_workspace_files(&workspace_root, &input.query).map_err(error_to_string)
+    let query = input.query;
+    tauri::async_runtime::spawn_blocking(move || search_workspace_files(&workspace_root, &query))
+        .await
+        .map_err(error_to_string)?
+        .map_err(error_to_string)
 }
 
 #[derive(Debug, Deserialize)]
@@ -228,7 +247,13 @@ pub(super) async fn read_workspace_file_command(
 ) -> std::result::Result<sinew_app::FileDocument, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
-    read_workspace_file(&workspace_root, &input.relative_path).map_err(error_to_string)
+    let relative_path = input.relative_path;
+    tauri::async_runtime::spawn_blocking(move || {
+        read_workspace_file(&workspace_root, &relative_path)
+    })
+    .await
+    .map_err(error_to_string)?
+    .map_err(error_to_string)
 }
 
 #[tauri::command]
@@ -640,7 +665,9 @@ pub async fn set_semantic_embeddings_enabled(enabled: bool) -> std::result::Resu
     Ok(())
 }
 
-pub(crate) fn get_or_create_project_id(workspace_root: &std::path::Path) -> std::result::Result<String, String> {
+pub(crate) fn get_or_create_project_id(
+    workspace_root: &std::path::Path,
+) -> std::result::Result<String, String> {
     // 1. Prioritize Git remote URL if it exists
     if let Some(git_url) = crate::git::get_git_remote_url(workspace_root) {
         let normalized = git_url.trim().to_lowercase();
@@ -666,7 +693,10 @@ pub(crate) fn get_or_create_project_id(workspace_root: &std::path::Path) -> std:
     let new_id = uuid::Uuid::new_v4().to_string();
     let _ = std::fs::create_dir_all(&sinew_dir);
     if let Err(e) = std::fs::write(&id_file, &new_id) {
-        return Err(format!("Impossible d'écrire l'identifiant du projet : {}", e));
+        return Err(format!(
+            "Impossible d'écrire l'identifiant du projet : {}",
+            e
+        ));
     }
     Ok(new_id)
 }
@@ -678,11 +708,11 @@ pub(crate) fn migrate_workspace_conversations(
 ) {
     let absolute_path = workspace_root.display().to_string();
     let lowercase_path = absolute_path.to_lowercase();
-    
+
     // Migrate from paths
     let _ = store.migrate_conversations(&absolute_path, project_id);
     let _ = store.migrate_conversations(&lowercase_path, project_id);
-    
+
     // Migrate from local UUID if it exists and is different
     let sinew_dir = workspace_root.join(".sinew");
     let id_file = sinew_dir.join("project_id.txt");
