@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 17:17:36
+
+### Changed
+- **Horodatage du plan d'action (`afaire.md`)** : Mise à jour de l'heure de synthèse après validation du contrôle unique complet.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter cette mise à jour finale.
+
+### Changed
+- **Contrôle unique sans blocage live (`crates/sinew-cursor/src/tests.rs`, `scripts/check.ps1`, `scripts/agent-bridge/test-live-rust.ps1`)** : Les tests Cursor dépendants d'un compte et du réseau sont ignorés par défaut dans les contrôles courants, le script principal précise qu'ils restent séparés, et le script dédié sait les lancer explicitement.
+- **Plan d'action mis à jour (`afaire.md`)** : Ajout de l'état confirmé sur la séparation des tests live pour garder le contrôle courant fiable.
+- **Changelog (`CHANGELOG.md`)** : Restauration du titre principal et ajout de cette entrée pour documenter les ajustements de validation.
+
 ## [Unreleased] - 2026-05-29 16:51:36
 
 ### Improved

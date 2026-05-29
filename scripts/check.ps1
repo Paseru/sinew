@@ -41,7 +41,9 @@ if ($LASTEXITCODE -ne 0) {
     throw "Rust clippy a échoué avec le code $LASTEXITCODE"
 }
 
-Invoke-CheckStep "Tests Rust" { cargo test --workspace --no-fail-fast }
+Write-Host ""
+Write-Host "Les tests live externes marqués ignorés restent lancés par leurs scripts dédiés." -ForegroundColor DarkGray
+Invoke-CheckStep "Tests Rust locaux" { cargo test --workspace --no-fail-fast }
 Invoke-CheckStep "Audit npm racine" { npm audit --omit=dev }
 Invoke-CheckStep "Audit npm Chrome bridge" { npm --prefix sinew-chrome-bridge audit --omit=dev }
 Invoke-CheckStep "Audit npm Agent bridge" { npm --prefix scripts/agent-bridge audit --omit=dev }

@@ -209,7 +209,9 @@ mod tests {
         assert!(body.contains("CLIENT_SIDE_TOOL_V2_READ_FILE_V2"));
     }
 
+    // Tests live : ils dépendent d'un compte et du réseau, donc ils restent hors contrôle courant.
     #[tokio::test]
+    #[ignore]
     async fn test_live_cursor_usage() {
         let provider = match crate::client::CursorProvider::from_default_sources() {
             Ok(provider) => provider,
@@ -226,6 +228,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_live_agent_usable_models() {
         let session = match crate::auth::composer::load_composer_session() {
             Ok(Some(session)) => session,
@@ -258,6 +261,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_live_rust_agent_bridge() {
         use futures::StreamExt;
         use sinew_core::{ChatMessage, ModelRef, ProviderRequest, StreamEvent};
@@ -324,6 +328,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_live_composer_request() {
         use sinew_core::Provider;
         use futures::StreamExt;

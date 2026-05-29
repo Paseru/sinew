@@ -1,6 +1,6 @@
 # À faire — priorités fiables du projet Sinew
 
-> Mis à jour le 2026-05-29 16:43. Les priorités déjà traitées ont été retirées.
+> Mis à jour le 2026-05-29 17:17. Les priorités déjà traitées ont été retirées.
 
 ## État confirmé
 
@@ -8,8 +8,9 @@
 - Le frontend compile : `npm run build` passe.
 - Le backend Rust compile : `cargo check --workspace --all-targets` passe.
 - Le test terminal ciblé `bash::tests::interactive_session_accepts_input` passe après stabilisation.
+- Les tests live Cursor, dépendants d'un compte et du réseau, sont séparés des contrôles courants.
 - `cargo clippy` est installé et branché dans le contrôle unique. Il tourne en mode rapport par défaut, avec un mode strict activable via `SINEW_STRICT_CLIPPY=1`.
-- Un contrôle unique existe : `npm run check`.
+- Un contrôle unique existe pour les contrôles courants : `npm run check`.
 - L'audit npm est propre sur les 3 paquets : racine, `sinew-chrome-bridge`, `scripts/agent-bridge`.
 - Les diagnostics éditeur ne signalent aucune erreur.
 - `DESIGN.md` est absent alors que le README annonce son injection automatique.
