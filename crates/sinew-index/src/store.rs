@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     ffi::OsString,
     path::{Path, PathBuf},
+    thread,
     time::Duration,
 };
 
@@ -55,15 +56,18 @@ impl IndexStore {
         let conn =
             Connection::open(&self.path).context("unable to open codebase index database")?;
         let _ = conn.busy_timeout(Duration::from_secs(10));
-        let _ = conn.execute_batch(
+        let tuning = sqlite_tuning();
+        let pragmas = format!(
             "PRAGMA journal_mode = WAL;
              PRAGMA synchronous = NORMAL;
-             PRAGMA cache_size = -262144;
-             PRAGMA mmap_size = 536870912;
+             PRAGMA cache_size = -{};
+             PRAGMA mmap_size = {};
              PRAGMA temp_store = MEMORY;
              PRAGMA cache_spill = FALSE;
              PRAGMA busy_timeout = 10000;",
+            tuning.cache_kib, tuning.mmap_bytes
         );
+        let _ = conn.execute_batch(&pragmas);
         Ok(conn)
     }
 
@@ -364,4 +368,22 @@ fn now_ms() -> i64 {
         .unwrap_or_default()
         .as_millis()
         .min(i64::MAX as u128) as i64
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SqliteTuning {
+    cache_kib: i64,
+    mmap_bytes: i64,
+}
+
+fn sqlite_tuning() -> SqliteTuning {
+    let parallelism = thread::available_parallelism()
+        .map(|value| value.get() as i64)
+        .unwrap_or(4);
+    let cache_kib = (parallelism * 16 * 1024).clamp(64 * 1024, 1024 * 1024);
+    let mmap_bytes = (cache_kib * 1024 * 2).clamp(256 * 1024 * 1024, 2 * 1024 * 1024 * 1024);
+    SqliteTuning {
+        cache_kib,
+        mmap_bytes,
+    }
 }

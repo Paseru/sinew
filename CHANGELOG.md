@@ -1,4 +1,9 @@
 # Changelog
+## [Unreleased] - 2026-05-30 01:05:00
+
+### Improved
+- **Reglages adaptes a chaque PC (`crates/sinew-index/src/store.rs`)** : remplacement des tailles fixes de cache SQLite par un calcul base sur les coeurs disponibles. Sinew s'adapte ainsi automatiquement au PC fixe, au portable ou a une future machine sans viser une configuration precise.
+- **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter l'ajustement general demande.
 
 ## [Unreleased] — 2026-05-30
 
