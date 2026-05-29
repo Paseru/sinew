@@ -428,6 +428,8 @@ html[data-theme="ai"] .chat-footer {
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
   border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  /* SOTA 3: Frosted Noise Texture */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E") !important;
 }
 
 html[data-theme="ai"] .chat-col {
@@ -472,6 +474,56 @@ html[data-theme="ai"] button[aria-checked="true"] {
 html[data-theme="ai"] .composer__box:focus-within {
   box-shadow: 0 0 15px rgba(155, 81, 224, 0.4), inset 0 0 5px rgba(155, 81, 224, 0.1) !important;
   border-color: #ab7cf6 !important;
+}
+
+/* SOTA 1: Cursor-Tracking Glow for modern AI cards */
+html[data-theme="ai"] .tool-card::after,
+html[data-theme="ai"] .composer__box::after,
+html[data-theme="ai"] .settings-pane__provider-card::after,
+html[data-theme="ai"] .settings-pane__provider-card--compact::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: inherit !important;
+  background: radial-gradient(350px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(155, 81, 224, 0.08), transparent 80%) !important;
+  opacity: 0 !important;
+  transition: opacity 0.4s ease !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+html[data-theme="ai"] .tool-card:hover::after,
+html[data-theme="ai"] .composer__box:hover::after,
+html[data-theme="ai"] .settings-pane__provider-card:hover::after,
+html[data-theme="ai"] .settings-pane__provider-card--compact:hover::after {
+  opacity: 1 !important;
+}
+
+/* SOTA 2: Spring Physics for bouncy click/hover feel in AI mode */
+html[data-theme="ai"] .tool-card,
+html[data-theme="ai"] .composer__box,
+html[data-theme="ai"] .settings-pane__provider-card,
+html[data-theme="ai"] .settings-pane__provider-card--compact {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+              background-color 0.3s ease, 
+              border-color 0.3s ease, 
+              box-shadow 0.3s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+html[data-theme="ai"] .tool-card:hover,
+html[data-theme="ai"] .composer__box:hover,
+html[data-theme="ai"] .settings-pane__provider-card:hover,
+html[data-theme="ai"] .settings-pane__provider-card--compact:hover {
+  transform: scale(1.008) !important;
+}
+
+html[data-theme="ai"] .tool-card:active,
+html[data-theme="ai"] .composer__box:active,
+html[data-theme="ai"] .settings-pane__provider-card:active,
+html[data-theme="ai"] .settings-pane__provider-card--compact:active {
+  transform: scale(0.985) !important;
 }
 
 * {

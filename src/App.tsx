@@ -35,6 +35,25 @@ export default function App() {
       const savedTheme = localStorage.getItem("sinew.theme") || "dark";
       document.documentElement.setAttribute("data-theme", savedTheme);
     } catch {}
+
+    // SOTA 1: Cursor-Tracking Glow event listener for AI Glass Theme
+    const handleMouseMove = (e: MouseEvent) => {
+      const isAI = document.documentElement.getAttribute("data-theme") === "ai";
+      if (!isAI) return;
+      
+      const target = (e.target as HTMLElement).closest(
+        ".tool-card, .composer__box, .settings-pane__provider-card, .settings-pane__provider-card--compact"
+      );
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        (target as HTMLElement).style.setProperty("--mouse-x", `${x}px`);
+        (target as HTMLElement).style.setProperty("--mouse-y", `${y}px`);
+      }
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   const openWorkspace = useCallback(async (path: string) => {
