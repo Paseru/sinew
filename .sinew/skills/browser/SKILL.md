@@ -85,6 +85,34 @@ Use `evaluate` for simple reads:
 
 Keep evaluation small and return JSON-serializable values.
 
+## Diagnostic and Emulation Tools (Google DevTools for Agents 1.0 Hybrid Mode)
+
+Use these tools to analyze page quality, emulate network/device profiles, and debug memory issues safely:
+
+### Emulation & Experience testing
+
+Use `emulate_experience` to test responsive layouts or network/CPU conditions:
+- **Mobile emulation:** `emulate_experience(device="mobile")` or `emulate_experience(device="tablet")` to emulate smartphone or tablet screens and enable touch triggers.
+- **Slow connection emulation:** `emulate_experience(network="slow-3g")` or `emulate_experience(network="4g")` to check load behaviors under throttled networks.
+- **CPU Throttling:** `emulate_experience(cpuThrottling=4)` to simulate a low-spec CPU.
+- **Reset:** `emulate_experience(device="none", network="none", cpuThrottling=0)` to revert back to default.
+
+*Note:* When in mobile emulation mode, mouse click and hover operations automatically simulate real tactile taps.
+
+### Automated Page Audit (Lighthouse)
+
+Use `lighthouse_audit` to execute complete quality, performance, and SEO checks:
+- **Run all audits:** `lighthouse_audit()` or `lighthouse_audit(categories=["performance", "accessibility", "seo", "best-practices"])`
+- **Use case:** Use this tool at the end of page construction or optimization tasks to gather detailed ratings and suggestions to report to the user.
+
+*Furtivity Warning:* Lighthouse execution can trigger anti-bot scripts on heavily protected production environments (e.g. Cloudflare). Avoid executing audits on live bank portals or protected login stages.
+
+### Memory & Performance Diagnostics
+
+Use `analyze_memory_leaks` to check JavaScript memory consumption and DOM size:
+- **Run memory check:** `analyze_memory_leaks()`
+- **Use case:** Identify if a web application has high memory footprints, detached iframes, or an overly complex DOM tree. Always run this when the page is inactive to avoid affecting mouse animation smooth physics.
+
 ## Recovery
 
 If tools fail:

@@ -1324,6 +1324,37 @@ const MCP_TOOLS = [
     name: 'screenshot',
     description: 'Capture une image de l’onglet Chrome actif via CDP local.',
     inputSchema: { type: 'object', properties: { format: { type: 'string', enum: ['jpeg', 'png'] }, quality: { type: 'number' } } }
+  },
+  {
+    name: 'emulate_experience',
+    description: "Configure l'émulation du navigateur (taille d'écran, conditions réseau 3G/4G, limitation CPU) pour tester le rendu.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        device: { type: 'string', enum: ['mobile', 'tablet', 'desktop', 'none'], description: "Profil de l'appareil à émuler" },
+        network: { type: 'string', enum: ['offline', 'slow-3g', 'fast-3g', '4g', 'wifi', 'online', 'none'], description: "Conditions réseau à émuler" },
+        cpuThrottling: { type: 'number', description: "Facteur de ralentissement du processeur (ex: 2, 4, 6 pour simuler un appareil lent)" }
+      }
+    }
+  },
+  {
+    name: 'lighthouse_audit',
+    description: "Exécute un audit de qualité automatique complet (Performance, Accessibilité, SEO, Bonnes Pratiques) sur la page active.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        categories: {
+          type: 'array',
+          items: { type: 'string', enum: ['performance', 'accessibility', 'seo', 'best-practices'] },
+          description: "Catégories de diagnostics à exécuter"
+        }
+      }
+    }
+  },
+  {
+    name: 'analyze_memory_leaks',
+    description: "Analyse la consommation mémoire de la page, compte les nœuds du DOM et identifie de potentielles fuites mémoire.",
+    inputSchema: { type: 'object', properties: {} }
   }
 ];
 
@@ -1366,6 +1397,360 @@ async function executeBrowserTask(task, cursorOptions = {}) {
     return JSON.stringify({ success: results.every(r => r.result && r.result.success !== false), results });
   } catch (err) {
     return `Error: ${err.message}`;
+  }
+}
+
+async function executeEmulateExperience(device, network, cpuThrottling) {
+  const tab = await getReadyTab(null).catch(() => null);
+  if (!tab) return JSON.stringify({ success: false, error: "Aucun onglet Chrome actif trouvé." });
+
+  const cdp = cdpConnect(tab.id);
+  try {
+    // 1. Device emulation
+    if (device && device !== 'none') {
+      let width = 1440, height = 900, deviceScaleFactor = 1, mobile = false;
+      if (device === 'mobile') {
+        width = 375; height = 812; deviceScaleFactor = 3; mobile = true;
+      } else if (device === 'tablet') {
+        width = 768; height = 1024; deviceScaleFactor = 2; mobile = true;
+      }
+      
+      await cdp.send('Emulation.setDeviceMetricsOverride', {
+        width,
+        height,
+        deviceScaleFactor,
+        mobile,
+        screenOrientation: { angle: 0, type: mobile ? 'portraitPrimary' : 'landscapePrimary' }
+      });
+      
+      if (mobile) {
+        await cdp.send('Emulation.setTouchEmulationEnabled', {
+          enabled: true,
+          maxTouchPoints: 5
+        });
+      } else {
+        await cdp.send('Emulation.setTouchEmulationEnabled', {
+          enabled: false
+        });
+      }
+    } else {
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    }
+
+    // 2. Network emulation
+    if (network && network !== 'none' && network !== 'online') {
+      let offline = false, latency = 0, downloadThroughput = -1, uploadThroughput = -1;
+      if (network === 'offline') {
+        offline = true;
+        latency = 0;
+        downloadThroughput = 0;
+        uploadThroughput = 0;
+      } else if (network === 'slow-3g') {
+        latency = 400;
+        downloadThroughput = Math.round(400 * 1024 / 8);
+        uploadThroughput = Math.round(150 * 1024 / 8);
+      } else if (network === 'fast-3g') {
+        latency = 150;
+        downloadThroughput = Math.round(1.6 * 1024 * 1024 / 8);
+        uploadThroughput = Math.round(750 * 1024 / 8);
+      } else if (network === '4g') {
+        latency = 50;
+        downloadThroughput = Math.round(10 * 1024 * 1024 / 8);
+        uploadThroughput = Math.round(3 * 1024 * 1024 / 8);
+      } else if (network === 'wifi') {
+        latency = 10;
+        downloadThroughput = Math.round(50 * 1024 * 1024 / 8);
+        uploadThroughput = Math.round(10 * 1024 * 1024 / 8);
+      }
+      
+      await cdp.send('Network.emulateNetworkConditions', {
+        offline,
+        latency,
+        downloadThroughput,
+        uploadThroughput
+      });
+    } else {
+      await cdp.send('Network.emulateNetworkConditions', {
+        offline: false,
+        latency: 0,
+        downloadThroughput: -1,
+        uploadThroughput: -1
+      });
+    }
+
+    // 3. CPU throttling
+    if (cpuThrottling && cpuThrottling > 0) {
+      await cdp.send('Emulation.setCPUThrottlingRate', {
+        rate: Number(cpuThrottling)
+      });
+    } else {
+      await cdp.send('Emulation.setCPUThrottlingRate', {
+        rate: 1
+      });
+    }
+
+    cdp.close();
+    return JSON.stringify({
+      success: true,
+      message: `Émulation configurée avec succès: Appareil=${device || 'aucun'}, Réseau=${network || 'aucun'}, Limitation CPU=${cpuThrottling || 'aucune'}.`
+    });
+  } catch (err) {
+    cdp.close();
+    return JSON.stringify({ success: false, error: err.message });
+  }
+}
+
+async function executeLighthouseAudit(categories = ['performance', 'accessibility', 'seo', 'best-practices']) {
+  const tab = await getReadyTab(null).catch(() => null);
+  if (!tab) return JSON.stringify({ success: false, error: "Aucun onglet Chrome actif trouvé." });
+
+  const cdp = cdpConnect(tab.id);
+  try {
+    const categoriesJson = JSON.stringify(categories);
+    const result = await cdp.send('Runtime.evaluate', {
+      expression: '(function() {\n' +
+        '  var report = {\n' +
+        '    url: location.href,\n' +
+        '    timestamp: new Date().toISOString(),\n' +
+        '    scores: {},\n' +
+        '    details: {}\n' +
+        '  };\n' +
+        '  var categories = ' + categoriesJson + ';\n' +
+        '\n' +
+        '  if (categories.indexOf("performance") !== -1) {\n' +
+        '    var perfScore = 100;\n' +
+        '    var details = [];\n' +
+        '    var t = window.performance ? window.performance.timing : null;\n' +
+        '    if (t) {\n' +
+        '      var loadTime = t.loadEventEnd - t.navigationStart;\n' +
+        '      var domReady = t.domComplete - t.navigationStart;\n' +
+        '      var dnsLookup = t.domainLookupEnd - t.domainLookupStart;\n' +
+        '      if (loadTime > 0) {\n' +
+        '        details.push({ metric: "Temps de chargement total", value: (loadTime / 1000).toFixed(2) + "s" });\n' +
+        '        if (loadTime > 4000) perfScore -= 25;\n' +
+        '        else if (loadTime > 2000) perfScore -= 10;\n' +
+        '      }\n' +
+        '      if (domReady > 0) {\n' +
+        '        details.push({ metric: "DOM complet", value: (domReady / 1000).toFixed(2) + "s" });\n' +
+        '        if (domReady > 2500) perfScore -= 15;\n' +
+        '      }\n' +
+        '      if (dnsLookup > 0) {\n' +
+        '        details.push({ metric: "Résolution DNS", value: dnsLookup + "ms" });\n' +
+        '      }\n' +
+        '    }\n' +
+        '    var images = Array.from(document.querySelectorAll("img"));\n' +
+        '    var unoptimizedImages = images.filter(function(img) {\n' +
+        '      var rect = img.getBoundingClientRect();\n' +
+        '      return rect.width > 0 && !img.src.endsWith(".svg") && !img.srcset;\n' +
+        '    });\n' +
+        '    if (unoptimizedImages.length > 0) {\n' +
+        '      perfScore -= Math.min(15, unoptimizedImages.length * 3);\n' +
+        '      details.push({ metric: "Images non réactives (sans srcset)", count: unoptimizedImages.length });\n' +
+        '    }\n' +
+        '    var scriptsCount = document.querySelectorAll("script").length;\n' +
+        '    details.push({ metric: "Scripts JavaScript chargés", count: scriptsCount });\n' +
+        '    if (scriptsCount > 30) perfScore -= 10;\n' +
+        '    report.scores.performance = Math.max(20, perfScore);\n' +
+        '    report.details.performance = details;\n' +
+        '  }\n' +
+        '\n' +
+        '  if (categories.indexOf("accessibility") !== -1) {\n' +
+        '    var accScore = 100;\n' +
+        '    var details = [];\n' +
+        '    var images = Array.from(document.querySelectorAll("img"));\n' +
+        '    var missingAlt = images.filter(function(img) { return !img.hasAttribute("alt") || img.getAttribute("alt").trim() === ""; });\n' +
+        '    if (missingAlt.length > 0) {\n' +
+        '      accScore -= Math.min(30, missingAlt.length * 8);\n' +
+        '      details.push({ metric: "Images sans attribut alt", count: missingAlt.length });\n' +
+        '    }\n' +
+        '    var inputs = Array.from(document.querySelectorAll("input:not([type=\'hidden\']), select, textarea"));\n' +
+        '    var unlabeledInputs = inputs.filter(function(inp) {\n' +
+        '      if (inp.id) {\n' +
+        '        var label = document.querySelector("label[for=\'" + inp.id + "\']");\n' +
+        '        if (label) return false;\n' +
+        '      }\n' +
+        '      if (inp.closest("label")) return false;\n' +
+        '      if (inp.getAttribute("aria-label") || inp.getAttribute("aria-labelledby")) return false;\n' +
+        '      if (inp.getAttribute("title")) return false;\n' +
+        '      return true;\n' +
+        '    });\n' +
+        '    if (unlabeledInputs.length > 0) {\n' +
+        '      accScore -= Math.min(25, unlabeledInputs.length * 10);\n' +
+        '      details.push({ metric: "Champs de saisie sans étiquette ou description", count: unlabeledInputs.length });\n' +
+        '    }\n' +
+        '    var lang = document.documentElement.getAttribute("lang");\n' +
+        '    if (!lang) {\n' +
+        '      accScore -= 15;\n' +
+        '      details.push({ metric: "Balise HTML sans attribut lang de langue", status: "Manquant" });\n' +
+        '    } else {\n' +
+        '      details.push({ metric: "Attribut lang défini", value: lang });\n' +
+        '    }\n' +
+        '    var hTags = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).map(function(h) { return parseInt(h.tagName[1]); });\n' +
+        '    var badHeaderOrder = false;\n' +
+        '    for (var i = 1; i < hTags.length; i++) {\n' +
+        '      if (hTags[i] - hTags[i-1] > 1) { badHeaderOrder = true; break; }\n' +
+        '    }\n' +
+        '    if (badHeaderOrder) {\n' +
+        '      accScore -= 10;\n' +
+        '      details.push({ metric: "Structure des titres (Hn) non séquentielle", status: "Non-conforme" });\n' +
+        '    }\n' +
+        '    report.scores.accessibility = Math.max(30, accScore);\n' +
+        '    report.details.accessibility = details;\n' +
+        '  }\n' +
+        '\n' +
+        '  if (categories.indexOf("seo") !== -1) {\n' +
+        '    var seoScore = 100;\n' +
+        '    var details = [];\n' +
+        '    var title = document.title;\n' +
+        '    if (!title || title.trim().length === 0) {\n' +
+        '      seoScore -= 30;\n' +
+        '      details.push({ metric: "Titre de la page", status: "Manquant ou vide" });\n' +
+        '    } else {\n' +
+        '      details.push({ metric: "Titre de la page conforme", value: title });\n' +
+        '      if (title.length > 60) {\n' +
+        '        seoScore -= 5;\n' +
+        '        details.push({ metric: "Titre trop long", value: title.length + " car." });\n' +
+        '      }\n' +
+        '    }\n' +
+        '    var metaDesc = document.querySelector("meta[name=\'description\']");\n' +
+        '    if (!metaDesc || !metaDesc.getAttribute("content") || metaDesc.getAttribute("content").trim().length === 0) {\n' +
+        '      seoScore -= 30;\n' +
+        '      details.push({ metric: "Méta-description de la page", status: "Manquant ou vide" });\n' +
+        '    } else {\n' +
+        '      var desc = metaDesc.getAttribute("content");\n' +
+        '      details.push({ metric: "Méta-description trouvée", value: desc.substring(0, 40) + "..." });\n' +
+        '    }\n' +
+        '    var viewport = document.querySelector("meta[name=\'viewport\']");\n' +
+        '    if (!viewport) {\n' +
+        '      seoScore -= 20;\n' +
+        '      details.push({ metric: "Méta viewport mobile", status: "Manquant" });\n' +
+        '    }\n' +
+        '    var h1s = document.querySelectorAll("h1");\n' +
+        '    if (h1s.length === 0) {\n' +
+        '      seoScore -= 15;\n' +
+        '      details.push({ metric: "Titre H1", status: "Manquant" });\n' +
+        '    } else if (h1s.length > 1) {\n' +
+        '      seoScore -= 5;\n' +
+        '      details.push({ metric: "Plusieurs H1 détectés", count: h1s.length });\n' +
+        '    }\n' +
+        '    report.scores.seo = Math.max(40, seoScore);\n' +
+        '    report.details.seo = details;\n' +
+        '  }\n' +
+        '\n' +
+        '  if (categories.indexOf("best-practices") !== -1) {\n' +
+        '    var bpScore = 100;\n' +
+        '    var details = [];\n' +
+        '    var isHttps = location.protocol === "https:";\n' +
+        '    if (!isHttps && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {\n' +
+        '      bpScore -= 30;\n' +
+        '      details.push({ metric: "Connexion sécurisée (HTTPS)", status: "Non-sécurisé (HTTP)" });\n' +
+        '    }\n' +
+        '    details.push({ metric: "Doctype HTML5 présent", status: document.doctype ? "Oui" : "Non" });\n' +
+        '    if (!document.doctype) bpScore -= 10;\n' +
+        '    report.scores.bestpractices = Math.max(40, bpScore);\n' +
+        '    report.details.bestpractices = details;\n' +
+        '  }\n' +
+        '\n' +
+        '  return report;\n' +
+        '})()',
+      returnByValue: true
+    });
+
+    cdp.close();
+    return JSON.stringify({
+      success: true,
+      report: result?.result?.value || result?.value
+    });
+  } catch (err) {
+    cdp.close();
+    return JSON.stringify({ success: false, error: err.message });
+  }
+}
+
+async function executeAnalyzeMemoryLeaks() {
+  const tab = await getReadyTab(null).catch(() => null);
+  if (!tab) return JSON.stringify({ success: false, error: "Aucun onglet Chrome actif trouvé." });
+
+  const cdp = cdpConnect(tab.id);
+  try {
+    await cdp.send('Performance.enable');
+    const perfMetrics = await cdp.send('Performance.getMetrics');
+    
+    const metricsMap = {};
+    if (perfMetrics && perfMetrics.metrics) {
+      for (const m of perfMetrics.metrics) {
+        metricsMap[m.name] = m.value;
+      }
+    }
+    
+    const jsHeapUsed = metricsMap['JSHeapUsedSize'] || 0;
+    const jsHeapTotal = metricsMap['JSHeapTotalSize'] || 0;
+    const domNodesCount = metricsMap['DOMNodes'] || 0;
+    const layoutCount = metricsMap['LayoutCount'] || 0;
+    const recalcStyleCount = metricsMap['RecalcStyleCount'] || 0;
+
+    const domStatsResult = await cdp.send('Runtime.evaluate', {
+      expression: '(function() {\n' +
+        '  return {\n' +
+        '    totalElements: document.querySelectorAll("*").length,\n' +
+        '    iframeCount: document.querySelectorAll("iframe").length,\n' +
+        '    scriptsCount: document.querySelectorAll("script").length,\n' +
+        '    canvasCount: document.querySelectorAll("canvas").length\n' +
+        '  };\n' +
+        '})()',
+      returnByValue: true
+    });
+
+    const domStats = domStatsResult?.result?.value || domStatsResult?.value || {};
+    
+    await cdp.send('Performance.disable');
+    cdp.close();
+
+    const report = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      memory: {
+        jsHeapUsedBytes: jsHeapUsed,
+        jsHeapUsedMb: (jsHeapUsed / (1024 * 1024)).toFixed(2) + ' MB',
+        jsHeapTotalBytes: jsHeapTotal,
+        jsHeapTotalMb: (jsHeapTotal / (1024 * 1024)).toFixed(2) + ' MB',
+        heapRatio: jsHeapTotal > 0 ? ((jsHeapUsed / jsHeapTotal) * 100).toFixed(1) + '%' : '0%'
+      },
+      dom: {
+        cdpDomNodesReported: domNodesCount,
+        activeElementsCount: domStats.totalElements || 0,
+        iframeCount: domStats.iframeCount || 0,
+        scriptsCount: domStats.scriptsCount || 0,
+        canvasCount: domStats.canvasCount || 0
+      },
+      rendering: {
+        layoutCount,
+        recalcStyleCount
+      },
+      diagnostics: []
+    };
+
+    if (jsHeapUsed > 80 * 1024 * 1024) {
+      report.diagnostics.push("⚠️ Utilisation élevée de la mémoire JS. La page consomme plus de 80 Mo.");
+    } else {
+      report.diagnostics.push("✅ Utilisation saine du tas mémoire (JS Heap).");
+    }
+
+    if (domNodesCount > 3000) {
+      report.diagnostics.push("⚠️ Arbre DOM volumineux détecté (plus de 3000 nœuds). Cela peut ralentir le rendu.");
+    } else {
+      report.diagnostics.push("✅ Taille de l'arbre DOM dans les limites optimales.");
+    }
+
+    if (domStats.iframeCount > 5) {
+      report.diagnostics.push("⚠️ Nombreux iframes actifs (" + domStats.iframeCount + ").");
+    }
+
+    return JSON.stringify(report);
+  } catch (err) {
+    cdp.close();
+    return JSON.stringify({ success: false, error: err.message });
   }
 }
 
@@ -1477,6 +1862,15 @@ rl.on('line', async (line) => {
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else if (toolName === 'screenshot') {
         const resultText = await executeScreenshot(args.format || 'jpeg', args.quality || 70);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'emulate_experience') {
+        const resultText = await executeEmulateExperience(args.device || 'none', args.network || 'none', args.cpuThrottling || 0);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'lighthouse_audit') {
+        const resultText = await executeLighthouseAudit(args.categories || ['performance', 'accessibility', 'seo', 'best-practices']);
+        console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
+      } else if (toolName === 'analyze_memory_leaks') {
+        const resultText = await executeAnalyzeMemoryLeaks();
         console.log(JSON.stringify({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: resultText }] } }));
       } else {
         console.log(JSON.stringify({

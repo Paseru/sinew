@@ -59,6 +59,12 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 15:57:18
+
+### Added
+- **Intégration d'outils de diagnostic et d'émulation hybrides (`sinew-chrome-bridge/mcp_server.js` et `.sinew/skills/browser/SKILL.md`)** : Ajout de trois nouveaux outils structurés MCP (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP brute de Google Chrome pour tester la compatibilité mobile (taille, touch events), évaluer les performances et diagnostics de qualité Lighthouse en local, et analyser la consommation de mémoire (JS heap et DOM nodes count).
+- **Mise à jour de la compétence Browser (`.sinew/skills/browser/SKILL.md`)** : Ajout d'une section de documentation claire guidant l'IA à utiliser ces nouveaux pouvoirs de diagnostic en mode hybride tout en préservant le simulateur biologique humain furtif de Sinew Chrome.
+
 ## [Unreleased] - 2026-05-29 15:46:39
 
 ### Fixed
