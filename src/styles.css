@@ -9991,3 +9991,45 @@ textarea {
   font-size: var(--fs-xs);
   font-weight: 500;
 }
+
+/* --- SOTA Glassmorphic Glowing Scrollbars for AI Theme --- */
+html[data-theme="ai"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html[data-theme="ai"] ::-webkit-scrollbar-track {
+  background: rgba(10, 0, 36, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+html[data-theme="ai"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.15) !important;
+  border: 1px solid rgba(0, 255, 255, 0.3) !important;
+  border-radius: var(--r-pill);
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.15);
+  background-clip: padding-box;
+}
+
+html[data-theme="ai"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 0, 127, 0.45) !important;
+  border-color: rgba(255, 0, 127, 0.7) !important;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+  background-clip: padding-box;
+}
+
+html[data-theme="ai"] ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Force show scrollbar in chat panel in AI theme with ultra-thin glowing line */
+html[data-theme="ai"] .chat-body::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+html[data-theme="ai"] .chat-body {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(0, 255, 255, 0.3) rgba(10, 0, 36, 0.2) !important;
+}
