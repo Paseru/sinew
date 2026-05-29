@@ -1,4 +1,4 @@
-﻿import { getAppLocale } from "./locale";
+import { getAppLocale } from "./locale";
 
 const FR_RUNTIME_MARK = "sinew-fr-runtime";
 
@@ -96,6 +96,7 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
   "Downloading…": "Téléchargement…",
   "Restart now": "Redémarrer maintenant",
   "Quit Sinew": "Quitter Sinew",
+  Skip: "Ignorer",
   Retry: "Réessayer",
   "Release notes": "Notes de version",
   About: "À propos",
