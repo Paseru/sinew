@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - **Performance globale adaptative (`crates/sinew-app/src/store.rs`)** : la base principale de conversations utilise un cache adapte aux coeurs disponibles, la lecture memoire SQLite et un delai d'attente plus robuste pour mieux exploiter les PC puissants sans reglage fixe.
-- **Recherche de fichiers plus rapide (`crates/sinew-app/src/workspace.rs`, `crates/sinew-app/Cargo.toml`)** : la recherche dans l'espace de travail se repartit maintenant sur les coeurs CPU disponibles afin de reduire les temps d'attente sur les gros projets.
+- **Recherche de fichiers plus rapide (`crates/sinew-app/src/workspace.rs`)** : la recherche dans l'espace de travail se repartit maintenant sur les coeurs CPU disponibles afin de reduire les temps d'attente sur les gros projets.
 - **Interface plus fluide pendant les grosses lectures (`src-tauri/src/workspace.rs`)** : les listes de fichiers, recherches et lectures de fichiers passent sur un couloir de travail separe pour eviter de figer l'application pendant les operations disque lourdes.
 - **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter les optimisations globales demandees.
 ## ðŸš€ PrÃ©sentation des FonctionnalitÃ©s Majeures (Fork Premium julienpiron.fr)
