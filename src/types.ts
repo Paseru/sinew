@@ -113,6 +113,11 @@ export type ConversationSummary = {
   updatedAtMs: number;
 };
 
+export type OtherWorkspaceSummary = {
+  workspaceId: string;
+  count: number;
+};
+
 export type SavedConversation = {
   id: string;
   workspaceId: string;

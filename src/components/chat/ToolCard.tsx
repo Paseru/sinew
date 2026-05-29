@@ -314,10 +314,15 @@ function TodoListCard({
   ToolCardProps,
   "status" | "summary" | "argsPretty" | "output" | "isError" | "compactMode"
 >) {
-  const [open, setOpen] = useState(() => compactMode === "disabled" || !compactMode || isError);
+  const [open, setOpen] = useState(() => {
+    if (compactMode === "very-compact") return false;
+    return compactMode === "disabled" || !compactMode || isError;
+  });
 
   useEffect(() => {
-    if (compactMode === "compact" || compactMode === "very-compact") {
+    if (compactMode === "very-compact") {
+      setOpen(false);
+    } else if (compactMode === "compact") {
       setOpen(isError);
     } else {
       setOpen(true);
@@ -411,10 +416,15 @@ function CleanContextCard({
   isError,
   compactMode,
 }: Pick<ToolCardProps, "status" | "argsPretty" | "output" | "isError" | "compactMode">) {
-  const [open, setOpen] = useState(() => compactMode === "disabled" || !compactMode || isError);
+  const [open, setOpen] = useState(() => {
+    if (compactMode === "very-compact") return false;
+    return compactMode === "disabled" || !compactMode || isError;
+  });
 
   useEffect(() => {
-    if (compactMode === "compact" || compactMode === "very-compact") {
+    if (compactMode === "very-compact") {
+      setOpen(false);
+    } else if (compactMode === "compact") {
       setOpen(isError);
     } else {
       setOpen(true);
@@ -972,7 +982,10 @@ export function ToolCard({
   const canonicalName = canonicalToolName(name);
   const isCreateImage = canonicalName === "create_image";
   const isTeamRunTool = canonicalName === "team_run";
-  const [open, setOpen] = useState(() => compactMode === "disabled" || !compactMode || isError);
+  const [open, setOpen] = useState(() => {
+    if (compactMode === "very-compact") return false;
+    return compactMode === "disabled" || !compactMode || isError;
+  });
   const [teamStopState, setTeamStopState] = useState<
     "idle" | "stopping" | "stopped" | "error"
   >("idle");
@@ -1034,7 +1047,9 @@ export function ToolCard({
   }, [isTeamRunSpawn, status, teamRunActive]);
 
   useEffect(() => {
-    if (compactMode === "compact" || compactMode === "very-compact") {
+    if (compactMode === "very-compact") {
+      setOpen(false);
+    } else if (compactMode === "compact") {
       setOpen(isError);
     } else {
       setOpen(true);

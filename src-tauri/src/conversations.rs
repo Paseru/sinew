@@ -381,3 +381,48 @@ pub(super) async fn register_chrome_bridge(
     }
 }
 
+#[tauri::command]
+pub(super) async fn list_other_workspaces_conversations(
+    state: State<'_, DesktopState>,
+    input: WorkspaceInput,
+) -> std::result::Result<Vec<sinew_app::OtherWorkspaceSummary>, String> {
+    let workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    state
+        .store
+        .list_other_workspaces(&workspace_root.display().to_string())
+        .map_err(error_to_string)
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct MigrateConversationsInput {
+    pub(super) src_workspace_path: String,
+    pub(super) dest_workspace_path: String,
+}
+
+#[tauri::command]
+pub(super) async fn migrate_conversations_to_current(
+    state: State<'_, DesktopState>,
+    input: MigrateConversationsInput,
+) -> std::result::Result<(), String> {
+    let src_root =
+        normalize_workspace_root(&input.src_workspace_path).map_err(error_to_string)?;
+    let dest_root =
+        normalize_workspace_root(&input.dest_workspace_path).map_err(error_to_string)?;
+    state
+        .store
+        .migrate_conversations(
+            &src_root.display().to_string(),
+            &dest_root.display().to_string(),
+        )
+        .map_err(error_to_string)?;
+        
+    std::thread::spawn(|| {
+        crate::backup_onedrive_db_on_exit();
+    });
+    
+    Ok(())
+}
+
+

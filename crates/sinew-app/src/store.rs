@@ -65,6 +65,13 @@ pub struct ConversationSummary {
     pub updated_at_ms: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OtherWorkspaceSummary {
+    pub workspace_id: String,
+    pub count: i64,
+}
+
 #[derive(Debug, Clone)]
 pub struct TurnCheckpointRecord {
     pub history_index: usize,
@@ -703,6 +710,54 @@ impl AppStore {
             conversations.push(row.context("bad conversation row")?);
         }
         Ok(conversations)
+    }
+
+    pub fn list_other_workspaces(&self, current_workspace_id: &str) -> Result<Vec<OtherWorkspaceSummary>> {
+        let conn = self.connection()?;
+        
+        // Clean both paths by converting them to lowercase and replacing forward/backward slashes 
+        // to minimize slight path formatting differences
+        let normalized_current = current_workspace_id.replace('\\', "/").to_lowercase();
+        
+        let mut statement = conn
+            .prepare(
+                "select workspace_id, count(*) from conversations
+                 group by workspace_id
+                 order by count(*) desc",
+            )
+            .context("unable to prepare other workspaces list query")?;
+
+        let rows = statement
+            .query_map([], |row| {
+                let workspace_id: String = row.get(0)?;
+                let count: i64 = row.get(1)?;
+                Ok((workspace_id, count))
+            })
+            .context("unable to read other workspaces list")?;
+
+        let mut list = Vec::new();
+        for row in rows {
+            let (workspace_id, count) = row.context("bad workspace summary row")?;
+            let normalized_db = workspace_id.replace('\\', "/").to_lowercase();
+            // Exclude current workspace from other workspaces list
+            if normalized_db != normalized_current {
+                list.push(OtherWorkspaceSummary {
+                    workspace_id,
+                    count,
+                });
+            }
+        }
+        Ok(list)
+    }
+
+    pub fn migrate_conversations(&self, src_workspace_id: &str, dest_workspace_id: &str) -> Result<()> {
+        let conn = self.connection()?;
+        conn.execute(
+            "update conversations set workspace_id = ?2 where workspace_id = ?1",
+            params![src_workspace_id, dest_workspace_id],
+        )
+        .context("unable to migrate conversations")?;
+        Ok(())
     }
 
     pub fn load_conversation(

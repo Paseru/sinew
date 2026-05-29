@@ -29,6 +29,7 @@ import type {
   InstalledSkill,
   KimiProviderStatus,
   DeepSeekProviderStatus,
+  OtherWorkspaceSummary,
   McpEnvVar,
   McpServerConfig,
   McpServerProbe,
@@ -1653,7 +1654,11 @@ export function SettingsPane({ workspacePath }: Props) {
 
       <section className="settings-pane__main">
         {section === "options" ? (
-          <OptionsSection locale={locale} onLocaleChange={setLocale} />
+          <OptionsSection
+            locale={locale}
+            onLocaleChange={setLocale}
+            workspacePath={workspacePath}
+          />
         ) : section === "about" ? (
           <AboutSection locale={locale} />
         ) : section === "providers" ? (
@@ -1820,9 +1825,11 @@ export function SettingsPane({ workspacePath }: Props) {
 function OptionsSection({
   locale,
   onLocaleChange,
+  workspacePath,
 }: {
   locale: AppLocale;
   onLocaleChange: (locale: AppLocale) => void;
+  workspacePath: string;
 }) {
   const [powerUserMaster, setPowerUserMaster] = useState<"enabled" | "disabled" | "custom">(() => {
     try {
@@ -1910,6 +1917,37 @@ function OptionsSection({
       .finally(() => {
         setSyncingMultiPc(false);
       });
+  };
+
+  const [otherWorkspaces, setOtherWorkspaces] = useState<OtherWorkspaceSummary[]>([]);
+
+  const refreshOtherWorkspaces = useCallback(() => {
+    api.listOtherWorkspacesConversations(workspacePath)
+      .then(setOtherWorkspaces)
+      .catch(console.error);
+  }, [workspacePath]);
+
+  useEffect(() => {
+    refreshOtherWorkspaces();
+  }, [refreshOtherWorkspaces]);
+
+  const handleMigrateConversations = async (srcPath: string) => {
+    const confirmMsg = locale === "fr"
+      ? `Êtes-vous sûr de vouloir lier les conversations de "${srcPath}" à votre projet actuel ? Elles apparaîtront immédiatement dans votre liste de conversations.`
+      : `Are you sure you want to link conversations from "${srcPath}" to your current project? They will appear immediately in your conversation list.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.migrateConversationsToCurrent(srcPath, workspacePath);
+      alert(locale === "fr" ? "Conversations liées avec succès !" : "Conversations linked successfully!");
+      // Notify workspace to refresh its conversations
+      window.dispatchEvent(new Event("refresh-conversations"));
+      // Refresh local list of other workspaces
+      refreshOtherWorkspaces();
+    } catch (err) {
+      console.error(err);
+      alert(locale === "fr" ? "Erreur lors du lien des conversations." : "Error linking conversations.");
+    }
   };
 
   const [autosave, setAutosave] = useState<boolean>(() => {
@@ -2702,6 +2740,80 @@ function OptionsSection({
                     ? (locale === "fr" ? "Synchronisation en cours..." : "Syncing...")
                     : (locale === "fr" ? "Synchroniser maintenant" : "Sync Now")}
                 </button>
+              </div>
+            )}
+            {multiPcSync && otherWorkspaces.length > 0 && (
+              <div style={{
+                marginTop: "16px",
+                paddingTop: "16px",
+                borderTop: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                width: "100%"
+              }}>
+                <h3 style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-1, #ccc)", margin: 0 }}>
+                  {locale === "fr" 
+                    ? "Détection de conversations d'autres projets / PC" 
+                    : "Detected conversations from other projects / PCs"}
+                </h3>
+                <p style={{ fontSize: "11px", color: "var(--text-2, #888)", margin: 0 }}>
+                  {locale === "fr"
+                    ? "Vos conversations du travail ou d'autres dossiers sont présentes dans OneDrive mais associées à des chemins différents. Liez-les à votre dossier actuel pour les afficher :"
+                    : "Your work conversations or other folders are present in OneDrive but associated with different paths. Link them to your current folder to show them:"}
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {otherWorkspaces.map((ws) => {
+                    // Extract folder name from path
+                    const pathParts = ws.workspaceId.split(/[\\/]/);
+                    let folderName = pathParts[pathParts.length - 1] || ws.workspaceId;
+                    if (ws.workspaceId.startsWith("\\\\?\\")) {
+                      folderName = ws.workspaceId.substring(4);
+                    }
+                    return (
+                      <div key={ws.workspaceId} style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        borderRadius: "6px",
+                        backgroundColor: "var(--bg-2, rgba(255, 255, 255, 0.04))",
+                        border: "1px solid var(--line-2, rgba(255, 255, 255, 0.08))"
+                      }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-0, #fff)" }}>
+                            {folderName}
+                          </span>
+                          <span style={{ fontSize: "10px", color: "var(--text-3, #666)" }}>
+                            {ws.workspaceId}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span style={{ fontSize: "11px", color: "var(--accent-hi, #b388ff)" }}>
+                            {ws.count} {locale === "fr" ? (ws.count > 1 ? "conversations" : "conversation") : (ws.count > 1 ? "conversations" : "conversation")}
+                          </span>
+                          <button
+                            type="button"
+                            className="settings-pane__button"
+                            onClick={() => handleMigrateConversations(ws.workspaceId)}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              backgroundColor: "var(--accent-hi, #b388ff)",
+                              color: "#000",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {locale === "fr" ? "Lier" : "Link"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -5694,8 +5806,8 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
             {command}
           </code>
         )}
-        <div className="settings-pane__detail-meta">
-          <span className="settings-pane__detail-key">Exposer tous les outils au démarrage</span>
+        <div className="settings-pane__detail-row">
+          <span>Exposer tous les outils au démarrage</span>
           <button
             type="button"
             className="settings-pane__switch"

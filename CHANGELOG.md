@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:36:07
+
+### Added
+- **Association de conversations de projets / PC alternatifs (`crates/sinew-app/src/store.rs`, `src-tauri/src/conversations.rs`, `src/lib/ipc.ts`, `src/components/SettingsPane.tsx`)** : Ajout de la possibilité de détecter et de lier des conversations provenant d'autres dossiers de projets (comme vos dossiers de travail synchronisés par OneDrive) directement depuis les paramètres.
+- **Rafraîchissement dynamique des conversations (`src/components/Workspace.tsx`)** : Écouteur d'événement global pour rafraîchir instantanément la liste des conversations du projet actif lors d'une migration ou synchronisation.
+
+## [Unreleased] - 2026-05-29 23:34:58
+
+### Changed
+- **Options d'affichage du démarrage des serveurs MCP (`src/components/SettingsPane.tsx`, `src/styles.css`)** : Alignement de l'option "Exposer tous les outils au démarrage" sur une seule ligne avec le bouton de bascule (toggle switch) aligné à droite, au lieu d'être compressé sur une largeur étroite de 28px.
+- **Correction des types TypeScript dans le panneau des options (`src/components/SettingsPane.tsx`)** : Passage de `workspacePath` à `OptionsSection` pour corriger les erreurs de compilation liées à la migration des conversations entre projets.
+
+## [Unreleased] - 2026-05-29 23:34:08
+
+### Changed
+- **Comportement des blocs d'outils en erreur en mode très compact (`src/components/chat/ToolCard.tsx`)** : En mode très compact, les cartes d'outils ayant échoué (comme l'exécution de scripts Bash ou Python) démarrent désormais repliées (fermées) par défaut au lieu de s'ouvrir automatiquement. L'utilisateur peut toujours cliquer dessus pour les déplier et voir les détails de l'erreur.
+
+
 ## [Unreleased] - 2026-05-29 23:24:18
 
 ### Fixed

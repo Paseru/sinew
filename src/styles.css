@@ -4975,6 +4975,16 @@ textarea {
   color: var(--text-3);
 }
 
+.settings-pane__detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+}
+
 .settings-pane__detail-meta code {
   color: var(--text-2);
   font-family: var(--font-mono);

@@ -1030,6 +1030,8 @@ pub fn run() {
             workspace::push_editor_diagnostics,
             workspace::set_semantic_embeddings_enabled,
             conversations::list_conversations,
+            conversations::list_other_workspaces_conversations,
+            conversations::migrate_conversations_to_current,
             conversations::create_conversation,
             conversations::load_conversation,
             conversations::rename_conversation,

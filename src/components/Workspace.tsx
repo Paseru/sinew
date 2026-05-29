@@ -203,6 +203,16 @@ export function Workspace({
     }
   }, [workspacePath]);
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      refreshConversationList().catch(console.error);
+    };
+    window.addEventListener("refresh-conversations", handleRefresh);
+    return () => {
+      window.removeEventListener("refresh-conversations", handleRefresh);
+    };
+  }, [refreshConversationList]);
+
   const selectConversation = useCallback(
     async (id: string) => {
       if (id === activeConv.id) return;

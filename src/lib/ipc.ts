@@ -34,6 +34,7 @@ import type {
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
   DeepSeekProviderStatus,
+  OtherWorkspaceSummary,
   PlanControl,
   QuestionAnswer,
   SavedConversation,
@@ -415,6 +416,16 @@ export const api = {
   listConversations(workspacePath: string) {
     return invoke<ConversationSummary[]>("list_conversations", {
       input: { workspacePath },
+    });
+  },
+  listOtherWorkspacesConversations(workspacePath: string) {
+    return invoke<OtherWorkspaceSummary[]>("list_other_workspaces_conversations", {
+      input: { workspacePath },
+    });
+  },
+  migrateConversationsToCurrent(srcWorkspacePath: string, destWorkspacePath: string) {
+    return invoke<void>("migrate_conversations_to_current", {
+      input: { srcWorkspacePath, destWorkspacePath },
     });
   },
   createConversation(workspacePath: string) {
