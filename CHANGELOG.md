@@ -59,6 +59,11 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:11:45
+
+### Added
+- **Intégration du système d'apprentissage global côté Rust (`src-tauri/src/turns.rs`)** : Modification du backend Rust de l'application pour charger et injecter automatiquement et de manière transparente le fichier d'instructions consolidées global (`%LOCALAPPDATA%\Sinew\instructions_consolidated.md`) dans le prompt système de tous les agents pour l'ensemble des projets ouverts sur cet ordinateur. Les agents bénéficient désormais de cette base d'apprentissage universelle sans dépendre d'un fichier local `AGENTS.md`.
+
 ## [Unreleased] - 2026-05-29 16:06:07
 
 ### Changed

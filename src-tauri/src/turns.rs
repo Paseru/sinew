@@ -1669,6 +1669,20 @@ pub(super) fn system_prompt_for_workspace(
         ));
     }
 
+    // Inject machine-wide global consolidated rules if present
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let global_rules_path = std::path::PathBuf::from(local_app_data)
+            .join("Sinew")
+            .join("instructions_consolidated.md");
+        if let Ok(global_rules) = std::fs::read_to_string(&global_rules_path) {
+            sections.push(format!(
+                "# Global Consolidated Instructions (Machine-wide Rules)\n\n\
+                IMPORTANT: The following machine-wide rules are consolidated from previous agent sessions on this PC. \
+                You MUST respect and follow these instructions strictly:\n\n{global_rules}"
+            ));
+        }
+    }
+
     if let Some(instructions) =
         read_workspace_prompt_file(workspace_root, WORKSPACE_INSTRUCTIONS_FILE)?
     {
