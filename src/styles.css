@@ -7780,6 +7780,7 @@ textarea {
   line-height: 1.5;
   word-break: break-word;
   letter-spacing: -0.005em;
+  white-space: pre-wrap;
 }
 .question-tool__options {
   display: flex;
@@ -10345,4 +10346,50 @@ html[data-theme="ai"] .img-preview-lightbox__btn-close:hover {
   background: rgba(255, 0, 127, 0.2) !important;
   color: #ff007f !important;
   text-shadow: 0 0 4px #ff007f;
+}
+
+/* Nouveaux styles pour l'organisation des options par catégories */
+.options-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--r-med, 12px);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.options-category-title {
+  margin: 0 0 4px 0;
+  font-size: var(--fs-md, 15px);
+  font-weight: 650;
+  color: var(--text-0, #fff);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.options-category-icon {
+  color: var(--primary, #9f7aea);
+  width: 20px;
+  height: 20px;
+}
+
+.options-category-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.options-subcategory-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .options-subcategory-row {
+    grid-template-columns: 1fr;
+  }
 }

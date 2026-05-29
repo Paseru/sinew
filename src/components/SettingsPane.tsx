@@ -2195,684 +2195,767 @@ function OptionsSection({
   };
 
   return (
-    <div className="settings-pane__body settings-pane__body--about">
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Langue" : "Language"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Choisissez la langue de l'interface. Sinew se recharge après un changement afin que chaque panneau se mette à jour proprement."
-              : "Choose the interface language. Sinew reloads after a change so every panel updates cleanly."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Interface language">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={locale === "en"}
-            data-active={locale === "en" ? "true" : "false"}
-            onClick={() => onLocaleChange("en")}
-          >
-            English
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={locale === "fr"}
-            data-active={locale === "fr" ? "true" : "false"}
-            onClick={() => onLocaleChange("fr")}
-          >
-            Français
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Thème d'affichage" : "Theme"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Basculez entre le mode clair (Jour), sombre (Nuit), système ou l'interface futuriste IA."
-              : "Switch between day, night, system theme, or the futuristic AI interface."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Theme">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={theme === "light"}
-            data-active={theme === "light" ? "true" : "false"}
-            onClick={() => changeTheme("light")}
-          >
-            {locale === "fr" ? "☀️ Jour" : "☀️ Day"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={theme === "dark"}
-            data-active={theme === "dark" ? "true" : "false"}
-            onClick={() => changeTheme("dark")}
-          >
-            {locale === "fr" ? "🌙 Nuit" : "🌙 Night"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={theme === "system"}
-            data-active={theme === "system" ? "true" : "false"}
-            onClick={() => changeTheme("system")}
-          >
-            {locale === "fr" ? "💻 Système" : "💻 System"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={theme === "ai"}
-            data-active={theme === "ai" ? "true" : "false"}
-            onClick={() => changeTheme("ai")}
-            style={{
-              border: theme === "ai" ? "1px solid #ff007f" : "none",
-              color: theme === "ai" ? "#00ffff" : "var(--text-0)"
-            }}
-          >
-            {locale === "fr" ? "🤖 IA (Néon / Animé)" : "🤖 AI (Neon / Anim)"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Mode Power User" : "Power User Mode"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Active en un clic toutes les fonctionnalités avancées (automatisation Git, réponses ultra-concises, changelog obligatoire, sauvegarde automatique et réflexion très compacte)."
-              : "Activate all advanced options in one click (Git automation, ultra-concise answers, mandatory changelog, auto-save, and very compact display mode)."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Power User Mode">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={powerUserMaster === "enabled"}
-            data-active={powerUserMaster === "enabled" ? "true" : "false"}
-            onClick={() => changePowerUserMaster("enabled")}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={powerUserMaster === "disabled"}
-            data-active={powerUserMaster === "disabled" ? "true" : "false"}
-            onClick={() => changePowerUserMaster("disabled")}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={powerUserMaster === "custom"}
-            data-active={powerUserMaster === "custom" ? "true" : "false"}
-            onClick={() => changePowerUserMaster("custom")}
-          >
-            {locale === "fr" ? "Personnalisé" : "Custom"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Automatisation Git & Arrière-plan" : "Git & Background Automation"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Vérifie, tire (pull) et pousse (push) automatiquement les modifications de code pour vous éviter de gérer Git manuellement."
-              : "Automatically checks, pulls, and pushes code changes to automate Git maintenance for you."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Git Automation">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={gitAutomation}
-            data-active={gitAutomation ? "true" : "false"}
-            onClick={() => toggleGitAutomation(true)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!gitAutomation}
-            data-active={!gitAutomation ? "true" : "false"}
-            onClick={() => toggleGitAutomation(false)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Réponses Ultra-Concises & Simplifiées" : "Ultra-Concise & Simplified Answers"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Force l'agent à répondre en langage simple, direct et ultra-concis. Il élimine le jargon technique complexe au profit de métaphores claires et d'analogies de la vie courante."
-              : "Forces the agent to answer in simple, direct, and ultra-concise language, replacing complex technical jargon with clear real-world metaphors and analogies."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Concise Answers">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={conciseAnswers}
-            data-active={conciseAnswers ? "true" : "false"}
-            onClick={() => toggleConciseAnswers(true)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!conciseAnswers}
-            data-active={!conciseAnswers ? "true" : "false"}
-            onClick={() => toggleConciseAnswers(false)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Messages Git en Français Simple" : "Simple French Git Messages"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Force l'agent à rédiger des messages de commit Git clairs, simples et en français pour raconter vos idées sans jargon de codeur."
-              : "Forces the agent to write clear, simple Git commit messages in French, describing your ideas without coder jargon."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Simple French Git Messages">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={gitFrenchMessages}
-            data-active={gitFrenchMessages ? "true" : "false"}
-            onClick={() => toggleGitFrenchMessages(true)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!gitFrenchMessages}
-            data-active={!gitFrenchMessages ? "true" : "false"}
-            onClick={() => toggleGitFrenchMessages(false)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Maquettes Visuelles Automatiques" : "Automatic Visual Mockups"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Oblige l'agent à dessiner un schéma d'interface (Mermaid) pour vous faire valider la mise en page avant d'écrire ou de modifier du code."
-              : "Forces the agent to draw a layout diagram (Mermaid) to get your design validation before writing or changing any code."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Visual Mockups">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={autoMockups}
-            data-active={autoMockups ? "true" : "false"}
-            onClick={() => toggleAutoMockups(true)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!autoMockups}
-            data-active={!autoMockups ? "true" : "false"}
-            onClick={() => toggleAutoMockups(false)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Autonomie de l'Agent" : "Agent Autonomy"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Force l'agent à être totalement autonome : s'il peut effectuer une action, lancer un outil ou lire un fichier lui-même, il le fera directement sans vous le demander."
-              : "Forces the agent to be fully autonomous: if it can perform an action, run a tool, or read a file itself, it will do so directly without asking you."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Agent Autonomy">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={agentAutonomy}
-            data-active={agentAutonomy ? "true" : "false"}
-            onClick={() => toggleAgentAutonomy(true)}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!agentAutonomy}
-            data-active={!agentAutonomy ? "true" : "false"}
-            onClick={() => toggleAgentAutonomy(false)}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Changelog obligatoire" : "Mandatory Changelog"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Oblige l'agent à noter scrupuleusement chaque modification dans un changelog (CHANGELOG.md) avec la date et l'heure locale, pour n'importe quel projet."
-              : "Forces the agent to log every single file modification in a changelog (CHANGELOG.md) with local date and time, for any project."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Mandatory Changelog">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={forceChangelog}
-            data-active={forceChangelog ? "true" : "false"}
-            onClick={() => toggleForceChangelog(true)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!forceChangelog}
-            data-active={!forceChangelog ? "true" : "false"}
-            onClick={() => toggleForceChangelog(false)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Sauvegarde automatique" : "Auto-Save"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Sauvegarde automatiquement vos fichiers modifiés après un court instant d'inactivité de frappe."
-              : "Automatically save your modified files after a brief period of inactivity."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Auto-Save">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={autosave}
-            data-active={autosave ? "true" : "false"}
-            onClick={() => toggleAutosave(true)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Activé (1.5s)" : "Enabled (1.5s)"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!autosave}
-            data-active={!autosave ? "true" : "false"}
-            onClick={() => toggleAutosave(false)}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Taille du texte (Éditeur)" : "Editor Font Size"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Ajustez la taille des caractères dans l'éditeur de code."
-              : "Adjust the text size in the code editor."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Editor Font Size">
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeEditorFontSize(Math.max(10, editorFontSize - 1))}
-          >
-            -
-          </button>
-          <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
-            {editorFontSize}px
-          </span>
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeEditorFontSize(Math.min(22, editorFontSize + 1))}
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Taille du texte (Chat)" : "Chat Font Size"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Ajustez la taille des caractères dans le panneau de chat."
-              : "Adjust the text size in the chat pane."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Font Size">
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeChatFontSize(Math.max(10, chatFontSize - 1))}
-          >
-            -
-          </button>
-          <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
-            {chatFontSize}px
-          </span>
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeChatFontSize(Math.min(22, chatFontSize + 1))}
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Largeur du chat" : "Chat Column Width"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Ajustez la largeur par défaut de la colonne de chat de droite."
-              : "Adjust the default width of the right chat column."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Column Width">
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeRightWidth(Math.max(220, rightWidth - 20))}
-          >
-            -
-          </button>
-          <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
-            {Math.round(rightWidth)}px
-          </span>
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeRightWidth(Math.min(1200, rightWidth + 20))}
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Largeur du menu latéral" : "Sidebar Column Width"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Ajustez la largeur par défaut de la colonne de gauche (fichiers)."
-              : "Adjust the default width of the left sidebar column."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Sidebar Column Width">
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeLeftWidth(Math.max(220, leftWidth - 20))}
-          >
-            -
-          </button>
-          <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
-            {Math.round(leftWidth)}px
-          </span>
-          <button
-            type="button"
-            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
-            onClick={() => changeLeftWidth(Math.min(800, leftWidth + 20))}
-          >
-            +
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Mode d'affichage" : "Display Mode"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Choisissez le niveau de détails techniques et de réflexion affichés dans le chat."
-              : "Choose the level of technical details and reasoning displayed in the chat."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Display Mode">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={compactReasoning === "very-compact"}
-            data-active={compactReasoning === "very-compact" ? "true" : "false"}
-            onClick={() => changeCompactReasoning("very-compact")}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Très compact" : "Very compact"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={compactReasoning === "compact"}
-            data-active={compactReasoning === "compact" ? "true" : "false"}
-            onClick={() => changeCompactReasoning("compact")}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Compact" : "Compact"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={compactReasoning === "disabled"}
-            data-active={compactReasoning === "disabled" ? "true" : "false"}
-            onClick={() => changeCompactReasoning("disabled")}
-            disabled={powerUserMaster !== "custom"}
-          >
-            {locale === "fr" ? "Détaillé" : "Detailed"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card">
-        <div className="settings-pane__about-card-copy">
-          <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
-          <p>
-            {locale === "fr"
-              ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
-              : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
-          </p>
-        </div>
-        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={multiPcSync}
-            data-active={multiPcSync ? "true" : "false"}
-            onClick={() => toggleMultiPcSync(true)}
-          >
-            {locale === "fr" ? "Activé" : "Enabled"}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!multiPcSync}
-            data-active={!multiPcSync ? "true" : "false"}
-            onClick={() => toggleMultiPcSync(false)}
-          >
-            {locale === "fr" ? "Désactivé" : "Disabled"}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
-        <div className="settings-pane__about-card-header-flex">
-          <div className="settings-pane__about-card-copy">
-            <h2>{locale === "fr" ? "Diagnostic Système SOTA" : "SOTA System Diagnostics"}</h2>
-            <p>
-              {locale === "fr"
-                ? "Vérifiez en temps réel le statut et la version de vos outils système indispensables."
-                : "Check the real-time status and version of your essential system tools."}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="settings-pane__button"
-            onClick={() => runSotaDiagnostics(true)}
-            disabled={loadingSota}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "6px",
-              backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
-              color: "var(--text-0, #fff)",
-              border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
-              cursor: "pointer",
-              fontSize: "12px",
-              fontWeight: 500,
-              display: "flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            {loadingSota ? (
-              <Icon icon="eos-icons:loading" width={14} height={14} />
-            ) : (
-              <Icon icon="solar:refresh-linear" width={14} height={14} />
-            )}
-            {locale === "fr" ? "Actualiser" : "Refresh"}
-          </button>
-        </div>
-
-        {sotaError && (
-          <div style={{ color: "#ef4444", fontSize: "13px", padding: "8px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.1)" }}>
-            Error: {sotaError}
-          </div>
-        )}
-
-        {sotaData && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 12px",
-              borderRadius: "6px",
-              backgroundColor: sotaData.status === "ok" ? "var(--bg-2, rgba(255, 255, 255, 0.04))" : "rgba(234, 179, 8, 0.1)",
-              border: `1px solid ${sotaData.status === "ok" ? "var(--line-1, rgba(255, 255, 255, 0.08))" : "rgba(234, 179, 8, 0.2)"}`,
-              fontSize: "13px",
-              color: sotaData.status === "ok" ? "var(--text-1, rgba(255, 255, 255, 0.85))" : "#eab308"
-            }}>
-              <Icon
-                icon={sotaData.status === "ok" ? "solar:check-circle-bold" : "solar:danger-bold"}
-                width={18}
-                height={18}
-              />
-              <span>
+    <div className="settings-pane__body settings-pane__body--about" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      
+      {/* ========================================================================= */}
+      {/* 🎨 CARTE GENERALE 1 : APPARENCE & INTERFACE                               */}
+      {/* ========================================================================= */}
+      <div className="options-category-group">
+        <h3 className="options-category-title">
+          <Icon icon="solar:palette-bold-duotone" className="options-category-icon" />
+          {locale === "fr" ? "Apparence & Interface" : "Appearance & Interface"}
+        </h3>
+        <div className="options-category-grid">
+          
+          {/* Langue */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Langue" : "Language"}</h2>
+              <p>
                 {locale === "fr"
-                  ? (sotaData.status === "ok"
-                      ? "Tous les outils système SOTA sont installés et configurés."
-                      : "Certains outils système SOTA ou dépendances sont manquants.")
-                  : sotaData.message}
-              </span>
+                  ? "Choisissez la langue de l'interface. Sinew se recharge après un changement afin que chaque panneau se mette à jour proprement."
+                  : "Choose the interface language. Sinew reloads after a change so every panel updates cleanly."}
+              </p>
             </div>
-
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: "10px"
-            }}>
-              {Object.entries(sotaData.tools || {}).map((entry) => {
-                const name = entry[0];
-                const info = entry[1] as any;
-                const isAvailable = info.available;
-                return (
-                  <div
-                    key={name}
-                    style={{
-                      padding: "12px",
-                      borderRadius: "8px",
-                      backgroundColor: "var(--bg-card, rgba(255, 255, 255, 0.03))",
-                      border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px"
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontWeight: 600, textTransform: "capitalize", fontSize: "14px" }}>
-                        {name}
-                      </span>
-                      <span style={{
-                        fontSize: "11px",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                        fontWeight: 600,
-                        backgroundColor: isAvailable ? "var(--bg-3, rgba(255, 255, 255, 0.08))" : "rgba(239, 68, 68, 0.15)",
-                        color: isAvailable ? "var(--text-2, rgba(255, 255, 255, 0.65))" : "#ef4444"
-                      }}>
-                        {isAvailable ? (locale === "fr" ? "Disponible" : "Available") : (locale === "fr" ? "Manquant" : "Missing")}
-                      </span>
-                    </div>
-
-                    {isAvailable ? (
-                      <div style={{ fontSize: "11px", opacity: 0.8, display: "flex", flexDirection: "column", gap: "2px" }}>
-                        <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={info.version || ""}>
-                          <strong>Version:</strong> {info.version || "Unknown"}
-                        </div>
-                        <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={info.path || ""}>
-                          <strong>Path:</strong> {info.path || "N/A"}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: "11px", color: "#ef4444", fontStyle: "italic" }}>
-                        {info.error || (locale === "fr" ? "Exécutable introuvable dans le PATH" : "Executable not found in PATH")}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Interface language">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={locale === "en"}
+                data-active={locale === "en" ? "true" : "false"}
+                onClick={() => onLocaleChange("en")}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={locale === "fr"}
+                data-active={locale === "fr" ? "true" : "false"}
+                onClick={() => onLocaleChange("fr")}
+              >
+                Français
+              </button>
             </div>
           </div>
-        )}
+
+          {/* Thème d'affichage */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Thème d'affichage" : "Theme"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Basculez entre le mode clair (Jour), sombre (Nuit), système ou l'interface futuriste IA."
+                  : "Switch between day, night, system theme, or the futuristic AI interface."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Theme">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={theme === "light"}
+                data-active={theme === "light" ? "true" : "false"}
+                onClick={() => changeTheme("light")}
+              >
+                {locale === "fr" ? "☀️ Jour" : "☀️ Day"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={theme === "dark"}
+                data-active={theme === "dark" ? "true" : "false"}
+                onClick={() => changeTheme("dark")}
+              >
+                {locale === "fr" ? "🌙 Nuit" : "🌙 Night"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={theme === "system"}
+                data-active={theme === "system" ? "true" : "false"}
+                onClick={() => changeTheme("system")}
+              >
+                {locale === "fr" ? "💻 Système" : "💻 System"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={theme === "ai"}
+                data-active={theme === "ai" ? "true" : "false"}
+                onClick={() => changeTheme("ai")}
+                style={{
+                  border: theme === "ai" ? "1px solid #ff007f" : "none",
+                  color: theme === "ai" ? "#00ffff" : "var(--text-0)"
+                }}
+              >
+                {locale === "fr" ? "🤖 IA (Néon / Animé)" : "🤖 AI (Neon / Anim)"}
+              </button>
+            </div>
+          </div>
+
+          {/* Tailles de police (Côte à côte) */}
+          <div className="options-subcategory-row">
+            {/* Éditeur */}
+            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Taille du texte (Éditeur)" : "Editor Font Size"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Ajustez la taille des caractères dans l'éditeur de code."
+                    : "Adjust the text size in the code editor."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Editor Font Size">
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeEditorFontSize(Math.max(10, editorFontSize - 1))}
+                >
+                  -
+                </button>
+                <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                  {editorFontSize}px
+                </span>
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeEditorFontSize(Math.min(22, editorFontSize + 1))}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Chat */}
+            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Taille du texte (Chat)" : "Chat Font Size"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Ajustez la taille des caractères dans le panneau de chat."
+                    : "Adjust the text size in the chat pane."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Font Size">
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeChatFontSize(Math.max(10, chatFontSize - 1))}
+                >
+                  -
+                </button>
+                <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                  {chatFontSize}px
+                </span>
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeChatFontSize(Math.min(22, chatFontSize + 1))}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Largeurs (Côte à côte) */}
+          <div className="options-subcategory-row">
+            {/* Chat Width */}
+            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Largeur du chat" : "Chat Column Width"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Ajustez la largeur par défaut de la colonne de chat de droite."
+                    : "Adjust the default width of the right chat column."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Column Width">
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeRightWidth(Math.max(220, rightWidth - 20))}
+                >
+                  -
+                </button>
+                <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                  {Math.round(rightWidth)}px
+                </span>
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeRightWidth(Math.min(1200, rightWidth + 20))}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Sidebar Width */}
+            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Largeur du menu latéral" : "Sidebar Column Width"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Ajustez la largeur par défaut de la colonne de gauche (fichiers)."
+                    : "Adjust the default width of the left sidebar column."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Sidebar Column Width">
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeLeftWidth(Math.max(220, leftWidth - 20))}
+                >
+                  -
+                </button>
+                <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                  {Math.round(leftWidth)}px
+                </span>
+                <button
+                  type="button"
+                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => changeLeftWidth(Math.min(800, leftWidth + 20))}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* ⚡ CARTE GENERALE 2 : MODE POWER USER & COMPORTEMENTS DE L'AGENT         */}
+      {/* ========================================================================= */}
+      <div className="options-category-group">
+        <h3 className="options-category-title">
+          <Icon icon="solar:bolt-bold-duotone" className="options-category-icon" style={{ color: "#eab308" }} />
+          {locale === "fr" ? "Mode Power User & Comportements" : "Power User Mode & Agent Behaviors"}
+        </h3>
+        <div className="options-category-grid">
+          
+          {/* Master Toggle */}
+          <div className="settings-pane__about-card" style={{ border: "1px solid rgba(234, 179, 8, 0.4)" }}>
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Mode Power User" : "Power User Mode"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Active en un clic toutes les fonctionnalités avancées (automatisation Git, réponses ultra-concises, changelog obligatoire, sauvegarde automatique et réflexion très compacte)."
+                  : "Activate all advanced options in one click (Git automation, ultra-concise answers, mandatory changelog, auto-save, and very compact display mode)."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Power User Mode">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={powerUserMaster === "enabled"}
+                data-active={powerUserMaster === "enabled" ? "true" : "false"}
+                onClick={() => changePowerUserMaster("enabled")}
+              >
+                {locale === "fr" ? "Activé" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={powerUserMaster === "disabled"}
+                data-active={powerUserMaster === "disabled" ? "true" : "false"}
+                onClick={() => changePowerUserMaster("disabled")}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={powerUserMaster === "custom"}
+                data-active={powerUserMaster === "custom" ? "true" : "false"}
+                onClick={() => changePowerUserMaster("custom")}
+              >
+                {locale === "fr" ? "Personnalisé" : "Custom"}
+              </button>
+            </div>
+          </div>
+
+          {/* Grille des 8 sous-cartes de comportements de l'agent */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
+            
+            {/* Ligne 1 : Git & Réponses ultra-concises */}
+            <div className="options-subcategory-row">
+              {/* Automatisation Git */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Automatisation Git & Arrière-plan" : "Git & Background Automation"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Vérifie, tire (pull) et pousse (push) automatiquement les modifications de code pour vous éviter de gérer Git."
+                      : "Automatically checks, pulls, and pushes code changes to automate Git maintenance."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Git Automation">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={gitAutomation}
+                    data-active={gitAutomation ? "true" : "false"}
+                    onClick={() => toggleGitAutomation(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!gitAutomation}
+                    data-active={!gitAutomation ? "true" : "false"}
+                    onClick={() => toggleGitAutomation(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Réponses ultra-concises */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Réponses Ultra-Concises & Simplifiées" : "Ultra-Concise & Simplified Answers"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Force l'agent à répondre en langage simple, éliminant le jargon technique pour des analogies claires."
+                      : "Forces the agent to answer in simple language, replacing jargon with clear analogies."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Concise Answers">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={conciseAnswers}
+                    data-active={conciseAnswers ? "true" : "false"}
+                    onClick={() => toggleConciseAnswers(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!conciseAnswers}
+                    data-active={!conciseAnswers ? "true" : "false"}
+                    onClick={() => toggleConciseAnswers(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Ligne 2 : Commits en français & Maquettes visuelles */}
+            <div className="options-subcategory-row">
+              {/* Commits en français */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Messages Git en Français Simple" : "Simple French Git Messages"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Force l'agent à rédiger des messages de commit clairs, simples et en français pour vos idées."
+                      : "Forces the agent to write clear, simple Git commit messages in French."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Simple French Git Messages">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={gitFrenchMessages}
+                    data-active={gitFrenchMessages ? "true" : "false"}
+                    onClick={() => toggleGitFrenchMessages(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!gitFrenchMessages}
+                    data-active={!gitFrenchMessages ? "true" : "false"}
+                    onClick={() => toggleGitFrenchMessages(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Maquettes visuelles Mermaid */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Maquettes Visuelles Automatiques" : "Automatic Visual Mockups"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Oblige l'agent à dessiner un schéma (Mermaid) pour valider la mise en page avant d'agir."
+                      : "Forces the agent to draw a layout diagram (Mermaid) to get your validation first."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Visual Mockups">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={autoMockups}
+                    data-active={autoMockups ? "true" : "false"}
+                    onClick={() => toggleAutoMockups(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!autoMockups}
+                    data-active={!autoMockups ? "true" : "false"}
+                    onClick={() => toggleAutoMockups(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Ligne 3 : Autonomie de l'agent & Changelog obligatoire */}
+            <div className="options-subcategory-row">
+              {/* Autonomie de l'agent */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Autonomie de l'Agent" : "Agent Autonomy"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Autorise l'agent à effectuer des actions et lire des fichiers de façon totalement autonome."
+                      : "Allows the agent to perform actions and read files fully autonomously."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Agent Autonomy">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={agentAutonomy}
+                    data-active={agentAutonomy ? "true" : "false"}
+                    onClick={() => toggleAgentAutonomy(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!agentAutonomy}
+                    data-active={!agentAutonomy ? "true" : "false"}
+                    onClick={() => toggleAgentAutonomy(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Changelog obligatoire */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Changelog obligatoire" : "Mandatory Changelog"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Oblige l'agent à noter chaque modification dans un journal (CHANGELOG.md) daté."
+                      : "Forces the agent to log every change in a dated changelog file (CHANGELOG.md)."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Mandatory Changelog">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={forceChangelog}
+                    data-active={forceChangelog ? "true" : "false"}
+                    onClick={() => toggleForceChangelog(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé" : "Enabled"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!forceChangelog}
+                    data-active={!forceChangelog ? "true" : "false"}
+                    onClick={() => toggleForceChangelog(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Ligne 4 : Sauvegarde automatique & Mode d'affichage de réflexion */}
+            <div className="options-subcategory-row">
+              {/* Sauvegarde automatique */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Sauvegarde automatique" : "Auto-Save"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Sauvegarde automatiquement vos fichiers modifiés après un court instant d'inactivité."
+                      : "Automatically save your modified files after a brief period of inactivity."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Auto-Save">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={autosave}
+                    data-active={autosave ? "true" : "false"}
+                    onClick={() => toggleAutosave(true)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Activé (1.5s)" : "Enabled (1.5s)"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!autosave}
+                    data-active={!autosave ? "true" : "false"}
+                    onClick={() => toggleAutosave(false)}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode d'affichage / Réflexion */}
+              <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                <div className="settings-pane__about-card-copy">
+                  <h2>{locale === "fr" ? "Mode d'affichage" : "Display Mode"}</h2>
+                  <p>
+                    {locale === "fr"
+                      ? "Choisissez le niveau de détails techniques et de réflexion affichés dans le chat."
+                      : "Choose the level of technical details and reasoning displayed in the chat."}
+                  </p>
+                </div>
+                <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Display Mode">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={compactReasoning === "very-compact"}
+                    data-active={compactReasoning === "very-compact" ? "true" : "false"}
+                    onClick={() => changeCompactReasoning("very-compact")}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Très compact" : "Very compact"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={compactReasoning === "compact"}
+                    data-active={compactReasoning === "compact" ? "true" : "false"}
+                    onClick={() => changeCompactReasoning("compact")}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Compact" : "Compact"}
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={compactReasoning === "disabled"}
+                    data-active={compactReasoning === "disabled" ? "true" : "false"}
+                    onClick={() => changeCompactReasoning("disabled")}
+                    disabled={powerUserMaster !== "custom"}
+                  >
+                    {locale === "fr" ? "Détaillé" : "Detailed"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 🔄 CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
+      {/* ========================================================================= */}
+      <div className="options-category-group">
+        <h3 className="options-category-title">
+          <Icon icon="solar:settings-bold-duotone" className="options-category-icon" style={{ color: "#3b82f6" }} />
+          {locale === "fr" ? "Système & Synchronisation" : "System & Synchronization"}
+        </h3>
+        <div className="options-category-grid">
+          
+          {/* Synchronisation Multi-PC */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
+                  : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={multiPcSync}
+                data-active={multiPcSync ? "true" : "false"}
+                onClick={() => toggleMultiPcSync(true)}
+              >
+                {locale === "fr" ? "Activé" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!multiPcSync}
+                data-active={!multiPcSync ? "true" : "false"}
+                onClick={() => toggleMultiPcSync(false)}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
+            </div>
+          </div>
+
+          {/* Diagnostic Système SOTA */}
+          <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
+            <div className="settings-pane__about-card-header-flex">
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Diagnostic Système SOTA" : "SOTA System Diagnostics"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Vérifiez en temps réel le statut et la version de vos outils système indispensables."
+                    : "Check the real-time status and version of your essential system tools."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="settings-pane__button"
+                onClick={() => runSotaDiagnostics(true)}
+                disabled={loadingSota}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                  color: "var(--text-0, #fff)",
+                  border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                {loadingSota ? (
+                  <Icon icon="eos-icons:loading" width={14} height={14} />
+                ) : (
+                  <Icon icon="solar:refresh-linear" width={14} height={14} />
+                )}
+                {locale === "fr" ? "Actualiser" : "Refresh"}
+              </button>
+            </div>
+
+            {sotaError && (
+              <div style={{ color: "#ef4444", fontSize: "13px", padding: "8px", borderRadius: "6px", backgroundColor: "rgba(239, 68, 68, 0.1)" }}>
+                Error: {sotaError}
+              </div>
+            )}
+
+            {sotaData && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "6px",
+                  backgroundColor: sotaData.status === "ok" ? "var(--bg-2, rgba(255, 255, 255, 0.04))" : "rgba(234, 179, 8, 0.1)",
+                  border: `1px solid ${sotaData.status === "ok" ? "var(--line-1, rgba(255, 255, 255, 0.08))" : "rgba(234, 179, 8, 0.2)"}`,
+                  fontSize: "13px",
+                  color: sotaData.status === "ok" ? "var(--text-1, rgba(255, 255, 255, 0.85))" : "#eab308"
+                }}>
+                  <Icon
+                    icon={sotaData.status === "ok" ? "solar:check-circle-bold" : "solar:danger-bold"}
+                    width={18}
+                    height={18}
+                  />
+                  <span>
+                    {locale === "fr"
+                      ? (sotaData.status === "ok"
+                          ? "Tous les outils système SOTA sont installés et configurés."
+                          : "Certains outils système SOTA ou dépendances sont manquants.")
+                      : sotaData.message}
+                  </span>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: "10px"
+                }}>
+                  {Object.entries(sotaData.tools || {}).map((entry) => {
+                    const name = entry[0];
+                    const info = entry[1] as any;
+                    const isAvailable = info.available;
+                    return (
+                      <div
+                        key={name}
+                        style={{
+                          padding: "12px",
+                          borderRadius: "8px",
+                          backgroundColor: "var(--bg-card, rgba(255, 255, 255, 0.03))",
+                          border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px"
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontWeight: 600, textTransform: "capitalize", fontSize: "14px" }}>
+                            {name}
+                          </span>
+                          <span style={{
+                            fontSize: "11px",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontWeight: 600,
+                            backgroundColor: isAvailable ? "var(--bg-3, rgba(255, 255, 255, 0.08))" : "rgba(239, 68, 68, 0.15)",
+                            color: isAvailable ? "var(--text-2, rgba(255, 255, 255, 0.65))" : "#ef4444"
+                          }}>
+                            {isAvailable ? (locale === "fr" ? "Disponible" : "Available") : (locale === "fr" ? "Manquant" : "Missing")}
+                          </span>
+                        </div>
+
+                        {isAvailable ? (
+                          <div style={{ fontSize: "11px", opacity: 0.8, display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={info.version || ""}>
+                              <strong>Version:</strong> {info.version || "Unknown"}
+                            </div>
+                            <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={info.path || ""}>
+                              <strong>Path:</strong> {info.path || "N/A"}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: "11px", color: "#ef4444", fontStyle: "italic" }}>
+                            {info.error || (locale === "fr" ? "Exécutable introuvable dans le PATH" : "Executable not found in PATH")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
     </div>
   );
 }
