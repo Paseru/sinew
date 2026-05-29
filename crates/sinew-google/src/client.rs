@@ -817,7 +817,7 @@ fn split_tool_id(name: &str, id: &str) -> (String, String) {
 }
 
 fn split_prefixed_tool_id(id: &str) -> (String, String) {
-    if let Some((name, raw_id)) = id.split_once("__") {
+    if let Some((name, raw_id)) = id.rsplit_once("__") {
         if !name.trim().is_empty() && !raw_id.trim().is_empty() {
             return (name.to_string(), raw_id.to_string());
         }

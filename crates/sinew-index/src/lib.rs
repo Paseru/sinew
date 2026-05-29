@@ -7,7 +7,7 @@ mod search;
 mod store;
 
 pub use background::{start_background_indexing, warm_workspace_index};
-pub use indexer::{ensure_workspace_index, index_stats, IndexStats};
+pub use indexer::{ensure_workspace_index, index_stats, sync_changed_paths, IndexStats};
 pub use process::{
     ensure_workspace_index_isolated, index_and_search_workspace_isolated, index_stats_isolated,
     process_isolation_enabled, run_helper_if_requested,

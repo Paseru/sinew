@@ -182,8 +182,8 @@ export const MODELS: ModelEntry[] = [
     value: "google:gemini-3.5-flash",
     provider: "google",
     label: "Gemini 3.5 Flash",
-    thinking: ["off"],
-    defaultThinking: "off",
+    thinking: ["low", "medium", "high"],
+    defaultThinking: "high",
   },
   {
     value: "kimi:kimi-for-coding",

@@ -1,7 +1,8 @@
 use std::{
+    collections::HashSet,
     fs,
     io::Read,
-    path::{Component, Path},
+    path::{Component, Path, PathBuf},
     time::SystemTime,
 };
 
@@ -23,7 +24,7 @@ pub struct IndexStats {
 pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
     let store = IndexStore::open(workspace_root)?;
     let mut stats = IndexStats::default();
-    let mut seen = std::collections::HashSet::<String>::new();
+    let mut seen = HashSet::<String>::new();
 
     for entry in WalkDir::new(workspace_root)
         .follow_links(false)
@@ -42,36 +43,16 @@ pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
             continue;
         }
         let relative = normalize_relative_path(workspace_root, path);
-        seen.insert(relative.clone());
+        seen.insert(relative);
 
-        let metadata = fs::metadata(path).with_context(|| format!("stat {}", path.display()))?;
-        let mtime_ms = metadata
-            .modified()
-            .ok()
-            .and_then(system_time_to_ms)
-            .unwrap_or(0);
-        let content = match read_text_file_limited(path) {
-            Ok(content) => content,
-            Err(_) => continue,
-        };
-        let hash = sha256_hex(content.as_bytes());
-        if store.file_hash(&relative)?.as_deref() == Some(hash.as_str()) {
-            continue;
+        if index_one_file(
+            &store,
+            workspace_root,
+            path,
+            crate::embeddings::is_available(),
+        )? {
+            stats.files_updated += 1;
         }
-        let mut chunks = chunk_file_content(&content, &relative);
-        if crate::embeddings::is_available() {
-            let texts = chunks
-                .iter()
-                .map(|chunk| chunk.content.clone())
-                .collect::<Vec<_>>();
-            if let Ok(vectors) = crate::embeddings::embed_passages(&texts) {
-                for (chunk, vector) in chunks.iter_mut().zip(vectors) {
-                    chunk.embedding = Some(vector);
-                }
-            }
-        }
-        store.replace_file(&relative, &hash, mtime_ms, &chunks)?;
-        stats.files_updated += 1;
     }
 
     for path in store.list_files()? {
@@ -84,6 +65,69 @@ pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
     stats.files_indexed = files;
     stats.chunks_indexed = chunks;
     stats.embeddings_backfilled = backfill_missing_embeddings(&store)?;
+    Ok(stats)
+}
+
+pub fn sync_changed_paths(
+    workspace_root: &Path,
+    paths: impl IntoIterator<Item = PathBuf>,
+) -> Result<IndexStats> {
+    const MAX_DIRECTORY_FILES_PER_EVENT: usize = 256;
+
+    let store = IndexStore::open(workspace_root)?;
+    let mut stats = IndexStats::default();
+    let mut unique = HashSet::<String>::new();
+
+    for path in paths {
+        let path = normalize_absolute_path(&path);
+        if !is_under_workspace(workspace_root, &path) || should_skip_entry(&path, workspace_root) {
+            continue;
+        }
+
+        if path.is_dir() {
+            let mut indexed = 0usize;
+            for entry in WalkDir::new(&path)
+                .follow_links(false)
+                .into_iter()
+                .filter_entry(|entry| !should_skip_entry(entry.path(), workspace_root))
+            {
+                if indexed >= MAX_DIRECTORY_FILES_PER_EVENT {
+                    break;
+                }
+                let Ok(entry) = entry else { continue };
+                if !entry.file_type().is_file() || !is_text_candidate(entry.path()) {
+                    continue;
+                }
+                let relative = normalize_relative_path(workspace_root, entry.path());
+                if !unique.insert(relative) {
+                    continue;
+                }
+                if index_one_file(&store, workspace_root, entry.path(), false)? {
+                    stats.files_updated += 1;
+                }
+                indexed += 1;
+            }
+            continue;
+        }
+
+        let relative = normalize_relative_path(workspace_root, &path);
+        if !unique.insert(relative.clone()) {
+            continue;
+        }
+
+        if path.exists() && is_text_candidate(&path) {
+            if index_one_file(&store, workspace_root, &path, false)? {
+                stats.files_updated += 1;
+            }
+        } else {
+            store.remove_file(&relative)?;
+            stats.files_updated += 1;
+        }
+    }
+
+    let (files, chunks) = store.stats()?;
+    stats.files_indexed = files;
+    stats.chunks_indexed = chunks;
     Ok(stats)
 }
 
@@ -113,6 +157,58 @@ fn normalize_relative_path(workspace_root: &Path, path: &Path) -> String {
         .display()
         .to_string()
         .replace('\\', "/")
+}
+
+fn normalize_absolute_path(path: &Path) -> PathBuf {
+    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn is_under_workspace(workspace_root: &Path, path: &Path) -> bool {
+    let root = normalize_absolute_path(workspace_root);
+    path.starts_with(&root) || path.starts_with(workspace_root)
+}
+
+fn index_one_file(
+    store: &IndexStore,
+    workspace_root: &Path,
+    path: &Path,
+    include_embeddings: bool,
+) -> Result<bool> {
+    if !is_text_candidate(path) {
+        return Ok(false);
+    }
+    let relative = normalize_relative_path(workspace_root, path);
+    let metadata = fs::metadata(path).with_context(|| format!("stat {}", path.display()))?;
+    let mtime_ms = metadata
+        .modified()
+        .ok()
+        .and_then(system_time_to_ms)
+        .unwrap_or(0);
+    let content = match read_text_file_limited(path) {
+        Ok(content) => content,
+        Err(_) => {
+            store.remove_file(&relative)?;
+            return Ok(true);
+        }
+    };
+    let hash = sha256_hex(content.as_bytes());
+    if store.file_hash(&relative)?.as_deref() == Some(hash.as_str()) {
+        return Ok(false);
+    }
+    let mut chunks = chunk_file_content(&content, &relative);
+    if include_embeddings && crate::embeddings::is_available() {
+        let texts = chunks
+            .iter()
+            .map(|chunk| chunk.content.clone())
+            .collect::<Vec<_>>();
+        if let Ok(vectors) = crate::embeddings::embed_passages(&texts) {
+            for (chunk, vector) in chunks.iter_mut().zip(vectors) {
+                chunk.embedding = Some(vector);
+            }
+        }
+    }
+    store.replace_file(&relative, &hash, mtime_ms, &chunks)?;
+    Ok(true)
 }
 
 fn is_text_candidate(path: &Path) -> bool {
