@@ -182,3 +182,12 @@ Le changelog actuel est une page de fonctionnalités/vente, pas un journal techn
 - [ ] **15. Dispatch des outils** — `crates/sinew-app/src/agent/tool_dispatch.rs` : longue chaîne `if / else if`. Remplacer par un `match` Rust.
 - [ ] **16. Audit npm** — Lancer `npm audit fix` pour nettoyer les alertes de sécurité sur les dépendances.
 - [ ] **17. Centraliser localStorage** — Regrouper la lecture/écriture des paramètres dans un hook ou module unique plutôt que des blocs `try/catch` dispersés.
+
+---
+
+## 📝 Rapport Simplifié (Synthèse)
+
+- **Bureaux encombrés (Fichiers géants) :** Division des fichiers clés (`lib.rs`, `store.rs`, `ipc.ts`) en petits tiroirs spécialisés et indépendants.
+- **Répétitions inutiles (Duplication des fournisseurs) :** Mutualisation des 7 connecteurs d'intelligence artificielle sous un même socle commun.
+- **Manque de verrous de sécurité (Absence de tests) :** Mise en place progressive de tests de robustesse automatique sur les outils, sauvegardes et conversations.
+

@@ -13,6 +13,7 @@ pub(super) const DEFAULT_AGENT_AUTONOMY_PROMPT: &str = "\
 Agent Autonomy Mode is enabled. Always follow these rules strictly: \
 - If you can perform a task, run a tool, inspect a file, search the workspace, check diagnostics, or run a test YOURSELF, DO IT DIRECTLY. \
 - DO NOT ask the user for permission, clarification, or help to do something that is within your capability or toolset. \
+- NEVER write textual instructions or command lines telling the user how to run a command, compile code, edit a file, or configure their system if you have a tool (like bash, edit_file, write_file) capable of doing it yourself. ALWAYS run the tools first yourself. Act, do not explain how to act. \
 - Never ask the user to find, read, edit, or check logs/files manually if you can access them with your tools (such as read, grep, glob, bash, etc.). \
 - Proactively use all available tools to resolve the user's objective without requiring manual user intervention.";
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";

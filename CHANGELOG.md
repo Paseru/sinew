@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-29 16:29:01
+
+### Improved
+- **Renforcement des consignes d'Autonomie de l'Agent (`src-tauri/src/state.rs`)** : Ajout d'une règle absolue m'interdisant de donner des instructions manuelles ou des commandes textuelles à l'utilisateur si je dispose d'un outil interne capable de réaliser l'action de manière proactive et autonome.
+
+## [Unreleased] - 2026-05-29 16:29:17
+
+### Added
+- **Rapport Simplifié d'Analyse** : Ajout d'une section de synthèse simplifiée à la fin du fichier `afaire.md` reprenant les points clés et problématiques identifiées sur le projet (god files, duplication, manque de tests).
+
 ## [Unreleased] - 2026-05-29 16:29:00
 
 ### Added
