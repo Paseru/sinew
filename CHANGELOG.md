@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-30 01:33:13
+
+### Removed
+- **Changelog** : suppression de la phrase promotionnelle sur l'optimisation en profondeur.
+
 ## [Unreleased] - 2026-05-30 01:22:35
 
 ### Added
@@ -85,6 +90,5 @@ Cette version a Ã©tÃ© optimisÃ©e en profondeur pour offrir une expÃ©rien
 ### Fixed
 - **Mémoire de l'indexeur local (`crates/sinew-index/src/store.rs`)** : Réduction du cache SQLite et de la mémoire mappée pour éviter qu'un helper d'indexation Sinew gonfle jusqu'à plusieurs dizaines de Go.
 - **Remplissage sémantique progressif (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : Limitation du nombre de morceaux vectorisés par passage afin d'éviter les pics mémoire lors des recherches dans le code.
-
 
 
