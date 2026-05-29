@@ -4,6 +4,7 @@
 .
 ├── .gitignore
 ├── AGENTS.md
+├── afaire.md
 ├── CHANGELOG.md
 ├── Cargo.lock
 ├── Cargo.toml

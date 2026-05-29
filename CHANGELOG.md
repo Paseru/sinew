@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-29
+- Fusion (merge) des mises à jour du dépôt d'origine (upstream/main) pour synchroniser l'historique Git
+- Mise à jour du fichier `afaire.md` avec l'analyse complète du projet : problématiques, priorités, et plan d'amélioration
+- Ajout de `afaire.md` dans la carte des fichiers de `AGENTS.md`
+
 ## 🚀 Présentation des Fonctionnalités Majeures (Fork Premium julienpiron.fr)
 
 Cette version a été optimisée en profondeur pour offrir une expérience utilisateur haut de gamme (SOTA), une autonomie maximale en arrière-plan, et des intégrations d'intelligence artificielle inégalées.
