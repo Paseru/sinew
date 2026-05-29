@@ -579,6 +579,11 @@ export const api = {
       powerUser = localStorage.getItem("sinew.power-user") !== "false";
     } catch {}
 
+    let agentAutonomy = true;
+    try {
+      agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
+    } catch {}
+
     return invoke<void>("send_message", {
       input: {
         workspacePath,
@@ -594,6 +599,7 @@ export const api = {
         messageVisibility,
         revertWorkspaceChanges,
         powerUser,
+        agentAutonomy,
         displayMode: readDisplayMode(),
       },
     });
@@ -637,6 +643,11 @@ export const api = {
       powerUser = localStorage.getItem("sinew.power-user") !== "false";
     } catch {}
 
+    let agentAutonomy = true;
+    try {
+      agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
+    } catch {}
+
     return invoke<ContextEstimate>("estimate_context", {
       input: {
         workspacePath,
@@ -648,6 +659,7 @@ export const api = {
         mode,
         rewriteFromHistoryIndex,
         powerUser,
+        agentAutonomy,
         displayMode: readDisplayMode(),
       },
     });

@@ -7,6 +7,12 @@ Prefer SOTA options, but explain them in plain language with minimal Git/code ja
 When possible, automate Git maintenance: check whether the opened project is up to date, pull if it is behind, \
 and push after successful modifications so the user mostly manages ideas, not Git. \
 You keep your responses concise without repeating yourself.";
+pub(super) const DEFAULT_AGENT_AUTONOMY_PROMPT: &str = "\
+Agent Autonomy Mode is enabled. Always follow these rules strictly: \
+- If you can perform a task, run a tool, inspect a file, search the workspace, check diagnostics, or run a test YOURSELF, DO IT DIRECTLY. \
+- DO NOT ask the user for permission, clarification, or help to do something that is within your capability or toolset. \
+- Never ask the user to find, read, edit, or check logs/files manually if you can access them with your tools (such as read, grep, glob, bash, etc.). \
+- Proactively use all available tools to resolve the user's objective without requiring manual user intervention.";
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";

@@ -10,7 +10,7 @@ pub(super) async fn estimate_context(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user, input.agent_autonomy)
             .map_err(error_to_string)?;
     let effective_system_prompt =
         with_display_mode_prompt(&effective_system_prompt, input.display_mode);
@@ -124,7 +124,7 @@ pub(super) async fn estimate_sub_agent_context(
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true)
             .map_err(error_to_string)?;
     let settings = state
         .store

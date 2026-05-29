@@ -27,7 +27,7 @@ pub(super) async fn send_message(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user, input.agent_autonomy)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -473,7 +473,7 @@ pub(super) async fn compact_conversation(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -1597,6 +1597,7 @@ pub(super) fn system_prompt_for_workspace(
     workspace_root: &Path,
     base: &str,
     power_user: bool,
+    agent_autonomy: bool,
 ) -> Result<String> {
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
 
@@ -1604,6 +1605,13 @@ pub(super) fn system_prompt_for_workspace(
         sections.push(format!(
             "# Power User Instructions\n\nPower User Mode is enabled. Please follow these rules strictly:\n\n{}",
             crate::state::DEFAULT_POWER_USER_PROMPT
+        ));
+    }
+
+    if agent_autonomy {
+        sections.push(format!(
+            "# Agent Autonomy Instructions\n\nAgent Autonomy is enabled. Please follow these rules strictly:\n\n{}",
+            crate::state::DEFAULT_AGENT_AUTONOMY_PROMPT
         ));
     }
 

@@ -307,6 +307,8 @@ pub(super) struct SendMessageInput {
     pub(super) revert_workspace_changes: bool,
     #[serde(default = "default_true")]
     pub(super) power_user: bool,
+    #[serde(default = "default_true")]
+    pub(super) agent_autonomy: bool,
     #[serde(default)]
     pub(super) display_mode: DisplayModeInput,
 }
@@ -340,6 +342,8 @@ pub(super) struct ContextEstimateInput {
     pub(super) rewrite_from_history_index: Option<usize>,
     #[serde(default = "default_true")]
     pub(super) power_user: bool,
+    #[serde(default = "default_true")]
+    pub(super) agent_autonomy: bool,
     #[serde(default)]
     pub(super) display_mode: DisplayModeInput,
 }
