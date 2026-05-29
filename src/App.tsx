@@ -108,7 +108,13 @@ export default function App() {
           ),
         ]);
         if (info && info.available && info.version) {
-          updateInfo = info;
+          let skipped = false;
+          try {
+            skipped = localStorage.getItem("sinew.skippedUpdateVersion") === info.version;
+          } catch {}
+          if (!skipped) {
+            updateInfo = info;
+          }
         }
       } catch {
         // Silent: a failed check (offline, server down, manifest 5xx)
@@ -166,6 +172,34 @@ export default function App() {
     return () => window.removeEventListener("sinew:install-update", handler);
   }, []);
 
+  const handleSkipUpdate = useCallback(async () => {
+    if (state.kind !== "update_required") return;
+    try {
+      localStorage.setItem("sinew.skippedUpdateVersion", state.info.version);
+    } catch {}
+    void api.resetWindowTitle().catch(() => {
+      // best-effort; leaving the previous title is harmless
+    });
+
+    if (startsEmpty) {
+      setState({ kind: "welcome" });
+      return;
+    }
+    const last = loadLastWorkspace();
+    if (!last) {
+      setState({ kind: "welcome" });
+      return;
+    }
+    try {
+      const bootstrap = await api.openWorkspace(last);
+      const displayName = bootstrap.workspace.name === ".sinew-sandbox" ? "Sans dossier" : bootstrap.workspace.name;
+      recordRecent(bootstrap.workspace.path, displayName);
+      setState({ kind: "workspace", bootstrap });
+    } catch {
+      setState({ kind: "welcome" });
+    }
+  }, [state, startsEmpty]);
+
   const backToWelcome = useCallback(() => {
     void api.resetWindowTitle().catch(() => {
       // best-effort; leaving the previous title is harmless
@@ -192,7 +226,7 @@ export default function App() {
       <UpdaterLockScreen
         info={state.info}
         autoInstall={state.autoInstall}
-        onSkip={backToWelcome}
+        onSkip={handleSkipUpdate}
       />
     );
   }

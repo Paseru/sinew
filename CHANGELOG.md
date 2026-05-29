@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:20:17
+
+### Changed
+- **Ignorer définitivement la demande de mise à jour au démarrage (`src/App.tsx`)** : Permet de ne plus afficher l'écran de mise à jour bloquante pour une version spécifique lorsque l'utilisateur clique sur "Skip". Le choix est sauvegardé localement, et l'application charge directement le dernier dossier ouvert.
+
 ## [Unreleased] - 2026-05-29 17:20:18
 
 ### Added
