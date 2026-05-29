@@ -37,6 +37,8 @@ type Props = {
   /// popover — surfacing the prompt again would feel like a re-ask).
   /// Defaults to `false` (boot flow).
   autoInstall?: boolean;
+  /// Callback to skip/postpone the update gate and proceed to the app.
+  onSkip?: () => void;
 };
 
 /// Full-screen, unbypassable update gate. Mounted by `App.tsx` when the boot
@@ -52,7 +54,7 @@ type Props = {
 /// the install, listens to `updater://progress` / `updater://finished`,
 /// runs the auto-restart countdown, and surfaces errors with a Retry
 /// path.
-export function UpdaterLockScreen({ info, autoInstall = false }: Props) {
+export function UpdaterLockScreen({ info, autoInstall = false, onSkip }: Props) {
   const [phase, setPhase] = useState<Phase>({ kind: "prompt" });
   const [countdown, setCountdown] = useState<number>(AUTO_RESTART_SECS);
 
@@ -264,23 +266,35 @@ export function UpdaterLockScreen({ info, autoInstall = false }: Props) {
 
         <footer className="updater-lock__actions">
           {phase.kind === "prompt" && (
-            <button
-              type="button"
-              className="updater-lock__cta"
-              onClick={startInstall}
-              autoFocus
-            >
-              <span className="updater-lock__cta-label">
-                Install update {info.version}
-              </span>
-              <span className="updater-lock__cta-chev">
-                <Icon
-                  icon="solar:alt-arrow-right-linear"
-                  width={16}
-                  height={16}
-                />
-              </span>
-            </button>
+            <>
+              {onSkip && (
+                <button
+                  type="button"
+                  className="updater-lock__btn updater-lock__btn--ghost"
+                  onClick={onSkip}
+                  style={{ marginRight: "12px" }}
+                >
+                  Skip
+                </button>
+              )}
+              <button
+                type="button"
+                className="updater-lock__cta"
+                onClick={startInstall}
+                autoFocus
+              >
+                <span className="updater-lock__cta-label">
+                  Install update {info.version}
+                </span>
+                <span className="updater-lock__cta-chev">
+                  <Icon
+                    icon="solar:alt-arrow-right-linear"
+                    width={16}
+                    height={16}
+                  />
+                </span>
+              </button>
+            </>
           )}
           {phase.kind === "ready" && (
             <button

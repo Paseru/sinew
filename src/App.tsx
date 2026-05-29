@@ -189,7 +189,11 @@ export default function App() {
 
   if (state.kind === "update_required") {
     return (
-      <UpdaterLockScreen info={state.info} autoInstall={state.autoInstall} />
+      <UpdaterLockScreen
+        info={state.info}
+        autoInstall={state.autoInstall}
+        onSkip={backToWelcome}
+      />
     );
   }
 
