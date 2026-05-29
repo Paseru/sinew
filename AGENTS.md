@@ -416,23 +416,8 @@
 
 # 🧠 DIRECTIVES DE SURVIE ET D'APPRENTISSAGE POUR LES AGENTS FUTURS
 
-Si vous êtes un agent d'IA qui intervient sur ce dépôt, **lisez très attentivement les règles suivantes tirées des erreurs passées**. Elles font office de mémoire permanente à long terme pour le projet :
+Si vous êtes un agent d'IA qui intervient sur ce dépôt, **respectez impérativement la consigne suivante** :
 
-### 1. 📂 Gestion des dossiers et exclusions Git (node_modules et build/)
-* **NE JAMAIS** traquer les dossiers `node_modules` de l'application ou des extensions locales (`sinew-chrome-bridge/node_modules/`, `scripts/agent-bridge/node_modules/`). Si vous lancez des commandes Git, assurez-vous qu'ils restent ignorés.
-* **NE JAMAIS** soumettre de gros fichiers d'applications déjà compilées (ex: `.exe` ou `.msi` dans un dossier `/build`). Utilisez toujours le fichier `.gitignore` pour exclure ces éléments.
-
-### 2. ⚡ Lancement de processus enfants sous Windows (spawn EINVAL)
-* **MANDATOIRE** : Lorsque vous spawnez des processus batch ou des commandes système comme `npm` ou `node` depuis un script Node (ex. : dans `prepare-agent-bridge.mjs`), vous **devez** spécifier `{ shell: true }` dans les options de `execFile` ou `spawn` (ex. : `execFile(npm, args, { shell: true })`). 
-* *Pourquoi ?* Suite aux mises à jour de sécurité de Node.js sur Windows (ex: CVE-2024-27980), le spawn de fichiers `.cmd` ou `.bat` sans shell explicite lance immédiatement une erreur bloquante `spawn EINVAL`.
-
-### 3. 🔄 Boucles récursives dans npm (postinstall)
-* **NE JAMAIS** configurer d'installation de dépendance automatique (`npm install` ou `npm --prefix ...`) directement dans le bloc `"postinstall"` du fichier `package.json` principal si cela risque de déclencher de la récursion infinie ou des conflits de chemins sur Windows.
-* *Alternative* : Utilisez plutôt les scripts de préparation officiels du cycle de vie du projet comme `scripts/prepare-agent-bridge.mjs` (qui s'exécute automatiquement avant la compilation ou le lancement dev grâce aux commandes `beforeBuildCommand` et `beforeDevCommand` configurées dans Tauri).
-
-### 4. 🎛️ MCP & Settings Pane (autoLoad)
-* Lors de la modification de la sérialisation des serveurs MCP dans `src/components/SettingsPane.tsx` (`settingsToJson`), n'oubliez jamais de conserver la variable `autoLoad` en écrivant : `if (server.autoLoad) entry.autoLoad = true;`. Si vous l'omettez, l'interface utilisateur supprimera silencieusement le choix de l'utilisateur à chaque modification ou fermeture des options.
-
-### 5. 🗃️ Système d'Apprentissage Automatique Global
+### 🗃️ Système d'Apprentissage Automatique Global
 * **MANDATOIRE** : L'agent doit impérativement lire et respecter les règles de `%LOCALAPPDATA%\Sinew\instructions_consolidated.md` (ou `$env:LOCALAPPDATA\Sinew\instructions_consolidated.md`) à chaque début de session.
 * **MANDATOIRE** : À chaque erreur commise par l'agent et corrigée (ex: "Je me suis trompé et j'ai recommencé"), l'agent doit incrémenter le compteur de cette erreur dans le fichier global `%LOCALAPPDATA%\Sinew\errors_raw.json`. Si le compteur d'une erreur atteint **3**, l'agent doit consolider et écrire cette règle dans `%LOCALAPPDATA%\Sinew\instructions_consolidated.md` pour qu'elle devienne une instruction prioritaire et permanente.

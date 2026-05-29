@@ -59,6 +59,12 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:06:07
+
+### Changed
+- **Décentralisation complète des descriptions d'erreurs (`AGENTS.md`)** : Suppression définitive des descriptions locales d'erreurs dans `AGENTS.md` pour éviter toute duplication. Désormais, `AGENTS.md` ne contient que le pointeur d'instructions globales pour forcer la lecture de la base d'apprentissage centralisée dans `%LOCALAPPDATA%\Sinew\`.
+- **Base de connaissances globale (`%LOCALAPPDATA%\Sinew\`)** : Migration de toutes les anciennes règles d'erreurs (Git, Windows, npm, MCP) directement dans le fichier d'apprentissage consolidé de la machine.
+
 ## [Unreleased] - 2026-05-29 16:04:26
 
 ### Changed
