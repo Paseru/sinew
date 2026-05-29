@@ -59,6 +59,12 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:18:48
+
+### Added
+- **Rapport d'analyse et d'améliorations (`afaire.md`)** : Création d'un document récapitulatif listant les principaux axes d'amélioration du projet (performances de l'interface, organisation du moteur Rust, et sécurité des dépendances).
+
+
 ## [Unreleased] - 2026-05-29 16:16:37
 
 ### Added
