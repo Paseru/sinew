@@ -265,6 +265,7 @@ export function EditorPane({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
     setEditorReadySeq((value) => value + 1);
     
     try {
@@ -389,7 +390,11 @@ export function EditorPane({
         "editorSuggestWidget.border": "#ff007f",
       }
     });
-    monaco.editor.setTheme("sinew-cool");
+    try {
+      monaco.editor.setTheme(getMonacoTheme(appTheme));
+    } catch (e) {
+      console.error("Failed to apply initial theme in handleMount:", e);
+    }
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const path = currentPathRef.current;
