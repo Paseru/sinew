@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:03:14
+
+### Changed
+- **Mode de recherche de mise à jour à 3 options (`src/components/SettingsPane.tsx`, `src/App.tsx`, `src/components/UpdateBadge.tsx`)** : Évolution de l'option de mise à jour pour proposer trois choix : "Bloquant" (vérifie et force la mise à jour au démarrage), "Notification uniquement" (démarre normalement et alerte discrètement via un badge interne), et "Désactivé" (ne vérifie jamais les mises à jour automatiquement).
+
 ## [Unreleased] - 2026-05-29 23:59:57
 
 ### Added

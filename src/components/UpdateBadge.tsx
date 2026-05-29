@@ -71,7 +71,7 @@ export function UpdateBadge() {
     let shouldCheck = true;
     try {
       const saved = localStorage.getItem("sinew.auto-update-check");
-      if (saved === "false") {
+      if (saved === "disabled" || saved === "false") {
         shouldCheck = false;
       }
     } catch {}

@@ -100,15 +100,15 @@ export default function App() {
     (async () => {
       // 1. Updater gate.
       let updateInfo: UpdateInfo | null = null;
-      let shouldCheck = true;
+      let shouldCheckAtBoot = true;
       try {
         const saved = localStorage.getItem("sinew.auto-update-check");
-        if (saved === "false") {
-          shouldCheck = false;
+        if (saved === "notification" || saved === "disabled" || saved === "false") {
+          shouldCheckAtBoot = false;
         }
       } catch {}
 
-      if (shouldCheck) {
+      if (shouldCheckAtBoot) {
         try {
           const info = await Promise.race<UpdateInfo | null>([
             api.checkForUpdate(),
