@@ -27,3 +27,6 @@ desktop-state.sqlite3
 desktop-state.sqlite3-wal
 desktop-state.sqlite3-shm
 
+/build
+
+
