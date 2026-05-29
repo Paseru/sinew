@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 23:59:57
+
+### Added
+- **Option de recherche de mise à jour automatique (`src/components/SettingsPane.tsx`, `src/App.tsx`, `src/components/UpdateBadge.tsx`)** : Ajout d'une option dans le panneau de configuration pour activer/désactiver la recherche de mise à jour automatique. Si désactivée, l'application ne recherche plus de nouvelles versions au démarrage (ce qui évite de bloquer l'interface utilisateur avec l'écran "Mise à jour requise") ni périodiquement en arrière-plan.
+
 ## [Unreleased] - 2026-05-29 23:45:15
 
 ### Added

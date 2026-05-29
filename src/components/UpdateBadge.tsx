@@ -68,6 +68,16 @@ export function UpdateBadge() {
   // Boot: first check + 30 min interval. We re-check on focus too so a long-
   // running session doesn't miss a release.
   useEffect(() => {
+    let shouldCheck = true;
+    try {
+      const saved = localStorage.getItem("sinew.auto-update-check");
+      if (saved === "false") {
+        shouldCheck = false;
+      }
+    } catch {}
+
+    if (!shouldCheck) return;
+
     void runCheck({ silent: true });
     intervalRef.current = window.setInterval(() => {
       void runCheck({ silent: true });

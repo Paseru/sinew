@@ -2033,6 +2033,24 @@ function OptionsSection({
     }
   });
 
+  const [autoUpdateCheck, setAutoUpdateCheck] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.auto-update-check");
+      if (saved !== null) return saved !== "false";
+      return true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleAutoUpdateCheck = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.auto-update-check", enabled ? "true" : "false");
+    } catch {}
+    setAutoUpdateCheck(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:auto-update-check-changed", { detail: enabled }));
+  };
+
   const [semanticEmbeddings, setSemanticEmbeddings] = useState<boolean>(() => {
     try {
       return localStorage.getItem("sinew.semantic-embeddings") === "true";
@@ -2629,6 +2647,38 @@ function OptionsSection({
                   +
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Recherche automatique de mise à jour */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Recherche de mise à jour automatique" : "Automatic Update Check"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Vérifie automatiquement les nouvelles versions au démarrage et périodiquement."
+                  : "Automatically checks for new versions on startup and periodically."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Update Check">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={autoUpdateCheck}
+                data-active={autoUpdateCheck ? "true" : "false"}
+                onClick={() => toggleAutoUpdateCheck(true)}
+              >
+                {locale === "fr" ? "Activé" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!autoUpdateCheck}
+                data-active={!autoUpdateCheck ? "true" : "false"}
+                onClick={() => toggleAutoUpdateCheck(false)}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
             </div>
           </div>
 

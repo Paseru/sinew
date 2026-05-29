@@ -100,26 +100,36 @@ export default function App() {
     (async () => {
       // 1. Updater gate.
       let updateInfo: UpdateInfo | null = null;
+      let shouldCheck = true;
       try {
-        const info = await Promise.race<UpdateInfo | null>([
-          api.checkForUpdate(),
-          new Promise<null>((resolve) =>
-            window.setTimeout(() => resolve(null), BOOT_CHECK_TIMEOUT_MS),
-          ),
-        ]);
-        if (info && info.available && info.version) {
-          let skipped = false;
-          try {
-            skipped = localStorage.getItem("sinew.skippedUpdateVersion") === info.version;
-          } catch {}
-          if (!skipped) {
-            updateInfo = info;
-          }
+        const saved = localStorage.getItem("sinew.auto-update-check");
+        if (saved === "false") {
+          shouldCheck = false;
         }
-      } catch {
-        // Silent: a failed check (offline, server down, manifest 5xx)
-        // shouldn't prevent the app from booting. The mid-session badge
-        // will retry later, and the next launch will re-gate cleanly.
+      } catch {}
+
+      if (shouldCheck) {
+        try {
+          const info = await Promise.race<UpdateInfo | null>([
+            api.checkForUpdate(),
+            new Promise<null>((resolve) =>
+              window.setTimeout(() => resolve(null), BOOT_CHECK_TIMEOUT_MS),
+            ),
+          ]);
+          if (info && info.available && info.version) {
+            let skipped = false;
+            try {
+              skipped = localStorage.getItem("sinew.skippedUpdateVersion") === info.version;
+            } catch {}
+            if (!skipped) {
+              updateInfo = info;
+            }
+          }
+        } catch {
+          // Silent: a failed check (offline, server down, manifest 5xx)
+          // shouldn't prevent the app from booting. The mid-session badge
+          // will retry later, and the next launch will re-gate cleanly.
+        }
       }
 
       if (cancelled) return;
