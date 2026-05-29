@@ -66,6 +66,9 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 - **Rapport d'analyse et d'intégration DevTools (`ANALYSE_DEVTOOLS_MCP.md`)** : Création d'une analyse technique poussée évaluant la faisabilité et l'impact de l'intégration des fonctionnalités de Chrome DevTools for Agents 1.0 (Lighthouse, émulation, fuites mémoire, auto-connect) tout en conservant le simulateur biologique humain furtif unique de Sinew Chrome.
 - **Rapport d'évaluation de la pertinence des outils de diagnostic Google (`ANALYSE_DIAGNOSTIC_GOOGLE.md`)** : Analyse de pertinence des outils de diagnostic avancés de Google (Lighthouse, émulation, fuites mémoire, auto-connect) du point de vue de l'audit et du contrôle qualité, avec métaphores simples et plan d'action d'adaptation pour notre simulateur biologique.
 
+### Changed
+- **Mise à jour de la carte du code (`AGENTS.md`)** : Enregistrement des rapports d'analyse de l'équipe (sécurité, architecture, intégration, diagnostic) dans la carte des fichiers du projet.
+
 ## [Unreleased] - 2026-05-29 15:48:14
 
 ### Added
