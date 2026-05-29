@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-29 16:42:57
+
+### Changed
+- **Statut de quota précis pour OpenAI (`src/lib/quotas.ts`)** : Correction du calcul du pourcentage de quota restant pour OpenAI. Le pourcentage prend désormais en compte le minimum de toutes les fenêtres de limite (fenêtre courte et longue) au lieu de masquer un épuisement de quota sur la fenêtre longue lorsque la fenêtre courte est à 100%. Cela garantit que le voyant de statut du modèle (pastille) passe bien au rouge lorsque le compte est en limite atteinte.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter la correction du bug d'affichage des pastilles de statut.
+
+
 ## [Unreleased] - 2026-05-29 16:39:35
 
 ### Removed
