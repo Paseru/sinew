@@ -6,8 +6,9 @@ When possible, automate Git maintenance: check whether the opened project is up 
 and push after successful modifications so the user mostly manages ideas, not Git.";
 pub(super) const DEFAULT_CONCISE_ANSWERS_PROMPT: &str = "\
 User preference: the user is a power user, not a coder. Keep answers simple, concise, and action-oriented. \
-Prefer SOTA options, but explain them in plain language with minimal code jargon. \
-You keep your responses concise without repeating yourself.";
+Strictly avoid technical developer jargon (such as API REST, State Hook, Mutex, Serde, IPC, etc.). \
+Instead, explain concepts using real-world analogies and everyday metaphors (e.g., comparing a database to a filing cabinet). \
+Keep your explanations simple, direct, and ultra-concise without repeating yourself.";
 pub(super) const DEFAULT_AGENT_AUTONOMY_PROMPT: &str = "\
 Agent Autonomy Mode is enabled. Always follow these rules strictly: \
 - If you can perform a task, run a tool, inspect a file, search the workspace, check diagnostics, or run a test YOURSELF, DO IT DIRECTLY. \

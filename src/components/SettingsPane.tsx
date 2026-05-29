@@ -2356,8 +2356,8 @@ function OptionsSection({
           <h2>{locale === "fr" ? "Réponses Ultra-Concises & Simplifiées" : "Ultra-Concise & Simplified Answers"}</h2>
           <p>
             {locale === "fr"
-              ? "Force l'agent à répondre en langage simple, direct et ultra-concis, sans blabla technique inutile."
-              : "Forces the agent to answer in plain language, keeping answers simple, direct, and ultra-concise."}
+              ? "Force l'agent à répondre en langage simple, direct et ultra-concis. Il élimine le jargon technique complexe au profit de métaphores claires et d'analogies de la vie courante."
+              : "Forces the agent to answer in simple, direct, and ultra-concise language, replacing complex technical jargon with clear real-world metaphors and analogies."}
           </p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Concise Answers">
