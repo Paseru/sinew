@@ -1,5 +1,12 @@
 # Changelog
 
+
+## [Unreleased] - 2026-05-30 00:36:50
+
+### Changed
+- **Rapport d'analyse complet (faire.md)** : Réécriture intégrale avec analyse approfondie de l'architecture (5 god files), qualité (250+ tests, 0 frontend), sécurité (Tauri, terminal, Chrome), dettes techniques (clippy, CHANGELOG, dépendances) et plan d'action priorisé.
+- **Journal des changements (CHANGELOG.md)** : Ajout de cette entrée.
+
 ## [Unreleased] - 2026-05-30 00:45:00
 
 ### Changed
