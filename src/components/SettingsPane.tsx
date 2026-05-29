@@ -2938,13 +2938,13 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           gap: "6px"
         }}>
           <Icon icon="solar:widget-bold" width={16} height={16} style={{ color: "var(--primary)" }} />
-          {locale === "fr" ? "Mon Fork Personnel — Améliorations Clés" : "My Personal Fork — Key Enhancements"}
+          {locale === "fr" ? "Fork JulienPiron.fr — Améliorations Clés" : "JulienPiron.fr Fork — Key Enhancements"}
         </h2>
         
         <p className="settings-pane__about-line" style={{ fontSize: "var(--fs-xs)", color: "var(--text-3)" }}>
           {locale === "fr" 
-            ? "Ce fork personnel enrichit Sinew avec des fonctionnalités avancées optimisées pour un flux de travail quotidien rapide, autonome et ultra-résilient."
-            : "This personal fork enriches Sinew with advanced features optimized for a fast, autonomous, and ultra-resilient daily workflow."}
+            ? "Ce fork de JulienPiron.fr enrichit Sinew avec des fonctionnalités avancées optimisées pour un flux de travail quotidien rapide, autonome et ultra-résilient."
+            : "This fork by JulienPiron.fr enriches Sinew with advanced features optimized for a fast, autonomous, and ultra-resilient daily workflow."}
         </p>
 
         <div style={{
