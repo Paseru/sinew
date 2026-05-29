@@ -123,6 +123,25 @@ export function EditorPane({
     }
   });
 
+  const [appTheme, setAppTheme] = useState<string>(() => {
+    try {
+      return localStorage.getItem("sinew.theme") || "dark";
+    } catch {
+      return "dark";
+    }
+  });
+
+  const getMonacoTheme = (themeName: string) => {
+    if (themeName === "light") return "sinew-light";
+    if (themeName === "ai") return "sinew-ai";
+    if (themeName === "system") {
+      if (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: light)").matches) {
+        return "sinew-light";
+      }
+    }
+    return "sinew-cool";
+  };
+
   useEffect(() => {
     const handleFont = (event: Event) => {
       const size = (event as CustomEvent<number>).detail;
@@ -132,13 +151,28 @@ export function EditorPane({
       const enabled = (event as CustomEvent<boolean>).detail;
       setAutosaveEnabled(enabled);
     };
+    const handleTheme = (event: Event) => {
+      const t = (event as CustomEvent<string>).detail;
+      setAppTheme(t);
+    };
     window.addEventListener("sinew:editor-font-size-changed", handleFont);
     window.addEventListener("sinew:autosave-changed", handleAutosave);
+    window.addEventListener("sinew:theme-changed", handleTheme);
     return () => {
       window.removeEventListener("sinew:editor-font-size-changed", handleFont);
       window.removeEventListener("sinew:autosave-changed", handleAutosave);
+      window.removeEventListener("sinew:theme-changed", handleTheme);
     };
   }, []);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions({
+        fontSize: editorFontSize,
+        lineHeight: editorFontSize + 6,
+      });
+    }
+  }, [editorFontSize]);
 
   useEffect(() => {
     onSaveRef.current = onSave;
@@ -200,6 +234,8 @@ export function EditorPane({
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     setEditorReadySeq((value) => value + 1);
+    
+    // 1. sinew-cool (Default Dark)
     monaco.editor.defineTheme("sinew-cool", {
       base: "vs-dark",
       inherit: true,
@@ -234,14 +270,83 @@ export function EditorPane({
         "editorHoverWidget.border": "#23252b",
         "editorSuggestWidget.background": "#0f1013",
         "editorSuggestWidget.border": "#23252b",
-        "editorSuggestWidget.selectedBackground": "#1e2b4a",
-        "editorSuggestWidget.highlightForeground": "#5b8cff",
-        "editorBracketMatch.background": "#1e2b4a",
-        "editorBracketMatch.border": "#3b82f6",
-        "scrollbarSlider.background": "#23252bcc",
-        "scrollbarSlider.hoverBackground": "#2b2e35cc",
-        "scrollbarSlider.activeBackground": "#3a3d44cc",
-      },
+      }
+    });
+
+    // 2. sinew-light (Day Theme)
+    monaco.editor.defineTheme("sinew-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "9ca3af" },
+        { token: "keyword", foreground: "2563eb" },
+        { token: "string", foreground: "16a34a" },
+        { token: "number", foreground: "ea580c" },
+        { token: "type", foreground: "b45309" },
+        { token: "function", foreground: "7c3aed" },
+        { token: "variable", foreground: "111827" },
+        { token: "constant", foreground: "ea580c" },
+        { token: "regexp", foreground: "16a34a" },
+        { token: "tag", foreground: "dc2626" },
+        { token: "attribute.name", foreground: "7c3aed" },
+      ],
+      colors: {
+        "editor.background": "#ffffff",
+        "editor.foreground": "#111827",
+        "editor.lineHighlightBackground": "#f3f4f6",
+        "editorLineNumber.foreground": "#9ca3af",
+        "editorLineNumber.activeForeground": "#1b2a47",
+        "editorCursor.foreground": "#2563eb",
+        "editor.selectionBackground": "#bfdbfe",
+        "editor.inactiveSelectionBackground": "#e5e7eb",
+        "editorIndentGuide.background1": "#f3f4f6",
+        "editorIndentGuide.activeBackground1": "#e5e7eb",
+        "editorGutter.background": "#ffffff",
+        "editorWidget.background": "#f9fafb",
+        "editorWidget.border": "#e5e7eb",
+        "editorHoverWidget.background": "#f9fafb",
+        "editorHoverWidget.border": "#e5e7eb",
+        "editorSuggestWidget.background": "#f9fafb",
+        "editorSuggestWidget.border": "#e5e7eb",
+      }
+    });
+
+    // 3. sinew-ai (AI Neon Cyberpunk Theme)
+    monaco.editor.defineTheme("sinew-ai", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "6d5a8c" },
+        { token: "keyword", foreground: "ff007f" },
+        { token: "string", foreground: "00ffff" },
+        { token: "number", foreground: "ffff00" },
+        { token: "type", foreground: "ffaa00" },
+        { token: "function", foreground: "a855f7" },
+        { token: "variable", foreground: "ffffff" },
+        { token: "constant", foreground: "ffff00" },
+        { token: "regexp", foreground: "00ffff" },
+        { token: "tag", foreground: "ff007f" },
+        { token: "attribute.name", foreground: "00ffff" },
+      ],
+      colors: {
+        "editor.background": "#050014",
+        "editor.foreground": "#ffffff",
+        "editor.lineHighlightBackground": "#150030",
+        "editorLineNumber.foreground": "#4d3080",
+        "editorLineNumber.activeForeground": "#00ffff",
+        "editorCursor.foreground": "#00ffff",
+        "editor.selectionBackground": "#ff007f55",
+        "editor.inactiveSelectionBackground": "#00ffff22",
+        "editorIndentGuide.background1": "#150030",
+        "editorIndentGuide.activeBackground1": "#26086f",
+        "editorGutter.background": "#050014",
+        "editorWidget.background": "#0a0024",
+        "editorWidget.border": "#ff007f",
+        "editorHoverWidget.background": "#0a0024",
+        "editorHoverWidget.border": "#ff007f",
+        "editorSuggestWidget.background": "#0a0024",
+        "editorSuggestWidget.border": "#ff007f",
+      }
     });
     monaco.editor.setTheme("sinew-cool");
 
@@ -585,7 +690,7 @@ export function EditorPane({
                 <Editor
                   key={activeTab.relativePath}
                   height="100%"
-                  theme="sinew-cool"
+                  theme={getMonacoTheme(appTheme)}
                   path={activeTab.relativePath}
                   value={activeTab.buffer}
                   language={languageForPath(activeTab.relativePath)}

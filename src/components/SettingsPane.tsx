@@ -1825,9 +1825,41 @@ function OptionsSection({
   locale: AppLocale;
   onLocaleChange: (locale: AppLocale) => void;
 }) {
+  const [powerUserMaster, setPowerUserMaster] = useState<"enabled" | "disabled" | "custom">(() => {
+    try {
+      const saved = localStorage.getItem("sinew.power-user-master");
+      if (saved === "enabled" || saved === "disabled" || saved === "custom") {
+        return saved;
+      }
+      const oldPowerUser = localStorage.getItem("sinew.power-user");
+      if (oldPowerUser === "false") {
+        return "disabled";
+      }
+      return "enabled";
+    } catch {
+      return "enabled";
+    }
+  });
+
   const [powerUser, setPowerUser] = useState<boolean>(() => {
     try {
       return localStorage.getItem("sinew.power-user") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const [gitAutomation, setGitAutomation] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.git-automation") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const [conciseAnswers, setConciseAnswers] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.concise-answers") !== "false";
     } catch {
       return true;
     }
@@ -1880,6 +1912,14 @@ function OptionsSection({
     }
   });
 
+  const [forceChangelog, setForceChangelog] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.force-changelog") === "true";
+    } catch {
+      return false;
+    }
+  });
+
   const toggleAutosave = (enabled: boolean) => {
     try {
       localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
@@ -1911,6 +1951,78 @@ function OptionsSection({
     } catch {}
     setAgentAutonomy(enabled);
     window.dispatchEvent(new CustomEvent("sinew:agent-autonomy-changed", { detail: enabled }));
+  };
+
+  const toggleForceChangelog = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.force-changelog", enabled ? "true" : "false");
+    } catch {}
+    setForceChangelog(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: enabled }));
+  };
+
+  const [leftWidth, setLeftWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.left-width");
+      return saved ? parseInt(saved, 10) : 280;
+    } catch {
+      return 280;
+    }
+  });
+
+  const [rightWidth, setRightWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.right-width");
+      return saved ? parseInt(saved, 10) : 420;
+    } catch {
+      return 420;
+    }
+  });
+
+  useEffect(() => {
+    const handleLeft = (event: Event) => {
+      const w = (event as CustomEvent<number>).detail;
+      setLeftWidth(w);
+    };
+    const handleRight = (event: Event) => {
+      const w = (event as CustomEvent<number>).detail;
+      setRightWidth(w);
+    };
+    window.addEventListener("sinew:left-width-updated", handleLeft);
+    window.addEventListener("sinew:right-width-updated", handleRight);
+    return () => {
+      window.removeEventListener("sinew:left-width-updated", handleLeft);
+      window.removeEventListener("sinew:right-width-updated", handleRight);
+    };
+  }, []);
+
+  const changeLeftWidth = (size: number) => {
+    setLeftWidth(size);
+    window.dispatchEvent(new CustomEvent("sinew:left-width-changed", { detail: size }));
+  };
+
+  const changeRightWidth = (size: number) => {
+    setRightWidth(size);
+    window.dispatchEvent(new CustomEvent("sinew:right-width-changed", { detail: size }));
+  };
+
+  const [theme, setTheme] = useState<"dark" | "light" | "system" | "ai">(() => {
+    try {
+      const val = localStorage.getItem("sinew.theme");
+      if (val === "light" || val === "system" || val === "ai") return val;
+      return "dark";
+    } catch {
+      return "dark";
+    }
+  });
+
+  const changeTheme = (newTheme: "dark" | "light" | "system" | "ai") => {
+    try {
+      localStorage.setItem("sinew.theme", newTheme);
+    } catch {}
+    setTheme(newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme);
+    window.dispatchEvent(new CustomEvent("sinew:theme-changed", { detail: newTheme }));
   };
 
   const [sotaData, setSotaData] = useState<any>(sotaCache.data);
@@ -1947,12 +2059,79 @@ function OptionsSection({
     }).catch(() => {});
   }, []);
 
-  const togglePowerUser = (enabled: boolean) => {
+  const changePowerUserMaster = (value: "enabled" | "disabled" | "custom") => {
     try {
-      localStorage.setItem("sinew.power-user", enabled ? "true" : "false");
+      localStorage.setItem("sinew.power-user-master", value);
     } catch {}
-    setPowerUser(enabled);
-    window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: enabled }));
+    setPowerUserMaster(value);
+
+    if (value === "enabled") {
+      try {
+        localStorage.setItem("sinew.power-user", "true");
+        localStorage.setItem("sinew.git-automation", "true");
+        localStorage.setItem("sinew.concise-answers", "true");
+        localStorage.setItem("sinew.force-changelog", "true");
+        localStorage.setItem("sinew.autosave", "true");
+        localStorage.setItem("sinew.compact-reasoning", "very-compact");
+      } catch {}
+      setPowerUser(true);
+      setGitAutomation(true);
+      setConciseAnswers(true);
+      setForceChangelog(true);
+      setAutosave(true);
+      setCompactReasoning("very-compact");
+
+      window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:concise-answers-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "very-compact" }));
+    } else if (value === "disabled") {
+      try {
+        localStorage.setItem("sinew.power-user", "false");
+        localStorage.setItem("sinew.git-automation", "false");
+        localStorage.setItem("sinew.concise-answers", "false");
+        localStorage.setItem("sinew.force-changelog", "false");
+        localStorage.setItem("sinew.autosave", "false");
+        localStorage.setItem("sinew.compact-reasoning", "disabled");
+      } catch {}
+      setPowerUser(false);
+      setGitAutomation(false);
+      setConciseAnswers(false);
+      setForceChangelog(false);
+      setAutosave(false);
+      setCompactReasoning("disabled");
+
+      window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:concise-answers-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "disabled" }));
+    }
+  };
+
+  const toggleGitAutomation = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.git-automation", enabled ? "true" : "false");
+      localStorage.setItem("sinew.power-user", (enabled || conciseAnswers) ? "true" : "false");
+    } catch {}
+    setGitAutomation(enabled);
+    setPowerUser(enabled || conciseAnswers);
+    window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: enabled }));
+    window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: enabled || conciseAnswers }));
+  };
+
+  const toggleConciseAnswers = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.concise-answers", enabled ? "true" : "false");
+      localStorage.setItem("sinew.power-user", (gitAutomation || enabled) ? "true" : "false");
+    } catch {}
+    setConciseAnswers(enabled);
+    setPowerUser(gitAutomation || enabled);
+    window.dispatchEvent(new CustomEvent("sinew:concise-answers-changed", { detail: enabled }));
+    window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: gitAutomation || enabled }));
   };
 
   const changeCompactReasoning = (value: "disabled" | "compact" | "very-compact") => {
@@ -2004,29 +2183,157 @@ function OptionsSection({
 
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Thème d'affichage" : "Theme"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Basculez entre le mode clair (Jour), sombre (Nuit), système ou l'interface futuriste IA."
+              : "Switch between day, night, system theme, or the futuristic AI interface."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Theme">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={theme === "light"}
+            data-active={theme === "light" ? "true" : "false"}
+            onClick={() => changeTheme("light")}
+          >
+            {locale === "fr" ? "☀️ Jour" : "☀️ Day"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={theme === "dark"}
+            data-active={theme === "dark" ? "true" : "false"}
+            onClick={() => changeTheme("dark")}
+          >
+            {locale === "fr" ? "🌙 Nuit" : "🌙 Night"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={theme === "system"}
+            data-active={theme === "system" ? "true" : "false"}
+            onClick={() => changeTheme("system")}
+          >
+            {locale === "fr" ? "💻 Système" : "💻 System"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={theme === "ai"}
+            data-active={theme === "ai" ? "true" : "false"}
+            onClick={() => changeTheme("ai")}
+            style={{
+              border: theme === "ai" ? "1px solid #ff007f" : "none",
+              color: theme === "ai" ? "#00ffff" : "var(--text-0)"
+            }}
+          >
+            {locale === "fr" ? "🤖 IA (Néon / Animé)" : "🤖 AI (Neon / Anim)"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
           <h2>{locale === "fr" ? "Mode Power User" : "Power User Mode"}</h2>
           <p>
             {locale === "fr"
-              ? "Gère et automatise tout en arrière-plan (Git & autres) et active les réponses ultra-concises et simplifiées."
-              : "Automate everything (Git & more) behind the scenes, and enable ultra-concise, simplified plain language answers."}
+              ? "Active en un clic toutes les fonctionnalités avancées (automatisation Git, réponses ultra-concises, changelog obligatoire, sauvegarde automatique et réflexion très compacte)."
+              : "Activate all advanced options in one click (Git automation, ultra-concise answers, mandatory changelog, auto-save, and very compact display mode)."}
           </p>
         </div>
         <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Power User Mode">
           <button
             type="button"
             role="radio"
-            aria-checked={powerUser}
-            data-active={powerUser ? "true" : "false"}
-            onClick={() => togglePowerUser(true)}
+            aria-checked={powerUserMaster === "enabled"}
+            data-active={powerUserMaster === "enabled" ? "true" : "false"}
+            onClick={() => changePowerUserMaster("enabled")}
           >
             {locale === "fr" ? "Activé" : "Enabled"}
           </button>
           <button
             type="button"
             role="radio"
-            aria-checked={!powerUser}
-            data-active={!powerUser ? "true" : "false"}
-            onClick={() => togglePowerUser(false)}
+            aria-checked={powerUserMaster === "disabled"}
+            data-active={powerUserMaster === "disabled" ? "true" : "false"}
+            onClick={() => changePowerUserMaster("disabled")}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={powerUserMaster === "custom"}
+            data-active={powerUserMaster === "custom" ? "true" : "false"}
+            onClick={() => changePowerUserMaster("custom")}
+          >
+            {locale === "fr" ? "Personnalisé" : "Custom"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Automatisation Git & Arrière-plan" : "Git & Background Automation"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Vérifie, tire (pull) et pousse (push) automatiquement les modifications de code pour vous éviter de gérer Git manuellement."
+              : "Automatically checks, pulls, and pushes code changes to automate Git maintenance for you."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Git Automation">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={gitAutomation}
+            data-active={gitAutomation ? "true" : "false"}
+            onClick={() => toggleGitAutomation(true)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!gitAutomation}
+            data-active={!gitAutomation ? "true" : "false"}
+            onClick={() => toggleGitAutomation(false)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Réponses Ultra-Concises & Simplifiées" : "Ultra-Concise & Simplified Answers"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Force l'agent à répondre en langage simple, direct et ultra-concis, sans blabla technique inutile."
+              : "Forces the agent to answer in plain language, keeping answers simple, direct, and ultra-concise."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Concise Answers">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={conciseAnswers}
+            data-active={conciseAnswers ? "true" : "false"}
+            onClick={() => toggleConciseAnswers(true)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!conciseAnswers}
+            data-active={!conciseAnswers ? "true" : "false"}
+            onClick={() => toggleConciseAnswers(false)}
+            disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Désactivé" : "Disabled"}
           </button>
@@ -2064,7 +2371,40 @@ function OptionsSection({
         </div>
       </div>
 
-      <div className="settings-pane__about-card">
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Changelog obligatoire" : "Mandatory Changelog"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Oblige l'agent à noter scrupuleusement chaque modification dans un changelog (CHANGELOG.md) avec la date et l'heure locale, pour n'importe quel projet."
+              : "Forces the agent to log every single file modification in a changelog (CHANGELOG.md) with local date and time, for any project."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Mandatory Changelog">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={forceChangelog}
+            data-active={forceChangelog ? "true" : "false"}
+            onClick={() => toggleForceChangelog(true)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!forceChangelog}
+            data-active={!forceChangelog ? "true" : "false"}
+            onClick={() => toggleForceChangelog(false)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
         <div className="settings-pane__about-card-copy">
           <h2>{locale === "fr" ? "Sauvegarde automatique" : "Auto-Save"}</h2>
           <p>
@@ -2080,6 +2420,7 @@ function OptionsSection({
             aria-checked={autosave}
             data-active={autosave ? "true" : "false"}
             onClick={() => toggleAutosave(true)}
+            disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Activé (1.5s)" : "Enabled (1.5s)"}
           </button>
@@ -2089,6 +2430,7 @@ function OptionsSection({
             aria-checked={!autosave}
             data-active={!autosave ? "true" : "false"}
             onClick={() => toggleAutosave(false)}
+            disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Désactivé" : "Disabled"}
           </button>
@@ -2157,6 +2499,66 @@ function OptionsSection({
 
       <div className="settings-pane__about-card">
         <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Largeur du chat" : "Chat Column Width"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Ajustez la largeur par défaut de la colonne de chat de droite."
+              : "Adjust the default width of the right chat column."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Column Width">
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeRightWidth(Math.max(220, rightWidth - 20))}
+          >
+            -
+          </button>
+          <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+            {rightWidth}px
+          </span>
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeRightWidth(Math.min(1200, rightWidth + 20))}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Largeur du menu latéral" : "Sidebar Column Width"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Ajustez la largeur par défaut de la colonne de gauche (fichiers)."
+              : "Adjust the default width of the left sidebar column."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Sidebar Column Width">
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeLeftWidth(Math.max(220, leftWidth - 20))}
+          >
+            -
+          </button>
+          <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+            {leftWidth}px
+          </span>
+          <button
+            type="button"
+            style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
+            onClick={() => changeLeftWidth(Math.min(800, leftWidth + 20))}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="settings-pane__about-card-copy">
           <h2>{locale === "fr" ? "Mode d'affichage" : "Display Mode"}</h2>
           <p>
             {locale === "fr"
@@ -2171,6 +2573,7 @@ function OptionsSection({
             aria-checked={compactReasoning === "very-compact"}
             data-active={compactReasoning === "very-compact" ? "true" : "false"}
             onClick={() => changeCompactReasoning("very-compact")}
+            disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Très compact" : "Very compact"}
           </button>
@@ -2180,6 +2583,7 @@ function OptionsSection({
             aria-checked={compactReasoning === "compact"}
             data-active={compactReasoning === "compact" ? "true" : "false"}
             onClick={() => changeCompactReasoning("compact")}
+            disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Compact" : "Compact"}
           </button>
@@ -2189,6 +2593,7 @@ function OptionsSection({
             aria-checked={compactReasoning === "disabled"}
             data-active={compactReasoning === "disabled" ? "true" : "false"}
             onClick={() => changeCompactReasoning("disabled")}
+            disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Détaillé" : "Detailed"}
           </button>

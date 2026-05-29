@@ -27,8 +27,16 @@ pub(super) async fn send_message(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, input.power_user, input.agent_autonomy)
-            .map_err(error_to_string)?;
+        system_prompt_for_workspace(
+            &workspace_root,
+            &state.system_prompt,
+            input.git_automation,
+            input.concise_answers,
+            input.agent_autonomy,
+            input.force_changelog,
+            input.client_formatted_date_time.as_deref(),
+        )
+        .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
     }
@@ -473,7 +481,7 @@ pub(super) async fn compact_conversation(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, None)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -1596,15 +1604,25 @@ pub(super) fn configurable_tool_catalog(workspace_root: &Path) -> Vec<ToolDescri
 pub(super) fn system_prompt_for_workspace(
     workspace_root: &Path,
     base: &str,
-    power_user: bool,
+    git_automation: bool,
+    concise_answers: bool,
     agent_autonomy: bool,
+    force_changelog: bool,
+    client_formatted_date_time: Option<&str>,
 ) -> Result<String> {
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
 
-    if power_user {
+    if git_automation {
         sections.push(format!(
-            "# Power User Instructions\n\nPower User Mode is enabled. Please follow these rules strictly:\n\n{}",
-            crate::state::DEFAULT_POWER_USER_PROMPT
+            "# Git & Background Automation\n\nGit Automation is enabled. Please follow these rules strictly:\n\n{}",
+            crate::state::DEFAULT_GIT_AUTOMATION_PROMPT
+        ));
+    }
+
+    if concise_answers {
+        sections.push(format!(
+            "# Concise & Simplified Answers\n\nConcise Answers Mode is enabled. Please follow these rules strictly:\n\n{}",
+            crate::state::DEFAULT_CONCISE_ANSWERS_PROMPT
         ));
     }
 
@@ -1612,6 +1630,20 @@ pub(super) fn system_prompt_for_workspace(
         sections.push(format!(
             "# Agent Autonomy Instructions\n\nAgent Autonomy is enabled. Please follow these rules strictly:\n\n{}",
             crate::state::DEFAULT_AGENT_AUTONOMY_PROMPT
+        ));
+    }
+
+    if force_changelog {
+        let date_time_str = client_formatted_date_time.unwrap_or("current local time");
+        sections.push(format!(
+            "# Mandatory Changelog Rule\n\n\
+            IMPORTANT: The 'Mandatory Changelog' option is enabled for this project. \
+            Every single time you modify one or more files in this workspace (using edit_file, write_file, bash, or any other tool):\n\
+            1. You MUST update (or create if it does not exist) the `CHANGELOG.md` file located at the root of the project.\n\
+            2. Every file modification must be logged in `CHANGELOG.md` under the correct precise date and time. The current local system time is: {}.\n\
+            3. Clearly document what was changed and why for each file.\n\
+            4. Updating `CHANGELOG.md` is a strict requirement and must be done in the exact same turn/action as the file modification. Do not omit this step or wait for the end of the conversation!",
+            date_time_str
         ));
     }
 

@@ -106,6 +106,259 @@
   --shadow-focus: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
+html[data-theme="light"] {
+  /* Surfaces */
+  --bg-canvas: #f6f8fa;
+  --bg-0: #ffffff;
+  --bg-1: #f3f4f6;
+  --bg-2: #e5e7eb;
+  --bg-3: #d1d5db;
+  --bg-4: #c3c7cf;
+  --bg-5: #9ca3af;
+  --bg-hi: #e5e7eb;
+  --bg-pure: #ffffff;
+
+  /* Editor surface */
+  --editor-bg: #fafafa;
+  --editor-bg-2: #f3f4f6;
+  --editor-bg-3: #e5e7eb;
+  --editor-fg: #111827;
+  --editor-fg-dim: #4b5563;
+
+  /* Lines / borders */
+  --line-soft:   rgba(17, 24, 39, 0.04);
+  --line:        rgba(17, 24, 39, 0.08);
+  --line-strong: rgba(17, 24, 39, 0.14);
+  --line-bold:   rgba(17, 24, 39, 0.32);
+  --divider:     rgba(17, 24, 39, 0.08);
+
+  /* Text */
+  --text-0: #111827;
+  --text-1: #374151;
+  --text-2: #4b5563;
+  --text-3: #6b7280;
+  --text-muted: #9ca3af;
+  --text-faint: #d1d5db;
+
+  /* Accents */
+  --accent:      #2563eb;
+  --accent-hi:   #1d4ed8;
+  --accent-dim:  #3b82f6;
+  --accent-deep: #1e3a8a;
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  --accent-soft: rgba(37, 99, 235, 0.08);
+
+  --accent-2:      #7c3aed;
+  --accent-2-soft: rgba(124, 58, 237, 0.08);
+
+  --hover-shift: #111827;
+
+  /* timeline (tool) colors */
+  --tone-thinking: #d97706;
+  --tone-grep:     #16a34a;
+  --tone-read:     #2563eb;
+  --tone-edit:     #7c3aed;
+
+  /* diff */
+  --diff-add-bg: rgba(22, 163, 74, 0.1);
+  --diff-add-fg: #16a34a;
+  --diff-rem-bg: rgba(220, 38, 38, 0.1);
+  --diff-rem-fg: #dc2626;
+
+  /* general elements */
+  --line-1: rgba(17, 24, 39, 0.1);
+  --line-2: rgba(17, 24, 39, 0.18);
+  --line-3: rgba(17, 24, 39, 0.3);
+}
+
+@media (prefers-color-scheme: light) {
+  html[data-theme="system"] {
+    --bg-canvas: #f6f8fa;
+    --bg-0: #ffffff;
+    --bg-1: #f3f4f6;
+    --bg-2: #e5e7eb;
+    --bg-3: #d1d5db;
+    --bg-4: #c3c7cf;
+    --bg-5: #9ca3af;
+    --bg-hi: #e5e7eb;
+    --bg-pure: #ffffff;
+
+    --editor-bg: #fafafa;
+    --editor-bg-2: #f3f4f6;
+    --editor-bg-3: #e5e7eb;
+    --editor-fg: #111827;
+    --editor-fg-dim: #4b5563;
+
+    --line-soft:   rgba(17, 24, 39, 0.04);
+    --line:        rgba(17, 24, 39, 0.08);
+    --line-strong: rgba(17, 24, 39, 0.14);
+    --line-bold:   rgba(17, 24, 39, 0.32);
+    --divider:     rgba(17, 24, 39, 0.08);
+
+    --text-0: #111827;
+    --text-1: #374151;
+    --text-2: #4b5563;
+    --text-3: #6b7280;
+    --text-muted: #9ca3af;
+    --text-faint: #d1d5db;
+
+    --accent:      #2563eb;
+    --accent-hi:   #1d4ed8;
+    --accent-dim:  #3b82f6;
+    --accent-deep: #1e3a8a;
+    --accent-glow: rgba(37, 99, 235, 0.25);
+    --accent-soft: rgba(37, 99, 235, 0.08);
+
+    --accent-2:      #7c3aed;
+    --accent-2-soft: rgba(124, 58, 237, 0.08);
+
+    --hover-shift: #111827;
+
+    --tone-thinking: #d97706;
+    --tone-grep:     #16a34a;
+    --tone-read:     #2563eb;
+    --tone-edit:     #7c3aed;
+
+    --diff-add-bg: rgba(22, 163, 74, 0.1);
+    --diff-add-fg: #16a34a;
+    --diff-rem-bg: rgba(220, 38, 38, 0.1);
+    --diff-rem-fg: #dc2626;
+
+    --line-1: rgba(17, 24, 39, 0.1);
+    --line-2: rgba(17, 24, 39, 0.18);
+    --line-3: rgba(17, 24, 39, 0.3);
+  }
+}
+
+html[data-theme="ai"] {
+  /* Surfaces */
+  --bg-canvas: #030008;
+  --bg-0: #050014;
+  --bg-1: #0a0024;
+  --bg-2: #0f0230;
+  --bg-3: #180447;
+  --bg-4: #26086f;
+  --bg-5: #380a9c;
+  --bg-hi: #0f0230;
+  --bg-pure: #000000;
+
+  /* Editor surface */
+  --editor-bg: #050014;
+  --editor-bg-2: #0a0024;
+  --editor-bg-3: #0f0230;
+  --editor-fg: #ffffff;
+  --editor-fg-dim: #c0a9f0;
+
+  /* Lines / borders */
+  --line-soft:   rgba(0, 255, 255, 0.08);
+  --line:        rgba(0, 255, 255, 0.15);
+  --line-strong: rgba(255, 0, 127, 0.4);
+  --line-bold:   rgba(255, 0, 127, 0.8);
+  --divider:     rgba(0, 255, 255, 0.15);
+
+  /* Text */
+  --text-0: #ffffff;
+  --text-1: #e0d5ff;
+  --text-2: #00ffff;
+  --text-3: #ff007f;
+  --text-muted: #8a6ab8;
+  --text-faint: #503080;
+
+  /* Accents */
+  --accent:      #ff007f;          /* Neon pink */
+  --accent-hi:   #ff55aa;
+  --accent-dim:  #cc0066;
+  --accent-deep: #880044;
+  --accent-glow: rgba(255, 0, 127, 0.6);
+  --accent-soft: rgba(255, 0, 127, 0.2);
+
+  --accent-2:      #00ffff;        /* Neon cyan */
+  --accent-2-soft: rgba(0, 255, 255, 0.2);
+
+  --hover-shift: #ffffff;
+
+  /* timeline (tool) colors */
+  --tone-thinking: #ffff00;
+  --tone-grep:     #00ffff;
+  --tone-read:     #00ff00;
+  --tone-edit:     #ff007f;
+
+  --diff-add-bg: rgba(0, 255, 255, 0.2);
+  --diff-add-fg: #00ffff;
+  --diff-rem-bg: rgba(255, 0, 127, 0.2);
+  --diff-rem-fg: #ff007f;
+
+  /* elements */
+  --line-1: rgba(0, 255, 255, 0.2);
+  --line-2: rgba(255, 0, 127, 0.3);
+  --line-3: rgba(0, 255, 255, 0.5);
+}
+
+/* Animations and glassmorphic layout overlays for the AI theme */
+@keyframes neonFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes gridScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+html[data-theme="ai"] body {
+  background: linear-gradient(135deg, #030008 0%, #0c0024 35%, #050014 70%, #150030 100%);
+  background-size: 400% 400%;
+  animation: neonFlow 15s ease infinite;
+  position: relative;
+}
+
+html[data-theme="ai"] body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: 
+    linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center;
+  z-index: 0;
+  animation: gridScroll 12s linear infinite;
+  opacity: 0.7;
+}
+
+/* Glassmorphism overlays on top of the moving space background */
+html[data-theme="ai"] .sidebar-shell,
+html[data-theme="ai"] .chat-body,
+html[data-theme="ai"] .editor-shell,
+html[data-theme="ai"] .terminal-shell,
+html[data-theme="ai"] .titlebar,
+html[data-theme="ai"] .workbench-center,
+html[data-theme="ai"] .sidebar-tab-pane,
+html[data-theme="ai"] .settings-pane,
+html[data-theme="ai"] .chat-footer {
+  background: rgba(10, 0, 36, 0.6) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+}
+
+html[data-theme="ai"] .welcome-pane {
+  background: transparent !important;
+}
+
+html[data-theme="ai"] button[data-active="true"],
+html[data-theme="ai"] button[aria-checked="true"] {
+  box-shadow: 0 0 12px var(--accent-glow) !important;
+  border-color: var(--accent) !important;
+  text-shadow: 0 0 4px var(--accent);
+}
+
+html[data-theme="ai"] .composer__box:focus-within {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 5px rgba(0, 255, 255, 0.1);
+  border-color: #00ffff !important;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -6140,7 +6393,7 @@ textarea {
 
 .msg__body {
   font-family: var(--font-ui);
-  font-size: var(--fs-sm);
+  font-size: var(--chat-font-size, var(--fs-sm));
   color: var(--text-0);
   line-height: 1.5;
   letter-spacing: -0.005em;
@@ -6263,7 +6516,7 @@ textarea {
   padding: 8px 11px;
   background: var(--bg-2);
   border-radius: var(--r-card);
-  font-size: var(--fs-sm);
+  font-size: var(--chat-font-size, var(--fs-sm));
   line-height: 1.5;
   letter-spacing: -0.005em;
 }
@@ -6442,14 +6695,14 @@ textarea {
 }
 .chat-file-link[data-variant="code"] {
   font-family: var(--font-mono);
-  font-size: var(--fs-mono);
+  font-size: 0.92em;
   color: var(--text-1);
 }
 .md ul, .md ol { margin: 0 0 8px; padding-left: 20px; }
 .md li { margin-bottom: 2px; }
 .md code {
   font-family: var(--font-mono);
-  font-size: var(--fs-mono);
+  font-size: 0.92em;
   background: var(--bg-2);
   padding: 1px 5px;
   border-radius: var(--r-small);
@@ -6466,7 +6719,7 @@ textarea {
   border-radius: var(--r-card);
   overflow-x: auto;
   font-family: var(--font-mono);
-  font-size: var(--fs-mono-sm);
+  font-size: 0.9em;
   line-height: 1.5;
   color: var(--editor-fg);
 }
@@ -8053,7 +8306,7 @@ textarea {
   pointer-events: none;
   overflow: hidden;
   font-family: var(--font-ui);
-  font-size: var(--fs-sm);
+  font-size: var(--chat-font-size, var(--fs-sm));
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: -0.005em;
@@ -8111,7 +8364,7 @@ textarea {
   background: transparent;
   border: 0 solid transparent;
   font-family: var(--font-ui);
-  font-size: var(--fs-sm);
+  font-size: var(--chat-font-size, var(--fs-sm));
   font-weight: 400;
   line-height: 1.5;
   resize: none;

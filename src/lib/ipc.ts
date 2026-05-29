@@ -574,15 +574,29 @@ export const api = {
     messageVisibility?: MessageVisibility,
     revertWorkspaceChanges?: boolean,
   ) {
-    let powerUser = true;
+    let gitAutomation = true;
     try {
-      powerUser = localStorage.getItem("sinew.power-user") !== "false";
+      gitAutomation = localStorage.getItem("sinew.git-automation") !== "false";
+    } catch {}
+
+    let conciseAnswers = true;
+    try {
+      conciseAnswers = localStorage.getItem("sinew.concise-answers") !== "false";
     } catch {}
 
     let agentAutonomy = true;
     try {
       agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
     } catch {}
+
+    let forceChangelog = false;
+    try {
+      forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
+    } catch {}
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const clientFormattedDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
     return invoke<void>("send_message", {
       input: {
@@ -598,8 +612,11 @@ export const api = {
         planControl,
         messageVisibility,
         revertWorkspaceChanges,
-        powerUser,
+        gitAutomation,
+        conciseAnswers,
         agentAutonomy,
+        forceChangelog,
+        clientFormattedDateTime,
         displayMode: readDisplayMode(),
       },
     });
@@ -638,15 +655,29 @@ export const api = {
     mode: AgentMode,
     rewriteFromHistoryIndex?: number,
   ) {
-    let powerUser = true;
+    let gitAutomation = true;
     try {
-      powerUser = localStorage.getItem("sinew.power-user") !== "false";
+      gitAutomation = localStorage.getItem("sinew.git-automation") !== "false";
+    } catch {}
+
+    let conciseAnswers = true;
+    try {
+      conciseAnswers = localStorage.getItem("sinew.concise-answers") !== "false";
     } catch {}
 
     let agentAutonomy = true;
     try {
       agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
     } catch {}
+
+    let forceChangelog = false;
+    try {
+      forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
+    } catch {}
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const clientFormattedDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
     return invoke<ContextEstimate>("estimate_context", {
       input: {
@@ -658,8 +689,11 @@ export const api = {
         thinking,
         mode,
         rewriteFromHistoryIndex,
-        powerUser,
+        gitAutomation,
+        conciseAnswers,
         agentAutonomy,
+        forceChangelog,
+        clientFormattedDateTime,
         displayMode: readDisplayMode(),
       },
     });

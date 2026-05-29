@@ -1706,8 +1706,22 @@ export function Workspace({
   );
 
   // ---------------- Layout state ----------------
-  const [leftWidth, setLeftWidth] = useState(INITIAL_LEFT);
-  const [rightWidth, setRightWidth] = useState(INITIAL_RIGHT);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sinew.left-width");
+      return saved ? parseInt(saved, 10) : INITIAL_LEFT;
+    } catch {
+      return INITIAL_LEFT;
+    }
+  });
+  const [rightWidth, setRightWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sinew.right-width");
+      return saved ? parseInt(saved, 10) : INITIAL_RIGHT;
+    } catch {
+      return INITIAL_RIGHT;
+    }
+  });
   const [topSplit, setTopSplit] = useState(INITIAL_SPLIT_TOP);
   const [terminalAvailable, setTerminalAvailable] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(false);
@@ -1755,6 +1769,37 @@ export function Workspace({
   const toggleTerminalFullHeight = useCallback(() => {
     setTerminalFullHeight((value) => !value);
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sinew.left-width", leftWidth.toString());
+    } catch {}
+    window.dispatchEvent(new CustomEvent("sinew:left-width-updated", { detail: leftWidth }));
+  }, [leftWidth]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sinew.right-width", rightWidth.toString());
+    } catch {}
+    window.dispatchEvent(new CustomEvent("sinew:right-width-updated", { detail: rightWidth }));
+  }, [rightWidth]);
+
+  useEffect(() => {
+    const handleLeft = (event: Event) => {
+      const w = (event as CustomEvent<number>).detail;
+      setLeftWidth(clampColumn(w));
+    };
+    const handleRight = (event: Event) => {
+      const w = (event as CustomEvent<number>).detail;
+      setRightWidth(clampColumn(w));
+    };
+    window.addEventListener("sinew:left-width-changed", handleLeft);
+    window.addEventListener("sinew:right-width-changed", handleRight);
+    return () => {
+      window.removeEventListener("sinew:left-width-changed", handleLeft);
+      window.removeEventListener("sinew:right-width-changed", handleRight);
+    };
+  }, [clampColumn]);
 
   useEffect(() => {
     let disposed = false;

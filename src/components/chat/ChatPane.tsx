@@ -1697,7 +1697,7 @@ export function ChatPane({
     text,
     composerAttachments,
     model,
-    modelEntry,
+    modelEntry?.value,
     thinking,
     effectiveMode,
     rewriteState?.historyIndex,

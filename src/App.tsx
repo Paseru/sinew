@@ -31,6 +31,10 @@ export default function App() {
       const size = saved ? parseInt(saved, 10) : 13;
       document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
     } catch {}
+    try {
+      const savedTheme = localStorage.getItem("sinew.theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    } catch {}
   }, []);
 
   const openWorkspace = useCallback(async (path: string) => {

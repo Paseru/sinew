@@ -308,7 +308,15 @@ pub(super) struct SendMessageInput {
     #[serde(default = "default_true")]
     pub(super) power_user: bool,
     #[serde(default = "default_true")]
+    pub(super) git_automation: bool,
+    #[serde(default = "default_true")]
+    pub(super) concise_answers: bool,
+    #[serde(default = "default_true")]
     pub(super) agent_autonomy: bool,
+    #[serde(default)]
+    pub(super) force_changelog: bool,
+    #[serde(default)]
+    pub(super) client_formatted_date_time: Option<String>,
     #[serde(default)]
     pub(super) display_mode: DisplayModeInput,
 }
@@ -343,7 +351,15 @@ pub(super) struct ContextEstimateInput {
     #[serde(default = "default_true")]
     pub(super) power_user: bool,
     #[serde(default = "default_true")]
+    pub(super) git_automation: bool,
+    #[serde(default = "default_true")]
+    pub(super) concise_answers: bool,
+    #[serde(default = "default_true")]
     pub(super) agent_autonomy: bool,
+    #[serde(default)]
+    pub(super) force_changelog: bool,
+    #[serde(default)]
+    pub(super) client_formatted_date_time: Option<String>,
     #[serde(default)]
     pub(super) display_mode: DisplayModeInput,
 }
