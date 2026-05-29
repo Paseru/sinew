@@ -174,9 +174,11 @@ export default function App() {
 
   const handleSkipUpdate = useCallback(async () => {
     if (state.kind !== "update_required") return;
-    try {
-      localStorage.setItem("sinew.skippedUpdateVersion", state.info.version);
-    } catch {}
+    if (state.info.version) {
+      try {
+        localStorage.setItem("sinew.skippedUpdateVersion", state.info.version);
+      } catch {}
+    }
     void api.resetWindowTitle().catch(() => {
       // best-effort; leaving the previous title is harmless
     });
