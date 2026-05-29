@@ -4,58 +4,41 @@
 .
 ├── .gitignore
 ├── AGENTS.md
-├── ANALYSE_COMMITS_30_60.md
-├── ANALYSE_COMMITS_60_90.md
-├── ANALYSE_COMMITS_90_120.md
-├── ANALYSE_COMMITS_120_175.md
-├── ANALYSE_COMMITS_175_230.md
-├── ANALYSE_COMMITS_230_285.md
-├── ANALYSE_COMMITS_285_PLUS.md
-├── ANALYSE_COMMITS_120_PLUS.md
-├── ANALYSE_DEVTOOLS_MCP.md
-├── ANALYSE_DIAGNOSTIC_GOOGLE.md
-├── ANALYSE_INTEGRATION_DEVTOOLS.md
-├── ETUDE_IMPACT_SECURITE.md
-├── AUDIT_PERFORMANCE_SOTA.md
-├── AUDIT_RUST.md
-├── AUDIT_SECURITE.md
-├── EXTRACTION_120_230.md
-├── EXTRACTION_230_332.md
+├── CHANGELOG.md
 ├── Cargo.lock
 ├── Cargo.toml
-├── commits.txt
-├── commits_details_120_175.txt
-├── commits_details_230_285.txt
-├── EDIT_FILE_HARNESS_COMPARISON.md
-├── FEATURES.md
-├── GLOB_HARNESS_COMPARISON.md
-├── GREP_HARNESS_COMPARISON.md
 ├── index.html
 ├── launch-sinew-dev.bat
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
-├── RAPPORT_VERIFICATION_FINAL.md
-├── README-FORK.md
 ├── README.md
 ├── .sinew
 │   └── skills
 │       └── browser
 │           └── SKILL.md
 ├── scripts
+│   ├── compil.ps1
+│   ├── export-agent-descriptor.mjs
+│   ├── prepare-agent-bridge.mjs
+│   ├── prepare-sidecars.mjs
 │   ├── agent-bridge
-│   │   └── export-agent-fds-prost.mjs
+│   │   ├── exec-handlers.mjs
+│   │   ├── export-agent-fds-prost.mjs
 │   │   ├── h2-bridge.mjs
+│   │   ├── install-proto.mjs
+│   │   ├── package-lock.json
+│   │   ├── package.json
 │   │   ├── run-stream.mjs
+│   │   ├── test-live-rust.ps1
 │   │   ├── test-live.ps1
 │   │   └── vendor
 │   │       └── agent_pb.ts
-│   ├── mitm
-│   │   ├── check-mitm.ps1
-│   │   ├── install-mitmproxy.ps1
-│   │   ├── README.md
-│   │   └── start-mitmweb.ps1
-│   └── prepare-sidecars.mjs
+│   └── mitm
+│       ├── check-mitm.ps1
+│       ├── install-mitmproxy.ps1
+│       ├── README.md
+│       └── start-mitmweb.ps1
 ├── tsconfig.json
 ├── tsconfig.node.json
 ├── vite.config.ts
@@ -68,7 +51,8 @@
 │   │   ├── screenshot.png
 │   │   └── swarm.png
 │   └── workflows
-│       └── release.yml
+│       ├── release.yml
+│       └── security.yml
 ├── crates
 │   ├── sinew-anthropic
 │   │   ├── Cargo.toml
@@ -97,15 +81,22 @@
 │   │       │   ├── tool_summary.rs
 │   │       │   └── turn.rs
 │   │       ├── bash.rs
+│   │       ├── check_sota.rs
+│   │       ├── codebase_search.rs
 │   │       ├── compact.rs
+│   │       ├── delete_file.rs
 │   │       ├── edit.rs
+│   │       ├── editor_diagnostics.rs
 │   │       ├── glob.rs
 │   │       ├── grep.rs
 │   │       ├── image.rs
 │   │       ├── lib.rs
+│   │       ├── list_dir.rs
 │   │       ├── mcp.rs
 │   │       ├── question.rs
 │   │       ├── read.rs
+│   │       ├── read_lints.rs
+│   │       ├── ripgrep.rs
 │   │       ├── skill.rs
 │   │       ├── store.rs
 │   │       ├── subagent.rs
@@ -128,8 +119,8 @@
 │   │       ├── tool_names.rs
 │   │       ├── tool_run.rs
 │   │       ├── web.rs
-│   │       ├── write.rs
-│   │       └── workspace.rs
+│   │       ├── workspace.rs
+│   │       └── write.rs
 │   ├── sinew-core
 │   │   ├── Cargo.toml
 │   │   └── src
@@ -140,6 +131,15 @@
 │   │       ├── provider.rs
 │   │       ├── stream.rs
 │   │       └── tool.rs
+│   ├── sinew-deepseek
+│   │   ├── Cargo.toml
+│   │   └── src
+│   │       ├── auth.rs
+│   │       ├── client.rs
+│   │       ├── lib.rs
+│   │       ├── model_info.rs
+│   │       ├── stream.rs
+│   │       └── wire.rs
 │   ├── sinew-google
 │   │   ├── Cargo.toml
 │   │   └── src
@@ -200,11 +200,10 @@
 │           │   ├── exec_handler.rs
 │           │   ├── h2_client.rs
 │           │   ├── mod.rs
-│           │   ├── retry.rs
-│           │   └── transport.rs (Rust seul par défaut; `SINEW_CURSOR_BRIDGE=node` ou `SINEW_CURSOR_BRIDGE_FALLBACK=1`)
 │           │   ├── models.rs
 │           │   ├── proto_dynamic.rs
 │           │   ├── proto_pool.rs
+│           │   ├── retry.rs
 │           │   ├── run_h2.rs
 │           │   ├── run_request.rs
 │           │   ├── rust_bridge.rs
@@ -214,14 +213,29 @@
 │           │   ├── tools.rs
 │           │   ├── transcript.rs
 │           │   └── transport.rs
+│           ├── auth
+│           │   ├── composer.rs
+│           │   ├── mod.rs
+│           │   └── oauth.rs
 │           ├── proto
 │           │   ├── agent.fds
 │           │   ├── agent.pb
 │           │   └── README.md
 │           ├── client.rs
+│           ├── connect.rs
+│           ├── context_injection.rs
+│           ├── conversation.rs
 │           ├── encryption.rs
 │           ├── identity.rs
-│           └── lib.rs
+│           ├── images.rs
+│           ├── lib.rs
+│           ├── model_info.rs
+│           ├── sanitize.rs
+│           ├── stream_state.rs
+│           ├── tests.rs
+│           ├── tools.rs
+│           ├── usage.rs
+│           └── workspace.rs
 ├── src-tauri
 │   ├── Cargo.toml
 │   ├── PROVIDERS.md
@@ -286,7 +300,7 @@
 │   │   │       └── ic_launcher_background.xml
 │   │   └── ios
 │   │       ├── AppIcon-20x20@1x.png
- East   ├── AppIcon-20x20@2x-1.png
+│   │       ├── AppIcon-20x20@2x-1.png
 │   │       ├── AppIcon-20x20@2x.png
 │   │       ├── AppIcon-20x20@3x.png
 │   │       ├── AppIcon-29x29@1x.png
@@ -331,6 +345,7 @@
     │   ├── EditorPane.tsx
     │   ├── FileTree.tsx
     │   ├── GitPanel.tsx
+    │   ├── ImageContextMenu.tsx
     │   ├── SearchPane.tsx
     │   ├── SettingsPane.tsx
     │   ├── SinewMark.tsx
@@ -357,17 +372,29 @@
     │       ├── dotmatrix-hooks.ts
     │       └── stream.ts
     ├── lib
+    │   ├── customIcons.ts
     │   ├── fileIcon.ts
+    │   ├── frRuntime.ts
     │   ├── ipc.ts
     │   ├── language.ts
+    │   ├── locale.ts
     │   ├── models.ts
+    │   ├── quotas.ts
     │   ├── recents.ts
     │   └── tools.ts
 └── sinew-chrome-bridge
     ├── add_to_sinew.py
     ├── background.js
     ├── com.sinew.chrome_bridge.json
+    ├── e2e-local.mjs
     ├── e2e-structured.mjs
+    ├── icon-128.png
+    ├── icon-32.png
+    ├── icon-64.png
+    ├── icon.jpg
+    ├── interact_chrome.js
+    ├── launch_chrome_silent.bat
+    ├── manifest.json
     ├── mcp_server.js
     ├── native-host-wrapper.exe
     ├── native_host.bat
@@ -376,6 +403,7 @@
     ├── popup.html
     ├── popup.js
     ├── register.ps1
+    ├── run_bridge.bat
     ├── run_sinew_bridge.bat
     ├── server.js
     ├── sinew_cursor.js
@@ -384,3 +412,23 @@
         └── src
             └── main.rs
 
+---
+
+# 🧠 DIRECTIVES DE SURVIE ET D'APPRENTISSAGE POUR LES AGENTS FUTURS
+
+Si vous êtes un agent d'IA qui intervient sur ce dépôt, **lisez très attentivement les règles suivantes tirées des erreurs passées**. Elles font office de mémoire permanente à long terme pour le projet :
+
+### 1. 📂 Gestion des dossiers et exclusions Git (node_modules et build/)
+* **NE JAMAIS** traquer les dossiers `node_modules` de l'application ou des extensions locales (`sinew-chrome-bridge/node_modules/`, `scripts/agent-bridge/node_modules/`). Si vous lancez des commandes Git, assurez-vous qu'ils restent ignorés.
+* **NE JAMAIS** soumettre de gros fichiers d'applications déjà compilées (ex: `.exe` ou `.msi` dans un dossier `/build`). Utilisez toujours le fichier `.gitignore` pour exclure ces éléments.
+
+### 2. ⚡ Lancement de processus enfants sous Windows (spawn EINVAL)
+* **MANDATOIRE** : Lorsque vous spawnez des processus batch ou des commandes système comme `npm` ou `node` depuis un script Node (ex. : dans `prepare-agent-bridge.mjs`), vous **devez** spécifier `{ shell: true }` dans les options de `execFile` ou `spawn` (ex. : `execFile(npm, args, { shell: true })`). 
+* *Pourquoi ?* Suite aux mises à jour de sécurité de Node.js sur Windows (ex: CVE-2024-27980), le spawn de fichiers `.cmd` ou `.bat` sans shell explicite lance immédiatement une erreur bloquante `spawn EINVAL`.
+
+### 3. 🔄 Boucles récursives dans npm (postinstall)
+* **NE JAMAIS** configurer d'installation de dépendance automatique (`npm install` ou `npm --prefix ...`) directement dans le bloc `"postinstall"` du fichier `package.json` principal si cela risque de déclencher de la récursion infinie ou des conflits de chemins sur Windows.
+* *Alternative* : Utilisez plutôt les scripts de préparation officiels du cycle de vie du projet comme `scripts/prepare-agent-bridge.mjs` (qui s'exécute automatiquement avant la compilation ou le lancement dev grâce aux commandes `beforeBuildCommand` et `beforeDevCommand` configurées dans Tauri).
+
+### 4. 🎛️ MCP & Settings Pane (autoLoad)
+* Lors de la modification de la sérialisation des serveurs MCP dans `src/components/SettingsPane.tsx` (`settingsToJson`), n'oubliez jamais de conserver la variable `autoLoad` en écrivant : `if (server.autoLoad) entry.autoLoad = true;`. Si vous l'omettez, l'interface utilisateur supprimera silencieusement le choix de l'utilisateur à chaque modification ou fermeture des options.
