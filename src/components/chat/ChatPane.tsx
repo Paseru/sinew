@@ -3233,7 +3233,7 @@ export function ChatPane({
           aria-modal="true"
           onWheel={handleWheel}
         >
-          <div className="img-preview-lightbox__container" onClick={(e) => e.stopPropagation()}>
+          <div className="img-preview-lightbox__container">
             <img
               src={convertFileSrc(previewImage)}
               alt={basename(previewImage)}
@@ -3241,6 +3241,7 @@ export function ChatPane({
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              onClick={(e) => e.stopPropagation()}
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
                 cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
@@ -3254,7 +3255,7 @@ export function ChatPane({
             />
             
             {/* Elegant glassmorphic toolbar */}
-            <div className="img-preview-lightbox__toolbar">
+            <div className="img-preview-lightbox__toolbar" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}

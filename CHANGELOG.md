@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:13:17
+
+### Changed
+- **Fermeture de la lightbox d'image au clic extérieur (`src/components/chat/ChatPane.tsx`)** : Permet de fermer l'aperçu de l'image (lightbox) en cliquant n'importe où autour de celle-ci, tout en empêchant la fermeture accidentelle lors d'un clic sur l'image elle-même ou sur les boutons de la barre d'outils.
+
 ## [Unreleased] - 2026-05-30 00:11:30
 
 ### Changed
