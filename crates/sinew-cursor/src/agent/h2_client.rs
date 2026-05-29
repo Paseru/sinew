@@ -16,10 +16,18 @@ pub type AgentUploadBody = StreamBody<ReceiverStream<Result<Frame<Bytes>, std::i
 
 static H2_CLIENT: OnceLock<Client<hyper_rustls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, AgentUploadBody>> =
     OnceLock::new();
+static RUSTLS_PROVIDER: OnceLock<()> = OnceLock::new();
+
+fn ensure_rustls_provider() {
+    RUSTLS_PROVIDER.get_or_init(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
+}
 
 pub fn shared_h2_client(
 ) -> Result<&'static Client<hyper_rustls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, AgentUploadBody>>
 {
+    ensure_rustls_provider();
     if let Some(client) = H2_CLIENT.get() {
         return Ok(client);
     }

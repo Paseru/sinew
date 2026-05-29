@@ -449,6 +449,82 @@ fn set_multi_pc_sync_enabled(enabled: bool) -> Result<(), String> {
     Err("Not supported on this platform".to_string())
 }
 
+#[tauri::command]
+fn trigger_multi_pc_sync() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // 1. Local AppData path
+        let localappdata = std::env::var("LOCALAPPDATA")
+            .map_err(|_| "LOCALAPPDATA env var not found".to_string())?;
+
+        let local_db = PathBuf::from(&localappdata)
+            .join("hyrak")
+            .join("sinew")
+            .join("data")
+            .join("desktop-state.sqlite3");
+
+        // 2. OneDrive path
+        let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
+            std::env::var("USERPROFILE")
+                .map(|u| format!("{}\\OneDrive", u))
+                .unwrap_or_default()
+        });
+        if onedrive.is_empty() {
+            return Err("OneDrive folder not found".to_string());
+        }
+        let onedrive_db_dir = PathBuf::from(onedrive).join("Documents").join("Sinew");
+        let onedrive_db = onedrive_db_dir.join("desktop-state.sqlite3");
+
+        if !local_db.exists() {
+            return Err("Local database does not exist".to_string());
+        }
+
+        let _ = fs::create_dir_all(&onedrive_db_dir);
+
+        // A. Backup local database
+        let backup_path = local_db.with_extension("sqlite3.bak");
+        let _ = fs::copy(&local_db, &backup_path);
+
+        // B. Merge Local -> OneDrive (push changes to OneDrive)
+        let mut steps = Vec::new();
+        if onedrive_db.exists() {
+            if let Err(e) = merge_databases(&onedrive_db, &local_db) {
+                tracing::warn!("Manual sync Local -> OneDrive merge failed, attempting copy: {:?}", e);
+                if let Err(err) = fs::copy(&local_db, &onedrive_db) {
+                    return Err(format!("Failed to copy database to OneDrive: {:?}", err));
+                }
+                steps.push("Uploaded database copy to OneDrive".to_string());
+            } else {
+                steps.push("Merged local database changes into OneDrive".to_string());
+            }
+        } else {
+            if let Err(err) = fs::copy(&local_db, &onedrive_db) {
+                return Err(format!("Failed to copy database to OneDrive: {:?}", err));
+            }
+            steps.push("Created initial OneDrive database copy".to_string());
+        }
+
+        // C. Merge OneDrive -> Local (pull changes from OneDrive)
+        if onedrive_db.exists() {
+            if let Err(e) = merge_databases(&local_db, &onedrive_db) {
+                tracing::error!("Manual sync OneDrive -> Local merge failed: {:?}", e);
+                return Err(format!("Merge OneDrive changes into Local failed: {:?}", e));
+            } else {
+                steps.push("Merged OneDrive database changes into Local".to_string());
+            }
+        }
+
+        return Ok(steps.join(", "));
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Multi-PC OneDrive Sync is only supported on Windows".to_string())
+    }
+}
+
 fn configure_agent_bridge_paths(app: &AppHandle) {
     if let Ok(resource_dir) = app.path().resource_dir() {
         let bundled = resource_dir.join("agent-bridge");
@@ -790,6 +866,7 @@ pub fn run() {
             updater::updater_current_version,
             is_multi_pc_sync_enabled,
             set_multi_pc_sync_enabled,
+            trigger_multi_pc_sync,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")

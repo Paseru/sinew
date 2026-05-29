@@ -5,7 +5,7 @@ use prost::Message as _;
 use prost_reflect::{DynamicMessage, Value};
 use sinew_core::{AppError, Result};
 
-use super::proto_dynamic::{get_i32_field, get_message_field, get_string_field};
+use super::proto_dynamic::{get_i32_field, get_message_field, get_string_field, oneof_case};
 use super::proto_pool::agent_pool;
 
 #[derive(Debug, Clone)]
@@ -39,7 +39,16 @@ pub fn decode_server_message(payload: &[u8]) -> Result<Vec<BridgeEvent>> {
 
 fn collect_events(msg: &DynamicMessage) -> Vec<BridgeEvent> {
     let mut out = Vec::new();
-    if let Some(update) = get_message_field(msg, "interaction_update") {
+    let update = get_message_field(msg, "interaction_update").or_else(|| {
+        oneof_case(msg).and_then(|case| {
+            if case == "interaction_update" {
+                get_message_field(msg, &case)
+            } else {
+                None
+            }
+        })
+    });
+    if let Some(update) = update {
         out.extend(interaction_events(&update));
     }
     // Exec messages are handled inline in run_h2 (bidirectional loop).
@@ -53,32 +62,64 @@ fn collect_events(msg: &DynamicMessage) -> Vec<BridgeEvent> {
 
 fn interaction_events(update: &DynamicMessage) -> Vec<BridgeEvent> {
     let mut out = Vec::new();
-    if let Some(inner) = get_message_field(update, "text_delta") {
-        if let Some(text) = get_string_field(&inner, "text") {
+    let case = oneof_case(update);
+    let push_text = |inner: &DynamicMessage, out: &mut Vec<BridgeEvent>| {
+        if let Some(text) = get_string_field(inner, "text") {
             if !text.is_empty() {
                 out.push(BridgeEvent::Text(text));
             }
         }
-    }
-    if let Some(inner) = get_message_field(update, "thinking_delta") {
-        if let Some(text) = get_string_field(&inner, "text") {
+    };
+    let push_thinking = |inner: &DynamicMessage, out: &mut Vec<BridgeEvent>| {
+        if let Some(text) = get_string_field(inner, "text") {
             if !text.is_empty() {
                 out.push(BridgeEvent::Thinking(text));
             }
         }
-    }
-    if let Some(inner) = get_message_field(update, "token_delta") {
-        let tokens = get_i32_field(&inner, "tokens").unwrap_or(0).max(0) as u32;
-        out.push(BridgeEvent::Usage {
-            output_tokens: tokens,
-            total_tokens: tokens,
-        });
-    }
-    if get_message_field(update, "step_completed").is_some() {
-        out.push(BridgeEvent::StepCompleted);
-    }
-    if get_message_field(update, "turn_ended").is_some() {
-        out.push(BridgeEvent::TurnEnded);
+    };
+    match case.as_deref() {
+        Some("text_delta") => {
+            if let Some(inner) = get_message_field(update, "text_delta") {
+                push_text(&inner, &mut out);
+            }
+        }
+        Some("thinking_delta") => {
+            if let Some(inner) = get_message_field(update, "thinking_delta") {
+                push_thinking(&inner, &mut out);
+            }
+        }
+        Some("token_delta") => {
+            if let Some(inner) = get_message_field(update, "token_delta") {
+                let tokens = get_i32_field(&inner, "tokens").unwrap_or(0).max(0) as u32;
+                out.push(BridgeEvent::Usage {
+                    output_tokens: tokens,
+                    total_tokens: tokens,
+                });
+            }
+        }
+        Some("step_completed") => out.push(BridgeEvent::StepCompleted),
+        Some("turn_ended") => out.push(BridgeEvent::TurnEnded),
+        _ => {
+            if let Some(inner) = get_message_field(update, "text_delta") {
+                push_text(&inner, &mut out);
+            }
+            if let Some(inner) = get_message_field(update, "thinking_delta") {
+                push_thinking(&inner, &mut out);
+            }
+            if let Some(inner) = get_message_field(update, "token_delta") {
+                let tokens = get_i32_field(&inner, "tokens").unwrap_or(0).max(0) as u32;
+                out.push(BridgeEvent::Usage {
+                    output_tokens: tokens,
+                    total_tokens: tokens,
+                });
+            }
+            if get_message_field(update, "step_completed").is_some() {
+                out.push(BridgeEvent::StepCompleted);
+            }
+            if get_message_field(update, "turn_ended").is_some() {
+                out.push(BridgeEvent::TurnEnded);
+            }
+        }
     }
     out
 }
@@ -151,4 +192,36 @@ fn checkpoint_event(state: &DynamicMessage) -> Option<BridgeEvent> {
 
 pub fn parse_connect_end(payload: &[u8]) -> Option<String> {
     super::connect_proto::parse_connect_end_error(payload)
+}
+
+#[cfg(test)]
+mod tests {
+    use prost_reflect::{DynamicMessage, Value};
+    use crate::agent::proto_dynamic::setf;
+    use super::*;
+
+    #[test]
+    fn decodes_interaction_text_delta() {
+        let pool = agent_pool().expect("pool");
+        let td_desc = pool
+            .get_message_by_name("agent.v1.TextDeltaUpdate")
+            .expect("TextDeltaUpdate");
+        let mut td = DynamicMessage::new(td_desc);
+        setf(&mut td, "text", Value::String("OK".into())).expect("text");
+        let iu_desc = pool
+            .get_message_by_name("agent.v1.InteractionUpdate")
+            .expect("InteractionUpdate");
+        let mut iu = DynamicMessage::new(iu_desc);
+        setf(&mut iu, "text_delta", Value::Message(td)).expect("text_delta");
+        let events = interaction_events(&iu);
+        assert!(matches!(&events[..], [BridgeEvent::Text(t)] if t == "OK"));
+
+        let asm_desc = pool
+            .get_message_by_name("agent.v1.AgentServerMessage")
+            .expect("AgentServerMessage");
+        let mut asm = DynamicMessage::new(asm_desc);
+        setf(&mut asm, "interaction_update", Value::Message(iu)).expect("interaction_update");
+        let events = collect_events(&asm);
+        assert!(events.iter().any(|e| matches!(e, BridgeEvent::Text(_))));
+    }
 }

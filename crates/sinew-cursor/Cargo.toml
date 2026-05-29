@@ -33,6 +33,7 @@ hyper = { version = "1.6", features = ["client", "http2"] }
 hyper-util = { version = "0.1", features = ["client", "client-legacy", "http2", "tokio"] }
 http-body-util = { version = "0.1", features = ["full"] }
 hyper-rustls = { version = "0.27", features = ["http2", "ring", "native-tokio"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 tokio-util = { version = "0.7", features = ["io"] }
 tokio-stream = "0.1"
 hex = "0.4"

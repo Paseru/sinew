@@ -117,6 +117,7 @@ async fn stream_via_rust_bridge_inner(
         let mut next_tool_index = 2usize;
         let mut open_part: Option<(usize, PartKind)> = None;
         let mut started_text = false;
+        let mut started_thinking = false;
         let mut tools_executed = 0u32;
         let mut usage = Usage::default();
         let mut total_output_tokens = 0u32;
@@ -206,9 +207,14 @@ async fn stream_via_rust_bridge_inner(
                         open_part = Some((index, kind));
                         yield StreamEvent::PartStart { index, kind, tool: None };
                     }
+                    started_thinking = true;
                     yield StreamEvent::ThinkingDelta { index, delta };
                 }
-                BridgeEvent::StepCompleted | BridgeEvent::TurnEnded => break,
+                BridgeEvent::StepCompleted | BridgeEvent::TurnEnded => {
+                    if started_text || started_thinking || tools_executed > 0 {
+                        break;
+                    }
+                }
             }
         }
 
@@ -216,7 +222,7 @@ async fn stream_via_rust_bridge_inner(
             yield StreamEvent::PartStop { index: idx };
         }
 
-        if !started_text && tools_executed == 0 {
+        if !started_text && !started_thinking && tools_executed == 0 {
             Err(AppError::Network(format!(
                 "Composer n'a renvoyé aucun texte. {OAUTH_HINT}"
             )))?;

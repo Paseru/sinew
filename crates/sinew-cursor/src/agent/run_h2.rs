@@ -223,6 +223,7 @@ async fn run_agent_stream_inner(
     };
 
     let mut saw_text = false;
+    let mut saw_thinking = false;
     let mut last_text_at: Option<std::time::Instant> = None;
     let mut output_tokens = 0u32;
     let mut pending = Vec::new();
@@ -255,6 +256,7 @@ async fn run_agent_stream_inner(
                                 &exec_ctx,
                                 &mut tool_response_rx,
                                 &mut saw_text,
+                                &mut saw_thinking,
                                 &mut last_text_at,
                                 &mut output_tokens,
                                 &mut finished,
@@ -272,11 +274,13 @@ async fn run_agent_stream_inner(
             }
             Ok(None) => break,
             Err(_) => {
-                if saw_text {
+                if saw_text || saw_thinking {
                     if let Some(at) = last_text_at {
                         if at.elapsed() >= Duration::from_millis(IDLE_AFTER_TEXT_MS) {
                             break;
                         }
+                    } else if saw_thinking && started.elapsed() >= Duration::from_millis(IDLE_AFTER_TEXT_MS) {
+                        break;
                     }
                 }
                 if started.elapsed() >= Duration::from_millis(MAX_TURN_MS) {
@@ -290,7 +294,7 @@ async fn run_agent_stream_inner(
     drop(frame_tx);
     let _ = tokio::time::timeout(Duration::from_secs(2), upload_done.notified()).await;
 
-    if !saw_text {
+    if !saw_text && !saw_thinking {
         return Err(AppError::Network(
             "agent Run stream ended without text".into(),
         ));
@@ -306,6 +310,7 @@ async fn process_server_payload(
     exec_ctx: &ExecContext<'_>,
     tool_response_rx: &mut mpsc::Receiver<ToolResponse>,
     saw_text: &mut bool,
+    saw_thinking: &mut bool,
     last_text_at: &mut Option<std::time::Instant>,
     output_tokens: &mut u32,
     finished: &mut bool,
@@ -380,19 +385,25 @@ async fn process_server_payload(
     match decode_server_message(payload) {
         Ok(events) => {
             for ev in events {
-                if matches!(ev, BridgeEvent::Text(_)) {
-                    *saw_text = true;
-                    *last_text_at = Some(std::time::Instant::now());
-                }
-                if let BridgeEvent::Usage {
-                    output_tokens: o, ..
-                } = &ev
-                {
-                    *output_tokens = output_tokens.saturating_add(*o);
-                }
-                if matches!(ev, BridgeEvent::StepCompleted | BridgeEvent::TurnEnded) {
-                    *finished = true;
-                    return Ok(true);
+                match &ev {
+                    BridgeEvent::Text(_) => {
+                        *saw_text = true;
+                        *last_text_at = Some(std::time::Instant::now());
+                    }
+                    BridgeEvent::Thinking(_) => {
+                        *saw_thinking = true;
+                        *last_text_at = Some(std::time::Instant::now());
+                    }
+                    BridgeEvent::Usage { output_tokens: o, .. } => {
+                        *output_tokens = output_tokens.saturating_add(*o);
+                    }
+                    BridgeEvent::StepCompleted | BridgeEvent::TurnEnded => {
+                        if *saw_text || *saw_thinking {
+                            *finished = true;
+                            return Ok(true);
+                        }
+                    }
+                    _ => {}
                 }
                 if event_tx.send(Ok(ev)).await.is_err() {
                     *finished = true;

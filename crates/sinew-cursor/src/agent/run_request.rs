@@ -92,6 +92,17 @@ fn build_conversation_state(
     )?;
     let turn_ids = build_history_turn_blob_ids(input.history_turns, blob_store)?;
     setf(&mut msg, "turns", Value::List(bytes_list(turn_ids)))?;
+    setf(&mut msg, "todos", Value::List(vec![]))?;
+    setf(&mut msg, "pending_tool_calls", Value::List(vec![]))?;
+    setf(
+        &mut msg,
+        "previous_workspace_uris",
+        Value::List(vec![]),
+    )?;
+    setf(&mut msg, "summary_archives", Value::List(vec![]))?;
+    setf(&mut msg, "turn_timings", Value::List(vec![]))?;
+    setf(&mut msg, "self_summary_count", Value::U32(0))?;
+    setf(&mut msg, "read_paths", Value::List(vec![]))?;
     Ok(msg)
 }
 
