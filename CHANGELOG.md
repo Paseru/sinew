@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-29 16:36:20
+
+### Changed
+- **Nettoyage du plan d'amélioration (`afaire.md`)** : Réécriture complète du rapport pour ne garder que les constats vérifiés et les actions à fort impact : test Rust bloquant, contrôles locaux, gros fichiers à découper, zones sensibles à auditer, dépendances à surveiller et création de `DESIGN.md`.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter la réécriture demandée du fichier de suivi.
+
 ## [Unreleased] - 2026-05-29 16:31:40
 
 ### Added

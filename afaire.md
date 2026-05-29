@@ -1,222 +1,121 @@
-# À faire — Analyse du projet Sinew
+# À faire — priorités fiables du projet Sinew
 
-> Rapport généré le 2026-05-29
+> Nettoyé le 2026-05-29 16:36. Ce fichier remplace l'ancien rapport : il garde uniquement les constats vérifiés et les actions qui peuvent avoir un vrai impact.
 
-## ✅ Mise à jour vérifiée — 2026-05-29 16:31
+## Synthèse de l'ancien rapport
 
-### Santé actuelle
+L'ancien fichier mélangeait des constats sûrs, des hypothèses et des idées secondaires. La version ci-dessous conserve seulement :
 
-- Git est à jour avec `origin/main`.
-- Construction frontend validée : `npm run build` passe.
-- Construction Rust validée : `cargo check --workspace --all-targets` passe.
-- Audit npm validé sur les 3 paquets (`racine`, `sinew-chrome-bridge`, `scripts/agent-bridge`) : aucune vulnérabilité détectée.
-- Diagnostics éditeur : aucune erreur détectée.
+- ce qui a été vérifié par les contrôles locaux ;
+- ce qui peut bloquer une livraison ;
+- ce qui peut réduire fortement les bugs, les risques ou la difficulté de maintenance.
 
-### À corriger en priorité
+## État confirmé
 
-- [ ] **Test Rust instable / bloquant** — `bash::tests::interactive_session_accepts_input` échoue sur Windows et la suite de tests peut rester bloquée. C'est le point le plus urgent.
-- [ ] **Installer les contrôles Rust manquants** — `cargo clippy` et `cargo audit` ne sont pas disponibles localement, alors qu'ils sont nécessaires pour vérifier la qualité et la sécurité Rust.
-- [ ] **Découper les très gros fichiers** :
-  - `src/components/SettingsPane.tsx` — environ 7138 lignes
-  - `src/components/chat/ChatPane.tsx` — environ 6501 lignes
-  - `sinew-chrome-bridge/server.js` — environ 2788 lignes
-  - `src-tauri/src/providers.rs` — environ 2455 lignes
-  - `src/components/Workspace.tsx` — environ 2226 lignes
-- [ ] **Resserrer la surface sensible** — terminal intégré, pont Chrome local, ouverture de liens, lecture de fichiers externes et protocole asset Tauri très large (`**/*`) doivent être audités et limités progressivement.
-- [ ] **Surveiller les dépendances** — plusieurs dépendances Rust existent en double et plusieurs paquets npm ont des versions majeures plus récentes.
-
-### Améliorations rapides proposées
-
-- [ ] Créer un script unique `check` lançant : build frontend, cargo check, tests Rust, audits npm, puis audit Rust quand `cargo-audit` sera installé.
-- [ ] Remplacer l'entrée `npm audit fix` des anciennes notes par un suivi simple, car l'audit npm actuel ne signale aucune vulnérabilité.
-- [ ] Prioriser le découpage de `SettingsPane.tsx` et `ChatPane.tsx` en petits panneaux/composants, comme ranger un gros classeur en dossiers séparés.
-
-## 🟢 Points forts (à préserver)
-
-- Architecture propre : `sinew-core` → crates fournisseurs → `sinew-app` → `src-tauri` → UI React
-- 13 crates Rust bien séparées, dépendances centralisées dans le workspace `Cargo.toml`
-- CI/CD robuste : release multi-plateforme (Windows, macOS universal, Linux) + audit de sécurité
-- Bundle Vite optimisé avec code splitting (Monaco, xterm, mermaid, markdown en chunks séparés)
-- Gestion fine des modèles, providers, OAuth, quotas temps réel
+- Git était à jour avec `origin/main` lors de la vérification.
+- Le frontend compile : `npm run build` passe.
+- Le backend Rust compile : `cargo check --workspace --all-targets` passe.
+- L'audit npm est propre sur les 3 paquets : racine, `sinew-chrome-bridge`, `scripts/agent-bridge`.
+- Les diagnostics éditeur ne signalent aucune erreur.
+- `cargo clippy` n'est pas installé localement.
+- `DESIGN.md` est absent alors que le README annonce son injection automatique.
 
 ---
 
-## 🔴 Problématiques
+## Priorité 1 — Fiabiliser les contrôles avant livraison
 
-### 1. Fichiers monolithiques ("god files")
+### 1. Corriger le test Rust bloquant
 
-| Fichier | Lignes | Ce qu'il contient |
-|---|---|---|
-| `src-tauri/src/lib.rs` | 1036 | Toutes les commandes Tauri : OAuth 6 providers, workspace, conversations, terminal, swarm, git, éditeur, fichiers… |
-| `crates/sinew-app/src/store.rs` | 1984 | Toute la persistance SQLite : conversations, settings, checkpoints, modèles, plans, goals… |
-| `src/lib/ipc.ts` | 909 | Tous les appels IPC frontend → backend dans un seul fichier |
+- [ ] Stabiliser `bash::tests::interactive_session_accepts_input` sur Windows.
 
-**Conséquences :** impossible de tester unitairement, merges conflictuels fréquents, onboarding difficile.
+**Pourquoi c'est important :** la suite de tests peut échouer ou rester bloquée. C'est comme un voyant rouge sur le tableau de bord : tant qu'il reste allumé, une livraison peut cacher une panne.
 
-### 2. Duplication massive entre les 7 fournisseurs
+### 2. Remettre `clippy` dans les contrôles locaux
 
-Chaque crate fournisseur (`sinew-anthropic`, `sinew-openai`, `sinew-google`, `sinew-kimi`, `sinew-openrouter`, `sinew-deepseek`, `sinew-cursor`) répète la même structure :
+- [ ] Installer/activer `cargo clippy` localement.
+- [ ] Ajouter son lancement dans les contrôles habituels quand il sera disponible.
 
-```
-auth.rs → client.rs → lib.rs → model_info.rs → stream.rs → wire.rs
-```
+**Pourquoi c'est important :** `clippy` repère les erreurs discrètes et les mauvaises habitudes avant qu'elles deviennent coûteuses.
 
-Seul `wire.rs` diffère réellement. Tout le reste (config, credential loading, HTTP client, user-agent) est dupliqué 7 fois.
+### 3. Créer un contrôle unique du projet
 
-**Conséquences :** 7x le code à maintenir, 7x les bugs potentiels, frein à l'ajout d'un nouveau fournisseur.
+- [ ] Ajouter un script simple `check` qui lance au minimum :
+  - `npm run build`
+  - `cargo check --workspace --all-targets`
+  - `cargo test --workspace --no-fail-fast`
+  - les 3 audits npm
+  - `cargo clippy` quand installé
 
-### 3. Faible couverture de tests
-
-✅ Présents :
-- `src-tauri/src/tests.rs` — machine à états du mode Plan
-- `crates/sinew-app/src/agent/tests.rs` — clean_context, history
-
-❌ Absents (zones critiques) :
-- Auth (OAuth PKCE, device flow Kimi)
-- Providers (streaming, retry, erreurs)
-- Store SQLite (CRUD conversations, settings)
-- Bash PTY (spawn, read, kill)
-- Edit / Write (pas d'écrasement sans backup)
-- MCP (connexion, outils)
-- SubAgent, Team, Git, FileTree, EditorPane…
-- Aucun test frontend React
-
-### 4. Pas de formatage Rust standardisé
-
-- Pas de `rustfmt.toml`
-- Pas de `.clippy.toml`
-- Seule règle lint : `too_many_arguments = "allow"` dans le workspace `Cargo.toml`
-
-### 5. Tooling de développement Windows uniquement
-
-- `launch-sinew-dev.bat` — pas d'équivalent bash
-- Scripts MITM en PowerShell uniquement
-- Chrome bridge : `.bat` + `.exe` natif
-
-Linux et macOS ne sont que des cibles CI, pas des environnements de dev.
-
-### 6. Gestion des erreurs trop générique
-
-```rust
-pub enum AppError {
-    Auth(String),
-    InvalidRequest(String),
-    RateLimit(String),
-    ContextLength(String),
-    Network(String),
-    Decode(String),
-    Stream(String),
-    RetryableStream { message: String, delay_ms: Option<u64> },
-    Unsupported(String),
-    Provider(String),
-}
-```
-
-Aucune information structurée (code HTTP, provider, modèle, délai de retry). Impossible de réagir programmatiquement.
-
-### 7. Pas de file d'attente ni rate-limiting local
-
-Aucun backoff exponentiel, aucune queue de requêtes. Si l'utilisateur enchaîne vite ou si le mode Goal tourne en boucle, risque de 429 sans gestion.
-
-### 8. Pas de `DESIGN.md`
-
-Le README mentionne l'injection automatique de `DESIGN.md` mais le fichier n'existe pas. Pas de tokens CSS standardisés ni de règles UI documentées.
-
-### 9. `CHANGELOG.md` orienté marketing
-
-Le changelog actuel est une page de fonctionnalités/vente, pas un journal technique des modifications. Difficile de tracer l'historique réel.
+**Pourquoi c'est important :** un seul bouton de contrôle évite les oublis.
 
 ---
 
-## 🟡 Améliorations proposées
+## Priorité 2 — Découper les fichiers trop gros
 
-### 🔥 Priorité haute
+Les fichiers suivants sont confirmés comme très volumineux :
 
-- [ ] **1. Découper `src-tauri/src/lib.rs`** en modules :
-  - `oauth.rs` — toutes les commandes OAuth (6 providers)
-  - `workspace_commands.rs` — open, create, delete, import
-  - `conversation_commands.rs` — list, load, save, delete, rename
-  - `terminal_commands.rs` — spawn, write, resize, kill
-  - `file_commands.rs` — read, write, edit, delete, trash, restore
-  - `swarm_commands.rs` — team, subagent
-  - `git_commands.rs` — status, branches, worktrees, PR
+| Fichier | Taille constatée | Action utile |
+|---|---:|---|
+| `src/components/SettingsPane.tsx` | 7138 lignes | Découper par panneaux : comptes, modèles, outils, apparence, avancé |
+| `src/components/chat/ChatPane.tsx` | 6501 lignes | Découper : messages, saisie, pièces jointes, plan, équipe, aperçu image |
+| `sinew-chrome-bridge/server.js` | 2788 lignes | Séparer : serveur, sécurité, Chrome, actions, macros, interface locale |
+| `src-tauri/src/providers.rs` | 2455 lignes | Séparer : connexion, quotas, modèles, état par fournisseur |
+| `src/components/Workspace.tsx` | 2226 lignes | Séparer : disposition, onglets, terminal, fichiers, actions |
 
-- [ ] **2. Découper `store.rs`** par domaine :
-  - `conversation_store.rs` — CRUD conversations
-  - `settings_store.rs` — tool settings, MCP settings, skill settings
-  - `checkpoint_store.rs` — snapshots et restaurations
-  - `model_store.rs` — mode_model_settings, OpenRouter catalog
-
-- [ ] **3. Ajouter `rustfmt.toml`** et lancer `cargo fmt --all`
-
-- [ ] **4. Tests sur les chemins critiques :**
-  - Auth OAuth (PKCE generation, code exchange, token storage)
-  - Store SQLite (create/read/update/delete conversations)
-  - Edit / Write (pas d'écrasement accidentel)
-  - Bash PTY (spawn → write → read → kill)
-
-### 🟠 Priorité moyenne
-
-- [ ] **5. Trait commun `ProviderClient`** pour réduire la duplication entre les 7 crates fournisseurs
-  - Extraire : config, credential loading, HTTP client builder, user-agent
-  - Garder spécifique : wire.rs (format de requête/réponse propre à chaque API)
-
-- [ ] **6. Structurer `AppError`** avec des champs utiles :
-  - `provider: Option<String>`
-  - `http_status: Option<u16>`
-  - `retry_after_secs: Option<u64>`
-
-- [ ] **7. Créer un `DESIGN.md`** avec :
-  - Palette de couleurs (dark theme actuel)
-  - Tokens CSS (`--sinew-bg`, `--sinew-text`, `--sinew-accent`, etc.)
-  - Règles de composants (boutons, cartes, inputs, modales)
-
-- [ ] **8. Scripts de dev cross-platform :**
-  - `justfile` (via `just`) ou scripts bash + PowerShell
-  - Alternative : `npm run dev` unifié qui détecte l'OS
-
-- [ ] **9. Découper `src/lib/ipc.ts`** par domaine :
-  - `ipc/workspace.ts`, `ipc/conversation.ts`, `ipc/providers.ts`, `ipc/git.ts`, `ipc/terminal.ts`
-
-### 🔵 Priorité basse
-
-- [ ] **10. Rate limiter local avec exponential backoff** (`tokio::time::sleep` + jitter)
-
-- [ ] **11. Tests E2E basiques** (Playwright ou Tauri WebDriver) : ouverture app → welcome → ouvrir un workspace → envoyer un message
-
-- [ ] **12. Composants UI partagés** (Button, Card, Input, Modal) au lieu de styles inline dispersés
-
-- [ ] **13. Mettre à jour `CHANGELOG.md`** avec un format standard (Keep a Changelog) et historique réel
+**Pourquoi c'est important :** ces fichiers sont des gros classeurs. Les découper en dossiers plus petits rend les changements plus sûrs, plus rapides et plus faciles à relire.
 
 ---
 
-## 📋 Résumé
+## Priorité 3 — Resserrer les zones sensibles
 
-| Problème | Sévérité | Remédiation |
-|---|---|---|
-| God files (`lib.rs`, `store.rs`, `ipc.ts`) | 🔴 Critique | Découpage modulaire (points 1, 2, 9) |
-| Duplication 7 fournisseurs | 🔴 Critique | Trait commun `ProviderClient` (point 5) |
-| Tests quasi absents | 🟠 Élevée | Tests sur auth, store, I/O (point 4) |
-| Pas de formatage standard | 🟠 Élevée | `rustfmt.toml` (point 3) |
-| Tooling Windows-only | 🟡 Moyenne | Scripts cross-platform (point 8) |
-| Erreurs trop génériques | 🟡 Moyenne | Structurer `AppError` (point 6) |
-| Pas de DESIGN.md | 🟡 Moyenne | Créer le fichier (point 7) |
-| Pas de rate limiting | 🔵 Basse | Backoff local (point 10) |
-| Pas de tests E2E | 🔵 Basse | Playwright (point 11) |
-| CHANGELOG marketing | 🔵 Basse | Keep a Changelog (point 13) |
+- [ ] Réduire progressivement la portée du protocole asset Tauri actuellement très large : `**/*`.
+- [ ] Auditer le terminal intégré.
+- [ ] Auditer le pont Chrome local.
+- [ ] Auditer l'ouverture de liens externes.
+- [ ] Auditer la lecture de fichiers hors espace de travail.
 
-### Points supplémentaires détectés avant l'analyse
-
-- [ ] **14. Performance visuelle** — `src/App.tsx` : l'effet de lueur au survol écoute `mousemove` sur toute la fenêtre. Remplacer par `:hover` CSS ou limiter aux composants concernés.
-- [ ] **15. Dispatch des outils** — `crates/sinew-app/src/agent/tool_dispatch.rs` : longue chaîne `if / else if`. Remplacer par un `match` Rust.
-- [ ] **16. Audit npm** — Lancer `npm audit fix` pour nettoyer les alertes de sécurité sur les dépendances.
-- [ ] **17. Centraliser localStorage** — Regrouper la lecture/écriture des paramètres dans un hook ou module unique plutôt que des blocs `try/catch` dispersés.
+**Pourquoi c'est important :** ce ne sont pas forcément des bugs aujourd'hui, mais ce sont des portes puissantes. Une porte puissante doit être petite, claire et bien surveillée.
 
 ---
 
-## 📝 Rapport Simplifié (Synthèse)
+## Priorité 4 — Garder les dépendances propres
 
-- **Bureaux encombrés (Fichiers géants) :** Division des fichiers clés (`lib.rs`, `store.rs`, `ipc.ts`) en petits tiroirs spécialisés et indépendants.
-- **Répétitions inutiles (Duplication des fournisseurs) :** Mutualisation des 7 connecteurs d'intelligence artificielle sous un même socle commun.
-- **Manque de verrous de sécurité (Absence de tests) :** Mise en place progressive de tests de robustesse automatique sur les outils, sauvegardes et conversations.
+- [ ] Garder l'audit npm à zéro vulnérabilité.
+- [ ] Ne pas lancer `npm audit fix` sans alerte réelle : l'audit actuel est propre.
+- [ ] Mettre à jour les grosses dépendances par petits lots testés.
+- [ ] Surveiller les dépendances Rust en double et supprimer celles qui sont faciles à éviter.
 
+**Pourquoi c'est important :** les dépendances sont comme des pièces importées. Plus elles sont nombreuses et anciennes, plus l'entretien devient lourd.
+
+---
+
+## Priorité 5 — Créer le document de design annoncé
+
+- [ ] Ajouter `DESIGN.md` à la racine.
+- [ ] Y documenter les couleurs, tailles, boutons, cartes, champs et règles visuelles principales.
+
+**Pourquoi c'est important :** le README annonce ce fichier, mais il n'existe pas. Le créer donnera une boussole claire pour toutes les futures modifications d'interface.
+
+---
+
+## Points retirés de l'ancien plan
+
+Ces sujets ne sont pas gardés comme priorités, soit parce qu'ils ne sont pas assez prouvés par l'analyse actuelle, soit parce que leur effet est moins direct :
+
+- refonte générale des 7 fournisseurs ;
+- refonte complète de `AppError` ;
+- rate limiting local ;
+- scripts de développement macOS/Linux ;
+- remarque sur le `mousemove` visuel ;
+- remplacement d'une chaîne `if/else` par un `match` ;
+- lancement de `npm audit fix` malgré un audit propre ;
+- réorganisation générale du changelog.
+
+## Ordre conseillé
+
+1. Corriger le test Rust bloquant.
+2. Ajouter le script `check`.
+3. Installer/brancher `clippy`.
+4. Découper `SettingsPane.tsx` puis `ChatPane.tsx`.
+5. Auditer les zones sensibles.
+6. Créer `DESIGN.md`.
