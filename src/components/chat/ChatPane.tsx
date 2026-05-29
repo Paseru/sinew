@@ -6088,6 +6088,8 @@ function ChatBlocks({
                 onAnswerQuestion={onAnswerQuestion}
                 disabled={answerQuestionDisabled}
                 allowStopQuestions={allowStopQuestions}
+                onOpenFile={onOpenFile}
+                workspacePath={workspacePath}
               />
             </div>
           );

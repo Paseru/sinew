@@ -104,6 +104,23 @@
                      0 14px 32px rgba(0, 0, 0, 0.40),
                      0 0 0 1px var(--line);
   --shadow-focus: 0 4px 14px rgba(0, 0, 0, 0.45);
+
+  /* Theme-specific Component Colors */
+  --composer-bg: rgba(20, 21, 24, 0.45);
+  --composer-bg-focus: rgba(24, 26, 31, 0.6);
+  --composer-border: rgba(255, 255, 255, 0.05);
+  --composer-border-focus: rgba(59, 130, 246, 0.45);
+  --composer-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --composer-shadow-focus: 0 4px 20px rgba(59, 130, 246, 0.15);
+
+  --card-bg: rgba(20, 21, 24, 0.4);
+  --card-bg-hover: rgba(20, 21, 24, 0.55);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --card-border-hover: rgba(255, 255, 255, 0.1);
+
+  --sticky-bg: rgba(15, 16, 19, 0.65);
+  --sticky-bg-hover: rgba(20, 21, 24, 0.75);
+  --sticky-border: rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="light"] {
@@ -169,6 +186,23 @@ html[data-theme="light"] {
   --line-1: rgba(17, 24, 39, 0.1);
   --line-2: rgba(17, 24, 39, 0.18);
   --line-3: rgba(17, 24, 39, 0.3);
+
+  /* Theme-specific Component Colors */
+  --composer-bg: rgba(255, 255, 255, 0.85);
+  --composer-bg-focus: rgba(255, 255, 255, 0.98);
+  --composer-border: rgba(17, 24, 39, 0.08);
+  --composer-border-focus: rgba(37, 99, 235, 0.45);
+  --composer-shadow: 0 4px 12px rgba(17, 24, 39, 0.05);
+  --composer-shadow-focus: 0 4px 20px rgba(37, 99, 235, 0.15);
+
+  --card-bg: rgba(17, 24, 39, 0.04);
+  --card-bg-hover: rgba(17, 24, 39, 0.08);
+  --card-border: rgba(17, 24, 39, 0.08);
+  --card-border-hover: rgba(17, 24, 39, 0.14);
+
+  --sticky-bg: rgba(243, 244, 246, 0.85);
+  --sticky-bg-hover: rgba(229, 231, 235, 0.95);
+  --sticky-border: rgba(17, 24, 39, 0.08);
 }
 
 @media (prefers-color-scheme: light) {
@@ -227,6 +261,23 @@ html[data-theme="light"] {
     --line-1: rgba(17, 24, 39, 0.1);
     --line-2: rgba(17, 24, 39, 0.18);
     --line-3: rgba(17, 24, 39, 0.3);
+
+    /* Theme-specific Component Colors */
+    --composer-bg: rgba(255, 255, 255, 0.85);
+    --composer-bg-focus: rgba(255, 255, 255, 0.98);
+    --composer-border: rgba(17, 24, 39, 0.08);
+    --composer-border-focus: rgba(37, 99, 235, 0.45);
+    --composer-shadow: 0 4px 12px rgba(17, 24, 39, 0.05);
+    --composer-shadow-focus: 0 4px 20px rgba(37, 99, 235, 0.15);
+
+    --card-bg: rgba(17, 24, 39, 0.04);
+    --card-bg-hover: rgba(17, 24, 39, 0.08);
+    --card-border: rgba(17, 24, 39, 0.08);
+    --card-border-hover: rgba(17, 24, 39, 0.14);
+
+    --sticky-bg: rgba(243, 244, 246, 0.85);
+    --sticky-bg-hover: rgba(229, 231, 235, 0.95);
+    --sticky-border: rgba(17, 24, 39, 0.08);
   }
 }
 
@@ -292,6 +343,23 @@ html[data-theme="ai"] {
   --line-1: rgba(0, 255, 255, 0.2);
   --line-2: rgba(255, 0, 127, 0.3);
   --line-3: rgba(0, 255, 255, 0.5);
+
+  /* Theme-specific Component Colors */
+  --composer-bg: rgba(5, 0, 20, 0.6);
+  --composer-bg-focus: rgba(10, 0, 36, 0.85);
+  --composer-border: rgba(0, 255, 255, 0.15);
+  --composer-border-focus: rgba(0, 255, 255, 0.6);
+  --composer-shadow: 0 4px 12px rgba(255, 0, 127, 0.2);
+  --composer-shadow-focus: 0 4px 20px rgba(255, 0, 127, 0.4);
+
+  --card-bg: rgba(10, 0, 36, 0.4);
+  --card-bg-hover: rgba(10, 0, 36, 0.65);
+  --card-border: rgba(0, 255, 255, 0.15);
+  --card-border-hover: rgba(255, 0, 127, 0.4);
+
+  --sticky-bg: rgba(10, 0, 36, 0.65);
+  --sticky-bg-hover: rgba(15, 2, 48, 0.75);
+  --sticky-border: rgba(0, 255, 255, 0.15);
 }
 
 /* Animations and glassmorphic layout overlays for the AI theme */
@@ -341,6 +409,17 @@ html[data-theme="ai"] .chat-footer {
   background: rgba(10, 0, 36, 0.6) !important;
   backdrop-filter: blur(20px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+}
+
+html[data-theme="ai"] .chat-col {
+  background: transparent !important;
+}
+
+html[data-theme="ai"] .todo-strip {
+  background: rgba(15, 2, 48, 0.6) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  border: 1px solid rgba(0, 255, 255, 0.15) !important;
 }
 
 html[data-theme="ai"] .welcome-pane {
@@ -4045,9 +4124,9 @@ textarea {
   justify-content: space-between;
   gap: 18px;
   padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border);
   border-radius: var(--r-med);
-  background: rgba(20, 21, 24, 0.45);
+  background: var(--card-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
@@ -4055,16 +4134,16 @@ textarea {
 }
 
 .settings-pane__provider-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(20, 21, 24, 0.55);
+  border-color: var(--card-border-hover);
+  background: var(--card-bg-hover);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .settings-pane__provider-card--compact {
   padding: 10px 12px;
   gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(20, 21, 24, 0.35);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
   border-radius: var(--r-med);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -4073,8 +4152,8 @@ textarea {
 }
 
 .settings-pane__provider-card--compact:hover {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(20, 21, 24, 0.45);
+  border-color: var(--card-border-hover);
+  background: var(--card-bg-hover);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -6082,7 +6161,7 @@ textarea {
   min-width: 0;
   flex: 1 1 0;
   height: 100%;
-  background: #090a0f; /* Deep elegant dark navy/slate canvas */
+  background: var(--bg-1); /* Use theme background variable */
   position: relative;
   overflow: hidden;
 }
@@ -7139,17 +7218,17 @@ textarea {
 /* Tool card */
 .tool-card {
   border-radius: var(--r-card);
-  background: rgba(20, 21, 24, 0.4);
+  background: var(--card-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
   overflow: hidden;
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .tool-card:not(:has(.tool-card__body)):hover {
-  background: rgba(20, 21, 24, 0.55);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
 }
 .tool-card:has(.tool-card__body) .tool-card__head:hover {
@@ -8274,19 +8353,19 @@ textarea {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: rgba(20, 21, 24, 0.45);
+  background: var(--composer-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--composer-border);
   border-radius: var(--r-card);
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--composer-shadow);
 }
 
 .composer__box:focus-within {
-  background: rgba(24, 26, 31, 0.6);
-  border-color: rgba(59, 130, 246, 0.45);
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+  background: var(--composer-bg-focus);
+  border-color: var(--composer-border-focus);
+  box-shadow: var(--composer-shadow-focus);
 }
 
 .mention-popover {
@@ -9950,11 +10029,11 @@ textarea {
   right: 0;
   z-index: 25;
   display: flex;
-  background: rgba(15, 16, 19, 0.65);
+  background: var(--sticky-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-left: 3px solid var(--accent);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--sticky-border);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   cursor: pointer;
   animation: slide-down 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -9964,7 +10043,7 @@ textarea {
 }
 
 .chat-sticky-question:hover {
-  background: rgba(20, 21, 24, 0.75);
+  background: var(--sticky-bg-hover);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
 }
 
@@ -9981,10 +10060,6 @@ html[data-theme="light"] .chat-sticky-question {
     transform: translateY(0);
     opacity: 1;
   }
-}
-
-.chat-sticky-question:hover {
-  background: var(--bg-2);
 }
 
 .chat-sticky-question__main {

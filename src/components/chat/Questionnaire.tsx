@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import type { QuestionAnswer } from "../../types";
+import { Markdown } from "./Markdown";
 
 type QuestionMode = "single_choice" | "multiple_choice";
 
@@ -42,6 +43,8 @@ type Props = {
   ) => void | Promise<void>;
   disabled: boolean;
   allowStopQuestions?: boolean;
+  onOpenFile?: (path: string) => void;
+  workspacePath?: string;
 };
 
 function stringFromUnknown(value: unknown): string | null {
@@ -251,6 +254,8 @@ export function Questionnaire({
   onAnswerQuestion,
   disabled,
   allowStopQuestions = false,
+  onOpenFile,
+  workspacePath,
 }: Props) {
   const steps = useMemo(() => questionStepsFromItems(questions), [questions]);
   const persistedAnswered =
@@ -432,7 +437,13 @@ export function Questionnaire({
       {(!sent || open) && (
         <div className="tool-card__body questionnaire__body">
       <div className="questionnaire__prompt-row">
-        <div className="question-tool__prompt">{prompt}</div>
+        <div className="question-tool__prompt">
+          <Markdown
+            text={prompt}
+            onOpenFile={onOpenFile || (() => {})}
+            workspacePath={workspacePath}
+          />
+        </div>
         {steps.length > 1 && (
           <span className="questionnaire__count">
             {clampedIndex + 1} / {steps.length}
