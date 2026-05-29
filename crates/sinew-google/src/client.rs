@@ -670,7 +670,7 @@ fn to_contents(
     model: &str,
     supports_tools: bool,
 ) -> Result<Vec<wire::Content>> {
-    let mut contents = Vec::new();
+    let mut contents: Vec<wire::Content> = Vec::new();
     for message in transcript {
         let role = match message.role {
             Role::User => "user",
@@ -784,12 +784,26 @@ fn to_contents(
             }
         }
         if !parts.is_empty() {
+            if let Some(last) = contents.last_mut() {
+                if last.role == role {
+                    last.parts.extend(parts);
+                    continue;
+                }
+            }
             contents.push(wire::Content {
                 role: role.into(),
                 parts,
             });
         }
     }
+
+    // Google Gemini API requires that:
+    // 1. The first message is a "user" message.
+    // Let's drop any leading "model" messages.
+    while !contents.is_empty() && contents[0].role != "user" {
+        contents.remove(0);
+    }
+
     Ok(contents)
 }
 
