@@ -228,14 +228,15 @@ pub(super) fn successful_read_fingerprints(
                     else {
                         continue;
                     };
-                    if name == "read" {
+                    let name_without_prefix = name.strip_prefix("default_api:").unwrap_or(name);
+                    if name_without_prefix == "read" {
                         let Some(path) = input.get("path").and_then(|value| value.as_str()) else {
                             continue;
                         };
                         if let Ok(normalized) = read.normalize_path(path) {
                             pending_reads.insert(id.clone(), Some(normalized));
                         }
-                    } else if name == "edit_file" || name == "write_file" {
+                    } else if name_without_prefix == "edit_file" || name_without_prefix == "write_file" {
                         pending_reads.insert(id.clone(), None);
                     }
                 }
