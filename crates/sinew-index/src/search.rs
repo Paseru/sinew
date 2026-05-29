@@ -36,7 +36,8 @@ pub fn search_workspace(
     if fts_query.is_empty() {
         return Ok(Vec::new());
     }
-    let candidate_limit = (limit.max(1).min(50) * 4).max(8) as i64;
+    let limit = limit.clamp(1, 50);
+    let candidate_limit = (limit * 4).max(8) as i64;
     let mut hits = search_fts_candidates(&store, &fts_query, path_prefix, candidate_limit)?;
     if hits.is_empty() {
         return Ok(Vec::new());
@@ -46,7 +47,7 @@ pub fn search_workspace(
             hits = rerank_with_embeddings(hits, &query_embedding);
         }
     }
-    hits.truncate(limit.max(1).min(50));
+    hits.truncate(limit);
     Ok(hits
         .into_iter()
         .map(|hit| CodebaseHit {

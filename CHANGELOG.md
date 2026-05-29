@@ -1,6 +1,26 @@
 # Changelog
 
+## [Unreleased] - 2026-05-29 16:51:36
+
+### Improved
+- **Index local plus rapide sur CPU, RAM et SSD (`crates/sinew-index/src/indexer.rs`)** : Préparation des fichiers en parallèle sur tous les cœurs disponibles, saut des fichiers inchangés grâce à leur date et leur taille, et écriture par lots pour mieux nourrir le SSD sans gonfler inutilement la mémoire.
+- **Base d’index optimisée pour le SSD local (`crates/sinew-index/src/store.rs`)** : Déplacement du cache d’index vers le dossier local de la machine, hausse du cache en RAM, lecture mémoire SSD, délai d’attente robuste et écritures groupées.
+- **Dépendance de parallélisation (`Cargo.toml`, `crates/sinew-index/Cargo.toml`, `Cargo.lock`)** : Ajout de Rayon pour répartir le travail lourd de préparation d’index sur plusieurs cœurs.
+- **Journal des changements (`CHANGELOG.md`)** : Documentation de ces optimisations de performance et de leur raison.
+
 All notable changes to this project will be documented in this file.
+
+## [Unreleased] - 2026-05-29 16:43:13
+
+### Added
+- **Script de contrôle unique (`scripts/check.ps1`, `package.json`)** : Ajout de `npm run check` pour lancer en une seule commande le build frontend, les contrôles Rust, `clippy`, les tests Rust, les audits npm et l'audit Rust si l'outil est installé. `clippy` tourne en mode rapport par défaut et peut devenir strict avec `SINEW_STRICT_CLIPPY=1`.
+
+### Changed
+- **Stabilisation du test terminal (`crates/sinew-app/src/bash.rs`)** : Le test interactif attend maintenant correctement la fin de la session Windows au lieu d'échouer sur une réponse encore en cours.
+- **Premières corrections `clippy` (`crates/sinew-index/src/background.rs`, `crates/sinew-index/src/process.rs`, `crates/sinew-index/src/search.rs`, `crates/sinew-openai/src/auth.rs`, `crates/sinew-google/src/auth.rs`)** : Correction de petites alertes de qualité signalées pendant le branchement du contrôle.
+- **Nettoyage du plan d'action (`afaire.md`)** : Retrait des trois priorités terminées et recentrage sur les actions restantes.
+- **Mise à jour de la carte des fichiers (`AGENTS.md`)** : Ajout du nouveau script `scripts/check.ps1` dans la carte du projet.
+- **Traçabilité du changement (`CHANGELOG.md`)** : Ajout de cette entrée pour documenter les modifications demandées.
 
 ## [Unreleased] - 2026-05-29 16:42:57
 

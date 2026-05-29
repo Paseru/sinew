@@ -19,6 +19,7 @@
 │       └── browser
 │           └── SKILL.md
 ├── scripts
+│   ├── check.ps1
 │   ├── compil.ps1
 │   ├── export-agent-descriptor.mjs
 │   ├── prepare-agent-bridge.mjs

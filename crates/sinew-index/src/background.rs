@@ -29,10 +29,11 @@ pub fn start_background_indexing(workspace_root: PathBuf) {
     }
     drop(guard);
 
-    if crate::process::process_isolation_enabled() && !crate::process::helper_child() {
-        if spawn_watch_helper(&workspace_root).is_ok() {
-            return;
-        }
+    if crate::process::process_isolation_enabled()
+        && !crate::process::helper_child()
+        && spawn_watch_helper(&workspace_root).is_ok()
+    {
+        return;
     }
 
     thread::spawn(move || run_background_indexing_loop(workspace_root, None));

@@ -335,7 +335,7 @@ pub fn all_auth_files() -> Result<Vec<(String, PathBuf)>> {
         files.push(("openai".to_string(), default_path));
     }
 
-    if let Ok(entries) = std::fs::read_dir(&dir) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {
@@ -538,8 +538,8 @@ fn save_oauth_tokens(
 }
 
 pub fn save_raw_access_token(path: &Path, access_token: &str) -> Result<OpenAiAuthStatus> {
-    let expires_at_ms = token_expiry_ms(access_token)
-        .unwrap_or_else(|| now_ms() + (3600 as i64 * 1000) - REFRESH_SKEW_MS);
+    let expires_at_ms =
+        token_expiry_ms(access_token).unwrap_or_else(|| now_ms() + 3_600_000_i64 - REFRESH_SKEW_MS);
     let account_id = token_account_id(access_token);
     let email = token_email(access_token);
     let plan_type = token_plan_type(access_token);

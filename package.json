@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "check": "powershell -ExecutionPolicy Bypass -File ./scripts/check.ps1",
     "test:chrome-bridge": "node sinew-chrome-bridge/e2e-local.mjs",
     "test:chrome-bridge:structured": "node sinew-chrome-bridge/e2e-structured.mjs",
     "prepare-sidecars": "node scripts/prepare-sidecars.mjs",

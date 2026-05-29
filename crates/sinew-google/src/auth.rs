@@ -360,7 +360,7 @@ pub fn all_auth_files() -> Result<Vec<(String, PathBuf)>> {
         files.push(("google".to_string(), default_path));
     }
 
-    if let Ok(entries) = std::fs::read_dir(&dir) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {

@@ -236,7 +236,7 @@ fn run_request_helper() -> i32 {
 }
 
 fn run_watch_helper(args: Vec<std::ffi::OsString>) -> i32 {
-    let Some(workspace_root) = args.get(0).map(PathBuf::from) else {
+    let Some(workspace_root) = args.first().map(PathBuf::from) else {
         eprintln!("missing workspace root for codebase index helper");
         return 2;
     };

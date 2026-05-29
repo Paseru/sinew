@@ -836,13 +836,25 @@ mod tests {
         assert!(started.content.contains("process still running"));
         let session_id = parse_session_id(&started.content);
 
-        let finished = tool
+        let mut finished = tool
             .run_input(json!({
                 "session_id": session_id,
                 "input": "Ada\n",
-                "yield_time_ms": 1_000
+                "yield_time_ms": 3_000
             }))
             .await;
+
+        for _ in 0..5 {
+            if finished.is_error || finished.content.contains("[exit status:") {
+                break;
+            }
+            finished = tool
+                .run_input(json!({
+                    "session_id": session_id,
+                    "yield_time_ms": 1_000
+                }))
+                .await;
+        }
 
         assert!(!finished.is_error, "{}", finished.content);
         assert!(
