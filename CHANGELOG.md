@@ -1,37 +1,10 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2026-05-30 01:51:21
-
-### Fixed
-- **Journal des modifications (CHANGELOG.md)** : Restauration du fichier à son état propre d'il y a deux commits, nettoyage de la corruption des caractères d'encodage (UTF-8) et retrait des doublons de l'historique.
-- **Historique des outils (crates/sinew-app/src/agent/history.rs)** : Correction de la détection des lectures d'outils en prenant en compte le préfixe `default_api:` injecté par l'interface. Cela résout le blocage de sécurité qui empêchait toutes les éditions de fichiers.
-
-## [Unreleased] - 2026-05-30 01:40:19
-
-### Fixed
-- **Vérifications de chemins (crates/sinew-app/src/workspace.rs)** : correction de la détection de dépassement de l'espace de travail sur Windows en nettoyant les préfixes UNC (\?\) et en unifiant la casse.
-
-## [Unreleased] - 2026-05-30 01:33:13
-
-### Removed
-- **Changelog** : suppression de la phrase promotionnelle sur l'optimisation en profondeur.
-
-## [Unreleased] - 2026-05-30 01:22:35
-
-### Added
-- **Règles anti-boucle locales (AGENTS.md)** : ajout de consignes explicites pour garder `cwd` dans le workspace, relire `CHANGELOG.md` juste avant chaque modification et utiliser les chemins Windows absolus afin d'éviter les erreurs répétées vues avec OpenAI.
-- **Traçabilité (CHANGELOG.md)** : ajout de cette entrée pour documenter la nouvelle règle de prévention.
-
-### Improved
-- **Performance globale adaptative (`crates/sinew-app/src/store.rs`)** : la base principale de conversations utilise un cache adapte aux coeurs disponibles, la lecture memoire SQLite et un delai d'attente plus robuste pour mieux exploiter les PC puissants sans reglage fixe.
-- **Recherche de fichiers plus rapide (`crates/sinew-app/src/workspace.rs`)** : la recherche dans l'espace de travail se repartit maintenant sur les coeurs CPU disponibles afin de reduire les temps d'attente sur les gros projets.
-- **Interface plus fluide pendant les grosses lectures (`src-tauri/src/workspace.rs`)** : les listes de fichiers, recherches et lectures de fichiers passent sur un couloir de travail separe pour eviter de figer l'application pendant les operations disque lourdes.
-- **Indexation semantique plus legere (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : la creation des empreintes vectorielles est limitee par lots pour eviter qu'une grosse premiere indexation monopolise trop longtemps le processeur et le disque.
-- **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter les optimisations globales demandees.
-
 ## 🚀 Présentation des Fonctionnalités Majeures (Fork Premium julienpiron.fr)
+
+Cette version a été optimisée en profondeur pour offrir une expérience utilisateur haut de gamme (SOTA), une autonomie maximale en arrière-plan, et des intégrations d'intelligence artificielle inégalées.
 
 ### 🎨 Interface, Confort & Ergonomie (Premium UI)
 * **Animation de démarrage premium :** Une animation de boot moderne, fluide et élégante à l'ouverture de l'application.
@@ -43,7 +16,7 @@ All notable changes to this project will be documented in this file.
 * **Version française complète :** L'interface entière et toutes les actions de l'application s'adaptent automatiquement en français ou en anglais.
 * **Sélection et copie libre :** Déblocage de la sélection et copie de texte directement dans le fil de discussion du chat.
 * **Démarcation visuelle :** Ligne de séparation verticale élégante à gauche du panneau de configuration des paramètres.
-* **Découpage du bundle Vite (-80% de taille) :** Monaco Editor et xterm.js sont isolés dans des sous-lots séparés pour un chargement instantané de l'interface utilisateur.
+* **Découpage du bundle Vite (-80% de taille) :** Monaco Editor et xterm.js sont isolés dans des sous-lots séparés pour un chargement instantanél'interface utilisateur.
 * **Visualisation du plan d'action (Planning Board) :** Intégration d'un bloc dynamique interactif (`PlanningNextMoveBlock`) montrant en temps réel les prochaines étapes planifiées par le Swarm d'agents.
 * **Aperçu d'image immersif (Lightbox) :** Visionneuse d'images de discussion immersive avec zoom à la molette de souris, déplacement panoramique, rotation, téléchargement et fermeture par clic extérieur.
 
@@ -93,9 +66,3 @@ All notable changes to this project will be documented in this file.
 * **Outils MCP de diagnostics Chrome avancés :** Intégration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mémoire en local.
 
 ---
-
-## [Unreleased] - 2026-05-30 01:24:40
-
-### Fixed
-- **Mémoire de l'indexeur local (`crates/sinew-index/src/store.rs`)** : Réduction du cache SQLite et de la mémoire mappée pour éviter qu'un helper d'indexation Sinew gonfle jusqu'à plusieurs dizaines de Go.
-- **Remplissage sémantique progressif (`crates/sinew-index/src/indexer.rs`, `crates/sinew-index/src/store.rs`)** : Limitation du nombre de morceaux vectorisés par passage afin d'éviter les pics mémoire lors des recherches dans le code.
