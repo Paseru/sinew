@@ -59,6 +59,14 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 16:16:37
+
+### Added
+- **Prise en charge de Claude Opus 4.8 (`crates/sinew-anthropic/src/client.rs`, `crates/sinew-anthropic/src/model_info.rs`, `src/lib/models.ts`)** : Intégration du nouveau modèle phare de la gamme d'intelligence artificielle d'Anthropic (Claude Opus 4.8) doté d'une fenêtre de contexte native de 1 million de jetons et des niveaux de réflexion configurables dans l'interface utilisateur.
+
+### Changed
+- **Mise à jour de la configuration de compilation (`Cargo.toml`, `Cargo.lock`)** : Synchronisation des versions des dépendances et du système de compilation avec la version de référence 0.1.26 de la branche parente.
+
 ## [Unreleased] - 2026-05-29 16:21:45
 
 ### Removed
