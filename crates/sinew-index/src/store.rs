@@ -377,13 +377,61 @@ struct SqliteTuning {
 }
 
 fn sqlite_tuning() -> SqliteTuning {
-    let parallelism = thread::available_parallelism()
-        .map(|value| value.get() as i64)
-        .unwrap_or(4);
-    let cache_kib = (parallelism * 16 * 1024).clamp(64 * 1024, 1024 * 1024);
-    let mmap_bytes = (cache_kib * 1024 * 2).clamp(256 * 1024 * 1024, 2 * 1024 * 1024 * 1024);
+    let profile = MachinePowerProfile::current();
+    let cache_kib = (profile.parallelism * 24 * 1024).clamp(96 * 1024, 1536 * 1024);
+    let mmap_bytes = (cache_kib * 1024 * profile.storage_multiplier())
+        .clamp(512 * 1024 * 1024, 4 * 1024 * 1024 * 1024);
     SqliteTuning {
         cache_kib,
         mmap_bytes,
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MachinePowerProfile {
+    parallelism: i64,
+    high_throughput_storage: bool,
+}
+
+impl MachinePowerProfile {
+    fn current() -> Self {
+        Self {
+            parallelism: thread::available_parallelism()
+                .map(|value| value.get() as i64)
+                .unwrap_or(4),
+            high_throughput_storage: high_throughput_storage_available(),
+        }
+    }
+
+    fn storage_multiplier(self) -> i64 {
+        if self.high_throughput_storage {
+            4
+        } else {
+            2
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn high_throughput_storage_available() -> bool {
+    use std::os::windows::process::CommandExt;
+
+    let output = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance Win32_DiskDrive | Select-Object -ExpandProperty Model",
+        ])
+        .creation_flags(0x08000000)
+        .output();
+    let Ok(output) = output else {
+        return true;
+    };
+    let text = String::from_utf8_lossy(&output.stdout).to_ascii_lowercase();
+    text.contains("nvme") || text.contains("ssd")
+}
+
+#[cfg(not(target_os = "windows"))]
+fn high_throughput_storage_available() -> bool {
+    true
 }

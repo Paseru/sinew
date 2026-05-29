@@ -1,4 +1,9 @@
 # Changelog
+## [Unreleased] - 2026-05-30 01:18:00
+
+### Improved
+- **Mode plein gaz adaptatif (`crates/sinew-index/src/store.rs`)** : Sinew pousse plus fort partout, puis augmente encore le cache et la lecture memoire quand la machine signale un stockage rapide type SSD/NVMe. Le reglage reste general et s'adapte au PC utilise au lieu de viser une configuration precise.
+- **Tracabilite (`CHANGELOG.md`)** : ajout de cette entree pour documenter l'amelioration demandee.
 
 ## [Unreleased] - 2026-05-30 01:08:50
 
