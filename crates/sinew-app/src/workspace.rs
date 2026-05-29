@@ -1410,17 +1410,38 @@ fn preview_image_media_type(path: &Path) -> Option<&'static str> {
 }
 
 fn relative_from_root(root: &Path, path: &Path) -> Result<String> {
-    let relative = path
-        .strip_prefix(root)
-        .with_context(|| format!("{} is outside the workspace", path.display()))?;
-    Ok(relative
-        .components()
-        .filter_map(|component| match component {
-            Component::Normal(value) => Some(value.to_string_lossy().into_owned()),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-        .join("/"))
+    let root_canonical = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+    let path_canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    #[cfg(target_os = "windows")]
+    {
+        let root_str = root_canonical.to_string_lossy().replace('\\', "/");
+        let path_str = path_canonical.to_string_lossy().replace('\\', "/");
+        let clean_root = if root_str.starts_with("//?/") { &root_str[4..] } else { &root_str };
+        let clean_path = if path_str.starts_with("//?/") { &path_str[4..] } else { &path_str };
+        let root_lower = clean_root.to_lowercase();
+        let path_lower = clean_path.to_lowercase();
+        if path_lower.starts_with(&root_lower) {
+            let relative_part = &clean_path[root_lower.len()..];
+            let trimmed = relative_part.trim_start_matches('/');
+            Ok(trimmed.to_string())
+        } else {
+            bail!("{} is outside the workspace", path.display());
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let relative = path_canonical
+            .strip_prefix(&root_canonical)
+            .with_context(|| format!("{} is outside the workspace", path.display()))?;
+        Ok(relative
+            .components()
+            .filter_map(|component| match component {
+                Component::Normal(value) => Some(value.to_string_lossy().into_owned()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("/"))
+    }
 }
 
 fn directory_has_children(path: &Path) -> bool {
