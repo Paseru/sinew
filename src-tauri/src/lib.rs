@@ -286,6 +286,144 @@ fn merge_databases(
     Ok(())
 }
 
+pub(crate) fn is_sync_enabled() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let file = std::path::PathBuf::from(localappdata)
+                .join("hyrak")
+                .join("sinew")
+                .join("data")
+                .join("multi_pc_enabled.txt");
+            return file.exists();
+        }
+    }
+    false
+}
+
+pub(crate) fn save_last_workspace_path(path: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let dir = std::path::PathBuf::from(localappdata)
+                .join("hyrak")
+                .join("sinew")
+                .join("data");
+            let _ = std::fs::create_dir_all(&dir);
+            let file = dir.join("last_workspace.txt");
+            let _ = std::fs::write(&file, path.as_bytes());
+        }
+    }
+    let _ = path;
+}
+
+pub(crate) fn load_last_workspace_path() -> Option<String> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+            let file = std::path::PathBuf::from(localappdata)
+                .join("hyrak")
+                .join("sinew")
+                .join("data")
+                .join("last_workspace.txt");
+            if file.exists() {
+                if let Ok(content) = std::fs::read_to_string(&file) {
+                    return Some(content.trim().to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+pub(crate) fn run_git_auto_pull(workspace_path: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let path = std::path::Path::new(workspace_path);
+        if !path.exists() {
+            return;
+        }
+
+        tracing::info!("Git Auto-Pull on startup/open for workspace: {:?}", path);
+        
+        let status = Command::new("cmd")
+            .args(&["/C", "git pull"])
+            .current_dir(path)
+            .status();
+        
+        match status {
+            Ok(s) if s.success() => {
+                tracing::info!("Git Auto-Pull succeeded!");
+            }
+            other => {
+                tracing::warn!("Git Auto-Pull finished with status: {:?}", other);
+            }
+        }
+    }
+    let _ = workspace_path;
+}
+
+pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        let path = std::path::Path::new(workspace_path);
+        if !path.exists() {
+            return;
+        }
+
+        tracing::info!("Git Auto-Commit and Push on exit for workspace: {:?}", path);
+
+        // Check if there are changes
+        let status = Command::new("cmd")
+            .args(&["/C", "git status --porcelain"])
+            .current_dir(path)
+            .output();
+
+        let has_changes = if let Ok(output) = status {
+            !output.stdout.is_empty()
+        } else {
+            true
+        };
+
+        if !has_changes {
+            tracing::info!("No local changes to commit.");
+            return;
+        }
+
+        // Add all changes
+        let _ = Command::new("cmd")
+            .args(&["/C", "git add ."])
+            .current_dir(path)
+            .status();
+
+        // Commit with auto msg
+        let computer_name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Sinew Client".to_string());
+        let commit_msg = format!("chore: auto-sync from {} on exit", computer_name);
+        let _ = Command::new("cmd")
+            .args(&["/C", "git", "commit", "-m", &commit_msg])
+            .current_dir(path)
+            .status();
+
+        // Push
+        let push_status = Command::new("cmd")
+            .args(&["/C", "git push"])
+            .current_dir(path)
+            .status();
+
+        match push_status {
+            Ok(s) if s.success() => {
+                tracing::info!("Git Auto-Push succeeded!");
+            }
+            other => {
+                tracing::error!("Git Auto-Push failed: {:?}", other);
+            }
+        }
+    }
+    let _ = workspace_path;
+}
+
 fn sync_onedrive_db_on_startup() {
     #[cfg(target_os = "windows")]
     {
@@ -351,6 +489,11 @@ fn sync_onedrive_db_on_startup() {
                 let _ = fs::copy(&onedrive_db, &local_db);
             }
         }
+
+        // Git auto pull on startup
+        if let Some(workspace_path) = load_last_workspace_path() {
+            run_git_auto_pull(&workspace_path);
+        }
     }
 }
 
@@ -406,23 +549,17 @@ pub(crate) fn backup_onedrive_db_on_exit() {
                 let _ = fs::copy(&local_db, &onedrive_db);
             }
         }
+
+        // Git auto commit and push on exit
+        if let Some(workspace_path) = load_last_workspace_path() {
+            run_git_auto_commit_and_push(&workspace_path);
+        }
     }
 }
 
 #[tauri::command]
 fn is_multi_pc_sync_enabled() -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
-            let file = std::path::PathBuf::from(localappdata)
-                .join("hyrak")
-                .join("sinew")
-                .join("data")
-                .join("multi_pc_enabled.txt");
-            return file.exists();
-        }
-    }
-    false
+    is_sync_enabled()
 }
 
 #[tauri::command]
@@ -447,82 +584,6 @@ fn set_multi_pc_sync_enabled(enabled: bool) -> Result<(), String> {
         }
     }
     Err("Not supported on this platform".to_string())
-}
-
-#[tauri::command]
-fn trigger_multi_pc_sync() -> Result<String, String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::fs;
-        use std::path::PathBuf;
-
-        // 1. Local AppData path
-        let localappdata = std::env::var("LOCALAPPDATA")
-            .map_err(|_| "LOCALAPPDATA env var not found".to_string())?;
-
-        let local_db = PathBuf::from(&localappdata)
-            .join("hyrak")
-            .join("sinew")
-            .join("data")
-            .join("desktop-state.sqlite3");
-
-        // 2. OneDrive path
-        let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
-            std::env::var("USERPROFILE")
-                .map(|u| format!("{}\\OneDrive", u))
-                .unwrap_or_default()
-        });
-        if onedrive.is_empty() {
-            return Err("OneDrive folder not found".to_string());
-        }
-        let onedrive_db_dir = PathBuf::from(onedrive).join("Documents").join("Sinew");
-        let onedrive_db = onedrive_db_dir.join("desktop-state.sqlite3");
-
-        if !local_db.exists() {
-            return Err("Local database does not exist".to_string());
-        }
-
-        let _ = fs::create_dir_all(&onedrive_db_dir);
-
-        // A. Backup local database
-        let backup_path = local_db.with_extension("sqlite3.bak");
-        let _ = fs::copy(&local_db, &backup_path);
-
-        // B. Merge Local -> OneDrive (push changes to OneDrive)
-        let mut steps = Vec::new();
-        if onedrive_db.exists() {
-            if let Err(e) = merge_databases(&onedrive_db, &local_db) {
-                tracing::warn!("Manual sync Local -> OneDrive merge failed, attempting copy: {:?}", e);
-                if let Err(err) = fs::copy(&local_db, &onedrive_db) {
-                    return Err(format!("Failed to copy database to OneDrive: {:?}", err));
-                }
-                steps.push("Uploaded database copy to OneDrive".to_string());
-            } else {
-                steps.push("Merged local database changes into OneDrive".to_string());
-            }
-        } else {
-            if let Err(err) = fs::copy(&local_db, &onedrive_db) {
-                return Err(format!("Failed to copy database to OneDrive: {:?}", err));
-            }
-            steps.push("Created initial OneDrive database copy".to_string());
-        }
-
-        // C. Merge OneDrive -> Local (pull changes from OneDrive)
-        if onedrive_db.exists() {
-            if let Err(e) = merge_databases(&local_db, &onedrive_db) {
-                tracing::error!("Manual sync OneDrive -> Local merge failed: {:?}", e);
-                return Err(format!("Merge OneDrive changes into Local failed: {:?}", e));
-            } else {
-                steps.push("Merged OneDrive database changes into Local".to_string());
-            }
-        }
-
-        return Ok(steps.join(", "));
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        Err("Multi-PC OneDrive Sync is only supported on Windows".to_string())
-    }
 }
 
 fn configure_agent_bridge_paths(app: &AppHandle) {
@@ -866,7 +927,6 @@ pub fn run() {
             updater::updater_current_version,
             is_multi_pc_sync_enabled,
             set_multi_pc_sync_enabled,
-            trigger_multi_pc_sync,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")

@@ -8,6 +8,15 @@ pub(super) async fn open_workspace(
 ) -> std::result::Result<WorkspaceBootstrap, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+
+    // Save last workspace path for Multi-PC sync
+    crate::save_last_workspace_path(&input.workspace_path);
+
+    // If Multi-PC sync is enabled, auto pull the opened workspace
+    if crate::is_sync_enabled() {
+        crate::run_git_auto_pull(&input.workspace_path);
+    }
+
     let mut bootstrap = state
         .store
         .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)

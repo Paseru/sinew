@@ -792,8 +792,5 @@ export const api = {
   setMultiPcSyncEnabled(enabled: boolean) {
     return invoke<void>("set_multi_pc_sync_enabled", { enabled });
   },
-  triggerMultiPcSync() {
-    return invoke<string>("trigger_multi_pc_sync");
-  },
 };
 

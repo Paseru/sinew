@@ -1654,7 +1654,7 @@ export function SettingsPane({ workspacePath }: Props) {
 
       <section className="settings-pane__main">
         {section === "options" ? (
-          <OptionsSection locale={locale} onLocaleChange={setLocale} workspacePath={workspacePath} />
+          <OptionsSection locale={locale} onLocaleChange={setLocale} />
         ) : section === "about" ? (
           <AboutSection locale={locale} />
         ) : section === "providers" ? (
@@ -1821,11 +1821,9 @@ export function SettingsPane({ workspacePath }: Props) {
 function OptionsSection({
   locale,
   onLocaleChange,
-  workspacePath,
 }: {
   locale: AppLocale;
   onLocaleChange: (locale: AppLocale) => void;
-  workspacePath: string;
 }) {
   const [powerUser, setPowerUser] = useState<boolean>(() => {
     try {
@@ -1847,145 +1845,6 @@ function OptionsSection({
   });
 
   const [multiPcSync, setMultiPcSync] = useState<boolean>(false);
-  const [syncingMultiPc, setSyncingMultiPc] = useState<boolean>(false);
-  const [syncStatus, setSyncStatus] = useState<{
-    success: boolean;
-    message: string;
-    details?: string;
-  } | null>(null);
-
-  const runManualMultiPcSync = useCallback(async () => {
-    setSyncingMultiPc(true);
-    setSyncStatus(null);
-    try {
-      // 1. Run database sync
-      const dbResult = await api.triggerMultiPcSync();
-      
-      // 2. If a workspacePath is provided, pull and push the Git repository!
-      let gitSuccess = true;
-      let gitDetails = "";
-      if (workspacePath) {
-        try {
-          // Attempt pull
-          const pullResult = await api.gitPull(workspacePath);
-          gitDetails += `Git Pull: ${pullResult.message || "OK"}. `;
-        } catch (err: any) {
-          // Git pull might fail if not a repo or other reason. Keep going but report.
-          gitSuccess = false;
-          gitDetails += `Git Pull failed: ${err.toString() || "error"}. `;
-        }
-        
-        try {
-          // Attempt push
-          const pushResult = await api.gitPush(workspacePath);
-          gitDetails += `Git Push: ${pushResult.message || "OK"}. `;
-        } catch (err: any) {
-          gitSuccess = false;
-          gitDetails += `Git Push failed: ${err.toString() || "error"}. `;
-        }
-      }
-
-      setSyncStatus({
-        success: true,
-        message: locale === "fr"
-          ? "Synchronisation terminée avec succès !"
-          : "Synchronization completed successfully!",
-        details: `${dbResult}. ${gitDetails}`
-      });
-
-      // Reload the window after 2 seconds to refresh everything cleanly
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-
-    } catch (err: any) {
-      setSyncStatus({
-        success: false,
-        message: locale === "fr"
-          ? "La synchronisation a échoué."
-          : "Synchronization failed.",
-        details: err.toString()
-      });
-    } finally {
-      setSyncingMultiPc(false);
-    }
-  }, [workspacePath, locale]);
-
-  const [autosave, setAutosave] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("sinew.autosave") === "true";
-    } catch {
-      return false;
-    }
-  });
-
-  const [editorFontSize, setEditorFontSize] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("sinew.editor-font-size");
-      return saved ? parseInt(saved, 10) : 12;
-    } catch {
-      return 12;
-    }
-  });
-
-  const [chatFontSize, setChatFontSize] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("sinew.chat-font-size");
-      return saved ? parseInt(saved, 10) : 13;
-    } catch {
-      return 13;
-    }
-  });
-
-  const toggleAutosave = (enabled: boolean) => {
-    try {
-      localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
-    } catch {}
-    setAutosave(enabled);
-    window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: enabled }));
-  };
-
-  const changeEditorFontSize = (size: number) => {
-    try {
-      localStorage.setItem("sinew.editor-font-size", size.toString());
-    } catch {}
-    setEditorFontSize(size);
-    window.dispatchEvent(new CustomEvent("sinew:editor-font-size-changed", { detail: size }));
-  };
-
-  const changeChatFontSize = (size: number) => {
-    try {
-      localStorage.setItem("sinew.chat-font-size", size.toString());
-    } catch {}
-    setChatFontSize(size);
-    document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
-    window.dispatchEvent(new CustomEvent("sinew:chat-font-size-changed", { detail: size }));
-  };
-
-  const [sotaData, setSotaData] = useState<any>(sotaCache.data);
-  const [loadingSota, setLoadingSota] = useState<boolean>(!sotaCache.data && !!sotaCache.promise);
-  const [sotaError, setSotaError] = useState<string | null>(sotaCache.error);
-
-  const runSotaDiagnostics = useCallback(async (force = false) => {
-    // If we have cached data and we are not forcing a refresh, just set it and return.
-    if (!force && sotaCache.data) {
-      setSotaData(sotaCache.data);
-      setSotaError(sotaCache.error);
-      setLoadingSota(false);
-      return;
-    }
-    setLoadingSota(true);
-    setSotaError(null);
-    try {
-      const parsed = await triggerSotaDiagnostics(force);
-      setSotaData(parsed);
-      setSotaError(null);
-    } catch (err: any) {
-      setSotaError(sotaCache.error || err.toString());
-    } finally {
-      setLoadingSota(false);
-    }
-  }, []);
 
   useEffect(() => {
     runSotaDiagnostics(false);
@@ -2214,105 +2073,34 @@ function OptionsSection({
         </div>
       </div>
 
-      <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
-        <div className="settings-pane__about-card-header-flex" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-          <div className="settings-pane__about-card-copy">
-            <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
-            <p>
-              {locale === "fr"
-                ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
-                : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
-            </p>
-          </div>
-          <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync" style={{ flexShrink: 0 }}>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={multiPcSync}
-              data-active={multiPcSync ? "true" : "false"}
-              onClick={() => toggleMultiPcSync(true)}
-            >
-              {locale === "fr" ? "Activé" : "Enabled"}
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={!multiPcSync}
-              data-active={!multiPcSync ? "true" : "false"}
-              onClick={() => toggleMultiPcSync(false)}
-            >
-              {locale === "fr" ? "Désactivé" : "Disabled"}
-            </button>
-          </div>
+      <div className="settings-pane__about-card">
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
+              : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
+          </p>
         </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid var(--line-1, rgba(255, 255, 255, 0.08))", paddingTop: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-            <span style={{ fontSize: "13px", color: "var(--text-2, rgba(255, 255, 255, 0.6))" }}>
-              {locale === "fr"
-                ? "Force une synchronisation immédiate (Base de données OneDrive + Git Pull & Push)."
-                : "Force an immediate synchronization (OneDrive database + Git Pull & Push)."}
-            </span>
-            <button
-              type="button"
-              className="settings-pane__button"
-              onClick={runManualMultiPcSync}
-              disabled={syncingMultiPc}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "6px",
-                backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
-                color: "var(--text-0, #fff)",
-                border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
-                cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                flexShrink: 0
-              }}
-            >
-              {syncingMultiPc ? (
-                <Icon icon="eos-icons:loading" width={14} height={14} />
-              ) : (
-                <Icon icon="solar:round-transfer-horizontal-bold-duotone" width={14} height={14} />
-              )}
-              {locale === "fr" ? "Synchroniser maintenant" : "Sync Now"}
-            </button>
-          </div>
-
-          {syncStatus && (
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-              padding: "10px 12px",
-              borderRadius: "6px",
-              backgroundColor: syncStatus.success ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-              border: `1px solid ${syncStatus.success ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
-              fontSize: "13px"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 500, color: syncStatus.success ? "#22c55e" : "#ef4444" }}>
-                <Icon
-                  icon={syncStatus.success ? "solar:check-circle-bold" : "solar:danger-bold"}
-                  width={18}
-                  height={18}
-                />
-                <span>{syncStatus.message}</span>
-              </div>
-              {syncStatus.details && (
-                <span style={{ fontSize: "11px", color: "var(--text-2, rgba(255, 255, 255, 0.6))", marginLeft: "26px", wordBreak: "break-all" }}>
-                  {syncStatus.details}
-                </span>
-              )}
-              {syncStatus.success && (
-                <span style={{ fontSize: "11px", color: "#22c55e", marginLeft: "26px", fontStyle: "italic", marginTop: "2px" }}>
-                  {locale === "fr" ? "Rechargement de l'application..." : "Reloading application..."}
-                </span>
-              )}
-            </div>
-          )}
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={multiPcSync}
+            data-active={multiPcSync ? "true" : "false"}
+            onClick={() => toggleMultiPcSync(true)}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!multiPcSync}
+            data-active={!multiPcSync ? "true" : "false"}
+            onClick={() => toggleMultiPcSync(false)}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
         </div>
       </div>
 
