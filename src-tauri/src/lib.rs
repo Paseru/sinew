@@ -480,6 +480,50 @@ pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
     let _ = workspace_path;
 }
 
+fn sync_auth_files(localappdata: &str, onedrive_db_dir: &std::path::Path, to_onedrive: bool) {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let local_dir = PathBuf::from(localappdata)
+        .join("hyrak")
+        .join("sinew")
+        .join("data");
+
+    if to_onedrive {
+        // Copy from Local to OneDrive
+        if let Ok(entries) = fs::read_dir(&local_dir) {
+            let _ = fs::create_dir_all(onedrive_db_dir);
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if name.contains("-auth") || name.contains("-device") || name.contains("-stream-state") {
+                            let dest = onedrive_db_dir.join(name);
+                            let _ = fs::copy(&path, &dest);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Copy from OneDrive to Local
+        if let Ok(entries) = fs::read_dir(onedrive_db_dir) {
+            let _ = fs::create_dir_all(&local_dir);
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if name.contains("-auth") || name.contains("-device") || name.contains("-stream-state") {
+                            let dest = local_dir.join(name);
+                            let _ = fs::copy(&path, &dest);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn sync_onedrive_db_on_startup() {
     #[cfg(target_os = "windows")]
     {
@@ -521,6 +565,9 @@ fn sync_onedrive_db_on_startup() {
             .join("instructions_consolidated.md");
 
         let onedrive_dir = PathBuf::from(&onedrive).join("Documents").join("Sinew");
+        // Sync auth files from OneDrive
+        sync_auth_files(&localappdata, &onedrive_dir, false);
+
         let global_errors_onedrive = onedrive_dir.join("errors_raw.json");
         let global_rules_onedrive = onedrive_dir.join("instructions_consolidated.md");
 
@@ -631,6 +678,9 @@ pub(crate) fn backup_onedrive_db_on_exit() {
                 let _ = fs::copy(&local_db, &onedrive_db);
             }
 
+            // Sync auth files to OneDrive
+            sync_auth_files(&localappdata, &onedrive_db_dir, true);
+
             // Sync global learning files to OneDrive on exit
             let global_errors_local = PathBuf::from(&localappdata)
                 .join("Sinew")
@@ -737,6 +787,9 @@ fn force_multi_pc_sync() -> Result<(), String> {
             }
         }
 
+        // Sync auth files from OneDrive
+        sync_auth_files(&localappdata, &onedrive_db_dir, false);
+
         // Sync from Local to OneDrive
         if local_db.exists() {
             let _ = fs::create_dir_all(&onedrive_db_dir);
@@ -768,6 +821,9 @@ fn force_multi_pc_sync() -> Result<(), String> {
                 let _ = fs::copy(&global_rules_local, &global_rules_onedrive);
             }
         }
+
+        // Sync auth files to OneDrive
+        sync_auth_files(&localappdata, &onedrive_db_dir, true);
 
         // Git auto commit/push & pull
         if let Some(workspace_path) = load_last_workspace_path() {

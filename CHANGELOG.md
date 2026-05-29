@@ -1,6 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:54:00
 
+### Added
+- **Synchronisation automatique des jetons de connexion (OAuth/clés) via OneDrive (`src-tauri/src/lib.rs`)** : Ajout de la copie automatique des fichiers de connexion (*-auth.json, *-device.json, *-stream-state.json) lors du démarrage, de la fermeture et de la synchronisation forcée. Cela permet de conserver la connexion aux comptes d'IA (Claude, ChatGPT, etc.) identique sur les deux ordinateurs sans devoir se réauthentifier manuellement.
+- **Identification universelle par Git remote URL (`src-tauri/src/workspace.rs`, `src-tauri/src/conversations.rs`)** : Priorisation de l'URL distante Git comme identifiant de projet unique universel pour une synchronisation 100% automatique et transparente.
 ## [Unreleased] - 2026-05-30 00:42:23
 
 ### Changed
