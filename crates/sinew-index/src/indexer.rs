@@ -160,7 +160,7 @@ fn normalize_relative_path(workspace_root: &Path, path: &Path) -> String {
 }
 
 fn normalize_absolute_path(path: &Path) -> PathBuf {
-    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+    path.to_path_buf()
 }
 
 fn is_under_workspace(workspace_root: &Path, path: &Path) -> bool {
