@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{anyhow, bail, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::text::{decode_text, encode_text, TextEncoding};
