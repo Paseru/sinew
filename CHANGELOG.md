@@ -4,6 +4,7 @@
 
 ### Added
 - **Script de synchronisation forcée (`sync_now.py`)** : Ajout d'un script robuste en Python permettant de fusionner à la demande et en toute sécurité les bases de données locale et OneDrive de Sinew, de copier les fichiers d'apprentissage globaux, et de pousser le dépôt Git vers GitHub pour garantir une sauvegarde multi-PC à 100% sans risque de perte.
+- **Mise à jour du plan d'action (`afaire.md`)** : Ajout de la confirmation de mise en place de la synchronisation forcée à la demande.
 
 ## [Unreleased] - 2026-05-29 17:17:36
 

@@ -163,7 +163,7 @@ def sync():
         if status_out.strip():
             print("Uncommitted changes found in workspace. Committing them...")
             subprocess.run(["git", "add", "."], check=True)
-            subprocess.run(["git", "commit", "-m", "chore: force-sync workspace from local PC before exit"], check=True)
+            subprocess.run(["git", "commit", "-m", "Sauvegarde automatique et synchronisation complète avant de quitter"], check=True)
             
         print("Pushing commits to remote repository...")
         subprocess.run(["git", "push"], check=True)
