@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased] - 2026-05-30 00:32:00
+
+### Fixed
+- **Normalisation et exclusion de l'UUID du projet actuel dans la liste des autres workspaces (`crates/sinew-app/src/store.rs`, `src-tauri/src/conversations.rs`)** : Correction du bug où l'identifiant unique (UUID) du projet actuel s'affichait comme un autre projet dans la liste de détection. Amélioration de la robustesse de la migration de chemin en ignorant la casse et la forme des slashes (Windows).
+
 ## [Unreleased] - 2026-05-30 00:13:17
 
 ### Changed

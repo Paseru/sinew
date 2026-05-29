@@ -729,12 +729,13 @@ impl AppStore {
         Ok(conversations)
     }
 
-    pub fn list_other_workspaces(&self, current_workspace_id: &str) -> Result<Vec<OtherWorkspaceSummary>> {
+    pub fn list_other_workspaces(&self, current_workspace_id: &str, current_project_id: Option<&str>) -> Result<Vec<OtherWorkspaceSummary>> {
         let conn = self.connection()?;
         
         // Clean both paths by converting them to lowercase and replacing forward/backward slashes 
         // to minimize slight path formatting differences
         let normalized_current = current_workspace_id.replace('\\', "/").to_lowercase();
+        let normalized_project = current_project_id.map(|p| p.to_lowercase());
         
         let mut statement = conn
             .prepare(
@@ -756,8 +757,8 @@ impl AppStore {
         for row in rows {
             let (workspace_id, count) = row.context("bad workspace summary row")?;
             let normalized_db = workspace_id.replace('\\', "/").to_lowercase();
-            // Exclude current workspace from other workspaces list
-            if normalized_db != normalized_current {
+            // Exclude current workspace and current project UUID from other workspaces list
+            if normalized_db != normalized_current && Some(&normalized_db) != normalized_project.as_ref() {
                 list.push(OtherWorkspaceSummary {
                     workspace_id,
                     count,
@@ -769,11 +770,27 @@ impl AppStore {
 
     pub fn migrate_conversations(&self, src_workspace_id: &str, dest_workspace_id: &str) -> Result<()> {
         let conn = self.connection()?;
-        conn.execute(
-            "update conversations set workspace_id = ?2 where workspace_id = ?1",
-            params![src_workspace_id, dest_workspace_id],
-        )
-        .context("unable to migrate conversations")?;
+        // Normalize slashes and use case-insensitive matching for paths
+        let src_norm = src_workspace_id.replace('\\', "/").to_lowercase();
+        
+        // Find all distinct workspace_ids in the database that normalize to the same path
+        let mut stmt = conn.prepare("select distinct workspace_id from conversations")?;
+        let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
+        let mut ids_to_migrate = Vec::new();
+        for id in rows {
+            if let Ok(id) = id {
+                if id.replace('\\', "/").to_lowercase() == src_norm {
+                    ids_to_migrate.push(id);
+                }
+            }
+        }
+        
+        for id in ids_to_migrate {
+            conn.execute(
+                "update conversations set workspace_id = ?2 where workspace_id = ?1",
+                params![id, dest_workspace_id],
+            )?;
+        }
         Ok(())
     }
 

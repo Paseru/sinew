@@ -405,9 +405,10 @@ pub(super) async fn list_other_workspaces_conversations(
 ) -> std::result::Result<Vec<sinew_app::OtherWorkspaceSummary>, String> {
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let project_id = workspace::get_or_create_project_id(&workspace_root)?;
     state
         .store
-        .list_other_workspaces(&workspace_root.display().to_string())
+        .list_other_workspaces(&workspace_root.display().to_string(), Some(&project_id))
         .map_err(error_to_string)
 }
 
