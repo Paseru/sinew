@@ -58,7 +58,11 @@ fn chunk_by_symbols(lines: &[&str], relative_path: &str) -> Option<Vec<FileChunk
         }
         push_chunk(&mut chunks, lines, *start, end);
     }
-    if chunks.is_empty() { None } else { Some(chunks) }
+    if chunks.is_empty() {
+        None
+    } else {
+        Some(chunks)
+    }
 }
 
 fn symbol_pattern(ext: &str) -> Option<&'static str> {
@@ -66,13 +70,17 @@ fn symbol_pattern(ext: &str) -> Option<&'static str> {
         "rs" => Some(
             r"^\s*(pub(\([^)]*\))?\s+)?(async\s+)?(fn|struct|enum|trait|impl|mod|type|const|static|macro_rules!)\b",
         ),
-        "ts" | "tsx" | "js" | "jsx" => Some(
-            r"^\s*(export\s+)?(async\s+)?(function|class|interface|type|enum|const)\b",
-        ),
+        "ts" | "tsx" | "js" | "jsx" => {
+            Some(r"^\s*(export\s+)?(async\s+)?(function|class|interface|type|enum|const)\b")
+        }
         "py" => Some(r"^\s*(async\s+)?(def|class)\b"),
         "go" => Some(r"^\s*func(\s|\()"),
-        "java" | "kt" => Some(r"^\s*(public|private|protected|internal|data|sealed|open|abstract|class|interface|enum|fun)\b"),
-        "cs" => Some(r"^\s*(public|private|protected|internal|static|class|interface|struct|enum|record)\b"),
+        "java" | "kt" => Some(
+            r"^\s*(public|private|protected|internal|data|sealed|open|abstract|class|interface|enum|fun)\b",
+        ),
+        "cs" => Some(
+            r"^\s*(public|private|protected|internal|static|class|interface|struct|enum|record)\b",
+        ),
         _ => None,
     }
 }
