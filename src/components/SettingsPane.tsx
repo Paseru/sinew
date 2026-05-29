@@ -1557,7 +1557,6 @@ export function SettingsPane({ workspacePath }: Props) {
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">Options</span>
-          <span className="settings-pane__nav-count">5</span>
         </button>
         <button
           type="button"

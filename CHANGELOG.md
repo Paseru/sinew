@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-05-29 16:39:35
+
+### Removed
+- **Badge numérique sur l'onglet Options (`src/components/SettingsPane.tsx`)** : Retrait du badge dynamique codé en dur affichant un chiffre "5" injustifié sur l'onglet de configuration générale des Options pour un visuel plus propre et professionnel.
+
 ## [Unreleased] - 2026-05-29 16:36:20
 
 ### Changed
