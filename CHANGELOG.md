@@ -59,6 +59,11 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 
 ## 📜 Historique des Versions
 
+## [Unreleased] - 2026-05-29 15:47:36
+
+### Added
+- **Script d'installation automatisé (`package.json`)** : Ajout d'un script `postinstall` pour installer automatiquement les dépendances des extensions locales (`sinew-chrome-bridge` et `scripts/agent-bridge`) lors du lancement initial de `npm install` par n'importe quel développeur ou serveur de compilation.
+
 ## [Unreleased] - 2026-05-29 15:43:42
 
 ### Changed
