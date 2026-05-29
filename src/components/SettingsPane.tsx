@@ -1920,6 +1920,22 @@ function OptionsSection({
     }
   });
 
+  const [gitFrenchMessages, setGitFrenchMessages] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.git-french-messages") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const [autoMockups, setAutoMockups] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.auto-mockups") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
   const toggleAutosave = (enabled: boolean) => {
     try {
       localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
@@ -2071,6 +2087,8 @@ function OptionsSection({
         localStorage.setItem("sinew.git-automation", "true");
         localStorage.setItem("sinew.concise-answers", "true");
         localStorage.setItem("sinew.force-changelog", "true");
+        localStorage.setItem("sinew.git-french-messages", "true");
+        localStorage.setItem("sinew.auto-mockups", "true");
         localStorage.setItem("sinew.autosave", "true");
         localStorage.setItem("sinew.compact-reasoning", "very-compact");
       } catch {}
@@ -2078,6 +2096,8 @@ function OptionsSection({
       setGitAutomation(true);
       setConciseAnswers(true);
       setForceChangelog(true);
+      setGitFrenchMessages(true);
+      setAutoMockups(true);
       setAutosave(true);
       setCompactReasoning("very-compact");
 
@@ -2085,6 +2105,8 @@ function OptionsSection({
       window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:concise-answers-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:git-french-messages-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "very-compact" }));
     } else if (value === "disabled") {
@@ -2093,6 +2115,8 @@ function OptionsSection({
         localStorage.setItem("sinew.git-automation", "false");
         localStorage.setItem("sinew.concise-answers", "false");
         localStorage.setItem("sinew.force-changelog", "false");
+        localStorage.setItem("sinew.git-french-messages", "false");
+        localStorage.setItem("sinew.auto-mockups", "false");
         localStorage.setItem("sinew.autosave", "false");
         localStorage.setItem("sinew.compact-reasoning", "disabled");
       } catch {}
@@ -2100,6 +2124,8 @@ function OptionsSection({
       setGitAutomation(false);
       setConciseAnswers(false);
       setForceChangelog(false);
+      setGitFrenchMessages(false);
+      setAutoMockups(false);
       setAutosave(false);
       setCompactReasoning("disabled");
 
@@ -2107,6 +2133,8 @@ function OptionsSection({
       window.dispatchEvent(new CustomEvent("sinew:git-automation-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:concise-answers-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:git-french-messages-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "disabled" }));
     }
@@ -2132,6 +2160,22 @@ function OptionsSection({
     setPowerUser(gitAutomation || enabled);
     window.dispatchEvent(new CustomEvent("sinew:concise-answers-changed", { detail: enabled }));
     window.dispatchEvent(new CustomEvent("sinew:power-user-changed", { detail: gitAutomation || enabled }));
+  };
+
+  const toggleGitFrenchMessages = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.git-french-messages", enabled ? "true" : "false");
+    } catch {}
+    setGitFrenchMessages(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:git-french-messages-changed", { detail: enabled }));
+  };
+
+  const toggleAutoMockups = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.auto-mockups", enabled ? "true" : "false");
+    } catch {}
+    setAutoMockups(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: enabled }));
   };
 
   const changeCompactReasoning = (value: "disabled" | "compact" | "very-compact") => {
@@ -2333,6 +2377,72 @@ function OptionsSection({
             aria-checked={!conciseAnswers}
             data-active={!conciseAnswers ? "true" : "false"}
             onClick={() => toggleConciseAnswers(false)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Messages Git en Français Simple" : "Simple French Git Messages"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Force l'agent à rédiger des messages de commit Git clairs, simples et en français pour raconter vos idées sans jargon de codeur."
+              : "Forces the agent to write clear, simple Git commit messages in French, describing your ideas without coder jargon."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Simple French Git Messages">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={gitFrenchMessages}
+            data-active={gitFrenchMessages ? "true" : "false"}
+            onClick={() => toggleGitFrenchMessages(true)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!gitFrenchMessages}
+            data-active={!gitFrenchMessages ? "true" : "false"}
+            onClick={() => toggleGitFrenchMessages(false)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Désactivé" : "Disabled"}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        <div className="settings-pane__about-card-copy">
+          <h2>{locale === "fr" ? "Maquettes Visuelles Automatiques" : "Automatic Visual Mockups"}</h2>
+          <p>
+            {locale === "fr"
+              ? "Oblige l'agent à dessiner un schéma d'interface (Mermaid) pour vous faire valider la mise en page avant d'écrire ou de modifier du code."
+              : "Forces the agent to draw a layout diagram (Mermaid) to get your design validation before writing or changing any code."}
+          </p>
+        </div>
+        <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Visual Mockups">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={autoMockups}
+            data-active={autoMockups ? "true" : "false"}
+            onClick={() => toggleAutoMockups(true)}
+            disabled={powerUserMaster !== "custom"}
+          >
+            {locale === "fr" ? "Activé" : "Enabled"}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!autoMockups}
+            data-active={!autoMockups ? "true" : "false"}
+            onClick={() => toggleAutoMockups(false)}
             disabled={powerUserMaster !== "custom"}
           >
             {locale === "fr" ? "Désactivé" : "Disabled"}
@@ -2878,8 +2988,8 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Clic droit interactif sur les fichiers dans le chat, question collante en haut de l'écran, copie libre débloquée, et bouton « Influencer » intelligent."
-                : "Interactive right-click on files in chat, sticky question at top, unlocked text selection, and smart 'Steering' button."}
+                ? "Clic droit interactif sur les onglets (fermeture) et fichiers du chat (ouvrir, révéler, exécuter). Question collante et copie libre du chat débloquée."
+                : "Interactive right-click on tabs and chat files. Sticky question and unlocked chat text copying."}
             </div>
           </div>
 
@@ -2894,12 +3004,12 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:settings-bold-duotone" width={14} height={14} style={{ color: "#f59e0b" }} />
-              {locale === "fr" ? "Options & Confort de Travail" : "Options & Workplace Comfort"}
+              {locale === "fr" ? "Confort Monaco & Polices" : "Monaco Comfort & Fonts"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "3 niveaux de réflexion (Détaillé/Compact/Très compact), Mode Power User avec Git auto, diagnostic SOTA en un clic et version française complète avec synchro OneDrive & SQLite."
-                : "3 thinking levels (Detailed/Compact/Very compact), Power User Mode with auto-Git, one-click SOTA check, and full FR version with OneDrive & SQLite sync."}
+                ? "Ajustement dynamique de la taille du texte (+/-) pour Monaco et le chat. Découpage du bundle Vite (-80% taille) pour chargement instantané."
+                : "Dynamic font size buttons (+/-) for Monaco Editor and chat. Vite bundle splitting (-80% size) for instant UI load."}
             </div>
           </div>
 
@@ -2913,13 +3023,13 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             gap: "4px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
-              <Icon icon="solar:global-bold-duotone" width={14} height={14} style={{ color: "#ec4899" }} />
-              {locale === "fr" ? "Pont Chrome & MCP" : "Chrome Bridge & MCP"}
+              <Icon icon="solar:disk-bold-duotone" width={14} height={14} style={{ color: "#eab308" }} />
+              {locale === "fr" ? "Sauvegarde Auto & Mises à Jour" : "Auto-Save & Updates"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Pilotez Chrome de façon ultra-stable avec clics souris humains et courbes de Bézier. Zéro timeout et masquage de la barre d'avertissement de débogage."
-                : "Ultra-stable Chrome control with human clicks and physical Bézier curves. Zero timeout and hidden debugging bar."}
+                ? "Sauvegarde automatique SOTA 1.5s après la frappe. Écran de mises à jour sécurisé et synchronisation OneDrive & SQLite automatique."
+                : "SOTA auto-save 1.5s after typing. Safe updates screen and automatic OneDrive & SQLite synchronization."}
             </div>
           </div>
 
@@ -2933,13 +3043,13 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             gap: "4px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
-              <Icon icon="solar:cpu-bold-duotone" width={14} height={14} style={{ color: "#8b5cf6" }} />
-              {locale === "fr" ? "Résilience Google Antigravity & DeepSeek" : "Google Antigravity & DeepSeek Resilience"}
+              <Icon icon="solar:shield-check-bold-duotone" width={14} height={14} style={{ color: "#14b8a6" }} />
+              {locale === "fr" ? "Zéro Popup & Robustesse" : "Zero Popup & Resilience"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Routage Gemini AI Ultra avec déclaration d'outils réparée, en-têtes Cursor Stealth, intégration native complète de DeepSeek V3 & R1 (réflexion en continu) et multi-comptes."
-                : "Gemini AI Ultra routing with fixed tools, Cursor Stealth headers, native DeepSeek V3 & R1 (continuous reasoning) integration, and multi-accounts."}
+                ? "Lancement invisible des outils sans popup cmd.exe noire. Diagnostic réseau OAuth Windows résilient (erreur 10013, WinNAT/HNS)."
+                : "Invisible launch of sidecars with zero black cmd popups. Resilient Windows OAuth network check (error 10013, WinNAT/HNS)."}
             </div>
           </div>
 
@@ -2953,13 +3063,13 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             gap: "4px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
-              <Icon icon="solar:magnifier-bold-duotone" width={14} height={14} style={{ color: "#06b6d4" }} />
-              {locale === "fr" ? "Indexation Vectorielle & Auto-correction" : "Vector Search & Auto-correction"}
+              <Icon icon="solar:history-bold-duotone" width={14} height={14} style={{ color: "#6366f1" }} />
+              {locale === "fr" ? "Active Turn & Préfixe PC" : "Active Turn & PC Prefix"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Recherche vectorielle sémantique locale avec badge d'état interactif, diagnostics Monaco en temps réel pour auto-correction et zéro popup Windows noire."
-                : "Local semantic vector search with interactive status badge, real-time Monaco diagnostics for auto-correction, and zero black Windows cmd popups."}
+                ? "Active Turn Registry (Rust) pour reprise de streaming après coupure. Détection automatique du nom PC réel pour les fichiers multi-PC."
+                : "Rust Active Turn Registry for streaming recovery on restart. Automatic PC name prefixing for secure multi-PC files."}
             </div>
           </div>
 
@@ -2973,13 +3083,113 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             gap: "4px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
-              <Icon icon="solar:gallery-bold-duotone" width={14} height={14} style={{ color: "#e11d48" }} />
-              {locale === "fr" ? "Abonnements Gemini Images & Quotas" : "Gemini Images Subscription & Quotas"}
+              <Icon icon="solar:users-group-two-rounded-bold-duotone" width={14} height={14} style={{ color: "#a855f7" }} />
+              {locale === "fr" ? "Multi-comptes & Quotas" : "Multi-accounts & Quotas"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Abonnement Gemini (Google OAuth) sans clé API et sélecteur de modèles d'images. Visualisation des quotas en temps réel et pastilles dans le chat."
-                : "Gemini subscription (Google OAuth) without API key and image model selector. Real-time quota charts and status dots in the chat composer."}
+                ? "Connexion simultanée de plusieurs clés/comptes (OpenAI/Gemini). Pastilles live et barres de progression de consommation crédit dans le chat."
+                : "Simultaneous multi-account keys (OpenAI/Gemini). Live progression bars and credit balance dots directly in the chat."}
+            </div>
+          </div>
+
+          {/* Item 8 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:cpu-bold-duotone" width={14} height={14} style={{ color: "#8b5cf6" }} />
+              {locale === "fr" ? "Google Antigravity & DeepSeek" : "Google Antigravity & DeepSeek"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Routage intelligent Gemini Ultra et streaming optimisé. Intégration de Claude Opus 4.6 via les abonnements professionnels Google."
+                : "Gemini Ultra smart routing and optimized streaming. Claude Opus 4.6 integration via professional Google accounts."}
+            </div>
+          </div>
+
+          {/* Item 9 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:square-academic-cap-bold-duotone" width={14} height={14} style={{ color: "#d946ef" }} />
+              {locale === "fr" ? "Cursor Composer & WebSocket" : "Cursor Composer & WebSocket"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Pont Cursor Composer 2.5 (agent.v1) HTTP/2 autonome. WebSocket natif OpenAI et spoofing d'empreinte anti-blocage ChatGPT."
+                : "Cursor Composer 2.5 (agent.v1) HTTP/2 bridge. Native OpenAI WebSockets and advanced anti-blocking fingerprint spoofing."}
+            </div>
+          </div>
+
+          {/* Item 10 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:compass-bold-duotone" width={14} height={14} style={{ color: "#ec4899" }} />
+              {locale === "fr" ? "Steering & Influence SOTA" : "Steering & SOTA Influence"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Bouton d'interception « Influencer » (Steering) pour orienter, corriger ou ajouter des instructions en direct pendant que l'IA génère."
+                : "Smart 'Steering' button to guide, correct, or add instructions on the fly during generation."}
+            </div>
+          </div>
+
+          {/* Item 11 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:global-bold-duotone" width={14} height={14} style={{ color: "#ec4899" }} />
+              {locale === "fr" ? "Pont Chrome & Réparation" : "Chrome Bridge & Repair"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Pilotage Chrome Rust ultra-stable (clics et courbes Beziers physiques). Bouton bleu de réparation en un clic en cas d'erreur de pont local."
+                : "Native Rust Chrome control with human Bézier curves. One-click blue repair button for the local bridge."}
+            </div>
+          </div>
+
+          {/* Item 12 */}
+          <div style={{
+            background: "var(--bg-1)",
+            border: "1px solid var(--line-1)",
+            borderRadius: "var(--r-med)",
+            padding: "10px 12px",
+            display: "grid",
+            gap: "4px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
+              <Icon icon="solar:magnifier-bold-duotone" width={14} height={14} style={{ color: "#06b6d4" }} />
+              {locale === "fr" ? "Recherche Vectorielle & 8 Couches" : "Vector Search & 8-Layer"}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
+              {locale === "fr" 
+                ? "Indexation vectorielle sémantique locale BGE-Small. Moteur de remplacement Search/Replace intelligent à 8 couches résilient aux espaces."
+                : "Local vector index search with interactive badge. 8-layer smart Search/Replace engine resilient to minor whitespace errors."}
             </div>
           </div>
         </div>

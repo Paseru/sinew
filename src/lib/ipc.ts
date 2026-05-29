@@ -594,6 +594,16 @@ export const api = {
       forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
     } catch {}
 
+    let gitFrenchMessages = true;
+    try {
+      gitFrenchMessages = localStorage.getItem("sinew.git-french-messages") !== "false";
+    } catch {}
+
+    let autoMockups = true;
+    try {
+      autoMockups = localStorage.getItem("sinew.auto-mockups") !== "false";
+    } catch {}
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const clientFormattedDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
@@ -616,6 +626,8 @@ export const api = {
         conciseAnswers,
         agentAutonomy,
         forceChangelog,
+        gitFrenchMessages,
+        autoMockups,
         clientFormattedDateTime,
         displayMode: readDisplayMode(),
       },
@@ -675,6 +687,16 @@ export const api = {
       forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
     } catch {}
 
+    let gitFrenchMessages = true;
+    try {
+      gitFrenchMessages = localStorage.getItem("sinew.git-french-messages") !== "false";
+    } catch {}
+
+    let autoMockups = true;
+    try {
+      autoMockups = localStorage.getItem("sinew.auto-mockups") !== "false";
+    } catch {}
+
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const clientFormattedDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
@@ -693,6 +715,8 @@ export const api = {
         conciseAnswers,
         agentAutonomy,
         forceChangelog,
+        gitFrenchMessages,
+        autoMockups,
         clientFormattedDateTime,
         displayMode: readDisplayMode(),
       },

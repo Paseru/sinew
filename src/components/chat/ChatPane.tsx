@@ -647,6 +647,74 @@ export function ChatPane({
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Reset states when the image changes or is closed
+  useEffect(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+    setRotation(0);
+  }, [previewImage]);
+
+  // Handle escape key
+  useEffect(() => {
+    if (!previewImage) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPreviewImage(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewImage]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale <= 1) return;
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    const nextScale = e.deltaY < 0 ? scale * zoomFactor : scale / zoomFactor;
+    setScale(Math.max(0.5, Math.min(6, nextScale)));
+  };
+
+  const downloadImage = async (path: string) => {
+    try {
+      const response = await fetch(convertFileSrc(path));
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = basename(path);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download image", err);
+    }
+  };
+
   useEffect(() => {
     activeSubAgentIdRef.current = activeSubAgentId;
   }, [activeSubAgentId]);
@@ -3154,16 +3222,91 @@ export function ChatPane({
     >
       {previewImage && (
         <div
-          className="img-preview"
+          className="img-preview-lightbox"
           onClick={() => setPreviewImage(null)}
           role="dialog"
           aria-modal="true"
+          onWheel={handleWheel}
         >
-          <img
-            src={convertFileSrc(previewImage)}
-            alt={basename(previewImage)}
-            onClick={(event) => event.stopPropagation()}
-          />
+          <div className="img-preview-lightbox__container" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={convertFileSrc(previewImage)}
+              alt={basename(previewImage)}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{
+                transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+                cursor: scale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
+                transition: isDragging ? "none" : "transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)",
+                maxHeight: "85vh",
+                maxWidth: "85vw",
+                objectFit: "contain",
+                userSelect: "none",
+                pointerEvents: "auto",
+              }}
+            />
+            
+            {/* Elegant glassmorphic toolbar */}
+            <div className="img-preview-lightbox__toolbar">
+              <button
+                type="button"
+                onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}
+                title="Zoom arrière"
+              >
+                <Icon icon="solar:magnifer-zoom-out-linear" width={18} height={18} />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); }}
+                title="Taille réelle"
+                style={{ fontSize: "11px", fontWeight: "bold" }}
+              >
+                {Math.round(scale * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={() => setScale((s) => Math.min(6, s + 0.25))}
+                title="Zoom avant"
+              >
+                <Icon icon="solar:magnifer-zoom-in-linear" width={18} height={18} />
+              </button>
+              <span className="img-preview-lightbox__divider" />
+              <button
+                type="button"
+                onClick={() => setRotation((r) => r - 90)}
+                title="Tourner à gauche"
+              >
+                <Icon icon="solar:restart-linear" width={18} height={18} style={{ transform: "scaleX(-1)" }} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setRotation((r) => r + 90)}
+                title="Tourner à droite"
+              >
+                <Icon icon="solar:restart-linear" width={18} height={18} />
+              </button>
+              <span className="img-preview-lightbox__divider" />
+              <button
+                type="button"
+                className="img-preview-lightbox__btn-download"
+                onClick={() => downloadImage(previewImage)}
+                title="Télécharger l'image"
+              >
+                <Icon icon="solar:download-linear" width={18} height={18} />
+              </button>
+              <span className="img-preview-lightbox__divider" />
+              <button
+                type="button"
+                className="img-preview-lightbox__btn-close"
+                onClick={() => setPreviewImage(null)}
+                title="Fermer"
+              >
+                <Icon icon="solar:close-circle-linear" width={18} height={18} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {dropActive && !viewingSubAgent && (

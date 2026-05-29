@@ -34,6 +34,8 @@ pub(super) async fn send_message(
             input.concise_answers,
             input.agent_autonomy,
             input.force_changelog,
+            input.git_french_messages,
+            input.auto_mockups,
             input.client_formatted_date_time.as_deref(),
         )
         .map_err(error_to_string)?;
@@ -481,7 +483,7 @@ pub(super) async fn compact_conversation(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, None)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, None)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -1608,6 +1610,8 @@ pub(super) fn system_prompt_for_workspace(
     concise_answers: bool,
     agent_autonomy: bool,
     force_changelog: bool,
+    git_french_messages: bool,
+    auto_mockups: bool,
     client_formatted_date_time: Option<&str>,
 ) -> Result<String> {
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
@@ -1644,6 +1648,24 @@ pub(super) fn system_prompt_for_workspace(
             3. Clearly document what was changed and why for each file.\n\
             4. Updating `CHANGELOG.md` is a strict requirement and must be done in the exact same turn/action as the file modification. Do not omit this step or wait for the end of the conversation!",
             date_time_str
+        ));
+    }
+
+    if git_french_messages {
+        sections.push(format!(
+            "# Simple French Git Commit Messages\n\n\
+            IMPORTANT: Every single time you make a Git commit in this project, you MUST write the commit message in clear, jargon-free, simple French. \
+            Describe the change or feature in plain business/user terms (for example, `git commit -m \"Ajout du bouton de changelog dans les options\"` instead of `git commit -m \"feat(options): add changelog button\"`). \
+            Never use English, technical abbreviations, or pure developer jargon."
+        ));
+    }
+
+    if auto_mockups {
+        sections.push(format!(
+            "# Automatic Visual Mockups\n\n\
+            IMPORTANT: Every single time the user asks for a visual, layout, design, frontend, or UI change:\n\
+            1. BEFORE writing any code or modifying any files, you MUST generate and display a visual mockup or flowchart using a Mermaid diagram (e.g. ````mermaid ... ````) or describe the proposed layout in extremely clear terms.\n\
+            2. Present this visual layout clearly to the user first so they can validate the design before you proceed with writing the code."
         ));
     }
 

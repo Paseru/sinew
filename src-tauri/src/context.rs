@@ -17,6 +17,8 @@ pub(super) async fn estimate_context(
             input.concise_answers,
             input.agent_autonomy,
             input.force_changelog,
+            input.git_french_messages,
+            input.auto_mockups,
             input.client_formatted_date_time.as_deref(),
         )
         .map_err(error_to_string)?;
@@ -132,7 +134,7 @@ pub(super) async fn estimate_sub_agent_context(
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, None)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, None)
             .map_err(error_to_string)?;
     let settings = state
         .store

@@ -316,6 +316,10 @@ pub(super) struct SendMessageInput {
     #[serde(default)]
     pub(super) force_changelog: bool,
     #[serde(default)]
+    pub(super) git_french_messages: bool,
+    #[serde(default)]
+    pub(super) auto_mockups: bool,
+    #[serde(default)]
     pub(super) client_formatted_date_time: Option<String>,
     #[serde(default)]
     pub(super) display_mode: DisplayModeInput,
@@ -358,6 +362,10 @@ pub(super) struct ContextEstimateInput {
     pub(super) agent_autonomy: bool,
     #[serde(default)]
     pub(super) force_changelog: bool,
+    #[serde(default)]
+    pub(super) git_french_messages: bool,
+    #[serde(default)]
+    pub(super) auto_mockups: bool,
     #[serde(default)]
     pub(super) client_formatted_date_time: Option<String>,
     #[serde(default)]
