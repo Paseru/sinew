@@ -19,6 +19,19 @@ let mermaidPromise: Promise<MermaidApi> | null = null;
 let mermaidInitialized = false;
 let mermaidIdCounter = 0;
 
+function cleanupMermaidGarbage() {
+  if (typeof document === "undefined") return;
+  // Mermaid v11 leaves temporary rendering divs in the body on error or concurrently
+  const garbage = document.querySelectorAll('body > [id^="dmermaid"], body > [id^="mermaid-"]');
+  garbage.forEach((el) => {
+    try {
+      el.remove();
+    } catch (e) {
+      console.warn("Failed to remove Mermaid garbage element:", e);
+    }
+  });
+}
+
 function loadMermaid(): Promise<MermaidApi> {
   if (!mermaidPromise) {
     mermaidPromise = import("mermaid").then((module) => module.default);
@@ -84,6 +97,9 @@ async function renderMermaid(source: string, id: string) {
     });
     mermaidInitialized = true;
   }
+  // Call parse first to ensure the syntax is valid.
+  // This prevents Mermaid from writing temporary error/syntax-error elements to the DOM.
+  await mermaid.parse(source);
   return mermaid.render(id, source);
 }
 
@@ -130,11 +146,13 @@ export const MermaidDiagram = memo(function MermaidDiagram({ source }: Props) {
       })
       .catch((error) => {
         if (cancelled) return;
+        cleanupMermaidGarbage();
         setState({ status: "error", message: formatMermaidError(error) });
       });
 
     return () => {
       cancelled = true;
+      cleanupMermaidGarbage();
     };
   }, [source]);
 
