@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:57:59]
+- `RAPPORT_DAEMON_PERSISTANT.md` : Création du rapport de conception SOTA détaillant le découplage du moteur de discussion en démon d'arrière-plan Windows persistant (Named Pipes, cycle de vie detached, persistance SQLite, stream de reconnexion).
+
+
 ## [2026-05-30 02:52:05]
 - `sinew-chrome-bridge/mcp_server.js`, `sinew-chrome-bridge/server.js` : Suppression définitive des anciens serveurs Node.js obsolètes après la réécriture totale du pont Chrome en Rust.
 - `sinew-chrome-bridge/register.ps1` : Nettoyage et suppression complète des dépendances et lanceurs Node.js (`ws`, `npm install`, fichiers `.bat`) pour un déploiement 100% natif.
