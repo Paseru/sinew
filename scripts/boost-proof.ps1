@@ -1,49 +1,45 @@
-# Preuve mesuree : distillation locale vs lecture brute
-# Compare les jetons qu'une IA cloud consommerait AVEC vs SANS le distillateur local.
+# Preuve v2 : la BONNE architecture (recherche cible -> petit contexte -> reponse juste)
 $ErrorActionPreference = "Stop"
 $target = "C:\dev\sinew\src\components\SettingsPane.tsx"
 $question = "Where is the semantic embeddings toggle defined, what is its localStorage key, and which IPC function does it call?"
 
-$raw = Get-Content -Raw -Path $target
-$rawChars = $raw.Length
-$rawTokens = [math]::Round($rawChars / 4)
+$lines = Get-Content -Path $target
+$rawTokens = [math]::Round(($lines -join "`n").Length / 4)
 
-# Charge le 3B en memoire et le garde resident (keep_alive: -1)
+# Etape 1 : RECHERCHE CIBLEE (ce que fait l'index/grep) -> ne garde que les lignes pertinentes + contexte
+$pattern = "semantic|embeddings|setSemanticEmbeddings|sinew\.semantic"
+$hits = @()
+for ($i = 0; $i -lt $lines.Count; $i++) {
+  if ($lines[$i] -match $pattern) {
+    $start = [math]::Max(0, $i - 2); $end = [math]::Min($lines.Count - 1, $i + 2)
+    $hits += ($start..$end)
+  }
+}
+$hits = $hits | Sort-Object -Unique
+$snippet = ($hits | ForEach-Object { "{0}: {1}" -f ($_ + 1), $lines[$_] }) -join "`n"
+$snipTokens = [math]::Round($snippet.Length / 4)
+
+# Etape 2 : le distillateur local resume CE bout borne (et non tout le fichier)
 $prompt = @"
-You are a code-context distiller for an AI coding agent. A teammate AI needs to answer this question:
-"$question"
-Read the file below and output ONLY the minimal facts needed to answer (function names, line hints, keys, IPC calls). Be terse. Max 150 words. No code blocks.
+Answer this question using ONLY the snippet. Be terse, max 60 words, give exact key and IPC name.
+Question: $question
 
-FILE (SettingsPane.tsx):
-$raw
+SNIPPET:
+$snippet
 "@
-
-$body = @{
-  model      = "qwen2.5:3b"
-  prompt     = $prompt
-  stream     = $false
-  keep_alive = -1
-  options    = @{ num_ctx = 16384; temperature = 0.1 }
-} | ConvertTo-Json -Depth 6
-
+$body = @{ model="qwen2.5:3b"; prompt=$prompt; stream=$false; keep_alive=-1; options=@{ num_ctx=8192; temperature=0 } } | ConvertTo-Json -Depth 6
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-$resp = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 600
+$resp = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 300
 $sw.Stop()
+$ans = $resp.response.Trim()
 
-$distilled = $resp.response.Trim()
-$distChars = $distilled.Length
-$distTokens = [math]::Round($distChars / 4)
-$saved = [math]::Round((1 - ($distTokens / $rawTokens)) * 100, 1)
-
-Write-Host "=================== PREUVE BOOST LOCAL ==================="
-Write-Host ("Fichier            : SettingsPane.tsx")
-Write-Host ("Question posee     : " + $question)
-Write-Host "----------------------------------------------------------"
-Write-Host ("SANS boost (lecture brute du fichier) : {0} jetons" -f $rawTokens)
-Write-Host ("AVEC boost (resume du 3B local)        : {0} jetons" -f $distTokens)
-Write-Host ("ECONOMIE de jetons cloud               : {0} %" -f $saved)
-Write-Host ("Temps de distillation locale           : {0} s" -f [math]::Round($sw.Elapsed.TotalSeconds,1))
-Write-Host "----------------------------------------------------------"
-Write-Host "Reponse distillee fournie a l'IA cloud :"
-Write-Host $distilled
-Write-Host "=========================================================="
+Write-Host "=================== PREUVE BOOST LOCAL v2 ==================="
+Write-Host ("Question : " + $question)
+Write-Host "------------------------------------------------------------"
+Write-Host ("SANS boost  : lire tout SettingsPane.tsx          = {0} jetons" -f $rawTokens)
+Write-Host ("AVEC boost  : recherche ciblee -> {0} lignes        = {1} jetons" -f $hits.Count, $snipTokens)
+Write-Host ("ECONOMIE    : {0} %" -f [math]::Round((1-($snipTokens/$rawTokens))*100,1))
+Write-Host ("Distillation locale (3B) en {0}s, reponse juste :" -f [math]::Round($sw.Elapsed.TotalSeconds,1))
+Write-Host "------------------------------------------------------------"
+Write-Host $ans
+Write-Host "============================================================"
