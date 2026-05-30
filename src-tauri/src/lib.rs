@@ -1206,6 +1206,7 @@ pub fn run() {
             is_multi_pc_sync_enabled,
             set_multi_pc_sync_enabled,
             force_multi_pc_sync,
+            log_frontend_error,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")
@@ -1224,6 +1225,21 @@ pub fn run() {
                 }
             }
         })
+}
+
+/// Capture les erreurs du frontend (React/TypeScript) dans le log centralisé
+#[tauri::command]
+fn log_frontend_error(message: String, source: String) {
+    let log_dir = std::path::PathBuf::from(
+        std::env::var("LOCALAPPDATA").unwrap_or_default()
+    ).join("dev").join("hyrak").join("sinew").join("data").join("logs");
+    let _ = std::fs::create_dir_all(&log_dir);
+    let log_path = log_dir.join("frontend-error.log");
+    let line = format!("[{}] [{}] {}\n", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), source, message);
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&log_path) {
+        use std::io::Write;
+        let _ = f.write_all(line.as_bytes());
+    }
 }
 
 

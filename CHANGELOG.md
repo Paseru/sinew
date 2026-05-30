@@ -2,20 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-05-30 03:51:08]
-- `src/styles.css` : Question sticky agrandie — police 15px au lieu de 12px, interlignage 1.65 au lieu de 1.5. Retrait de `.question-tool__prompt` du bloc `!important` global pour éviter les conflits et ajout d'une règle dédiée `.tool-card--questionnaire .question-tool__prompt` avec `!important` ciblé.
-
-## [2026-05-30 03:48:12]
-- `src/styles.css` : Remplacement de toutes les couleurs d'accent bleues (`#3b82f6`, `#2563eb`) par des nuances de gris (`#9ca3af`, `#4b5563`) dans les thèmes sombre, clair et système. Conversion du lavender/violet en gris froid également. Mise à jour des ombres et bordures associées.
-- `src/lib/quotas.ts` : Changement de la couleur de quota de bleu à gris (`#3b82f6` → `#9ca3af`).
-- `src/components/EditorPane.tsx` : Curseur éditeur bleu → gris, commentaire "Soft blue" → "Soft cool gray".
-- `src/components/chat/MermaidDiagram.tsx` : Bordure de tâche active bleue → grise.
-- `src/components/TerminalPanel.tsx` : Couleurs terminal `blue` et `brightBlue` passées en gris.
-- `src/components/SettingsPane.tsx` : Icônes, badges, boutons et bordures bleus → gris. Correction du texte "blue repair button" → "gray repair button".
-
-## [2026-05-30 03:44:53]
-- `src/styles.css` : Ajout règle CSS `.md p:empty { display: none; }` pour masquer les paragraphes vides générés par DeepSeek en mode très compact.
-- `src-tauri/src/turns.rs` : Renforcement du prompt Very Compact avec "Never output empty paragraphs or blank lines in your visible responses."
+## [2026-05-30 03:51:25]
+- `src-tauri/src/main.rs` : Ajout d'un panic hook global qui capture toutes les panics Rust dans `logs/panic.log` avant le crash.
+- `src-tauri/src/lib.rs` : Ajout de la commande `log_frontend_error` qui écrit les erreurs du frontend dans `logs/frontend-error.log`.
+- `src/main.tsx` : Ajout de `window.onerror` et `window.onunhandledrejection` qui capturent toutes les erreurs JS/React et les envoient au backend.
+- `src/lib/ipc.ts` : Ajout de la méthode `logFrontendError`.
+- **Couverture erreurs totale** : panics Rust + erreurs React/JS + erreurs bridge = tout dans `logs/`.
 
 ## [2026-05-30 03:48:15]
 - `scripts/agent-bridge/run-stream.mjs` : Ajout logger JSON fichier vers `logs/agent-bridge.log` + timers (bridge_start, h2_connected, mcp_tool_exec, bridge_end).

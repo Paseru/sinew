@@ -930,5 +930,8 @@ export const api = {
   triggerAiRuleConsolidation(providerId: string) {
     return invoke<string>("trigger_ai_rule_consolidation", { providerId });
   },
+  logFrontendError(message: string, source: string) {
+    return invoke<void>("log_frontend_error", { message, source });
+  },
 };
 

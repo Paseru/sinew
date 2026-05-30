@@ -6,6 +6,30 @@ import "./lib/frRuntime";
 import "./lib/customIcons";
 import { api } from "./lib/ipc";
 
+// ── Capture toutes les erreurs frontend dans le log centralisé ──
+function captureFrontendError(message: string, source: string) {
+  // Toujours logger dans la console navigateur
+  console.error(`[${source}]`, message);
+  // Puis envoyer au backend pour écriture dans logs/frontend-error.log
+  try {
+    api.logFrontendError(message, source).catch(() => {});
+  } catch {}
+}
+
+window.addEventListener("error", (event) => {
+  const msg = event.error
+    ? `${event.error.message}\n${event.error.stack || ""}`
+    : event.message;
+  captureFrontendError(msg, `window.onerror:${event.filename}:${event.lineno}`);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const msg = event.reason
+    ? event.reason?.message || String(event.reason)
+    : "Unhandled Promise rejection";
+  captureFrontendError(msg, "unhandledrejection");
+});
+
 // Suppress the native WebKit context menu everywhere except inside text
 // inputs (where the OS-level copy/paste menu is still useful). Components
 // that want a context menu must intercept the event themselves and call
