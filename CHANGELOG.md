@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 15:27:26]
+- `src-tauri/src/tray.rs` : Nettoyage du code Rust. Suppression des imports de modules inutilisés (`DesktopState`, `Runtime`, `Manager`) et des variables mortes (`handle`, `tray`) signalés par le compilateur pour maintenir une base de code propre et sans avertissements.
+
 ## [2026-05-30 15:25:37]
 - `Cargo.lock`, `Cargo.toml`, `package.json`, `src-tauri/tauri.conf.json` : Mise à jour de la version vers la `0.1.27` via la fusion avec le dépôt upstream.
 - `crates/sinew-app/src/store.rs` : Amélioration SOTA du mode Plan. L'IA a interdiction de détailler l'implémentation (code, shell), mais doit impérativement conserver les choix de design, les technologies et les paramètres décidés lors de la discussion pour un plan plus précis et actionnable.

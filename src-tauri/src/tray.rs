@@ -1,11 +1,11 @@
-use crate::DesktopState;
+
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItemBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, Runtime,
+    AppHandle,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,8 +105,7 @@ pub fn update_tray_menu(app: &AppHandle) -> anyhow::Result<()> {
 }
 
 pub fn setup_tray(app: &tauri::App) -> anyhow::Result<()> {
-    let handle = app.handle().clone();
-    let tray = TrayIconBuilder::with_id("main")
+    let _tray = TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().unwrap().clone())
         .tooltip("Sinew")
         .on_menu_event(move |app_handle, event| {
