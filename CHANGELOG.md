@@ -2,7 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 16:01:00]
+- `src-tauri/src/workspace.rs` : Création de la commande Tauri `mount_super_ssh_workspace` qui orchestre la connexion "Super SSH". Cette commande déploie dynamiquement le daemon natif compilé sur le serveur distant via SCP, le démarre en arrière-plan, puis met en place un port forwarding SSH local (47990 -> 127.0.0.1:47990) sans bloquer l'interface.
+- `src-tauri/src/workspace.rs` : Ajout de la méthode `proxy_to_daemon` et interception des requêtes de fichiers (`list_workspace_entries_command`, `list_workspace_files_command`, `read_workspace_file_command`, `write_workspace_file_command`, `search_workspace_files_command`). Si l'espace de travail est préfixé par `super-ssh://`, les commandes ne lisent pas le disque local mais encapsulent l'appel en JSON et le transmettent au daemon distant sur le port 47990 pour une latence nulle.
+- `src-tauri/src/turns.rs` : Modification du routeur d'agents (`run_turn_via_daemon`). En mode Super SSH, la communication ne s'établit plus sur le pipe nommé Windows `\\.\pipe\sinew-agent-ipc` mais via une connexion TCP directe (`127.0.0.1:47990`) vers le daemon Linux du serveur.
+- `crates/sinew-app/src/workspace.rs` : Dérivation et exposition complète des traits de désérialisation (`Deserialize`) sur toutes les structures liées aux résultats de requêtes de l'espace de travail (`WorkspaceEntry`, `FileDocument`, `WorkspaceSearchResult`, etc.) pour supporter le parsing des données distantes renvoyées par le proxy.
+- `src-tauri/src/lib.rs` : Exposition de la commande système `mount_super_ssh_workspace` au processus IPC Tauri pour permettre au client React de l'invoquer depuis `Welcome.tsx`.
+
+## [2026-05-30 16:09:40]
+- `src-tauri/src/turns.rs` : Assouplissement du prompt système de la règle "Maquettes Visuelles Automatiques" suite aux retours utilisateurs. L'agent est désormais encouragé à générer proactivement des diagrammes Mermaid pour illustrer ses explications ou son architecture, au lieu de s'en priver par peur de bloquer l'édition de fichiers.
+- `src/components/SettingsPane.tsx` : Mise à jour de la description UI de la règle des maquettes visuelles pour refléter le changement (passage d'un comportement passif "uniquement si demandé" à un comportement proactif "Génère spontanément des schémas").
+
 ## [2026-05-30 16:05:00]
+- `crates/sinew-agent-daemon/src/protocol.rs` & `crates/sinew-agent-daemon/src/main.rs` : Ajout des requêtes `ListEntries`, `ListAllFiles`, `ReadFile` et `WriteFile` au protocole IPC du démon. Cela permet au frontend de lire et écrire des fichiers distants via le proxy TCP en mode Super SSH, sans nécessiter de point de montage SSHFS, garantissant une latence nulle.
 - `src/components/Welcome.tsx` : Ajout de l'option de sélection "Super SSH (Native Agent)" dans le formulaire de connexion SSH pour utiliser le nouveau mode de connexion proxy distant SOTA.
 - `src/lib/ipc.ts` : Ajout de la méthode `mountSuperSshWorkspace` qui appelle la commande Tauri `connect_super_ssh` de `@backend_ssh` pour gérer la connexion "Super SSH".
 

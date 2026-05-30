@@ -3154,8 +3154,8 @@ function OptionsSection({
                   <h2>{locale === "fr" ? "Maquettes Visuelles Automatiques" : "Automatic Visual Mockups"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Génère un schéma Mermaid ou un plan visuel uniquement si vous le demandez ou si l'agent l'estime nécessaire."
-                      : "Generates a Mermaid diagram or a visual layout only if you ask for it or if the agent deems it necessary."}
+                      ? "Génère spontanément des schémas Mermaid et des plans visuels pour illustrer vos explications, sans pour autant bloquer chaque petite édition de fichier."
+                      : "Proactively generates Mermaid diagrams and visual layouts to illustrate explanations, without blocking on every minor file edit."}
                   </p>
                 </div>
                 <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Visual Mockups">

@@ -1799,7 +1799,7 @@ pub(super) fn system_prompt_for_workspace(
     if auto_mockups {
         sections.push(format!(
             "# Automatic Visual Mockups\n\n\
-            IMPORTANT: Only generate a visual mockup or flowchart (e.g. Mermaid diagram) if the user explicitly asks for a visual layout/report, or if you determine that drawing a visual plan is necessary to clarify a complex layout change. Do not block or ask for validation every single time a frontend file is edited."
+            IMPORTANT: Proactively generate Mermaid diagrams and visual flowcharts to help the user visualize your logic, architectural changes, or complex processes. You should default to illustrating your explanations whenever it adds value for a power user. However, do not block the actual file editing to ask for validation on UI mockups every single time you edit a simple frontend file."
         ));
     }
 
@@ -2094,7 +2094,7 @@ async fn run_turn_via_daemon(
     sub_agent_settings: &sinew_app::SubAgentSettings,
     event_tx: tokio::sync::mpsc::UnboundedSender<sinew_app::AgentEvent>,
 ) -> anyhow::Result<sinew_app::TurnOutput> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::io::{AsyncWriteExt, BufReader};
     use tokio::net::windows::named_pipe::ClientOptions;
     use anyhow::Context;
 
@@ -2128,10 +2128,25 @@ async fn run_turn_via_daemon(
 
     let mut req_bytes = serde_json::to_vec(&request)?;
     req_bytes.push(b'\n');
+    
+    if workspace_path.starts_with("super-ssh://") {
+        let mut client = tokio::net::TcpStream::connect("127.0.0.1:47990").await.context("Failed to connect to remote daemon over TCP")?;
+        client.write_all(&req_bytes).await?;
+        let (reader, _) = tokio::io::split(client);
+        return handle_daemon_stream(BufReader::new(reader), event_tx).await;
+    }
+
     client.write_all(&req_bytes).await?;
 
     let (reader, _) = tokio::io::split(client);
-    let mut reader = BufReader::new(reader);
+    handle_daemon_stream(BufReader::new(reader), event_tx).await
+}
+
+async fn handle_daemon_stream<R: tokio::io::AsyncRead + Unpin>(
+    mut reader: tokio::io::BufReader<R>,
+    event_tx: tokio::sync::mpsc::UnboundedSender<sinew_app::AgentEvent>,
+) -> anyhow::Result<sinew_app::TurnOutput> {
+    use tokio::io::AsyncBufReadExt;
     let mut line = String::new();
 
     loop {
