@@ -297,11 +297,11 @@ function MermaidLightbox({ svg, onClose }: LightboxProps) {
     >
       <div className="mermaid-zoom__toolbar" onClick={stop}>
         <button type="button" onClick={zoomOut} title="Zoom out">
-          <Icon icon="solar:minus-circle-linear" width={16} height={16} />
+          <Icon icon="solar:minimize-square-linear" width={16} height={16} />
         </button>
         <span className="mermaid-zoom__scale">{Math.round(scale * 100)}%</span>
         <button type="button" onClick={zoomIn} title="Zoom in">
-          <Icon icon="solar:add-circle-linear" width={16} height={16} />
+          <Icon icon="solar:maximize-square-linear" width={16} height={16} />
         </button>
         <button type="button" onClick={reset} title="Reset view">
           <Icon icon="solar:refresh-linear" width={16} height={16} />

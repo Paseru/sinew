@@ -1328,7 +1328,7 @@ export function ToolCard({
             }}
             title="Auto-réparer avec un agent"
           >
-            <Icon icon="solar:wrench-linear" width={12} height={12} />
+            <Icon icon="solar:tuning-linear" width={12} height={12} />
             <span>Auto-réparer</span>
           </button>
         )}
@@ -1342,7 +1342,7 @@ export function ToolCard({
             title="Stop Agent Swarm"
           >
             <Icon
-              icon="solar:stop-circle-linear"
+              icon="solar:stop-bold"
               width={13}
               height={13}
             />

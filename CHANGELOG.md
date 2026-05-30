@@ -2,8 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-05-30 03:52:57]
-- `src/styles.css` : Question sticky branchée sur l'option « Chat Font Size » des paramètres (`--chat-font-size`, fallback 15px) avec interlignage 1.65. Retrait de `.question-tool__prompt` du bloc `!important` global et règle dédiée `.tool-card--questionnaire .question-tool__prompt`.
+## [2026-05-30 03:53:45]
+- `crates/sinew-app/src/agent/turn.rs` : Passage de `info!` à `debug!` pour compaction et turn_finished (uniformité totale).
 
 ## [2026-05-30 03:51:25]
 - `src-tauri/src/main.rs` : Ajout d'un panic hook global qui capture toutes les panics Rust dans `logs/panic.log` avant le crash.

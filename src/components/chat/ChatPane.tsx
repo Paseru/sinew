@@ -3300,7 +3300,7 @@ export function ChatPane({
                 onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}
                 title="Zoom arrière"
               >
-                <Icon icon="solar:magnifer-zoom-out-linear" width={18} height={18} />
+                <Icon icon="solar:minimize-square-linear" width={18} height={18} />
               </button>
               <button
                 type="button"
@@ -3315,7 +3315,7 @@ export function ChatPane({
                 onClick={() => setScale((s) => Math.min(6, s + 0.25))}
                 title="Zoom avant"
               >
-                <Icon icon="solar:magnifer-zoom-in-linear" width={18} height={18} />
+                <Icon icon="solar:maximize-square-linear" width={18} height={18} />
               </button>
               <span className="img-preview-lightbox__divider" />
               <button
@@ -3339,7 +3339,7 @@ export function ChatPane({
                 onClick={() => downloadImage(previewImage)}
                 title="Télécharger l'image"
               >
-                <Icon icon="solar:download-linear" width={18} height={18} />
+                <Icon icon="solar:download-square-linear" width={18} height={18} />
               </button>
               <span className="img-preview-lightbox__divider" />
               <button
@@ -3359,7 +3359,7 @@ export function ChatPane({
         <div className="chat-drop-overlay" aria-hidden>
           <div className="chat-drop-overlay__card">
             <span className="chat-drop-overlay__mark">
-              <Icon icon="solar:paperclip-bold" width={24} height={24} />
+              <Icon icon="solar:paperclip-rounded-bold" width={24} height={24} />
             </span>
             <div className="chat-drop-overlay__title">Drop files to attach</div>
             <div className="chat-drop-overlay__sub">
@@ -3377,7 +3377,7 @@ export function ChatPane({
             aria-label="Back to main chat"
             title="Back"
           >
-            <Icon icon="solar:alt-arrow-left-linear" width={16} height={16} />
+            <Icon icon="solar:arrow-left-linear" width={16} height={16} />
           </button>
         )}
         <span className="chat-head__title">
@@ -3414,7 +3414,7 @@ export function ChatPane({
                 className="chat-sticky-question__scroll-btn"
                 aria-label="Défiler vers la question"
               >
-                <Icon icon="solar:arrow-up-linear" width={11} height={11} />
+                <Icon icon="solar:arrow-to-top-left-linear" width={11} height={11} />
               </button>
             </div>
             <div className="chat-sticky-question__body">
@@ -3720,7 +3720,7 @@ export function ChatPane({
                   aria-label="Compaction instruction"
                 >
                   <span className="compact-pill__icon" aria-hidden="true">
-                    <Icon icon="solar:archive-linear" width={14} height={14} />
+                    <Icon icon="solar:archive-bold" width={14} height={14} />
                   </span>
                   <input
                     ref={compactInstructionInputRef}
@@ -4072,7 +4072,7 @@ export function ChatPane({
                 aria-label="Compact context"
                 aria-expanded={compactInstructionOpen}
               >
-                <Icon icon="solar:archive-linear" width={16} height={16} />
+                <Icon icon="solar:archive-bold" width={16} height={16} />
                 <span className="composer__iconbtn-tip" role="tooltip" aria-hidden="true">
                   Compaction
                 </span>
@@ -4492,7 +4492,7 @@ function RewindChangesPreview({
   return (
     <div className="rewind-preview">
       <div className="rewind-preview__head">
-        <Icon icon="solar:rewind-back-bold-duotone" width={15} height={15} />
+        <Icon icon="solar:undo-left-bold-duotone" width={15} height={15} />
         <span className="rewind-preview__title">Rollback</span>
         <button
           type="button"
@@ -6362,7 +6362,7 @@ function BlockView({
       return (
         <div className="msg" data-role="assistant">
           <div className="compaction-marker">
-            <Icon icon="solar:archive-check-linear" width={13} height={13} />
+            <Icon icon="solar:archive-check-bold" width={13} height={13} />
             <span>Conversation compacted</span>
             {formatCompactionMarkerTime(block.compactedAtMs) ? (
               <span className="compaction-marker__time">
@@ -6495,7 +6495,7 @@ function BlockView({
       return (
         <div className="msg" data-role="assistant">
           <div className="turn-duration">
-            <Icon icon="solar:clock-circle-linear" width={13} height={13} />
+            <Icon icon="solar:history-linear" width={13} height={13} />
             <span>Worked for {formatTurnDuration(block.durationMs)}</span>
           </div>
         </div>
@@ -6737,7 +6737,7 @@ function CompactionSummaryBlock({
           <span className="tool-card__spinner" />
         ) : (
           <span className="tool-card__glyph">
-            <Icon icon="solar:archive-linear" width={13} height={13} />
+            <Icon icon="solar:archive-bold" width={13} height={13} />
           </span>
         )}
         <span className="tool-card__title">Compacted context</span>

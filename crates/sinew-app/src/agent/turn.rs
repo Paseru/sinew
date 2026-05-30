@@ -337,7 +337,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             {
                 Ok(true) => {
                     let compaction_ms = compaction_start.elapsed().as_millis();
-                    tracing::info!(
+                    tracing::debug!(
                         provider = provider.name(),
                         compaction_ms,
                         "auto compaction completed before turn"
@@ -467,7 +467,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         {
                             Ok(()) => {
                                 let compaction_ms = compaction_start.elapsed().as_millis();
-                                tracing::info!(
+                                tracing::debug!(
                                     provider = provider.name(),
                                     compaction_ms,
                                     "auto compaction completed after stream error"
@@ -1101,7 +1101,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         event_scope.as_ref(),
         AgentEvent::TurnFinished { duration_ms: Some(turn_start.elapsed().as_millis() as i64) },
     );
-    tracing::info!(
+    tracing::debug!(
         total_turn_ms = turn_start.elapsed().as_millis(),
         cancelled,
         compacted,
