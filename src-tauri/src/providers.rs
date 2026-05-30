@@ -260,6 +260,74 @@ pub(super) fn remove_openrouter_provider(
     Ok(())
 }
 
+pub(super) fn install_ollama_provider(
+    providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
+    models: &[OpenRouterModelRecord],
+) -> std::result::Result<(), String> {
+    let provider = OllamaProvider::from_default_sources(ollama_capabilities(models))
+        .map_err(error_to_string)?;
+    providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?
+        .insert(
+            OLLAMA_PROVIDER_ID.into(),
+            Arc::new(provider) as Arc<dyn Provider>,
+        );
+    Ok(())
+}
+
+pub(super) fn ollama_capabilities(models: &[OpenRouterModelRecord]) -> Vec<ModelCapabilities> {
+    models
+        .iter()
+        .map(|model| {
+            sinew_ollama::capabilities_from_parts(
+                &model.id,
+                model.context_window,
+                model.max_output_tokens,
+                model.supports_images,
+                model.supports_thinking,
+                model.supports_tools,
+            )
+        })
+        .collect()
+}
+
+pub(super) fn default_ollama_model_ref(model: &OpenRouterModelRecord) -> ModelRef {
+    let mut model_ref = ModelRef::new(OLLAMA_PROVIDER_ID, model.id.clone());
+    model_ref.effort = Some(if model.supports_thinking {
+        Effort::Medium
+    } else {
+        Effort::None
+    });
+    model_ref
+}
+
+pub(super) fn remove_ollama_provider(
+    providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
+) -> std::result::Result<(), String> {
+    providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?
+        .remove(OLLAMA_PROVIDER_ID);
+    Ok(())
+}
+
+pub(super) fn ollama_provider_status_from_auth(
+    auth: OllamaAuthStatus,
+    connection_state: &str,
+    model_count: usize,
+    error: Option<String>,
+) -> OllamaProviderStatus {
+    OllamaProviderStatus {
+        connected: auth.connected && connection_state == "connected",
+        connection_state: connection_state.to_string(),
+        base_url: auth.base_url,
+        last_validated_ms: auth.last_validated_ms,
+        model_count,
+        error,
+    }
+}
+
 pub(super) fn install_deepseek_provider(
     providers: &Arc<StdMutex<HashMap<String, Arc<dyn Provider>>>>,
 ) -> std::result::Result<(), String> {
@@ -2223,6 +2291,130 @@ pub(super) async fn disconnect_openrouter_provider(
         model_count,
         None,
     ))
+}
+
+#[tauri::command]
+pub(super) async fn get_ollama_provider_status(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<OllamaProviderStatus, String> {
+    let model_count = state.store.load_ollama_models().map_err(error_to_string)?.len();
+    let auth = load_default_ollama_auth_status().map_err(error_to_string)?;
+    let state_str = if auth.connected {
+        let models = state.store.load_ollama_models().map_err(error_to_string)?;
+        install_ollama_provider(&state.providers, &models)?;
+        "connected"
+    } else {
+        remove_ollama_provider(&state.providers)?;
+        "disconnected"
+    };
+    Ok(ollama_provider_status_from_auth(
+        auth, state_str, model_count, None,
+    ))
+}
+
+#[tauri::command]
+pub(super) async fn connect_ollama_provider(
+    state: State<'_, DesktopState>,
+    input: ConnectOllamaInput,
+) -> std::result::Result<OllamaProviderStatus, String> {
+    let base_url = input
+        .base_url
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(default_ollama_base_url);
+
+    validate_ollama_endpoint(&base_url)
+        .await
+        .map_err(error_to_string)?;
+    let auth = save_default_ollama_base_url(&base_url).map_err(error_to_string)?;
+
+    let catalog = fetch_ollama_model_catalog(&base_url)
+        .await
+        .map_err(error_to_string)?;
+    let records = catalog.into_iter().map(ollama_record_from_catalog).collect::<Vec<_>>();
+    let models = state
+        .store
+        .save_ollama_models(&records)
+        .map_err(error_to_string)?;
+    install_ollama_provider(&state.providers, &models)?;
+    Ok(ollama_provider_status_from_auth(
+        auth,
+        "connected",
+        models.len(),
+        None,
+    ))
+}
+
+#[tauri::command]
+pub(super) async fn refresh_ollama_models(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<Vec<OpenRouterModelRecord>, String> {
+    let base_url = load_default_ollama_base_url()
+        .map_err(error_to_string)?
+        .ok_or_else(|| "Ollama is not connected".to_string())?;
+    let catalog = fetch_ollama_model_catalog(&base_url)
+        .await
+        .map_err(error_to_string)?;
+    let records = catalog.into_iter().map(ollama_record_from_catalog).collect::<Vec<_>>();
+    let models = state
+        .store
+        .save_ollama_models(&records)
+        .map_err(error_to_string)?;
+    refresh_ollama_provider_if_present(&state, &models)?;
+    Ok(models)
+}
+
+#[tauri::command]
+pub(super) fn list_ollama_models(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<Vec<OpenRouterModelRecord>, String> {
+    state.store.load_ollama_models().map_err(error_to_string)
+}
+
+#[tauri::command]
+pub(super) async fn disconnect_ollama_provider(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<OllamaProviderStatus, String> {
+    cancel_active_turns_for_provider(&state, OLLAMA_PROVIDER_ID).await;
+    delete_default_ollama_auth().map_err(error_to_string)?;
+    remove_ollama_provider(&state.providers)?;
+    let model_count = state.store.load_ollama_models().map_err(error_to_string)?.len();
+    Ok(ollama_provider_status_from_auth(
+        OllamaAuthStatus::disconnected(),
+        "disconnected",
+        model_count,
+        None,
+    ))
+}
+
+pub(super) fn ollama_record_from_catalog(
+    model: sinew_ollama::OllamaCatalogModel,
+) -> OpenRouterModelRecord {
+    OpenRouterModelRecord {
+        id: model.id,
+        name: model.name,
+        context_window: model.context_window,
+        max_output_tokens: model.max_output_tokens,
+        supports_images: model.supports_images,
+        supports_thinking: model.supports_thinking,
+        supports_tools: model.supports_tools,
+        added_at_ms: now_ms(),
+    }
+}
+
+pub(super) fn refresh_ollama_provider_if_present(
+    state: &DesktopState,
+    models: &[OpenRouterModelRecord],
+) -> std::result::Result<(), String> {
+    let present = state
+        .providers
+        .lock()
+        .map_err(|_| "provider registry is unavailable".to_string())?
+        .contains_key(OLLAMA_PROVIDER_ID);
+    if present {
+        install_ollama_provider(&state.providers, models)?;
+    }
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]

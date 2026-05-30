@@ -4401,6 +4401,22 @@ textarea {
   min-width: 0;
 }
 
+.settings-pane__provider-card--ollama {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.settings-pane__provider-card--ollama .settings-pane__provider-main {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.settings-pane__provider-card--ollama .settings-pane__provider-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .settings-pane__secondary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

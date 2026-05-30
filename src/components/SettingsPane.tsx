@@ -39,6 +39,7 @@ import type {
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
+  OllamaProviderStatus,
   SkillSettings,
   SubAgentConfig,
   SubAgentSettings,
@@ -172,6 +173,7 @@ export function SettingsPane({ workspacePath }: Props) {
   const cursorOAuthPendingRef = useRef(false);
   const [openRouterStatus, setOpenRouterStatus] = useState<OpenRouterProviderStatus | null>(null);
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
+  const [ollamaModels, setOllamaModels] = useState<OpenRouterModel[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providersBusy, setProvidersBusy] = useState(false);
   const [providersMessage, setProvidersMessage] = useState<string | null>(null);
@@ -428,9 +430,15 @@ export function SettingsPane({ workspacePath }: Props) {
       ]);
       setConfiguredProviders(providers);
       setOpenRouterModels(models);
+      if (providers.includes("ollama")) {
+        api.listOllamaModels().then(setOllamaModels).catch(() => setOllamaModels([]));
+      } else {
+        setOllamaModels([]);
+      }
     } catch {
       setConfiguredProviders([]);
       setOpenRouterModels([]);
+      setOllamaModels([]);
     }
   }, []);
 
@@ -439,8 +447,8 @@ export function SettingsPane({ workspacePath }: Props) {
   }, [loadConfiguredProviders]);
 
   const availableModels = useMemo(
-    () => availableModelsForProviders(configuredProviders, openRouterModels),
-    [configuredProviders, openRouterModels],
+    () => availableModelsForProviders(configuredProviders, openRouterModels, [], ollamaModels),
+    [configuredProviders, openRouterModels, ollamaModels],
   );
 
   const loadOpenAiStatus = useCallback(async () => {
@@ -1101,6 +1109,11 @@ export function SettingsPane({ workspacePath }: Props) {
     window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
   }, [loadConfiguredProviders]);
 
+  const handleOllamaChanged = useCallback(() => {
+    void loadConfiguredProviders();
+    window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
+  }, [loadConfiguredProviders]);
+
   const saveAndDetect = useCallback(async () => {
     setSaving(true);
     setStatus(null);
@@ -1755,6 +1768,7 @@ export function SettingsPane({ workspacePath }: Props) {
             onDisconnectDeepSeek={() => void disconnectDeepSeek()}
             onDeepSeekStatusChange={setDeepSeekStatus}
             onDeepSeekChanged={handleDeepSeekChanged}
+            onOllamaChanged={handleOllamaChanged}
           />
         ) : section === "tools" ? (
           <ToolsSection
@@ -4491,6 +4505,7 @@ type ProvidersSectionProps = {
   onDisconnectDeepSeek: () => void;
   onDeepSeekStatusChange: (status: DeepSeekProviderStatus) => void;
   onDeepSeekChanged: () => void;
+  onOllamaChanged: () => void;
 };
 
 function ProvidersSection({
@@ -4547,6 +4562,7 @@ function ProvidersSection({
   onDisconnectDeepSeek,
   onDeepSeekStatusChange,
   onDeepSeekChanged,
+  onOllamaChanged,
 }: ProvidersSectionProps) {
   const cursorStatus: CursorComposerAuthStatus = {
     connected: Boolean(cursorComposerStatus?.connected),
@@ -4993,6 +5009,7 @@ function ProvidersSection({
           onModelsChange={onOpenRouterModelsChange}
           onChanged={onOpenRouterChanged}
         />
+        <OllamaProviderCard onChanged={onOllamaChanged} />
       </div>
     </>
   );
@@ -5838,6 +5855,185 @@ function OpenRouterProviderCard({
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+type OllamaProviderCardProps = {
+  onChanged: () => void;
+};
+
+function OllamaProviderCard({ onChanged }: OllamaProviderCardProps) {
+  const DEFAULT_OLLAMA_URL = "http://localhost:11434";
+  const [status, setStatus] = useState<OllamaProviderStatus | null>(null);
+  const [models, setModels] = useState<OpenRouterModel[]>([]);
+  const [baseUrl, setBaseUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const next = await api.getOllamaProviderStatus();
+      setStatus(next);
+      if (next.connected) {
+        api.listOllamaModels().then(setModels).catch(() => setModels([]));
+      } else {
+        setModels([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
+
+  const connected = Boolean(status?.connected);
+  const state = status?.connectionState ?? "disconnected";
+  const statusLabel = busy
+    ? "Connecting"
+    : connected
+      ? "Connected"
+      : state === "error"
+        ? "Needs attention"
+        : "Not connected";
+  const statusTone = busy
+    ? "pending"
+    : connected
+      ? "ok"
+      : state === "error"
+        ? "error"
+        : "off";
+
+  const connect = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await api.connectOllamaProvider(baseUrl.trim() || undefined);
+      setStatus(next);
+      setBaseUrl("");
+      const list = await api.listOllamaModels().catch(() => []);
+      setModels(list);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refresh = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const list = await api.refreshOllamaModels();
+      setModels(list);
+      setStatus((prev) => (prev ? { ...prev, modelCount: list.length } : prev));
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disconnect = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await api.disconnectOllamaProvider();
+      setStatus(next);
+      setModels([]);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="settings-pane__provider-card settings-pane__provider-card--ollama">
+      <div className="settings-pane__provider-main">
+        <div className="settings-pane__provider-mark" aria-hidden>
+          <Icon icon="simple-icons:ollama" width={24} height={24} />
+        </div>
+        <div className="settings-pane__provider-copy">
+          <div className="settings-pane__provider-title-row">
+            <h2>Ollama</h2>
+            <span className="settings-pane__chip" data-tone={statusTone}>
+              <span className="settings-pane__chip-dot" />
+              {statusLabel}
+            </span>
+          </div>
+          <p>Run your local Ollama models. Detects every installed model automatically.</p>
+          {error && <div className="settings-pane__provider-error">{error}</div>}
+        </div>
+      </div>
+
+      <div className="settings-pane__provider-detail">
+        <label className="settings-pane__tool-credential">
+          <span className="settings-pane__tool-credential-label">Address</span>
+          <div className="settings-pane__tool-credential-field">
+            <input
+              type="text"
+              value={baseUrl}
+              placeholder={status?.baseUrl ?? DEFAULT_OLLAMA_URL}
+              onChange={(event) => setBaseUrl(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {connected && (
+              <div className="settings-pane__tool-credential-actions">
+                <button
+                  type="button"
+                  className="settings-pane__icon-btn"
+                  onClick={() => void disconnect()}
+                  disabled={busy}
+                  title="Disconnect Ollama"
+                  aria-label="Disconnect Ollama"
+                >
+                  <Icon icon="solar:trash-bin-minimalistic-linear" width={13} height={13} />
+                </button>
+              </div>
+            )}
+          </div>
+        </label>
+
+        <div className="settings-pane__provider-actions">
+          <button
+            type="button"
+            className="settings-pane__btn"
+            onClick={() => void connect()}
+            disabled={busy}
+          >
+            <Icon icon="solar:plug-circle-linear" width={13} height={13} />
+            <span>{busy ? "Detecting\u2026" : connected ? "Reconnect" : "Connect"}</span>
+          </button>
+          {connected && (
+            <button
+              type="button"
+              className="settings-pane__btn"
+              onClick={() => void refresh()}
+              disabled={busy}
+            >
+              <Icon icon="solar:refresh-linear" width={13} height={13} />
+              <span>Refresh models</span>
+            </button>
+          )}
+        </div>
+
+        {models.length > 0 && (
+          <div className="settings-pane__openrouter-list">
+            {models.map((model) => (
+              <div key={model.id} className="settings-pane__openrouter-row">
+                <span title={model.id}>{model.name || model.id}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>

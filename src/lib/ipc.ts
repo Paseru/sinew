@@ -33,6 +33,8 @@ import type {
   OpenRouterModel,
   OpenRouterModelSearchResult,
   OpenRouterProviderStatus,
+  OllamaModel,
+  OllamaProviderStatus,
   DeepSeekProviderStatus,
   OtherWorkspaceSummary,
   PlanControl,
@@ -620,6 +622,23 @@ export const api = {
     return invoke<OpenRouterModel[]>("remove_openrouter_model", {
       input: { id },
     });
+  },
+  getOllamaProviderStatus() {
+    return invoke<OllamaProviderStatus>("get_ollama_provider_status");
+  },
+  connectOllamaProvider(baseUrl?: string) {
+    return invoke<OllamaProviderStatus>("connect_ollama_provider", {
+      input: { baseUrl: baseUrl ?? null },
+    });
+  },
+  refreshOllamaModels() {
+    return invoke<OllamaModel[]>("refresh_ollama_models");
+  },
+  listOllamaModels() {
+    return invoke<OllamaModel[]>("list_ollama_models");
+  },
+  disconnectOllamaProvider() {
+    return invoke<OllamaProviderStatus>("disconnect_ollama_provider");
   },
   getCursorComposerStatus() {
     return invoke<CursorComposerAuthStatus>("get_cursor_composer_status");

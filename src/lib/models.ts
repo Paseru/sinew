@@ -3,11 +3,12 @@ import type {
   ModeModelSettings,
   ModelRef,
   OpenRouterModel,
+  OllamaModel,
   ThinkingLevel,
 } from "../types";
 
 export type ModelId = string;
-export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter" | "cursor" | "deepseek";
+export type ProviderId = "anthropic" | "openai" | "google" | "kimi" | "openrouter" | "cursor" | "deepseek" | "ollama";
 export type ModeModelSelection = { model: ModelId; thinking: ThinkingLevel };
 export type ModeModelSelections = Record<AgentMode, ModeModelSelection>;
 
@@ -60,6 +61,11 @@ export const PROVIDERS: {
     value: "openrouter",
     label: "OpenRouter",
     icon: "simple-icons:openrouter",
+  },
+  {
+    value: "ollama",
+    label: "Ollama",
+    icon: "simple-icons:ollama",
   },
 ];
 
@@ -238,20 +244,30 @@ export function sanitizeOpenRouterName(name: string | null | undefined): string 
   return tail || raw;
 }
 
+const OLLAMA_THINKING: readonly ThinkingLevel[] = ["off", "high"];
+const OLLAMA_NO_THINKING: readonly ThinkingLevel[] = ["off"];
+
 export function modelsWithOpenRouter(
   openRouterModels: readonly OpenRouterModel[] = [],
   deepSeekModels: readonly string[] = [],
+  ollamaModels: readonly OllamaModel[] = [],
 ): ModelEntry[] {
   const dsEntries = deepSeekModelEntries(deepSeekModels);
   const staticDsValues = new Set(MODELS.filter(m => m.provider === "deepseek").map(m => m.value));
   const filteredDs = dsEntries.filter(e => !staticDsValues.has(e.value));
-  return [...MODELS, ...openRouterModelEntries(openRouterModels), ...filteredDs];
+  return [
+    ...MODELS,
+    ...openRouterModelEntries(openRouterModels),
+    ...filteredDs,
+    ...ollamaModelEntries(ollamaModels),
+  ];
 }
 
 export function availableModelsForProviders(
   configuredProviders: readonly string[],
   openRouterModels: readonly OpenRouterModel[] = [],
   deepSeekModels: readonly string[] = [],
+  ollamaModels: readonly OllamaModel[] = [],
 ): ModelEntry[] {
   const configured = new Set(configuredProviders);
   const entries: ModelEntry[] = [
@@ -342,6 +358,10 @@ export function availableModelsForProviders(
     }
   }
 
+  if (configured.has("ollama")) {
+    entries.push(...ollamaModelEntries(ollamaModels));
+  }
+
   return entries;
 }
 
@@ -370,6 +390,18 @@ function openRouterModelEntries(
     label: sanitizeOpenRouterName(model.name) || model.id,
     thinking: model.supportsThinking ? OPENROUTER_THINKING : OPENROUTER_NO_THINKING,
     defaultThinking: model.supportsThinking ? "medium" : "off",
+  }));
+}
+
+function ollamaModelEntries(
+  ollamaModels: readonly OllamaModel[],
+): ModelEntry[] {
+  return ollamaModels.map((model) => ({
+    value: modelId("ollama", model.id),
+    provider: "ollama",
+    label: model.name || model.id,
+    thinking: model.supportsThinking ? OLLAMA_THINKING : OLLAMA_NO_THINKING,
+    defaultThinking: model.supportsThinking ? "high" : "off",
   }));
 }
 
@@ -428,6 +460,10 @@ export function thinkingFromRef(
     }
     return "medium";
   }
+  if (model?.provider === "ollama") {
+    if (model.effort === "none") return "off";
+    return "high";
+  }
   if (
     model?.provider === "openai" &&
     model.name === "gpt-5.3-codex-spark" &&
@@ -482,6 +518,9 @@ export function modelRefWithThinking(
     return { ...model, effort: "none" };
   }
   if (model.provider === "openrouter" && (thinking === "xhigh" || thinking === "max")) {
+    return { ...model, effort: "high" };
+  }
+  if (model.provider === "ollama") {
     return { ...model, effort: "high" };
   }
   // `minimal` is Gemini-only on the backend. The Google branch above already

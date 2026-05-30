@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 19:41:23]
+- `crates/sinew-ollama/*` (nouveau crate) : Ajout d'un fournisseur Ollama complet pour utiliser les modèles installés localement. Détecte automatiquement tous les modèles via l'API locale d'Ollama (`/api/tags` + `/api/show` pour le contexte et les capacités outils/vision/raisonnement), discute en streaming via l'endpoint compatible OpenAI, et stocke l'adresse du serveur (par défaut `http://localhost:11434`) au lieu d'une clé.
+- `Cargo.toml`, `src-tauri/Cargo.toml` : Déclaration et branchement du nouveau crate `sinew-ollama`.
+- `crates/sinew-app/src/store.rs` : Ajout du stockage de la liste des modèles Ollama (`load_ollama_models` / `save_ollama_models`).
+- `src-tauri/src/models.rs` : Ajout des structures `OllamaProviderStatus` et `ConnectOllamaInput`.
+- `src-tauri/src/providers.rs` : Ajout des fonctions d'installation/retrait du fournisseur et des commandes `get_ollama_provider_status`, `connect_ollama_provider`, `refresh_ollama_models`, `list_ollama_models`, `disconnect_ollama_provider`.
+- `src-tauri/src/lib.rs` : Enregistrement du fournisseur Ollama au démarrage, dans le modèle par défaut et dans la liste des commandes exposées au frontend.
+- `src/types.ts`, `src/lib/ipc.ts`, `src/lib/models.ts` : Ajout du type/carte Ollama, des appels IPC et de l'intégration des modèles Ollama dans les listes de choix de modèle.
+- `src/components/SettingsPane.tsx`, `src/styles.css`, `src/lib/frRuntime.ts` : Ajout de la carte Ollama dans les paramètres (connexion par adresse, détection auto, actualisation, déconnexion) avec son style et ses traductions françaises.
+- `src/components/chat/ChatPane.tsx` : Chargement des modèles Ollama et affichage dans le sélecteur de modèle.
+
 ## [2026-05-30 19:42:00]
 - `src-tauri/src/rules.rs` : Ajout d'un filet de sécurité à la consolidation par IA. Avant d'écraser `instructions_consolidated.md`, l'ancienne version est sauvegardée (`instructions_consolidated.bak.md`), et la réécriture est refusée si le résultat de l'IA est anormalement court (moins de la moitié de l'actuel) afin d'éviter toute perte silencieuse de règles en cas de réponse tronquée du modèle.
 

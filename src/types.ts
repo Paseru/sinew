@@ -336,6 +336,17 @@ export type OpenRouterModel = {
 
 export type OpenRouterModelSearchResult = Omit<OpenRouterModel, "addedAtMs">;
 
+export type OllamaProviderStatus = {
+  connected: boolean;
+  connectionState: ProviderConnectionState;
+  baseUrl?: string | null;
+  lastValidatedMs?: number | null;
+  modelCount: number;
+  error?: string | null;
+};
+
+export type OllamaModel = OpenRouterModel;
+
 export type McpEnvVar = {
   key: string;
   value: string;

@@ -90,6 +90,15 @@ use sinew_openrouter::{
     validate_api_key as validate_openrouter_api_key_remote, OpenRouterAuthStatus,
     OpenRouterCatalogModel, OpenRouterProvider, PROVIDER_ID as OPENROUTER_PROVIDER_ID,
 };
+use sinew_ollama::{
+    delete_default_auth as delete_default_ollama_auth,
+    fetch_model_catalog as fetch_ollama_model_catalog,
+    load_default_auth_status as load_default_ollama_auth_status,
+    load_default_base_url as load_default_ollama_base_url,
+    save_default_base_url as save_default_ollama_base_url,
+    validate_endpoint as validate_ollama_endpoint, default_base_url as default_ollama_base_url,
+    OllamaAuthStatus, OllamaProvider, PROVIDER_ID as OLLAMA_PROVIDER_ID,
+};
 use sinew_deepseek::{
     delete_default_auth as delete_default_deepseek_auth,
     load_default_api_key as load_default_deepseek_api_key,
@@ -913,7 +922,7 @@ pub fn run() {
     };
 
     let default_filter = tracing_subscriber::EnvFilter::new(
-        "trace,sinew_app=trace,sinew_cursor=trace,sinew_openai=trace,sinew_anthropic=trace,sinew_google=trace,sinew_kimi=trace,sinew_deepseek=trace,sinew_openrouter=trace,sinew_index=trace,sinew_core=trace,ort=warn,hyper=warn,h2=debug,h3=warn,tower=warn,tonic=warn,mio=warn,tokio=warn,rustls=warn,trust_dns=warn,reqwest=debug,sqlx=warn,rusqlite=warn",
+        "trace,sinew_app=trace,sinew_cursor=trace,sinew_openai=trace,sinew_anthropic=trace,sinew_google=trace,sinew_kimi=trace,sinew_deepseek=trace,sinew_openrouter=trace,sinew_ollama=trace,sinew_index=trace,sinew_core=trace,ort=warn,hyper=warn,h2=debug,h3=warn,tower=warn,tonic=warn,mio=warn,tokio=warn,rustls=warn,trust_dns=warn,reqwest=debug,sqlx=warn,rusqlite=warn",
     );
     let _ = tracing_subscriber::fmt()
         .with_writer(make_writer)
@@ -927,6 +936,7 @@ pub fn run() {
 
     let store = AppStore::open_default().expect("unable to open app store");
     let openrouter_models = store.load_openrouter_models().unwrap_or_default();
+    let ollama_models = store.load_ollama_models().unwrap_or_default();
     let mut providers: HashMap<String, Arc<dyn Provider>> = HashMap::new();
     if let Ok(provider) = AnthropicProvider::from_default_sources() {
         providers.insert("anthropic".into(), Arc::new(provider) as Arc<dyn Provider>);
@@ -964,6 +974,14 @@ pub fn run() {
             Arc::new(provider) as Arc<dyn Provider>,
         );
     }
+    if let Ok(provider) =
+        OllamaProvider::from_default_sources(ollama_capabilities(&ollama_models))
+    {
+        providers.insert(
+            OLLAMA_PROVIDER_ID.into(),
+            Arc::new(provider) as Arc<dyn Provider>,
+        );
+    }
     if let Ok(provider) = CursorProvider::from_default_sources() {
         providers.insert(
             CURSOR_PROVIDER_ID.into(),
@@ -981,6 +999,11 @@ pub fn run() {
         openrouter_models
             .first()
             .map(default_openrouter_model_ref)
+            .unwrap_or_else(|| ModelRef::new("google", GOOGLE_MODEL_ID).with_effort(Effort::Medium))
+    } else if providers.contains_key(OLLAMA_PROVIDER_ID) {
+        ollama_models
+            .first()
+            .map(default_ollama_model_ref)
             .unwrap_or_else(|| ModelRef::new("google", GOOGLE_MODEL_ID).with_effort(Effort::Medium))
     } else {
         ModelRef::new("google", GOOGLE_MODEL_ID).with_effort(Effort::Medium)
@@ -1158,6 +1181,11 @@ pub fn run() {
             providers::get_openrouter_key_details,
             providers::validate_openrouter_api_key,
             providers::disconnect_openrouter_provider,
+            providers::get_ollama_provider_status,
+            providers::connect_ollama_provider,
+            providers::refresh_ollama_models,
+            providers::list_ollama_models,
+            providers::disconnect_ollama_provider,
             providers::get_deepseek_provider_status,
             providers::validate_deepseek_api_key,
             providers::disconnect_deepseek_provider,

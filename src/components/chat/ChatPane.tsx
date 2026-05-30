@@ -546,6 +546,7 @@ export function ChatPane({
   );
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
   const [openRouterModels, setOpenRouterModels] = useState<OpenRouterModel[]>([]);
+  const [ollamaModels, setOllamaModels] = useState<OpenRouterModel[]>([]);
   const [agentTeamsEnabled, setAgentTeamsEnabled] = useState(false);
   const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
     try {
@@ -752,6 +753,11 @@ export function ChatPane({
       ]);
       setConfiguredProviders(providers);
       setOpenRouterModels(models);
+      if (providers.includes("ollama")) {
+        api.listOllamaModels().then(setOllamaModels).catch(() => setOllamaModels([]));
+      } else {
+        setOllamaModels([]);
+      }
       
       // Charger en arrière-plan les quotas de tous les fournisseurs configurés
       // pour que les pastilles de statut dans le menu déroulant soient à jour.
@@ -759,6 +765,7 @@ export function ChatPane({
     } catch {
       setConfiguredProviders([]);
       setOpenRouterModels([]);
+      setOllamaModels([]);
     }
   }, []);
 
@@ -805,12 +812,12 @@ export function ChatPane({
   }, [loadAgentTeamsEnabled]);
 
   const allModels = useMemo(
-    () => modelsWithOpenRouter(openRouterModels),
-    [openRouterModels],
+    () => modelsWithOpenRouter(openRouterModels, [], ollamaModels),
+    [openRouterModels, ollamaModels],
   );
   const availableModels = useMemo(
-    () => availableModelsForProviders(configuredProviders, openRouterModels),
-    [configuredProviders, openRouterModels],
+    () => availableModelsForProviders(configuredProviders, openRouterModels, [], ollamaModels),
+    [configuredProviders, openRouterModels, ollamaModels],
   );
 
   const baseModeSelections = useMemo(
