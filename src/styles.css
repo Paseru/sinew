@@ -424,14 +424,10 @@ html[data-theme="ai"] body::before {
 }
 
 /* Glassmorphism overlays on top of the moving space background */
-html[data-theme="ai"] .sidebar-shell,
-html[data-theme="ai"] .chat-body,
-html[data-theme="ai"] .editor-shell,
-html[data-theme="ai"] .terminal-shell,
+html[data-theme="ai"] .sidebar,
+html[data-theme="ai"] .chat-col,
 html[data-theme="ai"] .titlebar,
-html[data-theme="ai"] .workbench-center,
-html[data-theme="ai"] .sidebar-tab-pane,
-html[data-theme="ai"] .chat-footer {
+html[data-theme="ai"] .workbench-center {
   background: rgba(15, 16, 19, 0.72) !important; /* Elegant slate glass matching Night base */
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
@@ -455,10 +451,7 @@ html[data-theme="ai"] .settings-pane__main {
   background: transparent !important;
 }
 
-html[data-theme="ai"] .chat-col {
-  background: transparent !important;
-  border: none !important;
-}
+
 
 html[data-theme="ai"] .todo-strip {
   background: rgba(15, 2, 48, 0.6) !important;
@@ -1796,7 +1789,7 @@ textarea {
 .gutter,
 .gutter-h {
   position: relative;
-  background: var(--bg-1);
+  background: var(--line);
   flex: 0 0 1px;
   z-index: 2;
 }
@@ -1819,6 +1812,14 @@ textarea {
 }
 .gutter::after  { inset: 0; width: 1px; }
 .gutter-h::after { inset: 0; height: 1px; }
+.gutter:hover::after,
+.gutter[data-dragging="true"]::after {
+  background: var(--accent);
+}
+.gutter-h:hover::after,
+.gutter-h[data-dragging="true"]::after {
+  background: var(--accent);
+}
 
 /* ------------------------------------------------------------------
    Sidebar
@@ -3533,6 +3534,7 @@ textarea {
   background: var(--bg-1);
   overflow-x: auto;
   overflow-y: hidden;
+  border-bottom: 1px solid var(--line);
 }
 .tabs::-webkit-scrollbar { height: 0; }
 
@@ -6579,13 +6581,14 @@ html[data-theme="ai"] .chat-col::after {
 }
 
 .chat-head {
-  flex: 0 0 32px;
-  height: 32px;
+  flex: 0 0 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   padding: 0 10px;
   color: var(--text-1);
   gap: 8px;
+  border-bottom: 1px solid var(--line);
 }
 .chat-head__back {
   width: 22px;
@@ -10188,7 +10191,7 @@ html[data-theme="ai"] .chat-col::after {
 
 .chat-sticky-question {
   position: absolute;
-  top: 32px; /* Right below .chat-head which is 32px high */
+  top: 40px; /* Right below .chat-head which is 40px high */
   left: 0;
   right: 0;
   z-index: 25;

@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:25:25]
+- `src/styles.css` : Harmonisation des barres de séparation (diviseurs et bordures) entre le lecteur de document (éditeur/preview) et le panneau de chat. Uniformisation de la hauteur de l'en-tête du chat (`.chat-head`) à 40px pour l'aligner parfaitement avec les onglets de l'éditeur (`.tabs`), et ajout d'une bordure inférieure de séparation nette pour ces deux en-têtes. Mise à jour de la couleur de fond des séparateurs (`.gutter` et `.gutter-h`) avec la couleur standard de bordure (`var(--line)`) et ajout d'un effet de surbrillance réactif lors du survol ou du glissement. Simplification et correction des bordures d'arrière-plan du thème IA en ciblant uniquement les colonnes principales et en supprimant les bordures internes redondantes des sous-composants.
+
 ## [2026-05-30 22:27:43]
 - `README.md` : Réintégration du contenu officiel en anglais (les modes, les outils, le swarm, etc.) et retrait de toutes les instructions et sections relatives à l'installation et à la compilation.
 
