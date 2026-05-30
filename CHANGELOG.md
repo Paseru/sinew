@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:13:43]
+- `C:\Users\julie\.agents\skills` : Restauration de la compétence de recherche globale `find-skills` pour permettre la découverte et l'installation de compétences à la demande.
+
 ## [2026-05-30 02:15:11]
 - `crates/sinew-cursor/src/identity.rs` : Cache de la détection du fuseau horaire via OnceLock pour éviter le spawn répétitif de PowerShell sur chaque requête.
 - `crates/sinew-index/src/store.rs` : Optimisation majeure des performances SQLite. Mise en cache du profil de puissance machine (OnceLock), détection SSD/NVMe Windows améliorée via le PNPDeviceID et Caption, augmentation dynamique de la taille du cache SQLite (limité à ~3.1% de la mémoire vive pour rester bien en dessous du plafond de 40% demandé par l'utilisateur, max 1 Go) et de la taille de mmap (max 4 Go), et activation de PRAGMA threads multi-cœurs.
