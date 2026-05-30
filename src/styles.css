@@ -10868,3 +10868,87 @@ html[data-theme="ai"] .mermaid-zoom__hint {
   background: var(--bg-3);
   color: var(--text-0);
 }
+
+/* Magic Optimization Shimmer Effect */
+@keyframes chat-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.chat-body[data-optimizing="true"] {
+  position: relative;
+}
+
+.chat-body[data-optimizing="true"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: chat-shimmer 1.8s infinite linear;
+  z-index: 10;
+}
+
+.shimmer-card {
+  background: color-mix(in srgb, var(--bg-1) 80%, transparent);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.shimmer-icon {
+  color: var(--accent-color, #7c4dff);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.shimmer-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shimmer-line {
+  height: 10px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--bg-2) 25%,
+    var(--bg-3) 50%,
+    var(--bg-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: chat-shimmer 1.5s infinite linear;
+  border-radius: 4px;
+}
+
+.composer--optimizing {
+  opacity: 0.6;
+  pointer-events: none;
+}

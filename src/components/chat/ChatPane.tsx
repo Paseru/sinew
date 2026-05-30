@@ -1652,6 +1652,12 @@ export function ChatPane({
   );
 
   useEffect(() => {
+    if (optimizing) {
+      scheduleStickToBottom({ force: true, animated: true });
+    }
+  }, [optimizing, scheduleStickToBottom]);
+
+  useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
     const updateStickiness = () => {
@@ -3452,9 +3458,9 @@ export function ChatPane({
           </div>
         </div>
       )}
-      <div className="chat-body" ref={bodyRef} data-compact-mode={compactMode}>
+      <div className="chat-body" ref={bodyRef} data-compact-mode={compactMode} data-optimizing={optimizing ? "true" : "false"}>
         <div className="chat-body__content" ref={bodyContentRef}>
-          {displayView.blocks.length === 0 && !showPlanningNextMove ? (
+          {displayView.blocks.length === 0 && !showPlanningNextMove && !optimizing ? (
             <div className="chat-empty">
               <span className="chat-empty__mark">
                 {viewingSubAgent ? (
@@ -3518,6 +3524,24 @@ export function ChatPane({
                   <PlanningNextMoveBlock />
                 </div>
               )}
+              {optimizing && (
+                <div className="msg chat-optimize-shimmer" data-role="assistant">
+                  <div className="msg__role">Optimisation magique...</div>
+                  <div className="msg__body">
+                    <div className="shimmer-card">
+                      <div className="shimmer-header">
+                        <Icon icon="solar:magic-stick-3-bold-duotone" width={18} height={18} className="shimmer-icon" />
+                        <span className="shimmer-title">Analyse et réécriture du prompt...</span>
+                      </div>
+                      <div className="shimmer-lines">
+                        <div className="shimmer-line" />
+                        <div className="shimmer-line" style={{ width: '85%' }} />
+                        <div className="shimmer-line" style={{ width: '60%' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
           {displayView.lastError && (
@@ -3555,7 +3579,7 @@ export function ChatPane({
       {!viewingSubAgent && (
         <>
           <div
-            className={`composer${selectorLocked ? " composer--selector-locked" : ""}`}
+            className={`composer${selectorLocked ? " composer--selector-locked" : ""}${optimizing ? " composer--optimizing" : ""}`}
             ref={composerRef}
           >
             {rewriteState && rewindFileChanges.length > 0 && (
@@ -3598,7 +3622,9 @@ export function ChatPane({
                       <span className="chip__name">{att.name}</span>
                       <button
                         className="chip__close"
+                        disabled={optimizing}
                         onClick={(event) => {
+                          if (optimizing) return;
                           event.stopPropagation();
                           setAttachments((prev) =>
                             prev.filter((x) => x.path !== att.path),
@@ -3706,6 +3732,7 @@ export function ChatPane({
                   : undefined
               }
               value={text}
+              disabled={optimizing}
               placeholder={
                 view.status === "streaming" || isStreaming
                   ? "Queue next prompt..."
@@ -3755,6 +3782,7 @@ export function ChatPane({
                     ref={compactInstructionInputRef}
                     className="compact-pill__input"
                     value={compactInstruction}
+                    disabled={optimizing}
                     onChange={(event) =>
                       setCompactInstruction(event.target.value)
                     }
@@ -3765,7 +3793,11 @@ export function ChatPane({
                   <button
                     type="button"
                     className="compact-pill__submit"
-                    onClick={() => void handleCompactInstructionSubmit()}
+                    disabled={optimizing}
+                    onClick={() => {
+                      if (optimizing) return;
+                      void handleCompactInstructionSubmit();
+                    }}
                     aria-label="Compact conversation"
                   >
                     <Icon
@@ -3785,7 +3817,11 @@ export function ChatPane({
                 <button
                   type="button"
                   className="composer__iconbtn composer__compact-cancel"
-                  onClick={() => setCompactInstructionOpen(false)}
+                  disabled={optimizing}
+                  onClick={() => {
+                    if (optimizing) return;
+                    setCompactInstructionOpen(false);
+                  }}
                   aria-label="Cancel compaction"
                 >
                   <Icon icon="solar:close-square-linear" width={18} height={18} />
@@ -3797,7 +3833,11 @@ export function ChatPane({
               <button
                 type="button"
                 className="composer__iconbtn"
-                onClick={() => void pickAttachments()}
+                disabled={optimizing}
+                onClick={() => {
+                  if (optimizing) return;
+                  void pickAttachments();
+                }}
                 title="Attach files"
                 aria-label="Attach files"
               >
@@ -3821,9 +3861,9 @@ export function ChatPane({
                   data-open={modeOpen ? "true" : "false"}
                   data-mode={effectiveMode}
                   data-locked={selectorLocked ? "true" : "false"}
-                  disabled={selectorLocked}
+                  disabled={selectorLocked || optimizing}
                   onClick={() => {
-                    if (selectorLocked) return;
+                    if (selectorLocked || optimizing) return;
                     setModeOpen((o) => !o);
                     setModelOpen(false);
                     setThinkingOpen(false);
@@ -3883,9 +3923,9 @@ export function ChatPane({
                   className="composer__picker-btn"
                   data-open={modelOpen ? "true" : "false"}
                   data-locked={selectorLocked ? "true" : "false"}
-                  disabled={selectorLocked || availableModels.length === 0}
+                  disabled={selectorLocked || availableModels.length === 0 || optimizing}
                   onClick={() => {
-                    if (selectorLocked) return;
+                    if (selectorLocked || optimizing) return;
                     setModelOpen((o) => !o);
                     setThinkingOpen(false);
                     setModeOpen(false);
@@ -4009,10 +4049,11 @@ export function ChatPane({
                     disabled={
                       selectorLocked ||
                       availableModels.length === 0 ||
-                      availableThinking.length === 0
+                      availableThinking.length === 0 ||
+                      optimizing
                     }
                     onClick={() => {
-                      if (selectorLocked) return;
+                      if (selectorLocked || optimizing) return;
                       setThinkingOpen((o) => !o);
                       setModelOpen(false);
                       setModeOpen(false);
@@ -4065,7 +4106,7 @@ export function ChatPane({
                   type="button"
                   className="composer__iconbtn composer__fast-btn"
                   data-active={serviceTier === "fast" ? "true" : "false"}
-                  disabled={selectorLocked}
+                  disabled={selectorLocked || optimizing}
                   onClick={handleFastServiceTierToggle}
                   aria-label={
                     serviceTier === "fast" ? "Disable Fast" : "Enable Fast"
@@ -4097,7 +4138,7 @@ export function ChatPane({
                 type="button"
                 className="composer__iconbtn composer__compact"
                 onClick={handleCompact}
-                disabled={compactDisabled}
+                disabled={compactDisabled || optimizing}
                 aria-label="Compact context"
                 aria-expanded={compactInstructionOpen}
               >
@@ -4149,7 +4190,8 @@ export function ChatPane({
                   onClick={() => void handleSend()}
                   disabled={
                     (!text.trim() && composerAttachments.length === 0) ||
-                    !modelEntry
+                    !modelEntry ||
+                    optimizing
                   }
                 >
                   <span className="composer__send-label">Send</span>

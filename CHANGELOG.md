@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:09:30]
+- `src/components/chat/ChatPane.tsx` : Intégration de l'effet visuel et du blocage de l'interface lors de l'Optimisation Magique. Toutes les commandes de saisie et de validation sont désactivées durant l'optimisation, et un scroll automatique amène le squelette d'optimisation en vue.
+- `src/styles.css` : Ajout des animations de reflets mouvants (effet shimmer) et du style de squelette de chargement pour la carte d'optimisation, ainsi que le style semi-opaque inactif pour le conteneur du composeur.
+
 ## [2026-05-30 22:08:04]
 - `src/components/SettingsPane.tsx` : Correction d'une balise div non fermée dans la section "Power User". Le manque de fermeture pour le conteneur grid (Ligne 4) imbriquait indûment la Ligne 5 et le choix du mode d'affichage, provoquant un alignement incorrect dans la colonne gauche et un vide dans la colonne droite. Le positionnement et l'alignement des options sont désormais rétablis.
 
