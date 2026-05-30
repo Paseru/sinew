@@ -40,6 +40,10 @@ export default function App() {
       const savedTheme = localStorage.getItem("sinew.theme") || "dark";
       document.documentElement.setAttribute("data-theme", savedTheme);
     } catch {}
+    try {
+      const savedLargeChat = localStorage.getItem("sinew.large-chat-box") === "true";
+      document.documentElement.setAttribute("data-large-chat-box", savedLargeChat ? "true" : "false");
+    } catch {}
 
     // SOTA 1: Cursor-Tracking Glow event listener for AI Glass Theme
     const handleMouseMove = (e: MouseEvent) => {

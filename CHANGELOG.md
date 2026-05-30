@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:26:42]
+- `src/components/SettingsPane.tsx` : Ajout d'une option de configuration pour agrandir la taille de la boîte de saisie (boîte de chat) en mode normal ou agrandi.
+- `src/App.tsx` : Initialisation au démarrage de l'attribut `data-large-chat-box` sur le document HTML à partir des paramètres persistés de l'utilisateur.
+- `src/styles.css` : Utilisation de variables CSS pour la hauteur minimale/maximale du composer de messages et doublement automatique de ces dimensions en mode agrandi.
+
+
 ## [2026-05-30 02:23:29]
 - `RAPPORT_ANTIGRAVITY.md` : Création et simplification complète du rapport d'analyse pour supprimer le jargon technique et utiliser des métaphores faciles à comprendre (Téléviseur et Décodeur).
 

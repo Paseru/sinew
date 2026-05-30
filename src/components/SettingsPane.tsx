@@ -2114,6 +2114,32 @@ function OptionsSection({
     window.dispatchEvent(new CustomEvent("sinew:right-width-changed", { detail: rounded }));
   };
 
+  const [largeChatBox, setLargeChatBox] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.large-chat-box") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleLargeChatBox = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.large-chat-box", enabled ? "true" : "false");
+      document.documentElement.setAttribute("data-large-chat-box", enabled ? "true" : "false");
+    } catch {}
+    setLargeChatBox(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:large-chat-box-changed", { detail: enabled }));
+  };
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      setLargeChatBox(enabled);
+    };
+    window.addEventListener("sinew:large-chat-box-changed", handler as any);
+    return () => window.removeEventListener("sinew:large-chat-box-changed", handler as any);
+  }, []);
+
   const [theme, setTheme] = useState<"dark" | "light" | "system" | "ai">(() => {
     try {
       const val = localStorage.getItem("sinew.theme");
@@ -2644,6 +2670,38 @@ function OptionsSection({
                 onClick={() => changeAutoUpdateCheck("disabled")}
               >
                 {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
+            </div>
+          </div>
+
+          {/* Taille de la boîte de chat */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Taille de la boîte de chat" : "Chat Box Size"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Agrandit la zone de saisie de texte en bas du chat pour écrire de longs messages plus facilement."
+                  : "Enlarges the text input box at the bottom of the chat for typing long messages more easily."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label={locale === "fr" ? "Taille de la boîte de chat" : "Chat Box Size"}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!largeChatBox}
+                data-active={!largeChatBox ? "true" : "false"}
+                onClick={() => toggleLargeChatBox(false)}
+              >
+                {locale === "fr" ? "Normal" : "Normal"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={largeChatBox}
+                data-active={largeChatBox ? "true" : "false"}
+                onClick={() => toggleLargeChatBox(true)}
+              >
+                {locale === "fr" ? "Agrandie" : "Enlarged"}
               </button>
             </div>
           </div>

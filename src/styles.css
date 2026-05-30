@@ -121,6 +121,15 @@
   --sticky-bg: rgba(15, 16, 19, 0.65);
   --sticky-bg-hover: rgba(20, 21, 24, 0.75);
   --sticky-border: rgba(255, 255, 255, 0.05);
+
+  /* Chat box height variables */
+  --composer-min-height: 60px;
+  --composer-max-height: 200px;
+}
+
+html[data-large-chat-box="true"] {
+  --composer-min-height: 120px;
+  --composer-max-height: 400px;
 }
 
 html[data-theme="light"] {
@@ -8654,8 +8663,8 @@ textarea {
   display: block;
   width: 100%;
   margin: 0;
-  min-height: 60px;
-  max-height: 200px;
+  min-height: var(--composer-min-height, 60px);
+  max-height: var(--composer-max-height, 200px);
   padding: 9px 11px 2px;
   background: transparent;
   border: 0 solid transparent;
