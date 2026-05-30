@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 21:05:00]
+- `src-tauri/src/tests.rs` : Ajout d'un test de latence réel (ignoré par défaut, `flash_optimizer_race`) qui met en course DeepSeek V4 Flash et Gemini 3.5 Flash sur la tâche d'optimisation de prompt et mesure le temps jusqu'au 1er mot et le temps de réponse complète. Résultat sur 4 runs : 1er mot quasi à égalité (DeepSeek légèrement devant), mais Gemini 3.5 Flash termine la réponse complète plus vite et de manière plus régulière — meilleur choix pour l'optimiseur.
+
 ## [2026-05-30 20:50:00]
 - `src-tauri/src/turns.rs` : Correction de l'Optimisation Magique Auto qui ne réécrivait jamais le prompt. Cause racine : on demandait au modèle un JSON strict, mais un prompt réécrit est souvent multi-lignes, ce qui produit un JSON invalide (sauts de ligne bruts) et faisait échouer l'analyse en silence — le brouillon d'origine était alors envoyé tel quel. Nouveau format texte délimité robuste (`MODE:` + `===PROMPT===`), avec repli sur l'ancien JSON puis sur le texte brut, et normalisation du mode (act/plan/goal). L'option reste en envoi automatique invisible à l'Entrée (choix utilisateur).
 

@@ -290,3 +290,99 @@ fn swarm_completion_wake_text_mentions_finished_and_agent_responses() {
     assert!(wake_text.contains("Built the feature."));
     assert!(wake_text.contains("Agent Swarm a terminé"));
 }
+
+// Test de latence réel (réseau) : compare DeepSeek V4 Flash et Gemini 3.5 Flash
+// sur la tâche d'optimisation de prompt. Ignoré par défaut car il appelle les
+// vraies API avec les identifiants locaux.
+// Lancer avec : cargo test -p Sinew flash_optimizer_race -- --ignored --nocapture
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore]
+async fn flash_optimizer_race() {
+    use futures::StreamExt;
+    use sinew_core::provider::{Provider, ProviderRequest};
+
+    let draft = "ajoute un bouton pour exporter mes conversations en pdf et previens moi quand cest fini";
+    let system = "Tu es un Prompt Engineer. Réécris le brouillon de l'utilisateur en une consigne claire. Réponds par: MODE: act puis une nouvelle ligne ===PROMPT=== puis le texte réécrit.";
+
+    async fn time_model(
+        provider: std::sync::Arc<dyn Provider>,
+        model: sinew_core::ModelRef,
+        system: &str,
+        draft: &str,
+    ) -> (String, std::time::Duration, std::time::Duration, usize) {
+        let label = format!("{}:{}", model.provider, model.name);
+        let messages = vec![sinew_core::message::ChatMessage::user_text(draft.to_string())];
+        let request = ProviderRequest::new(model, messages).with_system(system.to_string());
+        let start = std::time::Instant::now();
+        let mut first_token: Option<std::time::Duration> = None;
+        let mut chars = 0usize;
+        match provider.stream(request).await {
+            Ok(mut stream) => {
+                while let Some(event) = stream.next().await {
+                    if let Ok(sinew_core::stream::StreamEvent::TextDelta { delta, .. }) = event {
+                        if first_token.is_none() {
+                            first_token = Some(start.elapsed());
+                        }
+                        chars += delta.chars().count();
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("[{label}] ERREUR stream: {e}");
+            }
+        }
+        (
+            label,
+            first_token.unwrap_or_else(|| start.elapsed()),
+            start.elapsed(),
+            chars,
+        )
+    }
+
+    let deepseek = std::sync::Arc::new(
+        tokio::task::spawn_blocking(|| {
+            sinew_deepseek::DeepSeekProvider::from_default_sources()
+                .expect("DeepSeek non configuré (deepseek-auth.json manquant)")
+        })
+        .await
+        .unwrap(),
+    ) as std::sync::Arc<dyn Provider>;
+    let google = std::sync::Arc::new(
+        tokio::task::spawn_blocking(|| {
+            sinew_google::GoogleProvider::from_default_sources()
+                .expect("Google non configuré (google-auth.json manquant)")
+        })
+        .await
+        .unwrap(),
+    ) as std::sync::Arc<dyn Provider>;
+
+    let ds_model = sinew_core::ModelRef {
+        provider: "deepseek".to_string(),
+        name: "deepseek-v4-flash".to_string(),
+        effort: Some(sinew_core::model::Effort::None),
+    };
+    let g_model = sinew_core::ModelRef {
+        provider: "google".to_string(),
+        name: "gemini-3.5-flash".to_string(),
+        effort: Some(sinew_core::model::Effort::None),
+    };
+
+    // Course concurrente : les deux modèles partent en même temps.
+    let (ds, g) = tokio::join!(
+        time_model(deepseek, ds_model, system, draft),
+        time_model(google, g_model, system, draft),
+    );
+
+    for (label, ttft, total, chars) in [&ds, &g] {
+        println!(
+            "[{label}] 1er token: {:>7.0} ms | total: {:>7.0} ms | {chars} caractères",
+            ttft.as_secs_f64() * 1000.0,
+            total.as_secs_f64() * 1000.0,
+        );
+    }
+
+    let winner_ttft = if ds.1 <= g.1 { &ds.0 } else { &g.0 };
+    let winner_total = if ds.2 <= g.2 { &ds.0 } else { &g.0 };
+    println!("==> 1er token le plus rapide : {winner_ttft}");
+    println!("==> réponse complète la plus rapide : {winner_total}");
+}
