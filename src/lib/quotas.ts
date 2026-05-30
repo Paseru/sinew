@@ -28,7 +28,7 @@ export interface QuotaInfo {
 export function quotaColor(percentage: number | null | undefined) {
   if (percentage == null) return "#64748b";
   if (percentage > 80) return "#10b981";
-  if (percentage > 50) return "#3b82f6";
+  if (percentage > 50) return "#9ca3af";
   if (percentage > 20) return "#ec4899";
   return "#ef4444";
 }

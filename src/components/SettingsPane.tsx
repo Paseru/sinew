@@ -3182,7 +3182,7 @@ function OptionsSection({
       {/* ========================================================================= */}
       <div className="options-category-group">
         <h3 className="options-category-title">
-          <Icon icon="solar:settings-bold-duotone" className="options-category-icon" style={{ color: "#3b82f6" }} />
+          <Icon icon="solar:settings-bold-duotone" className="options-category-icon" style={{ color: "#9ca3af" }} />
           {locale === "fr" ? "Diagnostics & Outils Système" : "Diagnostics & System Tools"}
         </h3>
         <div className="options-category-grid">
@@ -3403,9 +3403,9 @@ function OptionsSection({
                 style={{
                   padding: "6px 12px",
                   borderRadius: "6px",
-                  backgroundColor: autoLearningEnabled ? "var(--accent-lo, rgba(59, 130, 246, 0.15))" : "var(--bg-3, rgba(255, 255, 255, 0.08))",
-                  color: autoLearningEnabled ? "var(--accent-hi, #3b82f6)" : "var(--text-2, rgba(255, 255, 255, 0.45))",
-                  border: `1px solid ${autoLearningEnabled ? "var(--accent-lo, rgba(59, 130, 246, 0.3))" : "var(--line-1, rgba(255, 255, 255, 0.08))"}`,
+                  backgroundColor: autoLearningEnabled ? "var(--accent-lo, rgba(156, 163, 175, 0.15))" : "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                  color: autoLearningEnabled ? "var(--accent-hi, #9ca3af)" : "var(--text-2, rgba(255, 255, 255, 0.45))",
+                  border: `1px solid ${autoLearningEnabled ? "var(--accent-lo, rgba(156, 163, 175, 0.3))" : "var(--line-1, rgba(255, 255, 255, 0.08))"}`,
                   cursor: autoLearningEnabled ? "pointer" : "not-allowed",
                   fontSize: "12px",
                   fontWeight: 500,
@@ -3540,7 +3540,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             gap: "4px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
-              <Icon icon="solar:play-circle-bold-duotone" width={14} height={14} style={{ color: "#3b82f6" }} />
+              <Icon icon="solar:play-circle-bold-duotone" width={14} height={14} style={{ color: "#9ca3af" }} />
               {locale === "fr" ? "Démarrage & Sandbox" : "Startup & Sandbox"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
@@ -3746,7 +3746,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
                 ? "Pilotage Chrome Rust ultra-stable (clics et courbes Beziers physiques). Bouton bleu de réparation en un clic en cas d'erreur de pont local."
-                : "Native Rust Chrome control with human Bézier curves. One-click blue repair button for the local bridge."}
+                : "Native Rust Chrome control with human Bézier curves. One-click gray repair button for the local bridge."}
             </div>
           </div>
 
@@ -3991,7 +3991,7 @@ function ProvidersSection({
                     }
                   }}
                   style={{
-                    background: "var(--accent-1, #3b82f6)",
+                    background: "var(--accent-1, #9ca3af)",
                     color: "#fff",
                     border: "none",
                     borderRadius: "4px",
@@ -4137,7 +4137,7 @@ function ProvidersSection({
                       }
                     }}
                     style={{
-                      background: "var(--accent-1, #3b82f6)",
+                      background: "var(--accent-1, #9ca3af)",
                       color: "#fff",
                       border: "none",
                       borderRadius: "4px",
@@ -5997,7 +5997,7 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
             gap: "8px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Icon icon="solar:info-circle-linear" width={16} height={16} style={{ color: "#3b82f6" }} />
+              <Icon icon="solar:info-circle-linear" width={16} height={16} style={{ color: "#9ca3af" }} />
               <strong style={{ fontSize: "13px" }}>Synchronisation et configuration locale</strong>
             </div>
             <p style={{ margin: 0, fontSize: "12px", opacity: 0.8, lineHeight: "1.4" }}>
@@ -6023,7 +6023,7 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
               className="settings-pane__btn"
               style={{
                 alignSelf: "flex-start",
-                background: "#2563eb",
+                background: "#4b5563",
                 color: "#fff",
                 border: "none",
                 padding: "6px 12px",
@@ -7007,7 +7007,7 @@ function defineSinewCoolTheme(monaco: MonacoNs): void {
       "editor.lineHighlightBackground": "#0f1013",
       "editorLineNumber.foreground": "#3a3d44",
       "editorLineNumber.activeForeground": "#9aa0a8",
-      "editorCursor.foreground": "#3b82f6",
+      "editorCursor.foreground": "#9ca3af",
       "editor.selectionBackground": "#1e2b4a",
       "editor.inactiveSelectionBackground": "#141518",
       "editorIndentGuide.background1": "#141518",
@@ -7015,13 +7015,8 @@ function defineSinewCoolTheme(monaco: MonacoNs): void {
       "editorGutter.background": "#0b0b0d",
       "editorWidget.background": "#0f1013",
       "editorWidget.border": "#23252b",
-      "editorHoverWidget.background": "#0f1013",
-      "editorHoverWidget.border": "#23252b",
-      "editorSuggestWidget.background": "#0f1013",
-      "editorSuggestWidget.border": "#23252b",
-      "editorSuggestWidget.selectedBackground": "#1e2b4a",
-      "editorBracketMatch.background": "#1e2b4a",
-      "editorBracketMatch.border": "#3b82f6",
+      "editorBracketMatch.background": "#2a2d35",
+      "editorBracketMatch.border": "#9ca3af",
       "scrollbarSlider.background": "#23252bcc",
       "scrollbarSlider.hoverBackground": "#2b2e35cc",
       "scrollbarSlider.activeBackground": "#3a3d44cc",

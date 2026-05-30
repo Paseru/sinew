@@ -1591,7 +1591,7 @@ function DesignMarkdownIcon() {
       <rect x="2.2" y="2.2" width="11.6" height="11.6" rx="2.2" fill="#fff7ed" />
       <path
         d="M4.1 11.7 5 8.5l4.9-4.9a1.2 1.2 0 0 1 1.7 0l.8.8a1.2 1.2 0 0 1 0 1.7L7.5 11l-3.4.7Z"
-        fill="#2563eb"
+        fill="#4b5563"
       />
       <path
         d="m9.6 3.9 2.5 2.5M5 8.5 7.5 11"

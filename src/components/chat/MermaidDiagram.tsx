@@ -88,7 +88,7 @@ async function renderMermaid(source: string, id: string) {
         taskTextOutsideColor: "#d2d4d9",
         taskTextClickableColor: "#9fc2ff",
         activeTaskBkgColor: "#1e2b4a",
-        activeTaskBorderColor: "#3b82f6",
+        activeTaskBorderColor: "#9ca3af",
         doneTaskBkgColor: "#14311f",
         doneTaskBorderColor: "#22c55e",
         critBkgColor: "#3a1d22",

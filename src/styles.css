@@ -7825,6 +7825,8 @@ textarea {
 .questionnaire__prompt-row .question-tool__prompt {
   flex: 1 1 auto;
   min-width: 0;
+  font-size: var(--question-sticky-font-size, 15px);
+  line-height: 1.65;
 }
 .questionnaire__prompt-row .questionnaire__count {
   flex: 0 0 auto;
@@ -10572,10 +10574,15 @@ html[data-theme="ai"] .mermaid-zoom__hint {
 .chat-body,
 .todo-strip__message-text,
 .team-message__text,
-.question-tool__prompt,
 .questionnaire__custom-input,
 .question-tool__option-label {
   font-size: var(--chat-font-size, var(--fs-sm)) !important;
+}
+
+/* Question sticky : texte plus grand et plus aéré, sans déborder */
+.tool-card--questionnaire .question-tool__prompt {
+  font-size: var(--question-sticky-font-size, 15px) !important;
+  line-height: 1.65 !important;
 }
 
 /* Rendre les titres du chat relatifs à la taille de police choisie */
