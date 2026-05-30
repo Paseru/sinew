@@ -170,6 +170,25 @@ export function Welcome({ onPick, error, deriveName }: Props) {
               <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
             </span>
           </button>
+
+          <button
+            className="welcome__cta"
+            onClick={openSandbox}
+            disabled={picking}
+          >
+            <span className="welcome__cta-icon" style={{ background: "rgba(16, 185, 129, 0.12)", color: "#10b981" }}>
+              <Icon icon="solar:server-path-bold-duotone" width={22} height={22} />
+            </span>
+            <span className="welcome__cta-body">
+              <span className="welcome__cta-title">Connect to VM (SSH / Sandbox)</span>
+              <span className="welcome__cta-sub">
+                Work directly on a remote server using the integrated SSH MCP tools
+              </span>
+            </span>
+            <span className="welcome__cta-chev">
+              <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
+            </span>
+          </button>
         </div>
 
         {error && (

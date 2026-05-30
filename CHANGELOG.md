@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:44:22]
+- `src/components/Welcome.tsx` : Ajout d'un bouton d'accès direct SSH/Sandbox sur la page d'accueil (Switch) pour utiliser le serveur MCP SSH.
+
 ## [2026-05-30 02:43:27]
 - `COMPARAISON_ARCHITECTURE.md` : Création du document d'analyse comparative entre l'architecture de Cursor et les fonctionnalités actuelles de Sinew, évaluant le niveau d'opportunité d'intégration (Shadow Workspace, Indexation/Ignore, MCP Navigateur, Boucle d'agent, Commits).
 
