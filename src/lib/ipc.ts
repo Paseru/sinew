@@ -65,6 +65,8 @@ export interface ActiveSettings {
   forceChangelog: boolean;
   gitFrenchMessages: boolean;
   autoMockups: boolean;
+  strictProblemSolving: boolean;
+  fullImplementation: boolean;
   autoOptimizeEnabled: boolean;
   autoOptimizeModelId: string | null;
 }
@@ -90,6 +92,8 @@ export function readActiveSettings(): ActiveSettings {
       forceChangelog: true,
       gitFrenchMessages: true,
       autoMockups: true,
+      strictProblemSolving: true,
+      fullImplementation: true,
       autoOptimizeEnabled,
       autoOptimizeModelId,
     };
@@ -110,77 +114,14 @@ export function readActiveSettings(): ActiveSettings {
     forceChangelog: readBool("sinew.force-changelog"),
     gitFrenchMessages: readBool("sinew.git-french-messages"),
     autoMockups: readBool("sinew.auto-mockups"),
+    strictProblemSolving: readBool("sinew.strict-problem-solving"),
+    fullImplementation: readBool("sinew.full-implementation"),
     autoOptimizeEnabled,
     autoOptimizeModelId,
   };
 }
 
-function readActiveSettings(): ActiveSettings {
-  let master = "enabled";
-  try {
-    master = localStorage.getItem("sinew.power-user-master") || "enabled";
-  } catch {}
 
-  if (master === "enabled") {
-    return {
-      gitAutomation: true,
-      conciseAnswers: true,
-      agentAutonomy: true,
-      forceChangelog: true,
-      gitFrenchMessages: true,
-      autoMockups: true,
-    };
-  } else if (master === "disabled") {
-    return {
-      gitAutomation: false,
-      conciseAnswers: false,
-      agentAutonomy: false,
-      forceChangelog: false,
-      gitFrenchMessages: false,
-      autoMockups: false,
-    };
-  }
-
-  // Custom mode: read individual settings
-  let gitAutomation = true;
-  try {
-    gitAutomation = localStorage.getItem("sinew.git-automation") !== "false";
-  } catch {}
-
-  let conciseAnswers = true;
-  try {
-    conciseAnswers = localStorage.getItem("sinew.concise-answers") !== "false";
-  } catch {}
-
-  let agentAutonomy = true;
-  try {
-    agentAutonomy = localStorage.getItem("sinew.agent-autonomy") !== "false";
-  } catch {}
-
-  let forceChangelog = false;
-  try {
-    forceChangelog = localStorage.getItem("sinew.force-changelog") === "true";
-  } catch {}
-
-  let gitFrenchMessages = true;
-  try {
-    gitFrenchMessages = localStorage.getItem("sinew.git-french-messages") !== "false";
-  } catch {}
-
-  let autoMockups = true;
-  try {
-    autoMockups = localStorage.getItem("sinew.auto-mockups") !== "false";
-  } catch {}
-
-  return {
-    gitAutomation,
-    conciseAnswers,
-    agentAutonomy,
-    forceChangelog,
-    gitFrenchMessages,
-    autoMockups,
-  };
-}
 
 function readDisplayMode(): DisplayMode {
   let master = "enabled";
@@ -737,6 +678,8 @@ export const api = {
     const forceChangelog = active.forceChangelog;
     const gitFrenchMessages = active.gitFrenchMessages;
     const autoMockups = active.autoMockups;
+    const strictProblemSolving = active.strictProblemSolving;
+    const fullImplementation = active.fullImplementation;
 
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -762,6 +705,8 @@ export const api = {
         forceChangelog,
         gitFrenchMessages,
         autoMockups,
+        strictProblemSolving,
+        fullImplementation,
         clientFormattedDateTime,
         displayMode: readDisplayMode(),
       },
@@ -808,6 +753,8 @@ export const api = {
     const forceChangelog = active.forceChangelog;
     const gitFrenchMessages = active.gitFrenchMessages;
     const autoMockups = active.autoMockups;
+    const strictProblemSolving = active.strictProblemSolving;
+    const fullImplementation = active.fullImplementation;
 
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -829,6 +776,8 @@ export const api = {
         forceChangelog,
         gitFrenchMessages,
         autoMockups,
+        strictProblemSolving,
+        fullImplementation,
         clientFormattedDateTime,
         displayMode: readDisplayMode(),
       },

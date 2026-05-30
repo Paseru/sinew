@@ -264,7 +264,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
 
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, None)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, false, false, None)
             .map_err(error_to_string)?;
     let project_id = crate::workspace::resolve_project_id_str(&workspace_id);
     let mut conversation = state
@@ -665,7 +665,7 @@ pub(super) async fn stop_agent_swarm_command(
         .map_err(error_to_string)?
         .ok_or_else(|| "conversation not found".to_string())?;
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, None)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, false, false, None)
             .map_err(error_to_string)?;
     let mcp_settings = state.store.load_mcp_settings().map_err(error_to_string)?;
     let sub_agent_settings = state
