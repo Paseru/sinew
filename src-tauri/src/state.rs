@@ -21,6 +21,13 @@ Strict Problem Solving Mode is enabled. Never bypass, hide, or ignore errors and
 pub(super) const DEFAULT_FULL_IMPLEMENTATION_PROMPT: &str = "\
 Full Implementation Mode is enabled. Never leave TODOs, placeholders, or fake/mock code. Everything you write must be completely wired up, functional, and ready for production use immediately.";
 
+pub(super) const DEFAULT_SSH_OPTIMIZATION_PROMPT: &str = "\
+SSH Optimization Strategy: When you realize or are told that the current workspace is a remote SSH/SSHFS mount, network latency will make local file searches (like `grep` or `glob`) very slow. To restore local-like performance:
+1. SOTA Survival Kit: Use your SSH MCP tools (`ssh_exec`, `ssh_ensure_session`) to run commands natively on the remote server instead of the local terminal. If elite tools like `ripgrep` (rg) or `fd` are missing on the remote server, proactively install them (e.g. `apt-get install ripgrep`).
+2. Stealth Editing (SCP/SFTP): Use your native `edit_file` and `read` tools to read/modify code instead of piping `echo` or `sed` through the terminal. These tools are optimized and will sync files stealthily in the background.
+3. One-Shot Scripts: If you need to run complex logic on the remote server, write a script locally via `write_file`, then execute it remotely in one shot via `ssh_exec` to avoid interactive latency.";
+
+
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";

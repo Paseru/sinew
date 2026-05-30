@@ -1809,6 +1809,9 @@ pub(super) fn system_prompt_for_workspace(
         sections.push(crate::state::DEFAULT_FULL_IMPLEMENTATION_PROMPT.to_string());
     }
 
+    // Always inject SSH Optimization Strategy. The agent will ignore it if not on SSH.
+    sections.push(crate::state::DEFAULT_SSH_OPTIMIZATION_PROMPT.to_string());
+
     // Inject machine-wide global consolidated rules if present
     let mut global_rules_content = None;
     

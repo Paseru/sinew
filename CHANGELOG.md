@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 16:01:20]
+- `src-tauri/src/state.rs` & `src-tauri/src/turns.rs` : Ajout d'une consigne système permanente (`DEFAULT_SSH_OPTIMIZATION_PROMPT`) pour les agents. Lorsqu'ils détectent être sur un espace de travail distant monté en SSHFS, les agents utiliseront désormais leurs outils MCP natifs (`ssh_exec`) pour installer des utilitaires (SOTA) et exécuter des scripts directement sur le serveur, afin de contourner la latence réseau des outils de recherche de fichiers en local.
+
+
+
 ## [2026-05-30 15:44:34]
 - `src/components/Workspace.tsx` : Suppression du composant de connexion SSH dans la barre latérale inférieure de l'espace de travail. Le bouton "Se connecter" et ses états associés ont été retirés pour éviter toute confusion avec le changement de projet, réservant ainsi l'accès SSH à l'écran de bienvenue.
 
