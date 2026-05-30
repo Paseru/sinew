@@ -1,0 +1,22 @@
+[package]
+name = "sinew-agent-daemon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Persistent background daemon for Sinew agent loops"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sinew-core = { path = "../sinew-core" }
+sinew-app = { path = "../sinew-app" }
+sinew-cursor = { path = "../sinew-cursor" }
+
+[lints]
+workspace = true

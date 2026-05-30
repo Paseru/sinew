@@ -5095,6 +5095,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
+name = "sinew-agent-daemon"
+version = "0.1.26"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "sinew-app",
+ "sinew-core",
+ "sinew-cursor",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "sinew-anthropic"
 version = "0.1.26"
 dependencies = [

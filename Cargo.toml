@@ -11,6 +11,7 @@ members = [
     "crates/sinew-cursor",
     "crates/sinew-index",
     "crates/sinew-app",
+    "crates/sinew-agent-daemon",
     "src-tauri", "sinew-chrome-bridge/native-host-wrapper",
 ]
 

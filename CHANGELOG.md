@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:00:40]
+- `Cargo.toml` : Ajout du sous-projet `crates/sinew-agent-daemon` à la liste des membres du workspace Cargo.
+- `crates/sinew-agent-daemon/Cargo.toml` : Création du fichier de configuration Cargo avec ses dépendances (tokio, anyhow, serde, etc.).
+- `crates/sinew-agent-daemon/src/main.rs` : Implémentation du squelette du démon de fond persistant Windows (écriture de PID, configuration de serveur Named Pipe).
+
+
 ## [2026-05-30 02:57:59]
 - `RAPPORT_DAEMON_PERSISTANT.md` : Création du rapport de conception SOTA détaillant le découplage du moteur de discussion en démon d'arrière-plan Windows persistant (Named Pipes, cycle de vie detached, persistance SQLite, stream de reconnexion).
 
