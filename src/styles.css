@@ -6305,7 +6305,7 @@ textarea {
 }
 
 /* Highly optimized GPU-accelerated soft background lights */
-.chat-col::before {
+html[data-theme="ai"] .chat-col::before {
   content: "";
   position: absolute;
   top: -100px;
@@ -6322,7 +6322,7 @@ textarea {
   animation: chat-ambient-glow-1 25s infinite alternate ease-in-out;
 }
 
-.chat-col::after {
+html[data-theme="ai"] .chat-col::after {
   content: "";
   position: absolute;
   bottom: -100px;

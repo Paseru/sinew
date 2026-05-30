@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:06:13]
+- `src/styles.css` : Restriction des halos lumineux d'arrière-plan du chat et de leurs animations au seul mode IA (`data-theme="ai"`). En modes normaux (jour, nuit et système), ces animations et halos sont désormais désactivés pour conserver une interface sobre et sans distractions.
+
 ## [2026-05-30 21:45:24]
 - `C:\Users\julie\OneDrive\Bureau\Sinew_0.1.27_x64-setup.exe` : Recompilation de l'installateur Windows et copie sur le Bureau pour fournir une version installable fraîche.
 
