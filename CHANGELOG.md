@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:56:52]
+- `src/components/SettingsPane.tsx` : Correction d'un problème d'affichage où le composant `QuotaBar` en mode inline dépassait du bord de la carte pour les fournisseurs ayant de longs libellés de quotas (ex: "Claude & GPT-OSS"). Ajout de `maxWidth: "100%"`, `overflow: "hidden"` et `textOverflow: "ellipsis"` pour tronquer proprement le texte à l'intérieur.
+
 ## [2026-05-30 14:55:00]
 - `src/components/chat/ToolCard.tsx` : Suppression complète du bouton "Auto" / "Auto-fix", car les relances et correctifs automatiques doivent être gérés par l'agent de manière autonome sans nécessiter d'intervention manuelle.
 
