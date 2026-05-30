@@ -4837,23 +4837,9 @@ function ProviderCard({
           </div>
           {!compact && <p>{description}</p>}
           <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "4px" : "8px", alignItems: "center" }}>
-            {connected && meta.map((item) => (
+            {meta?.map((item) => (
               <span key={item}>{item}</span>
             ))}
-            {connected && quota && quota.kind !== "unavailable" && (
-              <>
-                {quota.kind === "credits" ? (
-                  <>
-                    <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
-                    <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
-                  </>
-                ) : (
-                  (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
-                    <QuotaBar inline key={item.label} item={item} />
-                  ))
-                )}
-              </>
-            )}
           </div>
           {connected && quota && quota.kind === "unavailable" && (
             <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: 0.7 }}>
@@ -4864,7 +4850,7 @@ function ProviderCard({
           {children}
         </div>
       </div>
-      <div className="settings-pane__provider-actions">
+      <div className="settings-pane__provider-actions" style={{ flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
         {connecting ? (
           <button
             type="button"
@@ -4926,6 +4912,57 @@ function ProviderCard({
               {!compact && <span>{busy ? "Disconnecting..." : "Disconnect"}</span>}
             </button>
           </div>
+        ) : (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {showMinus && (
+              <button
+                type="button"
+                className="settings-pane__btn"
+                onClick={onMinus}
+                disabled={loading || busy}
+                title="Remove account"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "6px 8px",
+                  minWidth: "auto",
+                  color: "var(--text-error, #f87171)"
+                }}
+              >
+                <Icon icon="solar:minus-square-linear" width={16} height={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="settings-pane__btn settings-pane__btn--primary"
+              onClick={onConnect}
+              disabled={loading || busy}
+              style={compact ? { padding: "6px 8px", minWidth: "auto" } : undefined}
+              title="Connect"
+            >
+              <Icon icon="solar:link-circle-linear" width={compact ? 16 : 13} height={compact ? 16 : 13} />
+              {!compact && <span>{busy ? busyConnectLabel : connectLabel}</span>}
+            </button>
+          </div>
+        )}
+        
+        {connected && quota && quota.kind !== "unavailable" && (
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "6px", width: "100%", maxWidth: "100%" }}>
+            {quota.kind === "credits" ? (
+              <>
+                <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+                <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
+              </>
+            ) : (
+              (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
+                <QuotaBar inline key={item.label} item={item} />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
         ) : (
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             {showMinus && (
