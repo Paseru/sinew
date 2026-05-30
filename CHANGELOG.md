@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:06:32]
+- `src-tauri/capabilities/default.json` : Extension des fenêtres autorisées à toutes (`*` au lieu de `main, sinew-window-*`) et ajout explicite de la permission `dialog:allow-message` pour s'assurer que le frontend puisse exécuter `window.confirm` sur n'importe quelle fenêtre Tauri sans blocage ACL.
+
 ## [2026-05-30 14:04:09]
 - `src-tauri/capabilities/default.json` : Ajout des permissions `dialog:allow-confirm` et `dialog:allow-ask` pour autoriser le frontend à utiliser les boîtes de dialogue de confirmation natives via `window.confirm`, résolvant l'erreur d'autorisation ACL `Command plugin:dialog|confirm not allowed by ACL` identifiée dans le fichier de log `frontend-error.log`.
 
