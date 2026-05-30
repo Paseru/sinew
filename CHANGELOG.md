@@ -3,7 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 03:04:09]
-- `crates/sinew-app/src/write.rs` : Ajout d'un test temporaire pour déboguer le problème de chemin absolu de l'espace de travail.
+- `src-tauri/src/lib.rs` : Restauration des imports accidentellement supprimés par la session précédente (`DeleteFileTool`, `EditFileTool`, `GlobTool`, `GoalWorkflowState`, `GrepTool`), résolvant les erreurs de compilation du projet principal.
+- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout de la dépendance `base64` pour permettre la compilation du binaire natif du pont Chrome.
+
+## [2026-05-30 03:06:42]
+- `crates/sinew-agent-daemon/src/main.rs` : Remplacement du chargement incorrect de `all_auth_files` par le constructeur standard `from_default_sources` pour le fournisseur Google, résolvant les erreurs de compilation du daemon.
+
+## [2026-05-30 03:04:09]
+- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout de la dépendance `base64` pour permettre la compilation du binaire natif du pont Chrome.
+
+## [2026-05-30 03:06:42]
+- `src-tauri/src/workspace.rs` : Ajout de l'installation automatique et silencieuse en tâche de fond de WinFsp et SSHFS-Win via Winget s'ils sont absents lors de la connexion.
+- `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Correction d'une erreur de syntaxe (accolades fermantes superflues) empêchant la compilation du binaire natif du pont Chrome.
 
 ## [2026-05-30 03:00:17]
 - `AGENTS.md` : Mise à jour de la carte des fichiers (code map) avec `computer_use.rs` et la nouvelle Skill.
