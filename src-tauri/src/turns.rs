@@ -61,11 +61,14 @@ Règles de réécriture:
 - Formulez sous forme d'instructions claires ou de description factuelle du besoin.
 - N'inventez pas de choix techniques non suggérés par l'utilisateur, mais structurez ceux présents.
 
-Répondez UNIQUEMENT en JSON valide avec ce format exact :
-{
-  \"mode\": \"act\" | \"plan\" | \"goal\",
-  \"rewritten_prompt\": \"votre texte réécrit ici\"
-}";
+Répondez EXACTEMENT dans ce format texte (sans JSON, sans Markdown, sans commentaire) :
+MODE: act
+===PROMPT===
+Votre texte réécrit ici (il peut tenir sur plusieurs lignes).
+
+La première ligne commence par 'MODE:' suivi de act, plan ou goal.
+La ligne suivante est exactement '===PROMPT==='.
+Tout ce qui suit ce marqueur est le prompt réécrit, en texte brut.";
 
     let messages = vec![sinew_core::message::ChatMessage::user_text(text.to_string())];
     
@@ -85,17 +88,82 @@ Répondez UNIQUEMENT en JSON valide avec ce format exact :
         }
     }
 
-    let mut json_text = response_text.trim();
+    parse_optimize_response(&response_text, text)
+}
+
+/// Extrait le mode et le prompt réécrit de la réponse du modèle.
+///
+/// On tolère plusieurs formats car les LLM produisent rarement un JSON
+/// strictement valide quand le texte réécrit est multi-lignes :
+/// 1. Format délimité `MODE:` + `===PROMPT===` (format demandé, robuste).
+/// 2. JSON `{ "mode": ..., "rewritten_prompt": ... }` (compatibilité).
+/// 3. Texte brut exploitable en dernier recours, pour ne jamais échouer
+///    silencieusement et renvoyer le brouillon original tel quel.
+fn parse_optimize_response(
+    raw: &str,
+    original: &str,
+) -> std::result::Result<OptimizePromptOutput, String> {
+    let normalize_mode = |value: &str| -> Option<String> {
+        let lower = value.trim().to_ascii_lowercase();
+        let token = lower
+            .split(|c: char| !c.is_ascii_alphabetic())
+            .find(|s| matches!(*s, "act" | "plan" | "goal"))?;
+        Some(token.to_string())
+    };
+
+    // 1. Format délimité.
+    if let Some(marker) = raw.find("===PROMPT===") {
+        let head = &raw[..marker];
+        let body = raw[marker + "===PROMPT===".len()..].trim_matches(|c| c == '\r' || c == '\n');
+        let mode = head
+            .lines()
+            .find_map(|line| {
+                let trimmed = line.trim();
+                if trimmed.to_ascii_uppercase().starts_with("MODE:") {
+                    normalize_mode(&trimmed[5..])
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| "act".to_string());
+        let rewritten = body.trim();
+        if !rewritten.is_empty() {
+            return Ok(OptimizePromptOutput {
+                mode,
+                rewritten_prompt: rewritten.to_string(),
+            });
+        }
+    }
+
+    // 2. JSON (compatibilité ascendante).
+    let mut json_text = raw.trim();
     if let Some(start) = json_text.find('{') {
         if let Some(end) = json_text.rfind('}') {
             json_text = &json_text[start..=end];
         }
     }
+    if let Ok(output) = serde_json::from_str::<OptimizePromptOutput>(json_text) {
+        if !output.rewritten_prompt.trim().is_empty() {
+            return Ok(OptimizePromptOutput {
+                mode: normalize_mode(&output.mode).unwrap_or_else(|| "act".to_string()),
+                rewritten_prompt: output.rewritten_prompt,
+            });
+        }
+    }
 
-    let output: OptimizePromptOutput = serde_json::from_str(json_text)
-        .map_err(|e| format!("Échec de l'optimisation (JSON invalide) : {}\nRaw: {}", e, json_text))?;
+    // 3. Dernier recours : texte brut non vide et différent du brouillon.
+    let fallback = raw.trim();
+    if !fallback.is_empty() && fallback != original.trim() {
+        return Ok(OptimizePromptOutput {
+            mode: normalize_mode(fallback).unwrap_or_else(|| "act".to_string()),
+            rewritten_prompt: fallback.to_string(),
+        });
+    }
 
-    Ok(output)
+    Err(format!(
+        "Échec de l'optimisation : réponse du modèle inexploitable.\nRaw: {}",
+        raw.trim()
+    ))
 }
 
 #[tauri::command]

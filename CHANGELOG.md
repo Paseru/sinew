@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 20:50:00]
+- `src-tauri/src/turns.rs` : Correction de l'Optimisation Magique Auto qui ne réécrivait jamais le prompt. Cause racine : on demandait au modèle un JSON strict, mais un prompt réécrit est souvent multi-lignes, ce qui produit un JSON invalide (sauts de ligne bruts) et faisait échouer l'analyse en silence — le brouillon d'origine était alors envoyé tel quel. Nouveau format texte délimité robuste (`MODE:` + `===PROMPT===`), avec repli sur l'ancien JSON puis sur le texte brut, et normalisation du mode (act/plan/goal). L'option reste en envoi automatique invisible à l'Entrée (choix utilisateur).
+
 ## [2026-05-30 20:41:00]
 - `crates/sinew-app/src/agent/boost_distill.rs` (nouveau) : Auto-distillation des grosses sorties d'outils dans la boucle de l'agent. Quand le Boost Local est actif (drapeau `SINEW_BOOST_DISTILLER`), les sorties volumineuses de `bash`/`bash_input`/`web_fetch` (> ~6 000 jetons) sont résumées par le modèle local avant d'entrer dans le contexte du modèle principal. Garde-fous SOTA : jamais sur `read`/`grep`/`codebase_search` (texte exact requis pour les éditions), jamais sur une sortie en erreur, fin de sortie conservée brute (codes d'erreur), repli sur la sortie brute si le distillateur échoue.
 - `crates/sinew-app/src/agent.rs` : Déclaration du module `boost_distill`.
