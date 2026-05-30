@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 18:18:38]
+- `src/components/SettingsPane.tsx` : Correction des problèmes d'encodage pour le bouton "Jour" et "Système" dans l'onglet Apparence, remplacement par des emojis corrects. Remplacement des réglages de taille numérique par une structure de classe CSS unifiée et correction de l'icône de titre pour DeepSeek.
+- `src/styles.css` : Ajout de la classe `.settings-pane__number-adjuster` pour uniformiser la disposition des ajusteurs numériques. Conversion de la règle responsive `@media` en `@container` query sur les lignes à deux colonnes pour qu'elles se comportent correctement suivant la taille du panneau de réglages, et élargissement de la bascule adaptative des cartes de 500px à 600px pour une meilleure lisibilité mobile.
+
 ## [2026-05-30 17:51:00]
 - `src/components/chat/chatUtils.ts` : Ajout de la fonction `playNotificationSound` utilisant l'API Web Audio pour jouer un carillon agréable à la fin d'un chat.
 - `src/components/chat/ChatPane.tsx` : Importation et déclenchement de la sonnerie de notification lors de la réception de l'événement `turn_finished`.
