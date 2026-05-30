@@ -1531,13 +1531,57 @@ impl AppStore {
         .context("unable to load conversation model")
     }
 
+    pub fn set_provider_status(&self, provider_id: &str, status: &str) -> Result<()> {
+        let conn = self.connection()?;
+        conn.execute(
+            "insert into provider_states (provider_id, status)
+             values (?1, ?2)
+             on conflict(provider_id) do update set
+                status = excluded.status",
+            params![provider_id, status],
+        )
+        .context("unable to set provider status")?;
+        Ok(())
+    }
+
+    pub fn get_provider_status(&self, provider_id: &str) -> Result<String> {
+        let conn = self.connection()?;
+        let status = conn
+            .query_row(
+                "select status from provider_states where provider_id = ?1",
+                params![provider_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .context("unable to read provider status")?;
+
+        Ok(status.unwrap_or_else(|| "active".to_string()))
+    }
+
+    pub fn list_archived_providers(&self) -> Result<Vec<String>> {
+        let conn = self.connection()?;
+        let mut statement = conn
+            .prepare("select provider_id from provider_states where status = 'archived'")
+            .context("unable to prepare archived providers query")?;
+
+        let rows = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .context("unable to query archived providers")?;
+
+        let mut archived = Vec::new();
+        for row in rows {
+            archived.push(row.context("bad provider status row")?);
+        }
+        Ok(archived)
+    }
+
     fn migrate(&self) -> Result<()> {
         let conn = self.connection()?;
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap_or(0);
 
-        if version >= 11 {
+        if version >= 12 {
             return Ok(());
         }
 
@@ -1604,7 +1648,16 @@ impl AppStore {
                 [],
             );
         }
-        conn.pragma_update(None, "user_version", 11)
+        if version < 12 {
+            conn.execute_batch(
+                "create table if not exists provider_states (
+                    provider_id text primary key,
+                    status text not null
+                );",
+            )
+            .context("unable to create provider_states table")?;
+        }
+        conn.pragma_update(None, "user_version", 12)
             .context("unable to set sqlite schema version")?;
         Ok(())
     }

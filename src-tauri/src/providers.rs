@@ -49,8 +49,34 @@ pub(super) fn list_configured_model_providers(
         .keys()
         .cloned()
         .collect::<Vec<_>>();
+    if let Ok(archived) = state.store.list_archived_providers() {
+        providers.retain(|p| !archived.contains(p));
+    }
     providers.sort_by(|a, b| compare_provider_keys(a, b));
     Ok(providers)
+}
+
+#[tauri::command]
+pub(super) fn archive_provider(
+    state: State<'_, DesktopState>,
+    provider_id: String,
+) -> std::result::Result<(), String> {
+    state.store.set_provider_status(&provider_id, "archived").map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub(super) fn restore_provider(
+    state: State<'_, DesktopState>,
+    provider_id: String,
+) -> std::result::Result<(), String> {
+    state.store.set_provider_status(&provider_id, "active").map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub(super) fn list_archived_providers(
+    state: State<'_, DesktopState>,
+) -> std::result::Result<Vec<String>, String> {
+    state.store.list_archived_providers().map_err(|e| e.to_string())
 }
 
 fn compare_provider_keys(a: &str, b: &str) -> std::cmp::Ordering {
