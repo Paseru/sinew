@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:29:00]
+- `Rapport_Codex_Analyse.md` : Création du rapport de synthèse de Codex analysant son architecture, son intégration avec le clavier Work Louder, son isolation d'exécutables (staging) et ses politiques de bac à sable (sandbox).
+
+
 ## [2026-05-30 02:26:42]
 - `src/components/SettingsPane.tsx` : Ajout d'une option de configuration pour agrandir la taille de la boîte de saisie (boîte de chat) en mode normal ou agrandi.
 - `src/App.tsx` : Initialisation au démarrage de l'attribut `data-large-chat-box` sur le document HTML à partir des paramètres persistés de l'utilisateur.
