@@ -3435,6 +3435,7 @@ function OptionsSection({
                   </button>
                 </div>
               </div>
+            </div>
 
               {/* Ligne 5 : Problem Solving & Full Implementation */}
               <div className="options-subcategory-row">
@@ -3510,7 +3511,6 @@ function OptionsSection({
           </div>
 
         </div>
-      </div>
         </>
       )}
 

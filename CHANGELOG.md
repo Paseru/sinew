@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:08:04]
+- `src/components/SettingsPane.tsx` : Correction d'une balise div non fermée dans la section "Power User". Le manque de fermeture pour le conteneur grid (Ligne 4) imbriquait indûment la Ligne 5 et le choix du mode d'affichage, provoquant un alignement incorrect dans la colonne gauche et un vide dans la colonne droite. Le positionnement et l'alignement des options sont désormais rétablis.
+
 ## [2026-05-30 22:06:13]
 - `src/styles.css` : Restriction des halos lumineux d'arrière-plan du chat et de leurs animations au seul mode IA (`data-theme="ai"`). En modes normaux (jour, nuit et système), ces animations et halos sont désormais désactivés pour conserver une interface sobre et sans distractions.
 
