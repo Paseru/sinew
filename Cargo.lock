@@ -2977,7 +2977,7 @@ dependencies = [
 
 [[package]]
 name = "native-host-wrapper"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -5098,7 +5098,7 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "sinew-agent-daemon"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "anyhow",
  "serde",
@@ -5184,7 +5184,7 @@ dependencies = [
 
 [[package]]
 name = "sinew-cursor"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -5219,7 +5219,7 @@ dependencies = [
 
 [[package]]
 name = "sinew-deepseek"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5258,7 +5258,7 @@ dependencies = [
 
 [[package]]
 name = "sinew-index"
-version = "0.1.26"
+version = "0.1.27"
 dependencies = [
  "anyhow",
  "directories",
