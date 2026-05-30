@@ -10620,6 +10620,14 @@ html[data-theme="ai"] .mermaid-zoom__hint {
   font-size: 11px;
   color: var(--text-2);
   min-width: 0;
+  white-space: nowrap;
+}
+
+.sidebar-ssh-widget__status > span:not(.sidebar-ssh-widget__status-dot) {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .sidebar-ssh-widget__status-dot {
@@ -10673,6 +10681,8 @@ html[data-theme="ai"] .mermaid-zoom__hint {
   cursor: pointer;
   border: 1px solid var(--line);
   transition: background 150ms ease, color 150ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sidebar-ssh-widget__connect-btn:hover {

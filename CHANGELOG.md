@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 11:17:33]
+- `src/styles.css` : Ajustement des styles de l'encart SSH pour forcer l'affichage de l'état de connexion et du bouton sur une seule ligne (sans retour à la ligne) avec troncature automatique du texte en cas de manque d'espace.
+
 ## [2026-05-30 11:14:58]
 - `src-tauri/src/rules.rs` : Suppression automatique du marqueur de début de fichier UTF-8 (BOM `\u{FEFF}`) lors de la lecture de `errors_raw.json` pour éviter l'erreur d'analyse JSON `Format errors_raw.json invalide: expected value at line 1 column 1` qui bloquait la consolidation des règles par l'IA.
 
@@ -32,7 +35,7 @@ All notable changes to this project will be documented in this file.
 ## [2026-05-30 03:51:25]
 - `src-tauri/src/main.rs` : Ajout d'un panic hook global qui capture toutes les panics Rust dans `logs/panic.log` avant le crash.
 - `src-tauri/src/lib.rs` : Ajout de la commande `log_frontend_error` qui écrit les erreurs du frontend dans `logs/frontend-error.log`.
-- `src/main.tsx` : Ajout de `window.onerror` et `window.onunhandledrejection` qui capturent toutes les erreurs JS/React et les envoient au backend.
+- `src/main.tsx` : Ajout de `window.onerror` and `window.onunhandledrejection` qui capturent toutes les erreurs JS/React et les envoient au backend.
 - `src/lib/ipc.ts` : Ajout de la méthode `logFrontendError`.
 - **Couverture erreurs totale** : panics Rust + erreurs React/JS + erreurs bridge = tout dans `logs/`.
 
@@ -83,7 +86,7 @@ All notable changes to this project will be documented in this file.
 ## [2026-05-30 03:13:06]
 - `src-tauri/src/workspace.rs` : Création de la commande `list_ssh_hosts` pour extraire automatiquement les serveurs/alias configurés dans le fichier `~/.ssh/config` de l'utilisateur.
 - `src-tauri/src/lib.rs` : Enregistrement de la commande `list_ssh_hosts` dans le gestionnaire Tauri.
-- `src/lib/ipc.ts` : Exposition de la méthode `listSshHosts`.
+- `src/lib/ipc.ts` : Exposition de la méthode API `listSshHosts`.
 - `src/components/Welcome.tsx` : Intégration des boutons de connexion rapide ("Quick Connect") basés sur la liste des serveurs configurés pour une connexion instantanée en un clic.
 
 ## [2026-05-30 03:06:42]
@@ -139,7 +142,6 @@ All notable changes to this project will be documented in this file.
 
 
 
-
 ## [2026-05-30 03:01:48]
 - `CHANGELOG.md` : Enregistrement de la suppression des fichiers temporaires et rapports d'analyse obsolètes.
 - `AGENTS.md` : Mise à jour de la carte des fichiers (code map) suite au retrait des fichiers inutiles du projet.
@@ -149,7 +151,7 @@ All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 03:02:04]
 - `crates/sinew-agent-daemon/src/protocol.rs` : Création de la structure du protocole d'échange JSON IPC (Requêtes de turn, d'annulation, de statut et Réponses d'événements et d'erreurs).
-- `crates/sinew-agent-daemon/src/main.rs` : Implémentation du serveur d'écoute asynchrone multithread gérant les connexions entrantes sur le Named Pipe et le traitement des messages JSON-RPC délimités par des retours à la ligne (`\n`).
+- `crates/sinew-agent-daemon/src/main.rs` : Implémentation du serveur d'écoute asynchrone multithread gérant les connexions entrantes sur le Named Pipe et le traitement des messages JSON-RPC de limités par des retours à la ligne (`\n`).
 
 
 ## [2026-05-30 02:57:00]
@@ -315,7 +317,7 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **Sélection et copie libre :** Déblocage de la sélection et copie de texte directement dans le fil de discussion du chat.
 * **Démarcation visuelle :** Ligne de séparation verticale élégante à gauche du panneau de configuration des paramètres.
 * **Découpage du bundle Vite (-80% de taille) :** Monaco Editor et xterm.js sont isolés dans des sous-lots séparés pour un chargement instantanél'interface utilisateur.
-* **Visualisation du plan d'action (Planning Board) :** Intégration d'un bloc dynamique interactif (`PlanningNextMoveBlock`) montrant en temps réel les prochaines étapes planifiées par le Swarm d'agents.
+* **Visualisation du plan d'action (Planning Board) :** Intégration d'un bloc dynamique interactif (`PlanningNextMoveBlock`) montrant en temps réel les prochaines étapes planifiées by le Swarm d'agents.
 * **Aperçu d'image immersif (Lightbox) :** Visionneuse d'images de discussion immersive avec zoom à la molette de souris, déplacement panoramique, rotation, téléchargement et fermeture par clic extérieur.
 
 ### 💾 Autonomie, Sauvegarde & Robustesse Système
@@ -337,7 +339,7 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **Script de contrôle qualité unifié (`scripts/check.ps1`) :** Commande unique `npm run check` exécutant le build frontend, `cargo check`, les tests, `clippy` et les audits de dépendances en une seule opération.
 * **Système d'apprentissage global transparent :** Chargement et injection automatique de la base d'instructions centralisées de l'utilisateur (`%LOCALAPPDATA%\Sinew\instructions_consolidated.md`) dans le prompt système de tous les agents pour l'ensemble des projets ouverts sur la machine.
 * **Consolidation automatique de la mémoire :** Mécanisme au démarrage transformant automatiquement les erreurs répétées enregistrées dans `errors_raw.json` en règles d'apprentissage globales permanentes dans `instructions_consolidated.md` avec nettoyage du compteur d'erreurs.
-* **Bouton de synchronisation forcée :** Ajout d'un bouton de synchronisation immédiate à la demande dans les paramètres pour déclencher manuellement la synchronisation bidirectionnelle OneDrive et Git.
+* **Bouton de synchronisation forcée :** Ajout d'un bouton de synchronisation immédiate à la demande dans les paramètres pour déclencher manuellement la synchronisation du dossier OneDrive local.
 
 ### 🤖 Modèles d'IA, Comptes & Furtivité (AI Engine)
 * **Gestion Multi-comptes OpenAI & Google Gemini :** Connexion simultanée de plusieurs profils OpenAI et Google Gemini secondaires avec bascule instantanée entre vos différentes clés, comptes et abonnements.
