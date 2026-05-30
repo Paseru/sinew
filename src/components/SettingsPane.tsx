@@ -178,6 +178,7 @@ export function SettingsPane({ workspacePath }: Props) {
   const [providersBusy, setProvidersBusy] = useState(false);
   const [providersMessage, setProvidersMessage] = useState<string | null>(null);
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
+  const [archivedProviders, setArchivedProviders] = useState<string[]>([]);
 
   const setLocale = useCallback((nextLocale: AppLocale) => {
     setAppLocale(nextLocale);
@@ -437,10 +438,31 @@ export function SettingsPane({ workspacePath }: Props) {
       }
     } catch {
       setConfiguredProviders([]);
+      setArchivedProviders([]);
       setOpenRouterModels([]);
       setOllamaModels([]);
     }
   }, []);
+
+  const handleArchiveProvider = useCallback(async (providerId: string) => {
+    try {
+      await api.archiveProvider(providerId);
+      await loadConfiguredProviders();
+      window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
+    } catch (err) {
+      console.error("Failed to archive provider:", err);
+    }
+  }, [loadConfiguredProviders]);
+
+  const handleRestoreProvider = useCallback(async (providerId: string) => {
+    try {
+      await api.restoreProvider(providerId);
+      await loadConfiguredProviders();
+      window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
+    } catch (err) {
+      console.error("Failed to restore provider:", err);
+    }
+  }, [loadConfiguredProviders]);
 
   useEffect(() => {
     void loadConfiguredProviders();
@@ -1705,6 +1727,10 @@ export function SettingsPane({ workspacePath }: Props) {
           <AboutSection locale={locale} />
         ) : section === "providers" ? (
           <ProvidersSection
+            archivedProviders={archivedProviders}
+            onArchiveProvider={handleArchiveProvider}
+            onRestoreProvider={handleRestoreProvider}
+            locale={locale}
             openAiStatus={openAiStatus}
             openAiAccounts={openAiAccounts}
             unconnectedAccounts={unconnectedAccounts}
@@ -4597,6 +4623,10 @@ function AboutSection({ locale }: { locale: AppLocale }) {
 // ---- Providers section -------------------------------------------------
 
 type ProvidersSectionProps = {
+  archivedProviders: string[];
+  onArchiveProvider: (providerId: string) => void;
+  onRestoreProvider: (providerId: string) => void;
+  locale?: string;
   openAiStatus: OpenAiProviderStatus | null;
   openAiAccounts: OpenAiAccountInfo[];
   unconnectedAccounts: string[];
@@ -4654,6 +4684,10 @@ type ProvidersSectionProps = {
 };
 
 function ProvidersSection({
+  archivedProviders,
+  onArchiveProvider,
+  onRestoreProvider,
+  locale = "en",
   openAiStatus,
   openAiAccounts,
   unconnectedAccounts,
@@ -4709,6 +4743,9 @@ function ProvidersSection({
   onDeepSeekChanged,
   onOllamaChanged,
 }: ProvidersSectionProps) {
+  const [showArchived, setShowArchived] = useState(false);
+  const isArchived = (id: string) => archivedProviders.includes(id);
+
   const cursorStatus: CursorComposerAuthStatus = {
     connected: Boolean(cursorComposerStatus?.connected),
     connectionState:
@@ -4750,86 +4787,154 @@ function ProvidersSection({
       </header>
 
       <div className="settings-pane__body settings-pane__body--providers">
-        <ProviderCard
-          name="Anthropic"
-          icon="simple-icons:anthropic"
-          description="Use OAuth to connect your Claude account for Anthropic models."
-          status={anthropicStatus}
-          connectedMeta={["Claude OAuth"]}
-          loading={loading}
-          busy={busy}
-          onConnect={onConnectAnthropic}
-          onCancel={onCancelAnthropic}
-          onDisconnect={onDisconnectAnthropic}
-          providerId="anthropic"
-        />
-        <ProviderCard
-          name="OpenAI"
-          icon="simple-icons:openai"
-          description="Use OAuth to connect your ChatGPT account for OpenAI models."
-          status={openAiStatus}
-          connectedMeta={[
-            openAiStatus?.email || "Signed in",
-            openAiStatus?.planType ?? null,
-          ]}
-          loading={loading}
-          busy={busy}
-          onConnect={onConnect}
-          onCancel={onCancel}
-          onDisconnect={onDisconnect}
-          showPlus={true}
-          onPlus={onAddOpenAiAccount}
-          providerId="openai"
-        >
-          {!openAiStatus?.connected && (
-            <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
-              <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Or paste a business access token:
+        <div className="settings-pane__tabs" role="tablist" style={{ marginBottom: "16px", display: "flex", gap: "8px", borderBottom: "1px solid var(--line-1)" }}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!showArchived}
+            className="settings-pane__tab"
+            style={{
+              padding: "8px 16px",
+              border: "none",
+              background: !showArchived ? "var(--bg-3)" : "transparent",
+              color: !showArchived ? "var(--text-1)" : "var(--text-3)",
+              cursor: "pointer",
+              borderRadius: "4px",
+              fontSize: "12px",
+              fontWeight: 500,
+              borderBottom: !showArchived ? "2px solid var(--accent-1)" : "2px solid transparent"
+            }}
+            onClick={() => setShowArchived(false)}
+          >
+            {locale === "fr" ? "Actifs" : "Active"}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={showArchived}
+            className="settings-pane__tab"
+            style={{
+              padding: "8px 16px",
+              border: "none",
+              background: showArchived ? "var(--bg-3)" : "transparent",
+              color: showArchived ? "var(--text-1)" : "var(--text-3)",
+              cursor: "pointer",
+              borderRadius: "4px",
+              fontSize: "12px",
+              fontWeight: 500,
+              borderBottom: showArchived ? "2px solid var(--accent-1)" : "2px solid transparent",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+            onClick={() => setShowArchived(true)}
+          >
+            {locale === "fr" ? "Archivés" : "Archived"}
+            {archivedProviders.length > 0 && (
+              <span style={{
+                background: "var(--accent-lo, rgba(156, 163, 175, 0.15))",
+                color: "var(--accent-hi, #9ca3af)",
+                fontSize: "10px",
+                padding: "1px 6px",
+                borderRadius: "10px",
+                fontWeight: "bold"
+              }}>
+                {archivedProviders.length}
               </span>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <input
-                  type="password"
-                  placeholder="eyJhbGciOi..."
-                  id="token-input-openai-main"
-                  style={{
-                    flex: 1,
-                    background: "var(--bg-3)",
-                    color: "var(--text-1)",
-                    border: "1px solid var(--line-2)",
-                    borderRadius: "4px",
-                    padding: "6px 10px",
-                    fontSize: "12px",
-                    outline: "none"
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const input = document.getElementById("token-input-openai-main") as HTMLInputElement;
-                    const val = input?.value || "";
-                    if (val.trim()) {
-                      await onSaveOpenAiAccessToken(val, "openai");
-                      onRefresh();
-                    }
-                  }}
-                  style={{
-                    background: "var(--accent-1, #9ca3af)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    padding: "6px 12px",
-                    fontSize: "12px",
-                    fontWeight: 500,
-                    cursor: "pointer"
-                  }}
-                >
-                  Save
-                </button>
+            )}
+          </button>
+        </div>
+
+        {showArchived === isArchived("anthropic") && (
+          <ProviderCard
+            name="Anthropic"
+            icon="simple-icons:anthropic"
+            description="Use OAuth to connect your Claude account for Anthropic models."
+            status={anthropicStatus}
+            connectedMeta={["Claude OAuth"]}
+            loading={loading}
+            busy={busy}
+            onConnect={onConnectAnthropic}
+            onCancel={onCancelAnthropic}
+            onDisconnect={onDisconnectAnthropic}
+            providerId="anthropic"
+            isArchived={isArchived("anthropic")}
+            onArchive={() => onArchiveProvider("anthropic")}
+            onRestore={() => onRestoreProvider("anthropic")}
+          />
+        )}
+        {showArchived === isArchived("openai") && (
+          <ProviderCard
+            name="OpenAI"
+            icon="simple-icons:openai"
+            description="Use OAuth to connect your ChatGPT account for OpenAI models."
+            status={openAiStatus}
+            connectedMeta={[
+              openAiStatus?.email || "Signed in",
+              openAiStatus?.planType ?? null,
+            ]}
+            loading={loading}
+            busy={busy}
+            onConnect={onConnect}
+            onCancel={onCancel}
+            onDisconnect={onDisconnect}
+            showPlus={true}
+            onPlus={onAddOpenAiAccount}
+            providerId="openai"
+            isArchived={isArchived("openai")}
+            onArchive={() => onArchiveProvider("openai")}
+            onRestore={() => onRestoreProvider("openai")}
+          >
+            {!openAiStatus?.connected && (
+              <div style={{ display: "grid", gap: "8px", marginTop: "12px", padding: "10px", background: "var(--bg-2)", borderRadius: "6px", border: "1px solid var(--line-1)" }}>
+                <span style={{ fontSize: "11px", fontWeight: "bold", color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Or paste a business access token:
+                </span>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="password"
+                    placeholder="eyJhbGciOi..."
+                    id="token-input-openai-main"
+                    style={{
+                      flex: 1,
+                      background: "var(--bg-3)",
+                      color: "var(--text-1)",
+                      border: "1px solid var(--line-2)",
+                      borderRadius: "4px",
+                      padding: "6px 10px",
+                      fontSize: "12px",
+                      outline: "none"
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const input = document.getElementById("token-input-openai-main") as HTMLInputElement;
+                      const val = input?.value || "";
+                      if (val.trim()) {
+                        await onSaveOpenAiAccessToken(val, "openai");
+                        onRefresh();
+                      }
+                    }}
+                    style={{
+                      background: "var(--accent-1, #9ca3af)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "4px",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </ProviderCard>
-        {(openAiAccounts.some((account) => account.key.startsWith("openai:")) || unconnectedAccounts.length > 0) && (
+            )}
+          </ProviderCard>
+        )}
+        {showArchived === isArchived("openai") && (openAiAccounts.some((account) => account.key.startsWith("openai:")) || unconnectedAccounts.length > 0) && (
           <div className="settings-pane__secondary-grid">
             {[...openAiAccounts]
               .filter((account) => account.key.startsWith("openai:"))
@@ -4976,50 +5081,60 @@ function ProvidersSection({
             </ProviderCard>
             );
           })}
-        </div>
+          </div>
         )}
-        <ProviderCard
-          name="Cursor"
-          icon="local:cursor"
-          description="Connectez votre compte Cursor (Google/GitHub) pour utiliser Auto + Composer via votre abonnement."
-          status={cursorStatus}
-          connectedMeta={[
-            cursorComposerStatus?.email || "Session Composer",
-            cursorComposerStatus?.membershipType && cursorComposerStatus.membershipType !== "pro_plus"
-              ? cursorComposerStatus.membershipType
-              : null,
-          ]}
-          loading={loading}
-          busy={busy}
-          onConnect={onConnectCursor}
-          onCancel={onCancelCursorComposer}
-          onDisconnect={onDisconnectCursorComposer}
-          providerId="cursor"
-          connectLabel="Connecter"
-          busyConnectLabel="Ouverture..."
-        />
-        <ProviderCard
-          name="Google"
-          icon="simple-icons:google"
-          description="Use OAuth to connect your Google account for Gemini models."
-          status={googleStatus}
-          connectedMeta={[
-            googleStatus?.email || "Signed in",
-            googleStatus?.userTier ?? null,
-            googleStatus?.projectId
-              ? `Project ${googleStatus.projectId}`
-              : null,
-          ]}
-          loading={loading}
-          busy={busy}
-          onConnect={onConnectGoogle}
-          onCancel={onCancelGoogle}
-          onDisconnect={onDisconnectGoogle}
-          showPlus={true}
-          onPlus={onAddGoogleAccount}
-          providerId="google"
-        />
-        {(googleAccounts.some((account) => account.key.startsWith("google:")) || unconnectedGoogleAccounts.length > 0) && (
+        {showArchived === isArchived("cursor") && (
+          <ProviderCard
+            name="Cursor"
+            icon="local:cursor"
+            description="Connectez votre compte Cursor (Google/GitHub) pour utiliser Auto + Composer via votre abonnement."
+            status={cursorStatus}
+            connectedMeta={[
+              cursorComposerStatus?.email || "Session Composer",
+              cursorComposerStatus?.membershipType && cursorComposerStatus.membershipType !== "pro_plus"
+                ? cursorComposerStatus.membershipType
+                : null,
+            ]}
+            loading={loading}
+            busy={busy}
+            onConnect={onConnectCursor}
+            onCancel={onCancelCursorComposer}
+            onDisconnect={onDisconnectCursorComposer}
+            providerId="cursor"
+            connectLabel="Connecter"
+            busyConnectLabel="Ouverture..."
+            isArchived={isArchived("cursor")}
+            onArchive={() => onArchiveProvider("cursor")}
+            onRestore={() => onRestoreProvider("cursor")}
+          />
+        )}
+        {showArchived === isArchived("google") && (
+          <ProviderCard
+            name="Google"
+            icon="simple-icons:google"
+            description="Use OAuth to connect your Google account for Gemini models."
+            status={googleStatus}
+            connectedMeta={[
+              googleStatus?.email || "Signed in",
+              googleStatus?.userTier ?? null,
+              googleStatus?.projectId
+                ? `Project ${googleStatus.projectId}`
+                : null,
+            ]}
+            loading={loading}
+            busy={busy}
+            onConnect={onConnectGoogle}
+            onCancel={onCancelGoogle}
+            onDisconnect={onDisconnectGoogle}
+            showPlus={true}
+            onPlus={onAddGoogleAccount}
+            providerId="google"
+            isArchived={isArchived("google")}
+            onArchive={() => onArchiveProvider("google")}
+            onRestore={() => onRestoreProvider("google")}
+          />
+        )}
+        {showArchived === isArchived("google") && (googleAccounts.some((account) => account.key.startsWith("google:")) || unconnectedGoogleAccounts.length > 0) && (
           <div className="settings-pane__secondary-grid">
             {[...googleAccounts]
               .filter((account) => account.key.startsWith("google:"))
@@ -5123,38 +5238,60 @@ function ProvidersSection({
               })}
           </div>
         )}
-        <ProviderCard
-          name="Kimi"
-          icon="local:kimi"
-          description="Use OAuth to connect your Kimi account for Kimi 2.6."
-          status={kimiStatus}
-          connectedMeta={["Kimi OAuth"]}
-          loading={loading}
-          busy={busy}
-          onConnect={onConnectKimi}
-          onCancel={onCancelKimi}
-          onDisconnect={onDisconnectKimi}
-          providerId="kimi"
-        />
-        <DeepSeekProviderCard
-          status={deepSeekStatus}
-          loading={loading}
-          busy={busy}
-          onDisconnect={onDisconnectDeepSeek}
-          onStatusChange={onDeepSeekStatusChange}
-          onChanged={onDeepSeekChanged}
-        />
-        <OpenRouterProviderCard
-          status={openRouterStatus}
-          models={openRouterModels}
-          loading={loading}
-          busy={busy}
-          onDisconnect={onDisconnectOpenRouter}
-          onStatusChange={onOpenRouterStatusChange}
-          onModelsChange={onOpenRouterModelsChange}
-          onChanged={onOpenRouterChanged}
-        />
-        <OllamaProviderCard onChanged={onOllamaChanged} />
+        {showArchived === isArchived("kimi") && (
+          <ProviderCard
+            name="Kimi"
+            icon="local:kimi"
+            description="Use OAuth to connect your Kimi account for Kimi 2.6."
+            status={kimiStatus}
+            connectedMeta={["Kimi OAuth"]}
+            loading={loading}
+            busy={busy}
+            onConnect={onConnectKimi}
+            onCancel={onCancelKimi}
+            onDisconnect={onDisconnectKimi}
+            providerId="kimi"
+            isArchived={isArchived("kimi")}
+            onArchive={() => onArchiveProvider("kimi")}
+            onRestore={() => onRestoreProvider("kimi")}
+          />
+        )}
+        {showArchived === isArchived("deepseek") && (
+          <DeepSeekProviderCard
+            status={deepSeekStatus}
+            loading={loading}
+            busy={busy}
+            onDisconnect={onDisconnectDeepSeek}
+            onStatusChange={onDeepSeekStatusChange}
+            onChanged={onDeepSeekChanged}
+            isArchived={isArchived("deepseek")}
+            onArchive={() => onArchiveProvider("deepseek")}
+            onRestore={() => onRestoreProvider("deepseek")}
+          />
+        )}
+        {showArchived === isArchived("openrouter") && (
+          <OpenRouterProviderCard
+            status={openRouterStatus}
+            models={openRouterModels}
+            loading={loading}
+            busy={busy}
+            onDisconnect={onDisconnectOpenRouter}
+            onStatusChange={onOpenRouterStatusChange}
+            onModelsChange={onOpenRouterModelsChange}
+            onChanged={onOpenRouterChanged}
+            isArchived={isArchived("openrouter")}
+            onArchive={() => onArchiveProvider("openrouter")}
+            onRestore={() => onRestoreProvider("openrouter")}
+          />
+        )}
+        {showArchived === isArchived("ollama") && (
+          <OllamaProviderCard
+            onChanged={onOllamaChanged}
+            isArchived={isArchived("ollama")}
+            onArchive={() => onArchiveProvider("ollama")}
+            onRestore={() => onRestoreProvider("ollama")}
+          />
+        )}
       </div>
     </>
   );
@@ -5188,6 +5325,9 @@ type ProviderCardProps = {
   compact?: boolean;
   connectLabel?: string;
   busyConnectLabel?: string;
+  isArchived?: boolean;
+  onArchive?: () => void;
+  onRestore?: () => void;
 };
 
 function ProviderCard({
@@ -5210,6 +5350,9 @@ function ProviderCard({
   compact,
   connectLabel = "Connect",
   busyConnectLabel = "Opening...",
+  isArchived,
+  onArchive,
+  onRestore,
 }: ProviderCardProps) {
   const state = status?.connectionState ?? "disconnected";
   const connected = Boolean(status?.connected);
@@ -5292,9 +5435,34 @@ function ProviderCard({
           <Icon icon={icon} width={compact ? 16 : 24} height={compact ? 16 : 24} />
         </div>
         <div className="settings-pane__provider-copy">
-          <div className="settings-pane__provider-title-row">
-            <h2>{name}</h2>
-            <span className="settings-pane__chip" data-tone={statusTone}>
+          <div className="settings-pane__provider-title-row" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0 }}>{name}</h2>
+            {onArchive && onRestore && (
+              isArchived ? (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onRestore(); }}
+                  title="Restore provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Icon icon="solar:archive-check-linear" width={12} height={12} />
+                  <span>Restore</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onArchive(); }}
+                  title="Archive provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px", opacity: 0.6 }}
+                >
+                  <Icon icon="solar:archive-linear" width={12} height={12} />
+                  <span>Archive</span>
+                </button>
+              )
+            )}
+            <span className="settings-pane__chip" data-tone={statusTone} style={{ marginLeft: "auto" }}>
               <span className="settings-pane__chip-dot" />
               {statusLabel}
             </span>
@@ -5657,6 +5825,9 @@ type OpenRouterProviderCardProps = {
   onStatusChange: (status: OpenRouterProviderStatus) => void;
   onModelsChange: (models: OpenRouterModel[]) => void;
   onChanged: () => void;
+  isArchived?: boolean;
+  onArchive?: () => void;
+  onRestore?: () => void;
 };
 
 function OpenRouterProviderCard({
@@ -5668,6 +5839,9 @@ function OpenRouterProviderCard({
   onStatusChange,
   onModelsChange,
   onChanged,
+  isArchived,
+  onArchive,
+  onRestore,
 }: OpenRouterProviderCardProps) {
   const [apiKey, setApiKey] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -5877,9 +6051,34 @@ function OpenRouterProviderCard({
           <Icon icon="simple-icons:openrouter" width={24} height={24} />
         </div>
         <div className="settings-pane__provider-copy">
-          <div className="settings-pane__provider-title-row">
-            <h2>OpenRouter</h2>
-            <span className="settings-pane__chip" data-tone={statusTone}>
+          <div className="settings-pane__provider-title-row" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0 }}>OpenRouter</h2>
+            {onArchive && onRestore && (
+              isArchived ? (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onRestore(); }}
+                  title="Restore provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Icon icon="solar:archive-check-linear" width={12} height={12} />
+                  <span>Restore</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onArchive(); }}
+                  title="Archive provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px", opacity: 0.6 }}
+                >
+                  <Icon icon="solar:archive-linear" width={12} height={12} />
+                  <span>Archive</span>
+                </button>
+              )
+            )}
+            <span className="settings-pane__chip" data-tone={statusTone} style={{ marginLeft: "auto" }}>
               <span className="settings-pane__chip-dot" />
               {statusLabel}
             </span>
@@ -6009,9 +6208,17 @@ function OpenRouterProviderCard({
 
 type OllamaProviderCardProps = {
   onChanged: () => void;
+  isArchived?: boolean;
+  onArchive?: () => void;
+  onRestore?: () => void;
 };
 
-function OllamaProviderCard({ onChanged }: OllamaProviderCardProps) {
+function OllamaProviderCard({
+  onChanged,
+  isArchived,
+  onArchive,
+  onRestore,
+}: OllamaProviderCardProps) {
   const DEFAULT_OLLAMA_URL = "http://localhost:11434";
   const [status, setStatus] = useState<OllamaProviderStatus | null>(null);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
@@ -6108,9 +6315,34 @@ function OllamaProviderCard({ onChanged }: OllamaProviderCardProps) {
           <Icon icon="simple-icons:ollama" width={24} height={24} />
         </div>
         <div className="settings-pane__provider-copy">
-          <div className="settings-pane__provider-title-row">
-            <h2>Ollama</h2>
-            <span className="settings-pane__chip" data-tone={statusTone}>
+          <div className="settings-pane__provider-title-row" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0 }}>Ollama</h2>
+            {onArchive && onRestore && (
+              isArchived ? (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onRestore(); }}
+                  title="Restore provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Icon icon="solar:archive-check-linear" width={12} height={12} />
+                  <span>Restore</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onArchive(); }}
+                  title="Archive provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px", opacity: 0.6 }}
+                >
+                  <Icon icon="solar:archive-linear" width={12} height={12} />
+                  <span>Archive</span>
+                </button>
+              )
+            )}
+            <span className="settings-pane__chip" data-tone={statusTone} style={{ marginLeft: "auto" }}>
               <span className="settings-pane__chip-dot" />
               {statusLabel}
             </span>
@@ -8635,6 +8867,9 @@ type DeepSeekProviderCardProps = {
   onDisconnect: () => void;
   onStatusChange: (status: DeepSeekProviderStatus) => void;
   onChanged: () => void;
+  isArchived?: boolean;
+  onArchive?: () => void;
+  onRestore?: () => void;
 };
 
 function DeepSeekProviderCard({
@@ -8644,6 +8879,9 @@ function DeepSeekProviderCard({
   onDisconnect,
   onStatusChange,
   onChanged,
+  isArchived,
+  onArchive,
+  onRestore,
 }: DeepSeekProviderCardProps) {
   const [apiKey, setApiKey] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -8768,9 +9006,34 @@ function DeepSeekProviderCard({
           <Icon icon="simple-icons:deepseek" width={24} height={24} />
         </div>
         <div className="settings-pane__provider-copy">
-          <div className="settings-pane__provider-title-row">
-            <h2>DeepSeek</h2>
-            <span className="settings-pane__chip" data-tone={statusTone}>
+          <div className="settings-pane__provider-title-row" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0 }}>DeepSeek</h2>
+            {onArchive && onRestore && (
+              isArchived ? (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onRestore(); }}
+                  title="Restore provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <Icon icon="solar:archive-check-linear" width={12} height={12} />
+                  <span>Restore</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="settings-pane__btn"
+                  onClick={(e) => { e.stopPropagation(); onArchive(); }}
+                  title="Archive provider"
+                  style={{ padding: "2px 6px", fontSize: "11px", height: "20px", display: "flex", alignItems: "center", gap: "4px", opacity: 0.6 }}
+                >
+                  <Icon icon="solar:archive-linear" width={12} height={12} />
+                  <span>Archive</span>
+                </button>
+              )
+            )}
+            <span className="settings-pane__chip" data-tone={statusTone} style={{ marginLeft: "auto" }}>
               <span className="settings-pane__chip-dot" />
               {statusLabel}
             </span>

@@ -2248,4 +2248,30 @@ mod tests {
 
         assert_eq!(tools[0].description, "custom edit instructions");
     }
+
+    #[test]
+    fn provider_archiving_and_restoring() -> Result<()> {
+        let path = std::env::temp_dir().join(format!("sinew-store-provider-test-{}.sqlite3", Uuid::new_v4()));
+        let store = AppStore { path: path.clone() };
+        let result = (|| -> Result<()> {
+            store.migrate()?;
+            
+            // Check default status is active (or not found)
+            assert_eq!(store.get_provider_status("openai")?, "active");
+            
+            // Archive provider
+            store.set_provider_status("openai", "archived")?;
+            assert_eq!(store.get_provider_status("openai")?, "archived");
+            assert_eq!(store.list_archived_providers()?, vec!["openai".to_string()]);
+            
+            // Restore provider
+            store.set_provider_status("openai", "active")?;
+            assert_eq!(store.get_provider_status("openai")?, "active");
+            assert!(store.list_archived_providers()?.is_empty());
+            
+            Ok(())
+        })();
+        let _ = fs::remove_file(&path);
+        result
+    }
 }

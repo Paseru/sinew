@@ -523,6 +523,15 @@ export const api = {
   listConfiguredModelProviders() {
     return invoke<string[]>("list_configured_model_providers");
   },
+  archiveProvider(providerId: string) {
+    return invoke<void>("archive_provider", { providerId });
+  },
+  restoreProvider(providerId: string) {
+    return invoke<void>("restore_provider", { providerId });
+  },
+  listArchivedProviders() {
+    return invoke<string[]>("list_archived_providers");
+  },
   getOpenAiProviderStatus() {
     return invoke<OpenAiProviderStatus>("get_openai_provider_status");
   },

@@ -3,9 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 22:19:45]
-- `crates/sinew-app/src/store.rs` : Ajout d'une table SQLite `provider_states` pour gérer l'archivage/restauration des fournisseurs avec les méthodes correspondantes `set_provider_status`, `get_provider_status` et `list_archived_providers`. Passage à la version 12 du schéma.
+- `crates/sinew-app/src/store.rs` : Ajout d'une table SQLite `provider_states` pour gérer l'archivage/restauration des fournisseurs avec les méthodes correspondantes `set_provider_status`, `get_provider_status` et `list_archived_providers`. Passage à la version 12 du schéma. Ajout du test unitaire `provider_archiving_and_restoring` pour valider le bon fonctionnement de l'archivage/restauration en base SQLite.
 - `src-tauri/src/providers.rs` : Enregistrement des commandes Tauri `archive_provider`, `restore_provider`, `list_archived_providers` et filtrage des fournisseurs archivés dans `list_configured_model_providers`.
 - `src-tauri/src/lib.rs` : Exposition des nouvelles commandes d'archivage et de restauration des fournisseurs.
+- `src/lib/ipc.ts` : Ajout des liaisons IPC pour les méthodes `archiveProvider`, `restoreProvider` et `listArchivedProviders`.
+- `src/components/SettingsPane.tsx` : Intégration de la gestion de l'archivage et de la restauration dans les cartes de fournisseurs, masquage des éléments archivés et ajout d'un filtre d'affichage (Actifs / Archivés). Ajout des boutons d'archivage/restauration dans les en-têtes de toutes les cartes de fournisseurs (DeepSeek, OpenRouter, Ollama, ProviderCard).
 
 ## [2026-05-30 22:17:59]
 - `src-tauri/src/turns.rs` : Prise en charge du niveau de réflexion (thinking/effort) dans les paramètres d'optimisation de prompt en utilisant `model_with_optional_selection`.
