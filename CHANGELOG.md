@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:04:09]
+- `crates/sinew-app/src/write.rs` : Ajout d'un test temporaire pour déboguer le problème de chemin absolu de l'espace de travail.
+
 ## [2026-05-30 03:00:17]
+- `AGENTS.md` : Mise à jour de la carte des fichiers (code map) avec `computer_use.rs` et la nouvelle Skill.
 - `.sinew/skills/computer_use/SKILL.md` : Création de la compétence (Skill) documentant le pilotage Windows pour l'agent.
 - `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Exposition de la commande MCP `computer_use` et implémentation Windows native correspondante.
 - `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout de la dépendance `image` pour le wrapper MCP.
@@ -16,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - `crates/sinew-app/src/tool_names.rs` : Définition de la constante d'outil `computer_use` et prise en charge de sa résolution canonique.
 - `crates/sinew-app/Cargo.toml` : Ajout de la dépendance `image` pour compresser les captures d'écran du Computer Use.
 - `crates/sinew-app/src/computer_use.rs` : Création du module d'automatisation et de pilotage d'ordinateur (Computer Use) natif pour Windows (GDI screenshots, simulation clavier/souris).
+
 
 
 

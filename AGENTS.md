@@ -20,7 +20,9 @@
 â”œâ”€â”€ README.md
 â”œâ”€â”€ .sinew
 â”‚   â””â”€â”€ skills
-â”‚       â””â”€â”€ browser
+â”‚       â”œâ”€â”€ browser
+â”‚       â”‚   â””â”€â”€ SKILL.md
+â”‚       â””â”€â”€ computer_use
 â”‚           â””â”€â”€ SKILL.md
 â”œâ”€â”€ scripts
 â”‚   â”œâ”€â”€ check.ps1
@@ -90,6 +92,7 @@
 â”‚   â”‚       â”œâ”€â”€ check_sota.rs
 â”‚   â”‚       â”œâ”€â”€ codebase_search.rs
 â”‚   â”‚       â”œâ”€â”€ compact.rs
+â”‚   â”‚       â”œâ”€â”€ computer_use.rs
 â”‚   â”‚       â”œâ”€â”€ delete_file.rs
 â”‚   â”‚       â”œâ”€â”€ edit.rs
 â”‚   â”‚       â”œâ”€â”€ editor_diagnostics.rs
