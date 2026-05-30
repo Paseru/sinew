@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:40:00]
+- `RAPPORT_DECOMPILE_CURSOR.md` : Enrichissement complet du rapport d'analyse de l'architecture de Cursor (Shadow Workspace, système d'indexation, automatisation de navigateur, boucle d'agent, génération de commits) avec des métaphores simples et des détails précis sur le fonctionnement interne de l'application décompilée.
+
+## [2026-05-30 02:33:05]
+- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout des dépendances tokio, tokio-tungstenite, serde, serde_json, anyhow et futures-util pour réécrire le pont Chrome natif en Rust.
+
 ## [2026-05-30 02:39:37]
 - `mcp_settings` : Intégration du serveur MCP SOTA `slepp-ssh-mcp` dans la base SQLite locale pour donner aux agents un accès SSH complet aux machines distantes.
 

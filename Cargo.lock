@@ -2934,6 +2934,14 @@ dependencies = [
 [[package]]
 name = "native-host-wrapper"
 version = "0.1.26"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+]
 
 [[package]]
 name = "native-tls"
