@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 02:23:29]
-- `RAPPORT_ANTIGRAVITY.md` : Création du rapport d'analyse détaillé sur l'architecture, le patch de libération et les fonctionnalités d'Antigravity à adapter pour Sinew.
+- `RAPPORT_ANTIGRAVITY.md` : Création et simplification complète du rapport d'analyse pour supprimer le jargon technique et utiliser des métaphores faciles à comprendre (Téléviseur et Décodeur).
 
 ## [2026-05-30 02:20:52]
 - `Rapport_SSH_Analyse.md` : Création du rapport détaillé d'analyse de l'implémentation SSH dans Antigravity, Codexx et Cursor en utilisant les perspectives des 4 sous-agents.
