@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:12:16]
+- `crates/sinew-index/src/process.rs` : Limitation de la mémoire des sous-processus de l'indexeur (recherche codebase et watch) à 12 Go maximum sur Windows via les API de Job Object, afin d'éviter tout blocage ou fuite de mémoire excessive.
+
 ## [2026-05-30 02:10:30]
 - `C:\Users\julie\.agents\skills` : Suppression des dossiers de compétences globales pré-installés superflus pour ne conserver que la compétence Chrome locale (`browser`) de l'espace de travail.
 

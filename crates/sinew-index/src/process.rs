@@ -77,6 +77,8 @@ pub fn run_helper_if_requested() -> bool {
         return false;
     }
 
+    apply_memory_limit_to_current_process();
+
     env::set_var(CHILD_ENV, "1");
 
     let code = match args.next().and_then(|value| value.into_string().ok()) {
@@ -359,3 +361,104 @@ fn process_is_alive(pid: u32) -> bool {
 fn process_is_alive(_pid: u32) -> bool {
     true
 }
+
+#[cfg(windows)]
+fn apply_memory_limit_to_current_process() {
+    let limit_gb: u64 = std::env::var("SINEW_INDEX_MEMORY_LIMIT_GB")
+        .ok()
+        .and_then(|val| val.trim().parse().ok())
+        .unwrap_or(12);
+
+    if limit_gb == 0 {
+        return;
+    }
+
+    let limit_bytes = limit_gb * 1024 * 1024 * 1024;
+
+    use std::ffi::c_void;
+    type Handle = *mut c_void;
+
+    #[repr(C)]
+    #[allow(non_camel_case_types)]
+    struct IO_COUNTERS {
+        read_operation_count: u64,
+        write_operation_count: u64,
+        other_operation_count: u64,
+        read_transfer_count: u64,
+        write_transfer_count: u64,
+        other_transfer_count: u64,
+    }
+
+    #[repr(C)]
+    #[allow(non_camel_case_types)]
+    struct JOBOBJECT_BASIC_LIMIT_INFORMATION {
+        per_process_user_time_limit: i64,
+        per_job_user_time_limit: i64,
+        limit_flags: u32,
+        minimum_working_set_size: usize,
+        maximum_working_set_size: usize,
+        active_process_limit: u32,
+        affinity: usize,
+        priority_class: u32,
+        scheduling_class: u32,
+    }
+
+    #[repr(C)]
+    #[allow(non_camel_case_types)]
+    struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION {
+        basic_limit_information: JOBOBJECT_BASIC_LIMIT_INFORMATION,
+        io_info: IO_COUNTERS,
+        process_memory_limit: usize,
+        job_memory_limit: usize,
+        peak_process_memory_used: usize,
+        peak_job_memory_used: usize,
+    }
+
+    const JOB_OBJECT_LIMIT_JOB_MEMORY: u32 = 0x00000200;
+    const JOB_OBJECT_LIMIT_PROCESS_MEMORY: u32 = 0x00000100;
+    const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: u32 = 0x00002000;
+    const JOB_OBJECT_EXTENDED_LIMIT_INFORMATION: i32 = 9;
+
+    extern "system" {
+        fn CreateJobObjectW(lpJobAttributes: *mut c_void, lpName: *const u16) -> Handle;
+        fn SetInformationJobObject(
+            hJob: Handle,
+            JobObjectInfoClass: i32,
+            lpJobObjectInfo: *const c_void,
+            cbJobObjectInfoLength: u32,
+        ) -> i32;
+        fn AssignProcessToJobObject(hJob: Handle, hProcess: Handle) -> i32;
+        fn GetCurrentProcess() -> Handle;
+        fn CloseHandle(hObject: Handle) -> i32;
+    }
+
+    unsafe {
+        let job = CreateJobObjectW(std::ptr::null_mut(), std::ptr::null());
+        if job.is_null() {
+            return;
+        }
+
+        let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+        info.basic_limit_information.limit_flags = JOB_OBJECT_LIMIT_JOB_MEMORY
+            | JOB_OBJECT_LIMIT_PROCESS_MEMORY
+            | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        info.process_memory_limit = limit_bytes as usize;
+        info.job_memory_limit = limit_bytes as usize;
+
+        let r = SetInformationJobObject(
+            job,
+            JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+            &info as *const _ as *const c_void,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        );
+        if r != 0 {
+            let current_process = GetCurrentProcess();
+            let _ = AssignProcessToJobObject(job, current_process);
+        } else {
+            let _ = CloseHandle(job);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn apply_memory_limit_to_current_process() {}
