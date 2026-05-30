@@ -60,6 +60,15 @@ function minPercent(items: QuotaWindow[]) {
   return Math.min(...values);
 }
 
+function codexDisplayPercent(windows: QuotaWindow[]) {
+  const shortWindow = windows[0]?.remainingPercent;
+  const weekWindow = windows.find((item) => item.label === "Fenetre longue")?.remainingPercent ?? windows[1]?.remainingPercent ?? null;
+
+  if (weekWindow != null && weekWindow <= 0) return 0;
+  if (typeof shortWindow === "number") return shortWindow;
+  return minPercent(windows);
+}
+
 function codexWindow(label: string, input: any): QuotaWindow | null {
   if (!input) return null;
   return {
@@ -159,7 +168,7 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
       
       return {
         kind: "rateLimits",
-        percentage: minPercent(windows),
+        percentage: codexDisplayPercent(windows),
         isReal: true,
         label: quota?.workspaceName || (quota?.planType ? `Codex ${quota.planType}` : "Codex"),
         source: "ChatGPT Codex /wham/usage",

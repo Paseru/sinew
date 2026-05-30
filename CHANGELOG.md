@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 21:38:12]
+- `src/lib/quotas.ts` : Ajustement de la pastille de quota OpenAI/Codex. La pastille suit maintenant la fenêtre courte 5h tant que la semaine n'est pas totalement vide, et ne passe rouge à cause de la semaine que lorsqu'il ne reste vraiment plus rien.
+
 ## [2026-05-30 21:15:44]
 - `.gitignore` : Exclusion des fichiers temporaires `_node_*.txt` et `_payload*.json` produits par les tests locaux du pont agent, afin d'éviter d'envoyer des journaux ou jetons de session par erreur.
 - `scripts/agent-bridge/_node_err.txt`, `scripts/agent-bridge/_node_out.txt`, `scripts/agent-bridge/_payload25.json` : Suppression des traces de test locales non nécessaires au produit.
