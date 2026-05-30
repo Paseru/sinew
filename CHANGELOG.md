@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:00:17]
+- `crates/sinew-app/Cargo.toml` : Ajout de la dépendance `image` pour compresser les captures d'écran du Computer Use.
+- `crates/sinew-app/src/computer_use.rs` : Création du module d'automatisation et de pilotage d'ordinateur (Computer Use) natif pour Windows (GDI screenshots, simulation clavier/souris).
+
+
 ## [2026-05-30 03:01:48]
 - `CHANGELOG.md` : Enregistrement de la suppression des fichiers temporaires et rapports d'analyse obsolètes.
 - `AGENTS.md` : Mise à jour de la carte des fichiers (code map) suite au retrait des fichiers inutiles du projet.
