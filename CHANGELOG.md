@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 21:45:24]
+- `C:\Users\julie\OneDrive\Bureau\Sinew_0.1.27_x64-setup.exe` : Recompilation de l'installateur Windows et copie sur le Bureau pour fournir une version installable fraîche.
+
 ## [2026-05-30 21:38:12]
 - `src/lib/quotas.ts` : Ajustement de la pastille de quota OpenAI/Codex. La pastille suit maintenant la fenêtre courte 5h tant que la semaine n'est pas totalement vide, et ne passe rouge à cause de la semaine que lorsqu'il ne reste vraiment plus rien.
 
