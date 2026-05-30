@@ -1986,10 +1986,10 @@ async fn run_turn_via_daemon(
         "history": context.history,
         "todo_list": context.todo_list,
         "goal_workflow": context.goal_workflow,
-        "mcp_settings": mcp_settings,
-        "tool_settings": tool_settings,
-        "skill_settings": skill_settings,
-        "sub_agent_settings": sub_agent_settings,
+        "mcp_settings": mcp_settings.clone(),
+        "tool_settings": tool_settings.clone(),
+        "skill_settings": skill_settings.clone(),
+        "sub_agent_settings": sub_agent_settings.clone(),
     });
 
     let mut req_bytes = serde_json::to_vec(&request)?;
