@@ -1,2 +1,0 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.39s
-     Running unittests src\lib.rs (C:/Users/julie/AppData/Local/Temp/sinew-cargo-target\debug\deps\sinew_cursor-84d4334513a46fad.exe)
