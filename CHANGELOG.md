@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:35:24]
+- `src-tauri/src/rules.rs` : Refonte du prompt système de `ai_consolidate_rules()` avec un système de confiance à 3 niveaux (🟢 ACTIVE / 🟡 CANDIDATE / 🔴 OBSOLÈTE), traçabilité complète (origine des erreurs, dates, règles remplacées), et dégradation automatique des règles obsolètes (2+ mois sans mise à jour ou contredites par une règle plus récente).
+
 ## [2026-05-30 03:24:31]
 - `src-tauri/src/lib.rs` : Changement du filtre de log par défaut de `info` à `trace` pour tous les crates Sinew (`sinew_app`, `sinew_cursor`, `sinew_openai`, `sinew_anthropic`, `sinew_google`, `sinew_kimi`, `sinew_deepseek`, `sinew_openrouter`, `sinew_index`, `sinew_core`). Les libs externes restent à `warn`/`debug` pour éviter le bruit. Le fichier de log passe de `desktop-app.log` à `logs/sinew.log` avec rotation à 64 Mo.
 - `crates/sinew-app/src/agent/turn.rs` : Ajout de timers de précision (stream setup, premier token, exécution de chaque outil, compaction automatique, durée totale du tour) avec `tracing::debug!` et `tracing::info!`.
