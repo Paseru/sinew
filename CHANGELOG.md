@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 21:15:44]
+- `.gitignore` : Exclusion des fichiers temporaires `_node_*.txt` et `_payload*.json` produits par les tests locaux du pont agent, afin d'éviter d'envoyer des journaux ou jetons de session par erreur.
+- `scripts/agent-bridge/_node_err.txt`, `scripts/agent-bridge/_node_out.txt`, `scripts/agent-bridge/_payload25.json` : Suppression des traces de test locales non nécessaires au produit.
+
+## [2026-05-30 21:09:14]
+- `crates/sinew-cursor/src/agent/proto_dynamic.rs` : Correction de la lecture des messages Cursor pour ignorer les enveloppes vides. Composer 2.5 Fast n'était pas refusé : Sinew ouvrait la mauvaise enveloppe, comme un courrier trié dans la mauvaise boîte, et ne répondait donc pas aux demandes de blobs de Cursor.
+- `crates/sinew-cursor/src/agent/run_h2.rs` : Conservation de la correction du lecteur HTTP/2 qui empêchait la boucle de rester bloquée après le premier battement de vie du serveur, lecture correcte des blobs enregistrés par Cursor, et retrait des traces de diagnostic temporaires.
+- `crates/sinew-cursor/src/tests.rs` : Ajout d'un choix de modèle par variable de test et remise en forme du test live pour vérifier explicitement `composer-2.5-fast`.
+- `crates/sinew-cursor/src/identity.rs` : Conservation de l'option de version Cursor configurable pour comparer facilement le comportement avec le client officiel sans retoucher le code.
+
 ## [2026-05-30 21:09:49]
 - `src-tauri/src/state.rs` : Ajout du chemin de mémoire persistante `.sinew/memory.md` pour conserver un carnet de projet entre sessions.
 - `src-tauri/src/turns.rs` : Injection automatique de `.sinew/memory.md` dans le prompt système quand le fichier existe, afin que l'agent retrouve les décisions, l'état du projet et les pièges connus dès le début d'une session.

@@ -17,16 +17,18 @@ use tracing::{debug, warn};
 use crate::connect::decode_connect_frames;
 use crate::identity::CursorIdeIdentity;
 
-use super::client_proto::{encode_client_heartbeat, encode_kv_get_blob_result, encode_kv_set_blob_result};
-use super::connect_proto::frame_connect_proto;
-use super::h2_client::{shared_h2_client, AgentUploadBody};
-use super::retry::{
-    backoff_before_retry, is_retryable_network_err, is_retryable_status, MAX_RUN_ATTEMPTS,
+use super::client_proto::{
+    encode_client_heartbeat, encode_kv_get_blob_result, encode_kv_set_blob_result,
 };
+use super::connect_proto::frame_connect_proto;
 use super::exec_handler::{
     encode_mcp_result, handle_exec_server_message, ExecContext, ExecOutcome, PendingToolRequest,
 };
+use super::h2_client::{shared_h2_client, AgentUploadBody};
 use super::proto_dynamic::get_message_field;
+use super::retry::{
+    backoff_before_retry, is_retryable_network_err, is_retryable_status, MAX_RUN_ATTEMPTS,
+};
 use super::run_request::{build_run_request, RunRequestInput};
 use super::server_decode::{
     decode_agent_server_message, decode_server_message, parse_connect_end, BridgeEvent,
@@ -106,12 +108,7 @@ async fn run_agent_stream_inner(
     let session_id = uuid::Uuid::new_v4().to_string();
     let request_id = uuid::Uuid::new_v4().to_string();
     let mut headers = HeaderMap::new();
-    identity.apply_agent_authenticated(
-        &mut headers,
-        &session_id,
-        &request_id,
-        &config.token,
-    );
+    identity.apply_agent_authenticated(&mut headers, &session_id, &request_id, &config.token);
 
     let mut response = None;
     let mut body_tx = None;
@@ -161,7 +158,12 @@ async fn run_agent_stream_inner(
             }
             Ok(resp) => {
                 let status = resp.status();
-                let body_hint = resp.into_body().collect().await.map(|c| c.to_bytes()).ok()
+                let body_hint = resp
+                    .into_body()
+                    .collect()
+                    .await
+                    .map(|c| c.to_bytes())
+                    .ok()
                     .and_then(|bytes| {
                         let text = String::from_utf8_lossy(&bytes);
                         let trimmed = text.trim();
@@ -186,7 +188,11 @@ async fn run_agent_stream_inner(
             Err(err) => {
                 let net = AppError::Network(format!("agent Run HTTP/2: {err}"));
                 if is_retryable_network_err(&net) && attempt + 1 < MAX_RUN_ATTEMPTS {
-                    warn!("agent Run network error — retry {}/{}", attempt + 1, MAX_RUN_ATTEMPTS);
+                    warn!(
+                        "agent Run network error — retry {}/{}",
+                        attempt + 1,
+                        MAX_RUN_ATTEMPTS
+                    );
                     last_err = Some(net);
                 } else {
                     return Err(net);
@@ -256,7 +262,11 @@ async fn run_agent_stream_inner(
             Ok(Some(Ok(frame))) => {
                 if let Some(chunk) = frame.data_ref() {
                     pending.extend_from_slice(chunk);
-                    while let Ok(frames) = decode_connect_frames(&mut pending) {
+                    // `decode_connect_frames` already drains every complete frame from
+                    // `pending` in one call (and returns Ok([]) when none remain), so this
+                    // must be a single `if let`. Using `while let Ok(..)` here spins forever
+                    // on the always-Ok empty result and starves the body reader.
+                    if let Ok(frames) = decode_connect_frames(&mut pending) {
                         for payload in frames {
                             if payload.is_empty() {
                                 continue;
@@ -297,7 +307,9 @@ async fn run_agent_stream_inner(
                         if at.elapsed() >= Duration::from_millis(IDLE_AFTER_TEXT_MS) {
                             break;
                         }
-                    } else if saw_thinking && started.elapsed() >= Duration::from_millis(IDLE_AFTER_TEXT_MS) {
+                    } else if saw_thinking
+                        && started.elapsed() >= Duration::from_millis(IDLE_AFTER_TEXT_MS)
+                    {
                         break;
                     }
                 }
@@ -318,7 +330,10 @@ async fn run_agent_stream_inner(
         ));
     }
     let duration_ms = started.elapsed().as_millis();
-    debug!(duration_ms, output_tokens, "cursor h2 agent stream finished");
+    debug!(
+        duration_ms,
+        output_tokens, "cursor h2 agent stream finished"
+    );
     Ok(())
 }
 
@@ -336,10 +351,6 @@ async fn process_server_payload(
     finished: &mut bool,
 ) -> Result<bool> {
     let msg = decode_agent_server_message(payload)?;
-    if tracing::enabled!(tracing::Level::DEBUG) {
-        let case = super::proto_dynamic::oneof_case(&msg);
-        debug!(server_case = ?case, payload_len = payload.len(), "cursor h2 server message");
-    }
 
     if let Some(exec) = get_message_field(&msg, "exec_server_message") {
         match handle_exec_server_message(&exec, exec_ctx).await? {
@@ -362,13 +373,10 @@ async fn process_server_payload(
                         args: args.clone(),
                     }))
                     .await;
-                let resp = tool_response_rx
-                    .recv()
-                    .await
-                    .unwrap_or(ToolResponse {
-                        content: "Error: empty tool response".into(),
-                        is_error: true,
-                    });
+                let resp = tool_response_rx.recv().await.unwrap_or(ToolResponse {
+                    content: "Error: empty tool response".into(),
+                    is_error: true,
+                });
                 let id = exec_msg_id.parse::<u32>().unwrap_or(0);
                 let bytes = encode_mcp_result(&exec_id, id, &resp.content, resp.is_error)?;
                 let _ = frame_tx.send(bytes).await;
@@ -418,14 +426,17 @@ async fn process_server_payload(
                         *saw_thinking = true;
                         *last_text_at = Some(std::time::Instant::now());
                     }
-                    BridgeEvent::Usage { output_tokens: o, .. } => {
+                    BridgeEvent::Usage {
+                        output_tokens: o, ..
+                    } => {
                         *output_tokens = output_tokens.saturating_add(*o);
                     }
                     BridgeEvent::StepCompleted | BridgeEvent::TurnEnded
-                        if (*saw_text || *saw_thinking) => {
-                            *finished = true;
-                            return Ok(true);
-                        }
+                        if (*saw_text || *saw_thinking) =>
+                    {
+                        *finished = true;
+                        return Ok(true);
+                    }
                     _ => {}
                 }
                 if event_tx.send(Ok(ev)).await.is_err() {
@@ -458,11 +469,13 @@ async fn handle_kv_message(
             let _ = frame_tx.send(bytes).await;
         }
         Some("set_blob_args") => {
-            if let (Some(blob_id), Some(blob_data)) = (
-                get_bytes_field(kv, "blob_id"),
-                get_bytes_field(kv, "blob_data"),
-            ) {
-                blob_store.insert(hex::encode(&blob_id), blob_data);
+            if let Some(args) = get_message_field(kv, "set_blob_args") {
+                if let (Some(blob_id), Some(blob_data)) = (
+                    get_bytes_field(&args, "blob_id"),
+                    get_bytes_field(&args, "blob_data"),
+                ) {
+                    blob_store.insert(hex::encode(&blob_id), blob_data);
+                }
             }
             let bytes = encode_kv_set_blob_result(id)?;
             let _ = frame_tx.send(bytes).await;

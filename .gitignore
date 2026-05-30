@@ -32,3 +32,5 @@ desktop-state.sqlite3-shm
 
 
 rust-live-*.txt
+scripts/agent-bridge/_node_*.txt
+scripts/agent-bridge/_payload*.json

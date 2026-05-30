@@ -12,8 +12,7 @@ pub fn message_desc(name: &str) -> Result<prost_reflect::MessageDescriptor> {
 }
 
 pub fn setf(msg: &mut DynamicMessage, name: &str, value: Value) -> Result<()> {
-    msg.try_set_field_by_name(name, value)
-        .map_err(field_err)
+    msg.try_set_field_by_name(name, value).map_err(field_err)
 }
 
 pub fn field_err(err: SetFieldError) -> AppError {
@@ -21,8 +20,11 @@ pub fn field_err(err: SetFieldError) -> AppError {
 }
 
 pub fn get_message_field(msg: &DynamicMessage, name: &str) -> Option<DynamicMessage> {
-    let value = msg.get_field_by_name(name)?;
-    match value.as_ref() {
+    let field = msg.descriptor().get_field_by_name(name)?;
+    if !msg.has_field(&field) {
+        return None;
+    }
+    match msg.get_field(&field).as_ref() {
         Value::Message(m) => Some(m.clone()),
         _ => None,
     }
@@ -66,4 +68,30 @@ pub fn oneof_case(msg: &DynamicMessage) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_message_field_ignores_unset_message_defaults() {
+        let asm_desc = message_desc("agent.v1.AgentServerMessage").expect("AgentServerMessage");
+        let kv_desc = message_desc("agent.v1.KvServerMessage").expect("KvServerMessage");
+        let mut asm = DynamicMessage::new(asm_desc);
+
+        assert!(get_message_field(&asm, "exec_server_message").is_none());
+        assert!(get_message_field(&asm, "kv_server_message").is_none());
+
+        setf(
+            &mut asm,
+            "kv_server_message",
+            Value::Message(DynamicMessage::new(kv_desc)),
+        )
+        .expect("kv_server_message");
+
+        assert_eq!(oneof_case(&asm).as_deref(), Some("kv_server_message"));
+        assert!(get_message_field(&asm, "exec_server_message").is_none());
+        assert!(get_message_field(&asm, "kv_server_message").is_some());
+    }
 }

@@ -133,7 +133,8 @@ mod tests {
             ],
         );
         let identity = CursorIdeIdentity::load();
-        let (payload, _) = build_stream_request(&request, "conv", "idem", 1, &identity, &test_blob_key());
+        let (payload, _) =
+            build_stream_request(&request, "conv", "idem", 1, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("toolResults") || body.contains("clientSideToolV2Result"));
     }
@@ -167,7 +168,8 @@ mod tests {
             ],
         );
         let identity = CursorIdeIdentity::load();
-        let (payload, _) = build_stream_request(&request, "conv", "idem", 1, &identity, &test_blob_key());
+        let (payload, _) =
+            build_stream_request(&request, "conv", "idem", 1, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("CLIENT_SIDE_TOOL_V2_TODO_READ"));
     }
@@ -180,8 +182,14 @@ mod tests {
         )
         .with_cache_key("sinew-conv-123");
         let identity = CursorIdeIdentity::load();
-        let (payload, _) =
-            build_stream_request(&request, "sinew-conv-123", "idem", 0, &identity, &test_blob_key());
+        let (payload, _) = build_stream_request(
+            &request,
+            "sinew-conv-123",
+            "idem",
+            0,
+            &identity,
+            &test_blob_key(),
+        );
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("sinew-conv-123"));
     }
@@ -203,7 +211,8 @@ mod tests {
             }],
         );
         let identity = CursorIdeIdentity::load();
-        let (payload, _) = build_stream_request(&request, "conv", "idem", 0, &identity, &test_blob_key());
+        let (payload, _) =
+            build_stream_request(&request, "conv", "idem", 0, &identity, &test_blob_key());
         let body = String::from_utf8_lossy(&payload);
         assert!(body.contains("clientSideToolV2Calls"));
         assert!(body.contains("CLIENT_SIDE_TOOL_V2_READ_FILE_V2"));
@@ -253,7 +262,10 @@ mod tests {
         match crate::agent::fetch_usable_models(&http, &identity, &token).await {
             Ok(bytes) => {
                 let models = crate::agent::scan_model_ids(&bytes);
-                println!("GetUsableModels OK: {} bytes, models={models:?}", bytes.len());
+                println!(
+                    "GetUsableModels OK: {} bytes, models={models:?}",
+                    bytes.len()
+                );
                 assert!(!bytes.is_empty());
             }
             Err(err) => println!("GetUsableModels ERROR: {err:?}"),
@@ -294,8 +306,10 @@ mod tests {
             }
         };
         let identity = crate::identity::CursorIdeIdentity::load();
+        let test_model =
+            std::env::var("SINEW_TEST_MODEL").unwrap_or_else(|_| "composer-2.5".to_string());
         let request = ProviderRequest::new(
-            ModelRef::new("cursor", "composer-2.5"),
+            ModelRef::new("cursor", &test_model),
             vec![ChatMessage::user_text("Dis OK en une phrase.")],
         )
         .with_workspace_root(r"C:\Dev\Sinew")
@@ -308,7 +322,8 @@ mod tests {
                 let mut saw_text = false;
                 while let Some(event) = stream.next().await {
                     match event {
-                        Ok(StreamEvent::TextDelta { .. }) | Ok(StreamEvent::ThinkingDelta { .. }) => {
+                        Ok(StreamEvent::TextDelta { .. })
+                        | Ok(StreamEvent::ThinkingDelta { .. }) => {
                             saw_text = true;
                         }
                         Err(err) => {
@@ -338,9 +353,9 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_live_composer_request() {
-        use sinew_core::Provider;
         use futures::StreamExt;
-        
+        use sinew_core::Provider;
+
         let provider = match crate::client::CursorProvider::from_default_sources() {
             Ok(provider) => provider,
             Err(e) => {
@@ -481,10 +496,8 @@ mod tests {
         .with_workspace_root(r"C:\Dev\sinew")
         .with_cache_key(format!("sinew-fast-{}", uuid::Uuid::new_v4()));
 
-        let effective = crate::model_info::resolve_agent_model_id(
-            &request.model,
-            request.service_tier,
-        );
+        let effective =
+            crate::model_info::resolve_agent_model_id(&request.model, request.service_tier);
         println!("Sinew UI model=composer-2.5 + fast tier → agent model_id={effective}");
 
         match live_sinew_stream(

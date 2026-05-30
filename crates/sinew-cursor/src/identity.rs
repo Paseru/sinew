@@ -47,9 +47,7 @@ impl CursorIdeIdentity {
             ));
         }
         if self.client_version.trim().is_empty() {
-            return Err(AppError::Auth(
-                "Cursor client version unavailable.".into(),
-            ));
+            return Err(AppError::Auth("Cursor client version unavailable.".into()));
         }
         Ok(())
     }
@@ -85,11 +83,7 @@ impl CursorIdeIdentity {
 
     pub fn apply(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
         self.apply_common(headers, session_id, request_id);
-        set_header(
-            headers,
-            "x-cursor-checksum",
-            &self.checksum(),
-        );
+        set_header(headers, "x-cursor-checksum", &self.checksum());
     }
 
     /// Authenticated Cursor API calls derive `x-client-key` and the checksum
@@ -103,7 +97,11 @@ impl CursorIdeIdentity {
     ) {
         self.apply_common(headers, session_id, request_id);
         let machine_id = Self::token_machine_id(access_token);
-        set_header(headers, "x-client-key", &Self::token_client_key(access_token));
+        set_header(
+            headers,
+            "x-client-key",
+            &Self::token_client_key(access_token),
+        );
         set_header(
             headers,
             "x-cursor-checksum",
@@ -122,7 +120,11 @@ impl CursorIdeIdentity {
     ) {
         let machine_id = Self::token_machine_id(access_token);
         set_header(headers, "authorization", &format!("Bearer {access_token}"));
-        set_header(headers, "x-client-key", &Self::token_client_key(access_token));
+        set_header(
+            headers,
+            "x-client-key",
+            &Self::token_client_key(access_token),
+        );
         set_header(
             headers,
             "x-cursor-checksum",
@@ -130,7 +132,12 @@ impl CursorIdeIdentity {
         );
         set_header(headers, "x-cursor-client-type", "cli");
         set_header(headers, "x-ghost-mode", "true");
-        set_header(headers, "x-cursor-client-version", AGENT_CLI_CLIENT_VERSION);
+        let agent_version = std::env::var("SINEW_CURSOR_AGENT_VERSION")
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| AGENT_CLI_CLIENT_VERSION.to_string());
+        set_header(headers, "x-cursor-client-version", &agent_version);
     }
 
     fn apply_common(&self, headers: &mut HeaderMap, session_id: &str, request_id: &str) {
@@ -197,7 +204,11 @@ fn sha256_hex(input: &str) -> String {
 fn cursor_storage_json_path() -> Option<PathBuf> {
     let base_dirs = directories::BaseDirs::new()?;
     let config_dir = base_dirs.config_dir();
-    let path = config_dir.join("Cursor").join("User").join("globalStorage").join("storage.json");
+    let path = config_dir
+        .join("Cursor")
+        .join("User")
+        .join("globalStorage")
+        .join("storage.json");
     if path.exists() {
         Some(path)
     } else {
@@ -246,7 +257,10 @@ fn load_cursor_storage_ids() -> Option<(String, Option<String>)> {
     let content = fs::read_to_string(path).ok()?;
     let json: serde_json::Value = serde_json::from_str(&content).ok()?;
     let machine_id = json.get("telemetry.machineId")?.as_str()?.to_string();
-    let mac_machine_id = json.get("telemetry.macMachineId").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let mac_machine_id = json
+        .get("telemetry.macMachineId")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     if !machine_id.trim().is_empty() {
         Some((machine_id, mac_machine_id))
     } else {
@@ -343,28 +357,30 @@ fn is_valid_machine_id(value: &str) -> bool {
 
 fn read_local_timezone() -> String {
     static CACHED_TZ: OnceLock<String> = OnceLock::new();
-    CACHED_TZ.get_or_init(|| {
-        if let Ok(tz) = std::env::var("TZ") {
-            if !tz.trim().is_empty() {
-                return tz.to_string();
-            }
-        }
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            if let Ok(output) = std::process::Command::new("powershell")
-                .args(["-NoProfile", "-Command", "(Get-TimeZone).Id"])
-                .creation_flags(0x08000000)
-                .output()
-            {
-                let tz = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !tz.is_empty() {
-                    return tz;
+    CACHED_TZ
+        .get_or_init(|| {
+            if let Ok(tz) = std::env::var("TZ") {
+                if !tz.trim().is_empty() {
+                    return tz.to_string();
                 }
             }
-        }
-        "UTC".into()
-    }).clone()
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                if let Ok(output) = std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", "(Get-TimeZone).Id"])
+                    .creation_flags(0x08000000)
+                    .output()
+                {
+                    let tz = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                    if !tz.is_empty() {
+                        return tz;
+                    }
+                }
+            }
+            "UTC".into()
+        })
+        .clone()
 }
 
 #[cfg(test)]
@@ -374,15 +390,12 @@ mod identity_tests {
 
     #[test]
     fn persisted_device_roundtrip() {
-        let path = std::env::temp_dir().join(format!(
-            "sinew-cursor-device-{}.json",
-            uuid::Uuid::new_v4()
-        ));
+        let path =
+            std::env::temp_dir().join(format!("sinew-cursor-device-{}.json", uuid::Uuid::new_v4()));
         let id = uuid::Uuid::new_v4().to_string();
         persist_sinew_machine_id(&path, &id).expect("persist device id");
         let contents = fs::read_to_string(&path).expect("read device file");
-        let device: PersistedDevice =
-            serde_json::from_str(&contents).expect("parse device file");
+        let device: PersistedDevice = serde_json::from_str(&contents).expect("parse device file");
         assert_eq!(device.machine_id, id);
         let _ = fs::remove_file(path);
     }
@@ -399,12 +412,7 @@ mod identity_tests {
         let identity = CursorIdeIdentity::load();
         let token = "test-access-token";
         let mut headers = HeaderMap::new();
-        identity.apply_agent_authenticated(
-            &mut headers,
-            "session",
-            "request",
-            token,
-        );
+        identity.apply_agent_authenticated(&mut headers, "session", "request", token);
         let auth = headers
             .get("authorization")
             .and_then(|v| v.to_str().ok())
