@@ -157,6 +157,11 @@ export const api = {
       input: { workspacePath },
     });
   },
+  mountSshWorkspace(hostOrAlias: string) {
+    return invoke<WorkspaceBootstrap>("mount_ssh_workspace", {
+      hostOrAlias,
+    });
+  },
   getOrCreateSandboxWorkspace() {
     return invoke<string>("get_or_create_sandbox_workspace");
   },

@@ -1,10 +1,14 @@
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result};
-use tracing::info;
+use tracing::{info, error};
+
+mod protocol;
 
 #[cfg(windows)]
-use tokio::net::windows::named_pipe::ServerOptions;
+use tokio::net::windows::named_pipe::{ServerOptions, NamedPipeServer};
+#[cfg(windows)]
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 #[allow(unreachable_code)]
 #[tokio::main]
@@ -41,8 +45,11 @@ async fn main() -> Result<()> {
             server.connect().await?;
             info!("Client connected via Named Pipe!");
             
-            // Handle client connection (placeholder)
-            // Subsequent instances can be created in loop
+            tokio::spawn(async move {
+                if let Err(e) = handle_client(server).await {
+                    error!("Error handling Named Pipe client: {:?}", e);
+                }
+            });
         }
     }
 
@@ -52,5 +59,61 @@ async fn main() -> Result<()> {
         tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
     }
 
+    Ok(())
+}
+
+#[cfg(windows)]
+async fn handle_client(stream: NamedPipeServer) -> Result<()> {
+    let (reader, mut writer) = tokio::io::split(stream);
+    let mut reader = BufReader::new(reader);
+    let mut line = String::new();
+    
+    loop {
+        line.clear();
+        let bytes_read = reader.read_line(&mut line).await?;
+        if bytes_read == 0 {
+            break; // Connection closed
+        }
+        
+        let request: protocol::DaemonRequest = match serde_json::from_str(&line) {
+            Ok(req) => req,
+            Err(e) => {
+                let err_resp = protocol::DaemonResponse::Error {
+                    message: format!("Invalid JSON request: {}", e),
+                };
+                let mut resp_str = serde_json::to_string(&err_resp)?;
+                resp_str.push('\n');
+                writer.write_all(resp_str.as_bytes()).await?;
+                continue;
+            }
+        };
+        
+        // Process request
+        info!("Received request: {:?}", request);
+        match request {
+            protocol::DaemonRequest::GetStatus => {
+                let resp = protocol::DaemonResponse::Status {
+                    is_busy: false,
+                    active_conversation_id: None,
+                };
+                let mut resp_str = serde_json::to_string(&resp)?;
+                resp_str.push('\n');
+                writer.write_all(resp_str.as_bytes()).await?;
+            }
+            protocol::DaemonRequest::CancelTurn { conversation_id } => {
+                info!("Cancel turn requested for: {}", conversation_id);
+            }
+            protocol::DaemonRequest::StartTurn { conversation_id, .. } => {
+                info!("Start turn requested for: {}", conversation_id);
+                // Placeholder response
+                let resp = protocol::DaemonResponse::TurnStarted {
+                    conversation_id: conversation_id.clone(),
+                };
+                let mut resp_str = serde_json::to_string(&resp)?;
+                resp_str.push('\n');
+                writer.write_all(resp_str.as_bytes()).await?;
+            }
+        }
+    }
     Ok(())
 }

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:02:04]
+- `crates/sinew-agent-daemon/src/protocol.rs` : Création de la structure du protocole d'échange JSON IPC (Requêtes de turn, d'annulation, de statut et Réponses d'événements et d'erreurs).
+- `crates/sinew-agent-daemon/src/main.rs` : Implémentation du serveur d'écoute asynchrone multithread gérant les connexions entrantes sur le Named Pipe et le traitement des messages JSON-RPC délimités par des retours à la ligne (`\n`).
+
+
+## [2026-05-30 02:57:00]
+- `src-tauri/src/workspace.rs` : Création de la commande `mount_ssh_workspace` pour automatiser la détection de lettre libre, le lancement d'SSHFS-Win et l'ouverture automatique du lecteur.
+- `src-tauri/src/lib.rs` : Enregistrement du gestionnaire Tauri `mount_ssh_workspace`.
+- `src/lib/ipc.ts` : Exposition de la méthode API `mountSshWorkspace`.
+- `src/components/Welcome.tsx` : Intégration d'un formulaire et bouton de connexion SSH directe dans l'interface d'accueil (Switch) permettant de connecter n'importe quelle VM à la volée.
+
 ## [2026-05-30 03:00:40]
 - `Cargo.toml` : Ajout du sous-projet `crates/sinew-agent-daemon` à la liste des membres du workspace Cargo.
 - `crates/sinew-agent-daemon/Cargo.toml` : Création du fichier de configuration Cargo avec ses dépendances (tokio, anyhow, serde, etc.).

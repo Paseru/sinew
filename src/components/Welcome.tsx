@@ -35,6 +35,25 @@ export function Welcome({ onPick, error, deriveName }: Props) {
   const [activeWorkspaces, setActiveWorkspaces] = useState<Set<string>>(
     () => new Set(),
   );
+  const [sshTarget, setSshTarget] = useState("");
+  const [connectingSsh, setConnectingSsh] = useState(false);
+  const [sshError, setSshError] = useState<string | null>(null);
+
+  const handleConnectSsh = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = sshTarget.trim();
+    if (!target) return;
+    setConnectingSsh(true);
+    setSshError(null);
+    try {
+      const bootstrap = await api.mountSshWorkspace(target);
+      onPick(bootstrap.workspace.path);
+    } catch (err) {
+      setSshError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setConnectingSsh(false);
+    }
+  };
 
   useEffect(() => {
     setRecents(loadRecents());
@@ -171,6 +190,59 @@ export function Welcome({ onPick, error, deriveName }: Props) {
             </span>
           </button>
         </div>
+
+        <form onSubmit={handleConnectSsh} style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px", width: "100%" }}>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="text"
+              placeholder="IP, domaine ou alias SSH (ex: nexus-nyc)"
+              value={sshTarget}
+              onChange={(e) => setSshTarget(e.target.value)}
+              disabled={connectingSsh}
+              style={{
+                flex: 1,
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: "1px solid var(--accent-soft)",
+                background: "var(--bg-2)",
+                color: "var(--text-1)",
+                fontSize: "13px",
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={connectingSsh || !sshTarget.trim()}
+              style={{
+                padding: "0 20px",
+                borderRadius: "8px",
+                background: "rgba(16, 185, 129, 0.15)",
+                color: "#10b981",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                fontSize: "13px",
+                fontWeight: "500",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              {connectingSsh ? (
+                <>Connexion...</>
+              ) : (
+                <>
+                  <Icon icon="solar:server-bold-duotone" width={16} height={16} />
+                  Connecter
+                </>
+              )}
+            </button>
+          </div>
+          {sshError && (
+            <div style={{ color: "var(--error)", fontSize: "12px", marginTop: "4px", textAlign: "left" }}>
+              {sshError}
+            </div>
+          )}
+        </form>
 
         {error && (
           <div className="welcome__error">{error}</div>

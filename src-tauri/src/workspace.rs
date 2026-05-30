@@ -730,3 +730,62 @@ pub(crate) fn resolve_project_id_str(workspace_path_str: &str) -> String {
     let path = std::path::Path::new(workspace_path_str);
     get_or_create_project_id(path).unwrap_or_else(|_| workspace_path_str.to_string())
 }
+
+#[tauri::command]
+pub(super) async fn mount_ssh_workspace(
+    state: State<'_, DesktopState>,
+    window: tauri::WebviewWindow,
+    host_or_alias: String,
+) -> std::result::Result<WorkspaceBootstrap, String> {
+    // 1. Trouver une lettre de lecteur libre
+    let mut drive_letter = None;
+    for letter in (b'D'..=b'Z').rev() {
+        let path = format!("{}:\\", letter as char);
+        if !std::path::Path::new(&path).exists() {
+            drive_letter = Some(letter as char);
+            break;
+        }
+    }
+    let letter = drive_letter.ok_or_else(|| "Aucune lettre de lecteur libre".to_string())?;
+    let drive_path = format!("{}:\\", letter);
+    let drive_arg = format!("{}:", letter);
+
+    // 2. Préparer le préfixe SSHFS-Win pour l'authentification par clé (.k)
+    let prefix = format!("\\sshfs.k\\{}", host_or_alias);
+
+    // 3. Exécuter le montage sshfs-win
+    let program = r"C:\Program Files\SSHFS-Win\bin\sshfs-win.exe";
+    if !std::path::Path::new(program).exists() {
+        return Err("L'utilitaire SSHFS-Win n'est pas installé sur ce PC.".to_string());
+    }
+
+    let _child = std::process::Command::new(program)
+        .args(&["svc", &prefix, &drive_arg])
+        .spawn()
+        .map_err(|e| format!("Erreur lors du lancement de sshfs-win : {}", e))?;
+
+    // Attendre jusqu'à 8 secondes que le lecteur Windows apparaisse
+    let mut mounted = false;
+    for _ in 0..40 {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        if std::path::Path::new(&drive_path).exists() {
+            mounted = true;
+            break;
+        }
+    }
+
+    if !mounted {
+        return Err("La connexion a échoué : impossible de monter le dossier distant. Vérifiez vos configurations SSH.".to_string());
+    }
+
+    // 4. Ouvrir l'espace de travail monté !
+    let bootstrap = open_workspace(
+        state,
+        window,
+        WorkspaceInput {
+            workspace_path: drive_path,
+        },
+    ).await?;
+
+    Ok(bootstrap)
+}
