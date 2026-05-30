@@ -751,21 +751,28 @@ export function Workspace({
     setTabs([tab]);
     setActiveTabIndex(0);
     setSettingsActive(false);
+    setSettingsOpen(false);
   }, []);
 
   const closeTabsToRight = useCallback((index: number) => {
     const tabCount = tabsRef.current.length;
-    if (index < 0 || index >= tabCount - 1) return;
-    setTabs((prev) => prev.slice(0, index + 1));
-    setActiveTabIndex((active) => {
-      if (active < 0) return active;
-      return active > index ? index : active;
-    });
+    if (index < 0) return;
+    if (index < tabCount - 1) {
+      setTabs((prev) => prev.slice(0, index + 1));
+      setActiveTabIndex((active) => {
+        if (active < 0) return active;
+        return active > index ? index : active;
+      });
+    }
+    setSettingsActive(false);
+    setSettingsOpen(false);
   }, []);
 
   const closeAllTabs = useCallback(() => {
     setTabs([]);
     setActiveTabIndex(-1);
+    setSettingsActive(false);
+    setSettingsOpen(false);
   }, []);
 
   const revealTab = useCallback(

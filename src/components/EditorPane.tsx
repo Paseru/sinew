@@ -670,6 +670,7 @@ export function EditorPane({
           tab={tabs[tabMenu.index]}
           tabCount={tabs.length}
           index={tabMenu.index}
+          settingsOpen={settingsOpen}
           onClose={() => setTabMenu(null)}
           onCloseTab={() => onClose(tabMenu.index)}
           onCloseOthers={() => onCloseOthers(tabMenu.index)}
@@ -964,6 +965,7 @@ function EditorTabContextMenu({
   tab,
   tabCount,
   index,
+  settingsOpen,
   onClose,
   onCloseTab,
   onCloseOthers,
@@ -976,6 +978,7 @@ function EditorTabContextMenu({
   tab: EditorTab;
   tabCount: number;
   index: number;
+  settingsOpen: boolean;
   onClose: () => void;
   onCloseTab: () => void;
   onCloseOthers: () => void;
@@ -1044,7 +1047,7 @@ function EditorTabContextMenu({
       <TabMenuItem
         icon="solar:alt-arrow-right-bold"
         label={isFr ? "Fermer les onglets à droite" : "Close to the Right"}
-        disabled={index >= tabCount - 1}
+        disabled={index >= tabCount - 1 && !settingsOpen}
         onClick={runAction(onCloseToRight)}
       />
       <TabMenuItem

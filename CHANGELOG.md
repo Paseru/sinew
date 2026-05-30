@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 16:58:12]
+- `src/components/Workspace.tsx` : Correction du comportement des menus de fermeture d'onglets (Fermer les autres, Fermer à droite, Fermer tous) pour qu'ils ferment également l'onglet "Paramètres" s'il est ouvert et actif, évitant ainsi le rendu d'un écran noir vide.
+- `src/components/EditorPane.tsx` : Mise à jour du composant `EditorTabContextMenu` pour accepter la propriété `settingsOpen`. Le bouton "Fermer les onglets à droite" reste désormais cliquable même sur le dernier onglet fichier si l'onglet Paramètres est ouvert (puisqu'il est situé à sa droite).
+
+## [2026-05-30 16:55:47]
+- `REFACTORING_PLAN.md` : Création du rapport d'audit global. Identification et priorisation des 3 meilleures cibles de rationalisation : unification des providers LLM (Rust), découpage des composants monolithiques SettingsPane/ChatPane (React), et standardisation du pipeline d'outils (Rust).
+
 ## [2026-05-30 16:17:12]
 - `src-tauri/src/workspace.rs` : Automatisation du déploiement du daemon Linux "Super SSH". Si le binaire local est absent, la commande de démarrage télécharge automatiquement la dernière release stable du daemon `sinew-agent-daemon-linux` via `curl` sur le serveur distant depuis GitHub, garantissant une utilisation sans configuration pour les utilisateurs.
 - `.github/workflows/release.yml` : Ajout d'une étape de compilation native du daemon (`cargo build --release -p sinew-agent-daemon`) sur les runners Linux de l'intégration continue. Le binaire est ensuite publié en tant qu'asset additionnel (`sinew-agent-daemon-linux`) sur les releases GitHub.
