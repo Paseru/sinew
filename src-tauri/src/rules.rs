@@ -226,9 +226,30 @@ pub async fn ai_consolidate_rules(
         ));
     };
 
+    // Filet de sécurité : refuser une réécriture anormalement courte (= règles
+    // perdues / réponse tronquée), même si l'en-tête est présent. Une fusion
+    // légitime peut raccourcir le fichier, mais pas le diviser par deux.
+    let current_len = current_rules.trim().len();
+    if current_len > 200 && refined_rules.len() < current_len / 2 {
+        return Err(format!(
+            "Réécriture refusée par sécurité : le résultat de l'IA est anormalement court \
+             ({} caractères contre {} actuellement). Le fichier n'a PAS été modifié pour éviter \
+             de perdre des règles.",
+            refined_rules.len(),
+            current_len
+        ));
+    }
+
     if let Some(parent) = rules_path.parent() {
         let _ = fs::create_dir_all(parent);
     }
+
+    // Sauvegarde de la version précédente avant tout écrasement.
+    if rules_path.exists() {
+        let backup_path = rules_path.with_extension("bak.md");
+        let _ = fs::copy(&rules_path, &backup_path);
+    }
+
     fs::write(&rules_path, format!("{refined_rules}\n"))
         .map_err(|e| format!("Impossible d'écrire instructions_consolidated.md: {e}"))?;
 

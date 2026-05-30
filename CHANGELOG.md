@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 19:42:00]
+- `src-tauri/src/rules.rs` : Ajout d'un filet de sécurité à la consolidation par IA. Avant d'écraser `instructions_consolidated.md`, l'ancienne version est sauvegardée (`instructions_consolidated.bak.md`), et la réécriture est refusée si le résultat de l'IA est anormalement court (moins de la moitié de l'actuel) afin d'éviter toute perte silencieuse de règles en cas de réponse tronquée du modèle.
+
 ## [2026-05-30 19:17:08]
 - `crates/sinew-app/src/agent/repeat_guard.rs` (nouveau) : Ajout du maillon « Capture » manquant du système d'auto-amélioration. Détecte quand l'agent rejoue la même commande shell ou le même appel d'outil en erreur sans progresser : injecte un rappel fort à 3 répétitions, puis enregistre l'incident dans `errors_raw.json` et coupe le tour à 4. Ces incidents alimentent désormais automatiquement la consolidation en règles globales (avant, `errors_raw.json` n'était jamais rempli par le code).
 - `crates/sinew-app/src/agent/turn.rs` : Branchement du détecteur de boucle dans la boucle d'outils (observation de chaque résultat, injection du rappel dans le prompt système, enregistrement + arrêt propre du tour avec événement d'erreur quand une boucle est avérée).
