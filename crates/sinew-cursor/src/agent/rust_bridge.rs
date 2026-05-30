@@ -7,6 +7,7 @@ use sinew_core::{
 };
 
 use crate::identity::CursorIdeIdentity;
+use crate::model_info;
 use crate::workspace;
 
 use super::bridge::tools_json;
@@ -55,7 +56,13 @@ async fn stream_via_rust_bridge_inner(
     token: String,
     request: ProviderRequest,
 ) -> Result<ProviderStream> {
-    let model = request.model.name.clone();
+    let model = model_info::resolve_agent_model_id(&request.model, request.service_tier);
+    tracing::debug!(
+        requested = %request.model.name,
+        effective = %model,
+        service_tier = ?request.service_tier,
+        "cursor agent.v1 model"
+    );
     let system = request
         .system_prompt
         .clone()

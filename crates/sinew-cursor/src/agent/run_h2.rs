@@ -160,9 +160,27 @@ async fn run_agent_stream_inner(
                 )));
             }
             Ok(resp) => {
+                let status = resp.status();
+                let body_hint = resp.into_body().collect().await.map(|c| c.to_bytes()).ok()
+                    .and_then(|bytes| {
+                        let text = String::from_utf8_lossy(&bytes);
+                        let trimmed = text.trim();
+                        if trimmed.is_empty() {
+                            None
+                        } else {
+                            Some(trimmed.chars().take(200).collect::<String>())
+                        }
+                    });
+                warn!(
+                    status = %status,
+                    body = body_hint.as_deref(),
+                    "agent Run rejected"
+                );
                 return Err(AppError::Network(format!(
-                    "agent Run failed: {}",
-                    resp.status()
+                    "agent Run failed: {status}{}",
+                    body_hint
+                        .map(|hint| format!(" — {hint}"))
+                        .unwrap_or_default()
                 )));
             }
             Err(err) => {

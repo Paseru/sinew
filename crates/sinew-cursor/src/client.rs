@@ -78,12 +78,12 @@ impl CursorProvider {
     }
 
     async fn composer_token(&self) -> Result<String> {
-        let session = self.config.composer.as_ref().ok_or_else(|| {
+        let session = load_composer_session()?.ok_or_else(|| {
             AppError::Auth(
                 "Cursor n'est pas connecté. Ouvrez Réglages → Fournisseurs et connectez-vous via OAuth (Google ou GitHub).".into(),
             )
         })?;
-        let token = ensure_fresh_composer_token(&self.http, session).await?;
+        let token = ensure_fresh_composer_token(&self.http, &session).await?;
         if self.should_block_for_pool_exhaustion(&token).await? {
             return Err(AppError::Auth(format!(
                 "Cursor Auto+Composer pool is exhausted ({:.0}% used). Wait for reset or use Cursor IDE.",

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:14:00]
+- `crates/sinew-cursor/src/agent/run_h2.rs` : Remplacement de l'appel `hyper::body::to_bytes(resp.into_body()).await` par `resp.into_body().collect().await.map(|c| c.to_bytes())` pour s'adapter à l'API de Hyper 1.x et corriger l'erreur de compilation `E0425: cannot find function to_bytes in module hyper::body` remontée dans `build-error.txt`.
+
+## [2026-05-30 14:10:18]
+- `AGENTS.md` : Ajout d'une règle d'auto-amélioration globale pour documenter l'obligation de fournir le paramètre `limit` avec `grep`/`glob` et de vérifier l'existence des fichiers avant l'appel (via `Test-Path`), suite aux erreurs de l'agent.
+
 ## [2026-05-30 14:06:32]
 - `src-tauri/capabilities/default.json` : Extension des fenêtres autorisées à toutes (`*` au lieu de `main, sinew-window-*`) et ajout explicite de la permission `dialog:allow-message` pour s'assurer que le frontend puisse exécuter `window.confirm` sur n'importe quelle fenêtre Tauri sans blocage ACL.
 

@@ -3,6 +3,8 @@
 - **Dossier de travail des commandes** : ne jamais utiliser `cwd: "."` ni un chemin absolu avec l'outil terminal. Utiliser `cwd: ""` pour rester dans le workspace courant et éviter les erreurs `path escapes workspace` / `cwd must stay inside the workspace`.
 - **CHANGELOG avant modification** : juste avant toute modification de `CHANGELOG.md`, toujours relire `C:\dev\sinew\CHANGELOG.md` avec l'outil `read`, puis modifier `CHANGELOG.md` dans le même lot que les autres fichiers touchés.
 - **Chemins de fichiers** : pour `read`, `edit_file` et `write_file`, utiliser les chemins absolus Windows du workspace, par exemple `C:\dev\sinew\...`.
+- **Grep Limit** : le paramètre `limit` est strictement obligatoire pour les outils `grep` et `glob`. Ne jamais l'omettre.
+- **Fichiers fantômes** : avant d'appeler `grep` ou `read` sur un chemin spécifique, s'assurer que le fichier existe réellement sur le disque (ex: via `bash` avec `Test-Path`).
 # Code map
 - L'agent doit garder Ã  jour cette carte simple des fichiers Ã  chaque crÃ©ation, suppression, renommage, dÃ©placement ou modification.
 

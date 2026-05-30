@@ -11,6 +11,7 @@ use tokio::process::Command;
 use tokio::sync::{mpsc, Mutex};
 
 use crate::identity::CursorIdeIdentity;
+use crate::model_info;
 use crate::workspace;
 
 use super::conversation_id::stable_agent_conversation_id;
@@ -43,7 +44,7 @@ pub async fn stream_via_node_bridge(
     let script = run_stream_script(&bridge_dir);
     let tsx = tsx_executable(&bridge_dir);
 
-    let model = request.model.name.clone();
+    let model = model_info::resolve_agent_model_id(&request.model, request.service_tier);
     let system = request.system_prompt.clone().unwrap_or_default();
     let (history_turns, current_user) = split_transcript(&request.transcript);
     let user = if current_user.is_empty() {
