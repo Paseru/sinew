@@ -342,26 +342,29 @@ fn is_valid_machine_id(value: &str) -> bool {
 }
 
 fn read_local_timezone() -> String {
-    if let Ok(tz) = std::env::var("TZ") {
-        if !tz.trim().is_empty() {
-            return tz;
-        }
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        if let Ok(output) = std::process::Command::new("powershell")
-            .args(["-NoProfile", "-Command", "(Get-TimeZone).Id"])
-            .creation_flags(0x08000000)
-            .output()
-        {
-            let tz = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !tz.is_empty() {
-                return tz;
+    static CACHED_TZ: OnceLock<String> = OnceLock::new();
+    CACHED_TZ.get_or_init(|| {
+        if let Ok(tz) = std::env::var("TZ") {
+            if !tz.trim().is_empty() {
+                return tz.to_string();
             }
         }
-    }
-    "UTC".into()
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            if let Ok(output) = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-Command", "(Get-TimeZone).Id"])
+                .creation_flags(0x08000000)
+                .output()
+            {
+                let tz = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !tz.is_empty() {
+                    return tz;
+                }
+            }
+        }
+        "UTC".into()
+    }).clone()
 }
 
 #[cfg(test)]

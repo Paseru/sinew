@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:15:11]
+- `crates/sinew-cursor/src/identity.rs` : Cache de la détection du fuseau horaire via OnceLock pour éviter le spawn répétitif de PowerShell sur chaque requête.
+- `crates/sinew-index/src/store.rs` : Optimisation majeure des performances SQLite. Mise en cache du profil de puissance machine (OnceLock), détection SSD/NVMe Windows améliorée via le PNPDeviceID et Caption, augmentation dynamique de la taille du cache SQLite (limité à ~3.1% de la mémoire vive pour rester bien en dessous du plafond de 40% demandé par l'utilisateur, max 1 Go) et de la taille de mmap (max 4 Go), et activation de PRAGMA threads multi-cœurs.
+
 ## [2026-05-30 02:12:16]
 - `crates/sinew-index/src/process.rs` : Limitation de la mémoire des sous-processus de l'indexeur (recherche codebase et watch) à 12 Go maximum sur Windows via les API de Job Object, afin d'éviter tout blocage ou fuite de mémoire excessive.
 

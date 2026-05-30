@@ -64,8 +64,10 @@ impl IndexStore {
              PRAGMA mmap_size = {};
              PRAGMA temp_store = MEMORY;
              PRAGMA cache_spill = FALSE;
+             PRAGMA threads = {};
              PRAGMA busy_timeout = 10000;",
-            tuning.cache_kib, tuning.mmap_bytes
+            tuning.cache_kib, tuning.mmap_bytes,
+            MachinePowerProfile::current().parallelism.min(8)
         );
         let _ = conn.execute_batch(&pragmas);
         Ok(conn)
@@ -380,11 +382,17 @@ struct SqliteTuning {
     mmap_bytes: i64,
 }
 
+static PROFILE: std::sync::OnceLock<MachinePowerProfile> = std::sync::OnceLock::new();
+
 fn sqlite_tuning() -> SqliteTuning {
     let profile = MachinePowerProfile::current();
-    let cache_kib = (profile.parallelism * 8 * 1024).clamp(32 * 1024, 256 * 1024);
+    // Cache scales with memory (approx. 1/32 of memory size),
+    // clamped between 32 MiB and 1 GiB.
+    let cache_kib = (profile.total_memory_kib / 32)
+        .clamp(32 * 1024, 1024 * 1024) as i64;
+    // Memory mapping scales up to 4x cache size on SSD/NVMe (up to 4 GiB max)
     let mmap_bytes = (cache_kib * 1024 * profile.storage_multiplier())
-        .clamp(128 * 1024 * 1024, 1024 * 1024 * 1024);
+        .clamp(128 * 1024 * 1024, 4 * 1024 * 1024 * 1024);
     SqliteTuning {
         cache_kib,
         mmap_bytes,
@@ -395,16 +403,23 @@ fn sqlite_tuning() -> SqliteTuning {
 struct MachinePowerProfile {
     parallelism: i64,
     high_throughput_storage: bool,
+    total_memory_kib: u64,
 }
 
 impl MachinePowerProfile {
     fn current() -> Self {
-        Self {
-            parallelism: thread::available_parallelism()
+        *PROFILE.get_or_init(|| {
+            let parallelism = thread::available_parallelism()
                 .map(|value| value.get() as i64)
-                .unwrap_or(4),
-            high_throughput_storage: high_throughput_storage_available(),
-        }
+                .unwrap_or(4);
+            let high_throughput_storage = high_throughput_storage_available();
+            let total_memory_kib = total_system_memory_kib();
+            Self {
+                parallelism,
+                high_throughput_storage,
+                total_memory_kib,
+            }
+        })
     }
 
     fn storage_multiplier(self) -> i64 {
@@ -417,6 +432,32 @@ impl MachinePowerProfile {
 }
 
 #[cfg(target_os = "windows")]
+fn total_system_memory_kib() -> u64 {
+    use std::os::windows::process::CommandExt;
+    let output = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            "(Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize",
+        ])
+        .creation_flags(0x08000000)
+        .output();
+    if let Ok(output) = output {
+        let text = String::from_utf8_lossy(&output.stdout);
+        if let Ok(kib) = text.trim().parse::<u64>() {
+            return kib;
+        }
+    }
+    // Fallback standard value: 16 GB
+    16 * 1024 * 1024
+}
+
+#[cfg(not(target_os = "windows"))]
+fn total_system_memory_kib() -> u64 {
+    16 * 1024 * 1024
+}
+
+#[cfg(target_os = "windows")]
 fn high_throughput_storage_available() -> bool {
     use std::os::windows::process::CommandExt;
 
@@ -424,7 +465,7 @@ fn high_throughput_storage_available() -> bool {
         .args([
             "-NoProfile",
             "-Command",
-            "Get-CimInstance Win32_DiskDrive | Select-Object -ExpandProperty Model",
+            "Get-CimInstance Win32_DiskDrive | ForEach-Object { $_.Model + ' ' + $_.PNPDeviceID + ' ' + $_.Caption }",
         ])
         .creation_flags(0x08000000)
         .output();
@@ -432,7 +473,7 @@ fn high_throughput_storage_available() -> bool {
         return true;
     };
     let text = String::from_utf8_lossy(&output.stdout).to_ascii_lowercase();
-    text.contains("nvme") || text.contains("ssd")
+    text.contains("nvme") || text.contains("ssd") || text.contains("solid state")
 }
 
 #[cfg(not(target_os = "windows"))]
