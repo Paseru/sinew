@@ -163,6 +163,80 @@ impl AnthropicProvider {
         }
         values.join(",")
     }
+
+    pub async fn get_usage(&self) -> Result<serde_json::Value> {
+        let token = self.config.credential.bearer_or_key(&self.http).await?;
+        let is_oauth = self.config.credential.is_oauth();
+        if !is_oauth {
+            return Err(AppError::Auth("Usage limits are only available for Claude OAuth accounts".into()));
+        }
+
+        let url = format!(
+            "{}/api/oauth/usage",
+            self.config.base_url.trim_end_matches('/')
+        );
+
+        let response = self
+            .http
+            .get(&url)
+            .header("authorization", format!("Bearer {token}"))
+            .header("anthropic-beta", "oauth-2025-04-20")
+            .header("content-type", "application/json")
+            .header("accept", "application/json")
+            .header("user-agent", USER_AGENT)
+            .send()
+            .await
+            .map_err(|err| AppError::Network(err.to_string()))?;
+
+        if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+            let refreshed_token = self
+                .config
+                .credential
+                .force_refresh(&self.http, &token)
+                .await
+                .map_err(|err| AppError::Auth(format!("Token refresh failed: {err}")))?;
+
+            let response2 = self
+                .http
+                .get(&url)
+                .header("authorization", format!("Bearer {refreshed_token}"))
+                .header("anthropic-beta", "oauth-2025-04-20")
+                .header("content-type", "application/json")
+                .header("accept", "application/json")
+                .header("user-agent", USER_AGENT)
+                .send()
+                .await
+                .map_err(|err| AppError::Network(err.to_string()))?;
+
+            if !response2.status().is_success() {
+                let status = response2.status();
+                let text = response2.text().await.unwrap_or_default();
+                return Err(AppError::Network(format!(
+                    "Failed to fetch Anthropic usage after token refresh: HTTP {status} - {text}"
+                )));
+            }
+
+            let data = response2
+                .json::<serde_json::Value>()
+                .await
+                .map_err(|err| AppError::Decode(err.to_string()))?;
+            return Ok(data);
+        }
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            return Err(AppError::Network(format!(
+                "Failed to fetch Anthropic usage: HTTP {status} - {text}"
+            )));
+        }
+
+        let data = response
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|err| AppError::Decode(err.to_string()))?;
+        Ok(data)
+    }
 }
 
 #[async_trait]

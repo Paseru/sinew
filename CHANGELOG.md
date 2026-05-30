@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 18:22:51]
+- `src/components/SettingsPane.tsx` : Déplacement de "Optimisation Magique Auto" en tête de l'onglet Power User sous forme de carte pleine largeur responsive. Rétablissement de l'accès au menu de choix de modèle d'analyse indépendamment de l'état d'activation de l'optimisation. Transfert de l'option "Recherche de mise à jour automatique" vers l'onglet Système (Diagnostics) pour une cohérence thématique parfaite.
+- `src/styles.css` : Ajout de la classe `.settings-pane__select` pour habiller proprement les listes déroulantes de paramètres.
+
+## [2026-05-30 18:21:34]
+- `crates/sinew-anthropic/src/client.rs` : Ajout de la méthode `get_usage` pour récupérer les limites de quota Anthropic via l'API OAuth `/api/oauth/usage` avec gestion du rafraîchissement des jetons.
+- `src-tauri/src/providers.rs` : Ajout de la commande Tauri `get_anthropic_usage` et définition du cache associé pour récupérer l'utilisation de l'abonnement Anthropic.
+- `src-tauri/src/lib.rs` : Exposition de la commande Tauri `get_anthropic_usage` au processus frontal.
+- `src/lib/ipc.ts` : Déclaration de la méthode IPC `getAnthropicUsage`.
+- `src/lib/quotas.ts` : Implémentation de la récupération et du parsing du quota pour le fournisseur Anthropic en utilisant les données de l'API d'abonnement Anthropic.
+
 ## [2026-05-30 18:18:38]
 - `src/components/SettingsPane.tsx` : Correction des problèmes d'encodage pour le bouton "Jour" et "Système" dans l'onglet Apparence, remplacement par des emojis corrects. Remplacement des réglages de taille numérique par une structure de classe CSS unifiée et correction de l'icône de titre pour DeepSeek.
 - `src/styles.css` : Ajout de la classe `.settings-pane__number-adjuster` pour uniformiser la disposition des ajusteurs numériques. Conversion de la règle responsive `@media` en `@container` query sur les lignes à deux colonnes pour qu'elles se comportent correctement suivant la taille du panneau de réglages, et élargissement de la bascule adaptative des cartes de 500px à 600px pour une meilleure lisibilité mobile.

@@ -10598,6 +10598,29 @@ html[data-theme="ai"] .mermaid-zoom__hint {
   color: var(--text-0);
 }
 
+.settings-pane__select {
+  height: 30px;
+  font-size: 13px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background-color: var(--bg-3, rgba(255, 255, 255, 0.08));
+  color: var(--text-0, #fff);
+  border: 1px solid var(--line-1, rgba(255, 255, 255, 0.12));
+  cursor: pointer;
+  outline: none;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.settings-pane__select:hover:not(:disabled) {
+  background-color: var(--bg-2, rgba(255, 255, 255, 0.12));
+  border-color: var(--border-hover, rgba(255, 255, 255, 0.25));
+}
+
+.settings-pane__select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @container (max-width: 700px) {
   .options-subcategory-row {
     grid-template-columns: 1fr;

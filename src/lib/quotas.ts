@@ -260,6 +260,91 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
     }
   }
 
+  if (providerId === "anthropic" || providerId.startsWith("anthropic:")) {
+    try {
+      const quota = await api.getAnthropicUsage();
+      const windows: QuotaWindow[] = [];
+
+      const windowKeys: { [key: string]: string } = {
+        five_hour: "Session 5h",
+        seven_day: "Hebdomadaire",
+        seven_day_sonnet: "Sonnet hebdo",
+        seven_day_opus: "Opus hebdo",
+        seven_day_oauth_apps: "Applis OAuth hebdo",
+        seven_day_omelette: "Claude Design",
+        seven_day_omelette_promotional: "Claude Design (promo)",
+        seven_day_cowork: "Co-work hebdo",
+      };
+
+      for (const [key, label] of Object.entries(windowKeys)) {
+        const win = quota[key];
+        if (win && typeof win.utilization === "number") {
+          const usedPercent = win.utilization;
+          const remainingPercent = Math.max(0, 100 - usedPercent);
+          
+          let resetTime: string | null = null;
+          let resetAtMs: number | null = null;
+          if (win.resets_at) {
+            try {
+              const d = new Date(win.resets_at);
+              resetAtMs = d.getTime();
+              const now = new Date();
+              const isToday = d.toDateString() === now.toDateString();
+              if (isToday) {
+                resetTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              } else {
+                resetTime = d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + " " + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+            } catch (e) {
+              console.error("Failed to parse resets_at date:", e);
+            }
+          }
+
+          windows.push({
+            label,
+            remainingPercent,
+            usedPercent,
+            resetAt: resetAtMs,
+            resetTime,
+          });
+        }
+      }
+
+      if (quota.extra_usage && quota.extra_usage.is_enabled) {
+        const limitCents = quota.extra_usage.monthly_limit || 0;
+        const usedCents = quota.extra_usage.used_credits || 0;
+        const remainingCents = Math.max(0, limitCents - usedCents);
+        const limitUsd = (limitCents / 100).toFixed(2);
+        const usedUsd = (usedCents / 100).toFixed(2);
+        const remainingUsd = (remainingCents / 100).toFixed(2);
+        const currency = quota.extra_usage.currency || 'USD';
+        
+        const pct = limitCents > 0 ? Math.max(0, 100 - (usedCents / limitCents) * 100) : 100;
+        
+        windows.push({
+          label: `Extra: $${remainingUsd} / $${limitUsd} ${currency}`,
+          remainingPercent: pct,
+          usedPercent: limitCents > 0 ? (usedCents / limitCents) * 100 : 0,
+        });
+      }
+
+      if (!windows.length) {
+        return unavailableQuota("Aucune donnee de quota disponible");
+      }
+
+      return {
+        kind: "rateLimits",
+        percentage: minPercent(windows),
+        isReal: true,
+        label: "Claude Pro / Max",
+        source: "Anthropic /api/oauth/usage",
+        windows,
+      };
+    } catch (err) {
+      return unavailableQuota(`Impossible de lire Claude: ${String(err)}`);
+    }
+  }
+
   return unavailableQuota("Quota reel non expose par ce fournisseur");
 }
 

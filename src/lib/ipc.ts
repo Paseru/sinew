@@ -639,6 +639,9 @@ export const api = {
   getCursorUsage() {
     return invoke<CursorUsageQuotaInfo>("get_cursor_usage");
   },
+  getAnthropicUsage() {
+    return invoke<any>("get_anthropic_usage");
+  },
   probeMcpTools() {
     return invoke<McpServerProbe[]>("probe_mcp_tools");
   },

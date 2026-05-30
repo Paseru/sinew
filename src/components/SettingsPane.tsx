@@ -2924,47 +2924,6 @@ function OptionsSection({
             </div>
           </div>
 
-          {/* Recherche automatique de mise à jour */}
-          <div className="settings-pane__about-card">
-            <div className="settings-pane__about-card-copy">
-              <h2>{locale === "fr" ? "Recherche de mise à jour automatique" : "Automatic Update Check"}</h2>
-              <p>
-                {locale === "fr"
-                  ? "Vérifie automatiquement les nouvelles versions au démarrage et périodiquement."
-                  : "Automatically checks for new versions on startup and periodically."}
-              </p>
-            </div>
-            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Update Check">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={autoUpdateCheck === "blocking"}
-                data-active={autoUpdateCheck === "blocking" ? "true" : "false"}
-                onClick={() => changeAutoUpdateCheck("blocking")}
-              >
-                {locale === "fr" ? "Bloquant" : "Blocking"}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={autoUpdateCheck === "notification"}
-                data-active={autoUpdateCheck === "notification" ? "true" : "false"}
-                onClick={() => changeAutoUpdateCheck("notification")}
-              >
-                {locale === "fr" ? "Notification uniquement" : "Notification only"}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={autoUpdateCheck === "disabled"}
-                data-active={autoUpdateCheck === "disabled" ? "true" : "false"}
-                onClick={() => changeAutoUpdateCheck("disabled")}
-              >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
-              </button>
-            </div>
-          </div>
-
           {/* Taille de la boîte de chat */}
           <div className="settings-pane__about-card">
             <div className="settings-pane__about-card-copy">
@@ -3084,6 +3043,53 @@ function OptionsSection({
               >
                 {locale === "fr" ? "Personnalisé" : "Custom"}
               </button>
+            </div>
+          </div>
+
+          {/* Optimisation Magique Auto */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Optimisation Magique Auto" : "Auto Magic Optimization"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Si activé, le brouillon est automatiquement analysé, réécrit et aiguillé sur le bon mode avant d'être envoyé au modèle principal lors d'un simple 'Entrée'."
+                  : "If enabled, your raw prompt is automatically analyzed, rewritten and routed to the correct mode before being sent to the main model upon hitting 'Enter'."}
+              </p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <select
+                className="settings-pane__select"
+                value={autoOptimizeModelId}
+                onChange={(e) => changeAutoOptimizeModelId(e.target.value)}
+                disabled={availableModels.length === 0}
+              >
+                <option value="">{locale === "fr" ? "Choisir le modèle d'analyse" : "Choose optimizer model"}</option>
+                {availableModels.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <div className="settings-pane__locale-switch" role="radiogroup">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={autoOptimizeEnabled}
+                  data-active={autoOptimizeEnabled ? "true" : "false"}
+                  onClick={() => toggleAutoOptimizeEnabled(true)}
+                >
+                  {locale === "fr" ? "Activé" : "Enabled"}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!autoOptimizeEnabled}
+                  data-active={!autoOptimizeEnabled ? "true" : "false"}
+                  onClick={() => toggleAutoOptimizeEnabled(false)}
+                >
+                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -3383,57 +3389,7 @@ function OptionsSection({
                 </div>
               </div>
 
-              {/* Ligne 5 : Optimisation de Prompt Automatique */}
-              <div className="options-subcategory-row">
-                <div className="settings-pane__about-card">
-                  <div className="settings-pane__about-card-copy">
-                    <h2>{locale === "fr" ? "Optimisation Magique Auto" : "Auto Magic Optimization"}</h2>
-                    <p>
-                      {locale === "fr"
-                        ? "Si activé, le brouillon est automatiquement analysé, réécrit et aiguillé sur le bon mode avant d'être envoyé au modèle principal lors d'un simple 'Entrée'."
-                        : "If enabled, your raw prompt is automatically analyzed, rewritten and routed to the correct mode before being sent to the main model upon hitting 'Enter'."}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", alignSelf: "flex-end" }}>
-                    <select
-                      className="settings-pane__select"
-                      style={{ height: "30px", fontSize: "13px", padding: "0 8px" }}
-                      value={autoOptimizeModelId}
-                      onChange={(e) => changeAutoOptimizeModelId(e.target.value)}
-                      disabled={!autoOptimizeEnabled || availableModels.length === 0}
-                    >
-                      <option value="">{locale === "fr" ? "Choisir le modèle d'analyse" : "Choose optimizer model"}</option>
-                      {availableModels.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="settings-pane__locale-switch" role="radiogroup">
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={autoOptimizeEnabled}
-                        data-active={autoOptimizeEnabled ? "true" : "false"}
-                        onClick={() => toggleAutoOptimizeEnabled(true)}
-                      >
-                        {locale === "fr" ? "Activé" : "Enabled"}
-                      </button>
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={!autoOptimizeEnabled}
-                        data-active={!autoOptimizeEnabled ? "true" : "false"}
-                        onClick={() => toggleAutoOptimizeEnabled(false)}
-                      >
-                        {locale === "fr" ? "Désactivé" : "Disabled"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ligne 6 : Problem Solving & Full Implementation */}
+              {/* Ligne 5 : Problem Solving & Full Implementation */}
               <div className="options-subcategory-row">
                 <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
                   <div className="settings-pane__about-card-copy">
@@ -3558,6 +3514,47 @@ function OptionsSection({
                   {locale === "fr" ? "Désactivé" : "Disabled"}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Recherche automatique de mise à jour */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Recherche de mise à jour automatique" : "Automatic Update Check"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Vérifie automatiquement les nouvelles versions au démarrage et périodiquement."
+                  : "Automatically checks for new versions on startup and periodically."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Automatic Update Check">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={autoUpdateCheck === "blocking"}
+                data-active={autoUpdateCheck === "blocking" ? "true" : "false"}
+                onClick={() => changeAutoUpdateCheck("blocking")}
+              >
+                {locale === "fr" ? "Bloquant" : "Blocking"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={autoUpdateCheck === "notification"}
+                data-active={autoUpdateCheck === "notification" ? "true" : "false"}
+                onClick={() => changeAutoUpdateCheck("notification")}
+              >
+                {locale === "fr" ? "Notification uniquement" : "Notification only"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={autoUpdateCheck === "disabled"}
+                data-active={autoUpdateCheck === "disabled" ? "true" : "false"}
+                onClick={() => changeAutoUpdateCheck("disabled")}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
             </div>
           </div>
 

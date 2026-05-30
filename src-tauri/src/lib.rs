@@ -1173,6 +1173,7 @@ pub fn run() {
             providers::sync_cursor_composer_auth,
             providers::disconnect_cursor_composer,
             providers::get_cursor_usage,
+            providers::get_anthropic_usage,
             conversations::probe_mcp_tools,
             conversations::list_installed_skills_command,
             conversations::save_skill_settings,

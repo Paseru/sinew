@@ -1126,6 +1126,7 @@ pub(super) struct AntigravityQuotaInfo {
 
 static ANTIGRAVITY_QUOTA_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, (AntigravityQuotaInfo, std::time::Instant)>>> = std::sync::OnceLock::new();
 static CURSOR_USAGE_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(CursorUsageQuotaInfo, std::time::Instant)>>> = std::sync::OnceLock::new();
+static ANTHROPIC_USAGE_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(serde_json::Value, std::time::Instant)>>> = std::sync::OnceLock::new();
 static DEEPSEEK_BALANCE_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(serde_json::Value, std::time::Instant)>>> = std::sync::OnceLock::new();
 static OPENROUTER_KEY_CACHE: std::sync::OnceLock<std::sync::Mutex<Option<(serde_json::Value, std::time::Instant)>>> = std::sync::OnceLock::new();
 static OPENAI_CODEX_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, (OpenAiCodexRateLimitInfo, std::time::Instant)>>> = std::sync::OnceLock::new();
@@ -2646,4 +2647,28 @@ pub(super) async fn get_cursor_usage() -> std::result::Result<CursorUsageQuotaIn
     }
 
     Ok(result)
+}
+
+#[tauri::command]
+pub(super) async fn get_anthropic_usage() -> std::result::Result<serde_json::Value, String> {
+    let cache = ANTHROPIC_USAGE_CACHE.get_or_init(|| std::sync::Mutex::new(None));
+    if let Ok(guard) = cache.lock() {
+        if let Some((ref cached, fetched_at)) = *guard {
+            if fetched_at.elapsed() < std::time::Duration::from_secs(30) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
+    let provider = AnthropicProvider::from_default_sources().map_err(error_to_string)?;
+    let usage = provider
+        .get_usage()
+        .await
+        .map_err(error_to_string)?;
+
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some((usage.clone(), std::time::Instant::now()));
+    }
+
+    Ok(usage)
 }
