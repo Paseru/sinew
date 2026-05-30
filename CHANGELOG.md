@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-05-30 15:14:38]
+- `src/components/SettingsPane.tsx` : Correction des erreurs d'encodage (mojibake) où les caractères accentués français apparaissaient sous la forme de caractères corrompus à cause d'une précédente écriture dans un format de texte incorrect. Le fichier a été restauré en UTF-8 pur.
+- `AGENTS.md` : Correction identique de l'encodage pour restaurer les caractères français.
+
 ## [2026-05-30 15:10:00]
 - `src-tauri/Cargo.toml` & `Cargo.toml` : Activation du plugin natif `tray-icon` pour afficher l'icône de Sinew dans la zone de notification Windows.
 - `src-tauri/src/tray.rs` : Création du module de gestion de l'icône système (Tray Icon) pour proposer le menu des projets récents lors d'un clic droit sur l'icône Sinew (en bas à droite).
