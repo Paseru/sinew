@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:08:33]
+- `src/components/SettingsPane.tsx` : Suppression du bouton de synchronisation manuelle ("Synchroniser maintenant") et de la section de détection/liaison des conversations d'autres projets ("Détection de conversations d'autres projets / PC") pour simplifier l'interface utilisateur.
+
+
 ## 🚀 Présentation des Fonctionnalités Majeures (Fork Premium julienpiron.fr)
 
 Cette version a été optimisée en profondeur pour offrir une expérience utilisateur haut de gamme (SOTA), une autonomie maximale en arrière-plan, et des intégrations d'intelligence artificielle inégalées.
