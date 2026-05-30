@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use serde::Serialize;
+use std::time::Instant;
 use sinew_core::{
     AppError, ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
     ProviderStream, Result, Role, TokenEstimate, ToolDescriptor,
@@ -262,9 +263,20 @@ impl Provider for AnthropicProvider {
             stream: true,
         };
 
+        let model_name = request.model.name.clone();
+        let provider_name = "anthropic".to_string();
+        let req_start = Instant::now();
         let response = self
             .send_json_accept("/v1/messages", &body, "text/event-stream")
             .await?;
+
+        let http_ms = req_start.elapsed().as_millis();
+        tracing::debug!(
+            provider = provider_name,
+            model = model_name,
+            http_ms,
+            "Anthropic HTTP round-trip (stream setup)"
+        );
 
         if !response.status().is_success() {
             return Err(read_http_error(response, true).await);

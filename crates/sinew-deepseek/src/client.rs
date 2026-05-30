@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
+use std::time::Instant;
 use sinew_core::{
     AppError, ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
     ProviderStream, Result, Role, TokenEstimate, ToolDescriptor,
@@ -78,12 +79,16 @@ impl DeepSeekProvider {
         route: &str,
         body: &T,
     ) -> Result<reqwest::Response> {
+        let req_start = Instant::now();
         let request = self.post(route).await?;
-        request
+        let response = request
             .json(body)
             .send()
             .await
-            .map_err(|err| AppError::Network(err.to_string()))
+            .map_err(|err| AppError::Network(err.to_string()))?;
+        let http_ms = req_start.elapsed().as_millis();
+        tracing::debug!(provider = "deepseek", route, http_ms, "HTTP round-trip");
+        Ok(response)
     }
 }
 

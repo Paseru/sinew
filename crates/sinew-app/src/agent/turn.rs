@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use futures_util::StreamExt;
@@ -140,6 +140,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     } = ctx;
 
     send_event(&event_tx, event_scope.as_ref(), AgentEvent::TurnStarted);
+    let turn_start = Instant::now();
     strip_all_visible_tool_result_ids(&mut history);
     normalize_tool_call_inputs(&mut history);
     repair_missing_tool_results(&mut history);
@@ -313,6 +314,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         };
 
         if auto_compact || provider_changed {
+            let compaction_start = Instant::now();
             match maybe_auto_compact_history(
                 &provider,
                 &model,
@@ -334,10 +336,25 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             .await
             {
                 Ok(true) => {
+                    let compaction_ms = compaction_start.elapsed().as_millis();
+                    tracing::info!(
+                        provider = provider.name(),
+                        compaction_ms,
+                        "auto compaction completed before turn"
+                    );
                     compacted = true;
                     continue;
                 }
-                Ok(false) => {}
+                Ok(false) => {
+                    let compaction_ms = compaction_start.elapsed().as_millis();
+                    if compaction_ms > 10 {
+                        tracing::debug!(
+                            provider = provider.name(),
+                            compaction_ms,
+                            "auto compaction check (no compaction needed)"
+                        );
+                    }
+                }
                 Err(err) => {
                     send_event(
                         &event_tx,
@@ -371,8 +388,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             None => request,
         };
 
+        let loop_start = Instant::now();
         let mut stream_retry_attempts = 0usize;
         let (message_builder, mut stop_reason, response_usage) = 'stream_attempt: loop {
+            let stream_setup_start = Instant::now();
             let stream_res = tokio::select! {
                 biased;
                 res = provider.stream(request.clone()) => Some(res),
@@ -388,7 +407,16 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 continue 'stream_attempt;
             };
             let mut stream = match stream_res {
-                Ok(stream) => stream,
+                Ok(stream) => {
+                    let stream_setup_ms = stream_setup_start.elapsed().as_millis();
+                    tracing::debug!(
+                        provider = provider.name(),
+                        model = model.name,
+                        stream_setup_ms,
+                        "provider stream setup completed"
+                    );
+                    stream
+                }
                 Err(err) => {
                     if should_retry_stream(&err, stream_retry_attempts) {
                         stream_retry_attempts += 1;
@@ -416,6 +444,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         && is_context_length_error(&err)
                         && can_auto_compact_history(&history, auto_compaction_attempts)
                     {
+                        let compaction_start = Instant::now();
                         match run_auto_compaction(
                             &provider,
                             &model,
@@ -437,6 +466,12 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         .await
                         {
                             Ok(()) => {
+                                let compaction_ms = compaction_start.elapsed().as_millis();
+                                tracing::info!(
+                                    provider = provider.name(),
+                                    compaction_ms,
+                                    "auto compaction completed after stream error"
+                                );
                                 compacted = true;
                                 continue 'conversation;
                             }
@@ -471,6 +506,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             let mut stream_error = None;
             let mut saw_message_stop = false;
             let mut finalized_tool_calls = 0usize;
+            let mut first_token = true;
 
             loop {
                 tokio::select! {
@@ -485,7 +521,19 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                     event = stream.next() => {
                         let Some(event) = event else { break; };
                         let event = match event {
-                            Ok(event) => event,
+                            Ok(event) => {
+                                if first_token {
+                                    first_token = false;
+                                    let first_token_ms = stream_setup_start.elapsed().as_millis();
+                                    tracing::debug!(
+                                        provider = provider.name(),
+                                        model = model.name,
+                                        first_token_ms,
+                                        "first token received"
+                                    );
+                                }
+                                event
+                            }
                             Err(err) => {
                                 stream_error = Some(err);
                                 break;
@@ -755,6 +803,14 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
 
         if loops >= max_tool_rounds {
             abort_eager_tool_results(&mut eager_tool_results);
+            tracing::warn!(
+                provider = provider.name(),
+                model = model.name,
+                loops,
+                max_tool_rounds,
+                loop_elapsed_ms = loop_start.elapsed().as_millis(),
+                "tool loop limit reached"
+            );
             send_event(
                 &event_tx,
                 event_scope.as_ref(),
@@ -778,21 +834,34 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 let result = if let Some(result) = tool_result_from_composer_bridge_meta(meta) {
                     result
                 } else if name == "clean_context" {
-                    run_clean_context(&mut history, input.clone(), &current_turn_tool_result_ids)
+                    let tool_start = Instant::now();
+                    let result = run_clean_context(&mut history, input.clone(), &current_turn_tool_result_ids);
+                    let tool_ms = tool_start.elapsed().as_millis();
+                    tracing::debug!(tool = name, tool_ms, "tool executed");
+                    result
                 } else if name == "update_goal" {
-                    run_update_goal(&mut goal_workflow, input.clone())
+                    let tool_start = Instant::now();
+                    let result = run_update_goal(&mut goal_workflow, input.clone());
+                    let tool_ms = tool_start.elapsed().as_millis();
+                    tracing::debug!(tool = name, tool_ms, "tool executed");
+                    result
                 } else if let Some(handle) = eager_tool_results.remove(id) {
-                    match handle.await {
+                    let tool_start = Instant::now();
+                    let result = match handle.await {
                         Ok(result) => result,
                         Err(err) => {
                             ToolRunResult::err(format!("write_file task failed: {err}"), Vec::new())
                         }
-                    }
+                    };
+                    let tool_ms = tool_start.elapsed().as_millis();
+                    tracing::debug!(tool = name, tool_ms, eager = true, "tool executed");
+                    result
                 } else if should_wait_for_cooperative_cancel(
                     name,
                     subagents.as_ref(),
                     teams.as_ref(),
                 ) {
+                    let tool_start = Instant::now();
                     let result = run_tool(
                         &bash,
                         &glob,
@@ -826,6 +895,8 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         input.clone(),
                     )
                     .await;
+                    let tool_ms = tool_start.elapsed().as_millis();
+                    tracing::debug!(tool = name, tool_ms, "tool executed");
                     if matches!(cmd_rx.try_recv(), Ok(EngineCommand::Cancel)) {
                         cancelled = true;
                         abort_eager_tool_results(&mut eager_tool_results);
@@ -839,7 +910,8 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                     }
                     result
                 } else {
-                    tokio::select! {
+                    let tool_start = Instant::now();
+                    let result = tokio::select! {
                     biased;
                         command = cmd_rx.recv() => {
                             if matches!(command, Some(EngineCommand::Cancel)) {
@@ -882,7 +954,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                             name,
                             input.clone(),
                         ) => result,
-                    }
+                    };
+                    let tool_ms = tool_start.elapsed().as_millis();
+                    tracing::debug!(tool = name, tool_ms, "tool executed");
+                    result
                 };
                 let canonical_name = tool_names::canonical_tool_name(name);
                 if (canonical_name == tool_names::READ
@@ -1024,7 +1099,13 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     send_event(
         &event_tx,
         event_scope.as_ref(),
-        AgentEvent::TurnFinished { duration_ms: None },
+        AgentEvent::TurnFinished { duration_ms: Some(turn_start.elapsed().as_millis() as i64) },
+    );
+    tracing::info!(
+        total_turn_ms = turn_start.elapsed().as_millis(),
+        cancelled,
+        compacted,
+        "turn finished"
     );
     todo_list.normalize();
     TurnOutput {

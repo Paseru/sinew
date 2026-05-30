@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:24:31]
+- `src-tauri/src/lib.rs` : Changement du filtre de log par défaut de `info` à `trace` pour tous les crates Sinew (`sinew_app`, `sinew_cursor`, `sinew_openai`, `sinew_anthropic`, `sinew_google`, `sinew_kimi`, `sinew_deepseek`, `sinew_openrouter`, `sinew_index`, `sinew_core`). Les libs externes restent à `warn`/`debug` pour éviter le bruit. Le fichier de log passe de `desktop-app.log` à `logs/sinew.log` avec rotation à 64 Mo.
+- `crates/sinew-app/src/agent/turn.rs` : Ajout de timers de précision (stream setup, premier token, exécution de chaque outil, compaction automatique, durée totale du tour) avec `tracing::debug!` et `tracing::info!`.
+- `crates/sinew-app/src/store.rs` : Ajout d'un timer sur `save_conversation` (temps SQLite + sérialisation).
+- `crates/sinew-anthropic/src/client.rs` : Ajout d'un timer HTTP round-trip sur le stream Anthropic.
+- `crates/sinew-openai/src/client.rs` : Ajout d'un timer HTTP round-trip sur le stream SSE OpenAI.
+- `crates/sinew-google/src/client.rs` : Ajout d'un timer HTTP round-trip sur le stream Google Antigravity.
+- `crates/sinew-deepseek/src/client.rs` : Ajout d'un timer HTTP round-trip dans `send_json`.
+- `crates/sinew-kimi/src/client.rs` : Ajout d'un timer HTTP round-trip dans `send_json` (inclut les retries 401).
+- `crates/sinew-openrouter/src/client.rs` : Ajout d'un timer HTTP round-trip sur le stream OpenRouter.
+- **Centralisation logs** : Tous les logs sont maintenant dans `%LOCALAPPDATA%/dev/hyrak/sinew/data/logs/sinew.log`.
+
 ## [2026-05-30 03:33:19]
 - `src/components/Workspace.tsx` : Ajout d'un timer automatique (toutes les 5 minutes) qui vérifie si l'apprentissage IA est activé et, si oui, déclenche la consolidation IA des erreurs. Premier déclenchement après 30 secondes au démarrage.
 

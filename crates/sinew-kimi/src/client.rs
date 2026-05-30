@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
+use std::time::Instant;
 use sinew_core::{
     AppError, ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
     ProviderStream, Result, Role, TokenEstimate, ToolDescriptor,
@@ -82,6 +83,7 @@ impl KimiProvider {
         route: &str,
         body: &T,
     ) -> Result<reqwest::Response> {
+        let req_start = Instant::now();
         let (request, token) = self.post(route).await?;
         let response = request
             .json(body)
@@ -90,6 +92,8 @@ impl KimiProvider {
             .map_err(|err| AppError::Network(err.to_string()))?;
 
         if response.status() != reqwest::StatusCode::UNAUTHORIZED {
+            let http_ms = req_start.elapsed().as_millis();
+            tracing::debug!(provider = "kimi", route, http_ms, "HTTP round-trip");
             return Ok(response);
         }
 
@@ -100,11 +104,14 @@ impl KimiProvider {
             .map_err(map_refresh_failure)?;
 
         let (request, _) = self.post(route).await?;
-        request
+        let response = request
             .json(body)
             .send()
             .await
-            .map_err(|err| AppError::Network(err.to_string()))
+            .map_err(|err| AppError::Network(err.to_string()))?;
+        let http_ms = req_start.elapsed().as_millis();
+        tracing::debug!(provider = "kimi", route, http_ms, retried = true, "HTTP round-trip");
+        Ok(response)
     }
 }
 

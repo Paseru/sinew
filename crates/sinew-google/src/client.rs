@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -403,7 +403,11 @@ impl Provider for GoogleProvider {
         let caps = model_info::capabilities(&request.model);
         let user_data = self.ensure_user_data().await?;
         let body = build_generate_request(&request, &user_data, &caps)?;
+        let req_start = Instant::now();
+        let model_name = request.model.name.clone();
         let response = self.post_stream_with_fallbacks(&body).await?;
+        let http_ms = req_start.elapsed().as_millis();
+        tracing::debug!(provider = "google", model = model_name, http_ms, "HTTP round-trip");
 
         Ok(map_stream(response.bytes_stream(), request.model.name))
     }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -139,13 +139,16 @@ impl Provider for OpenRouterProvider {
         }
 
         let body = build_chat_request(&request, &caps)?;
-
+        let req_start = Instant::now();
+        let model_name = request.model.name.clone();
         let response = self
             .post("/chat/completions")
             .json(&body)
             .send()
             .await
             .map_err(|err| AppError::Network(err.to_string()))?;
+        let http_ms = req_start.elapsed().as_millis();
+        tracing::debug!(provider = "openrouter", model = model_name, http_ms, "HTTP round-trip");
         if !response.status().is_success() {
             return Err(read_http_error(response).await);
         }

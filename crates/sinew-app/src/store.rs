@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     thread,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{Context, Result};
@@ -923,6 +923,8 @@ impl AppStore {
     }
 
     pub fn save_conversation(&self, conversation: &SavedConversation) -> Result<()> {
+        let start = Instant::now();
+        let conv_id = conversation.id.clone();
         let now = now_ms();
         let mut todo_list = conversation.todo_list.clone();
         todo_list.normalize();
@@ -984,6 +986,8 @@ impl AppStore {
 
         tx.commit()
             .context("unable to commit conversation transaction")?;
+        let save_ms = start.elapsed().as_millis();
+        tracing::debug!(conv_id = conv_id, save_ms, msg_count = conversation.history.len(), "conversation saved");
         Ok(())
     }
 

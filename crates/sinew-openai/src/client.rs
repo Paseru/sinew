@@ -1,6 +1,7 @@
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
+    time::Instant,
 };
 
 use async_trait::async_trait;
@@ -278,11 +279,20 @@ async fn stream_sse_request_with_bearer(
         builder = builder.header("user-agent", USER_AGENT);
     }
 
+    let req_start = Instant::now();
     let response = builder
         .json(&body)
         .send()
         .await
         .map_err(|err| AppError::Network(err.to_string()))?;
+    let http_ms = req_start.elapsed().as_millis();
+    tracing::debug!(
+        provider = "openai",
+        model = default_model,
+        http_ms,
+        transport = "sse",
+        "OpenAI HTTP round-trip (stream setup)"
+    );
 
     if !response.status().is_success() {
         return Err(read_http_error(response).await);
