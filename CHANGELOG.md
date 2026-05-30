@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 20:24:01]
+- `src-tauri/src/boost.rs` (nouveau) : Ajout de la fonctionnalité « Boost Local ». Un seul interrupteur démarre le serveur Ollama si besoin, charge un petit modèle distillateur (`qwen2.5:3b` par défaut) et le garde en mémoire toute la session (`keep_alive = -1`), et active la recherche sémantique vectorielle. Expose 4 commandes : `boost_local_status`, `boost_local_start`, `boost_local_stop`, `boost_local_distill` (cette dernière compresse un gros texte — log, fichier, sortie d'outil — en faits utiles pour économiser les jetons des IA).
+- `src-tauri/src/lib.rs` : Déclaration du module `boost` et enregistrement des 4 commandes dans le handler Tauri.
+- `src/lib/ipc.ts` : Ajout du type `BoostStatus` et des appels IPC `boostLocalStatus`, `boostLocalStart`, `boostLocalStop`, `boostLocalDistill`.
+- `src/components/SettingsPane.tsx` : Ajout de la carte/bouton « Boost Local » (toggle Activé/Désactivé) avec voyants d'état (Ollama, distillateur chargé, sémantique) ; l'activation aligne aussi le toggle de recherche sémantique existant.
+- `scripts/boost-proof.ps1` (nouveau) : Script de preuve mesurée — démontre l'économie de jetons (recherche ciblée + distillation locale) sur un vrai fichier du projet (99,3% de jetons en moins, réponse correcte).
 ## [2026-05-30 19:41:23]
 - `crates/sinew-ollama/*` (nouveau crate) : Ajout d'un fournisseur Ollama complet pour utiliser les modèles installés localement. Détecte automatiquement tous les modèles via l'API locale d'Ollama (`/api/tags` + `/api/show` pour le contexte et les capacités outils/vision/raisonnement), discute en streaming via l'endpoint compatible OpenAI, et stocke l'adresse du serveur (par défaut `http://localhost:11434`) au lieu d'une clé.
 - `Cargo.toml`, `src-tauri/Cargo.toml` : Déclaration et branchement du nouveau crate `sinew-ollama`.

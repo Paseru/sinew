@@ -3,7 +3,7 @@ import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
 import { getAppLocale, setAppLocale, type AppLocale } from "../lib/locale";
-import { api } from "../lib/ipc";
+import { api, type BoostStatus } from "../lib/ipc";
 import { fetchProviderQuota, quotaColor, getCachedQuota, type QuotaInfo, quotaCache } from "../lib/quotas";
 import { canonicalToolName } from "../lib/tools";
 import { Markdown } from "./chat/Markdown";
@@ -2129,6 +2129,39 @@ function OptionsSection({
     window.dispatchEvent(new CustomEvent("sinew:semantic-embeddings-changed", { detail: enabled }));
   };
 
+  // Boost Local : distillateur résident + recherche sémantique, en un bouton.
+  const [boostStatus, setBoostStatus] = useState<BoostStatus | null>(null);
+  const [boostBusy, setBoostBusy] = useState(false);
+  const [boostError, setBoostError] = useState<string | null>(null);
+
+  const refreshBoostStatus = useCallback(() => {
+    api
+      .boostLocalStatus()
+      .then(setBoostStatus)
+      .catch(() => setBoostStatus(null));
+  }, []);
+
+  useEffect(() => {
+    refreshBoostStatus();
+  }, [refreshBoostStatus]);
+
+  const toggleBoost = async (enable: boolean) => {
+    setBoostBusy(true);
+    setBoostError(null);
+    try {
+      const status = enable ? await api.boostLocalStart() : await api.boostLocalStop();
+      setBoostStatus(status);
+      if (enable) {
+        toggleSemanticEmbeddings(true);
+      }
+    } catch (err) {
+      setBoostError(String(err));
+      refreshBoostStatus();
+    } finally {
+      setBoostBusy(false);
+    }
+  };
+
   const toggleAutosave = (enabled: boolean) => {
     try {
       localStorage.setItem("sinew.autosave", enabled ? "true" : "false");
@@ -3573,6 +3606,61 @@ function OptionsSection({
           </div>
 
           
+
+          {/* Boost Local : distillateur résident + recherche sémantique */}
+          <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "14px", alignItems: "stretch" }}>
+            <div className="settings-pane__about-card-header-flex">
+              <div className="settings-pane__about-card-copy">
+                <h2>
+                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🚀</span>
+                  {locale === "fr" ? "Boost Local" : "Local Boost"}
+                </h2>
+                <p>
+                  {locale === "fr"
+                    ? "Lance un assistant local résident : recherche sémantique + un petit modèle distillateur gardé en mémoire toute la session. Il donne aux IA juste l'essentiel → jusqu'à 99% de jetons en moins (100% local)."
+                    : "Starts a resident local helper: semantic search + a small distiller model kept in memory for the whole session. It feeds AIs only the essentials → up to 99% fewer tokens (100% local)."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Boost Local">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={boostStatus?.active ?? false}
+                  data-active={boostStatus?.active ? "true" : "false"}
+                  disabled={boostBusy}
+                  onClick={() => toggleBoost(true)}
+                >
+                  {boostBusy && !boostStatus?.active
+                    ? (locale === "fr" ? "Démarrage…" : "Starting…")
+                    : (locale === "fr" ? "Activé" : "Enabled")}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!(boostStatus?.active ?? false)}
+                  data-active={!(boostStatus?.active ?? false) ? "true" : "false"}
+                  disabled={boostBusy}
+                  onClick={() => toggleBoost(false)}
+                >
+                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                </button>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", fontSize: "12px", opacity: 0.85 }}>
+              <span data-active={boostStatus?.ollamaRunning ? "true" : "false"} style={{ padding: "2px 8px", borderRadius: "6px", border: "1px solid var(--border-0)" }}>
+                {boostStatus?.ollamaRunning ? "●" : "○"} Ollama
+              </span>
+              <span data-active={boostStatus?.distillerLoaded ? "true" : "false"} style={{ padding: "2px 8px", borderRadius: "6px", border: "1px solid var(--border-0)" }}>
+                {boostStatus?.distillerLoaded ? "●" : "○"} {locale === "fr" ? "Distillateur" : "Distiller"} ({boostStatus?.distillerModel ?? "qwen2.5:3b"})
+              </span>
+              <span data-active={boostStatus?.semanticEnabled ? "true" : "false"} style={{ padding: "2px 8px", borderRadius: "6px", border: "1px solid var(--border-0)" }}>
+                {boostStatus?.semanticEnabled ? "●" : "○"} {locale === "fr" ? "Sémantique" : "Semantic"}
+              </span>
+            </div>
+            {boostError ? (
+              <p style={{ color: "var(--danger)", fontSize: "12px", margin: 0 }}>{boostError}</p>
+            ) : null}
+          </div>
 
           {/* Recherche Sémantique Vectorielle (BETA) */}
           <div className="settings-pane__about-card">

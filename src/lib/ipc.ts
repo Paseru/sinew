@@ -962,5 +962,25 @@ export const api = {
   logFrontendError(message: string, source: string) {
     return invoke<void>("log_frontend_error", { message, source });
   },
+  boostLocalStatus() {
+    return invoke<BoostStatus>("boost_local_status");
+  },
+  boostLocalStart(distiller?: string) {
+    return invoke<BoostStatus>("boost_local_start", { distiller: distiller ?? null });
+  },
+  boostLocalStop() {
+    return invoke<BoostStatus>("boost_local_stop");
+  },
+  boostLocalDistill(text: string, question?: string) {
+    return invoke<string>("boost_local_distill", { text, question: question ?? null });
+  },
+};
+
+export type BoostStatus = {
+  ollamaRunning: boolean;
+  distillerLoaded: boolean;
+  distillerModel: string;
+  semanticEnabled: boolean;
+  active: boolean;
 };
 
