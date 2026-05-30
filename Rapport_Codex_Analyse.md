@@ -50,3 +50,41 @@ Ce rapport présente l'analyse de l'application Codex décompilée (`C:\Users\ju
 * **Analogie :** Pour ouvrir des pages internet sans contaminer le reste de la maison, l'assistant utilise un écran séparé étanche qui bloque tout échange de clés de sécurité ou de mots de passe vers l'extérieur.
 * **Fonctionnement :** L'affichage des pages web utilise des règles strictes qui interdisent le chargement de scripts non autorisés et isolent les formulaires.
 * **Intérêt pour Sinew :** Renforcer la sécurité de notre navigateur interne (Chrome Bridge) en bloquant les tentatives d'accès aux fichiers sensibles de l'utilisateur lors de visites sur des sites web inconnus.
+
+---
+
+## 5. 🔌 Les Mini-Applications visuelles (MCP Apps & Sandboxed Views)
+* **Analogie :** D'habitude, les outils externes (MCP) n'envoient que du texte brut. Ici, l'assistant peut afficher de vrais écrans et des pages interactives fournies par ces outils dans des cadres sécurisés (des "mini-écrans" étanches).
+* **Fonctionnement :** 
+  * Les serveurs MCP peuvent exposer des vues graphiques. La route `/mcp-app/:pluginId/:server/:toolName` affiche ces pages dans une balise `<webview>` d'Electron isolée par partition réseau.
+  * La sécurité réseau (CSP) limite l'accès de ces mini-apps aux seuls domaines autorisés. La communication se fait par un protocole d'échange de messages sécurisé (MessagePorts).
+  * Un bouton discret permet d'ouvrir les outils de développement (DevTools) de ce cadre isolé pour aider les créateurs.
+* **Intérêt pour Sinew :** Permettre aux outils MCP de Sinew de dessiner de jolies interfaces utilisateur interactives (pour de la visualisation de données, des graphiques ou des formulaires complexes) en toute sécurité.
+
+---
+
+## 6. 📅 Le Planificateur d'Automatisations (Background Scheduler & RRule)
+* **Analogie :** Un carnet de bord où l'on programme des tâches régulières à accomplir par l'assistant (comme un réveil-matin ou un calendrier de corvées).
+* **Fonctionnement :**
+  * L'utilisateur planifie une tâche récurrente (toutes les heures, tous les jours à une heure fixe, ou les jours de semaine).
+  * Il spécifie la consigne (ex: "générer les notes de mise à jour"), le dossier de travail, le modèle d'IA et son niveau de réflexion.
+  * Les planifications sont stockées dans une base de données locale (SQLite) et gérées via un traducteur de règles de récurrence (RRule/CRON).
+* **Intérêt pour Sinew :** Offrir à l'utilisateur un onglet "Automations" pour programmer des tâches régulières autonomes en arrière-plan (revues de code périodiques, vérifications de sécurité régulières, etc.).
+
+---
+
+## 7. 🛠️ Le Brouillon de Travail et l'Auto-Réparation Git (Worktrees & Auto-Fix Setup)
+* **Analogie :** Un espace de brouillon jetable pour exécuter des scripts de préparation, avec un assistant intégré qui se charge de réparer automatiquement les pannes de configuration.
+* **Fonctionnement :**
+  * Pour chaque nouvelle discussion, l'application peut créer un dossier clone temporaire (Git Worktree) pour travailler de manière isolée sans toucher au code principal.
+  * Lors de la première exécution, elle prépare le projet (compilation, installation de packages). Si cette préparation échoue, l'erreur s'affiche avec un bouton **"Auto-réparation"** (Auto-Fix).
+  * Ce bouton lance un agent spécialisé temporaire dont la seule consigne est d'analyser l'erreur, de modifier les configurations cassées et de retenter jusqu'à ce que le démarrage réussisse, avant de proposer les corrections à l'utilisateur.
+* **Intérêt pour Sinew :** Intégrer la gestion des espaces de travail Git temporaires et proposer ce bouton de réparation automatique intelligent lorsque la configuration locale ou l'installation des dépendances d'un projet échoue.
+
+---
+
+## 8. ⏳ Le Régulateur de Débit de Texte (Delta Buffering Queue)
+* **Analogie :** Au lieu d'essayer de lire chaque lettre au fur et à mesure qu'elle arrive (ce qui ferait clignoter et ralentir l'écran), on accumule les lettres dans un petit entonnoir pour les afficher par groupes réguliers toutes les 50 millisecondes.
+* **Fonctionnement :** Le texte provenant de la console (ou de la pensée de l'IA) est placé dans une file d'attente d'affichage temporaire pour économiser les ressources de l'ordinateur et garder l'interface fluide.
+* **Intérêt pour Sinew :** Améliorer la fluidité du chat et de la console interactive de Sinew lors des sorties de texte massives ou rapides.
+
