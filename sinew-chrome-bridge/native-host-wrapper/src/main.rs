@@ -1144,6 +1144,39 @@ fn get_mcp_tools_list() -> serde_json::Value {
                 },
                 "required": ["task"]
             }
+        },
+        {
+            "name": "emulate_experience",
+            "description": "Configure les profils mobiles, la bande passante réseau lente ou l'étranglement CPU pour tester le comportement de la page.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "device": { "type": "string", "enum": ["none", "mobile", "tablet"] },
+                    "network": { "type": "string", "enum": ["none", "offline", "slow-3g", "fast-3g", "4g", "wifi"] },
+                    "cpuThrottling": { "type": "number" }
+                }
+            }
+        },
+        {
+            "name": "lighthouse_audit",
+            "description": "Simule un audit Lighthouse de performance, d'accessibilité, de bonnes pratiques et SEO directement en inspectant le DOM.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "categories": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    }
+                }
+            }
+        },
+        {
+            "name": "analyze_memory_leaks",
+            "description": "Analyse les nœuds DOM, la taille du tas JS et les iframes actifs pour détecter les fuites de mémoire.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {}
+            }
         }
     ])
 }
@@ -1175,6 +1208,28 @@ async fn make_api_call(
             Err(e) => json!({ "content": [{ "type": "text", "text": format!("Failed to parse response: {e}") }], "isError": true }),
         },
         Err(e) => json!({ "content": [{ "type": "text", "text": format!("API call failed: {e}") }], "isError": true }),
+    }
+}
+
+async fn call_cdp_command(
+    client: &reqwest::Client,
+    base_url: &str,
+    secret: &str,
+    tab_id: &str,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<serde_json::Value, reqwest::Error> {
+    let request = client.get(format!("{base_url}/api/cdp_command"))
+        .query(&[
+            ("token", secret),
+            ("tabId", tab_id),
+            ("method", method),
+            ("cdpParams", &params.to_string()),
+        ]);
+
+    match request.send().await {
+        Ok(res) => res.json::<serde_json::Value>().await,
+        Err(e) => Err(e),
     }
 }
 
@@ -1350,6 +1405,359 @@ async fn handle_mcp_tool_call(name: &str, arguments: serde_json::Value, secret: 
         "run_browser_agent" => {
             let task = arguments.get("task").and_then(|t| t.as_str()).unwrap_or("");
             make_api_call(&client, &base_url, secret, &tab_id, "execute_silent_task", vec![("task", task.to_string())]).await
+        }
+        "emulate_experience" => {
+            let device = arguments.get("device").and_then(|d| d.as_str()).unwrap_or("none");
+            let network = arguments.get("network").and_then(|n| n.as_str()).unwrap_or("none");
+            let cpu_throttling = arguments.get("cpuThrottling").and_then(|c| c.as_f64()).unwrap_or(0.0) as i64;
+
+            if device != "none" {
+                let mut width = 1440;
+                let mut height = 900;
+                let mut device_scale_factor = 1.0;
+                let mut mobile = false;
+
+                if device == "mobile" {
+                    width = 375;
+                    height = 812;
+                    device_scale_factor = 3.0;
+                    mobile = true;
+                } else if device == "tablet" {
+                    width = 768;
+                    height = 1024;
+                    device_scale_factor = 2.0;
+                    mobile = true;
+                }
+
+                let cdp_params = json!({
+                    "width": width,
+                    "height": height,
+                    "deviceScaleFactor": device_scale_factor,
+                    "mobile": mobile,
+                    "screenOrientation": {
+                        "angle": 0,
+                        "type": if mobile { "portraitPrimary" } else { "landscapePrimary" }
+                    }
+                });
+
+                let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Emulation.setDeviceMetricsOverride", cdp_params).await;
+
+                let touch_params = json!({
+                    "enabled": mobile,
+                    "maxTouchPoints": 5
+                });
+                let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Emulation.setTouchEmulationEnabled", touch_params).await;
+            } else {
+                let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Emulation.clearDeviceMetricsOverride", json!({})).await;
+                let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Emulation.setTouchEmulationEnabled", json!({"enabled": false})).await;
+            }
+
+            if network != "none" && network != "online" {
+                let mut offline = false;
+                let mut latency = 0;
+                let mut download_throughput = -1;
+                let mut upload_throughput = -1;
+
+                if network == "offline" {
+                    offline = true;
+                    download_throughput = 0;
+                    upload_throughput = 0;
+                } else if network == "slow-3g" {
+                    latency = 400;
+                    download_throughput = (400.0 * 1024.0 / 8.0) as i64;
+                    upload_throughput = (150.0 * 1024.0 / 8.0) as i64;
+                } else if network == "fast-3g" {
+                    latency = 150;
+                    download_throughput = (1.6 * 1024.0 * 1024.0 / 8.0) as i64;
+                    upload_throughput = (750.0 * 1024.0 / 8.0) as i64;
+                } else if network == "4g" {
+                    latency = 50;
+                    download_throughput = (10.0 * 1024.0 * 1024.0 / 8.0) as i64;
+                    upload_throughput = (3.0 * 1024.0 * 1024.0 / 8.0) as i64;
+                } else if network == "wifi" {
+                    latency = 10;
+                    download_throughput = (50.0 * 1024.0 * 1024.0 / 8.0) as i64;
+                    upload_throughput = (10.0 * 1024.0 * 1024.0 / 8.0) as i64;
+                }
+
+                let net_params = json!({
+                    "offline": offline,
+                    "latency": latency,
+                    "downloadThroughput": download_throughput,
+                    "uploadThroughput": upload_throughput
+                });
+                let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Network.emulateNetworkConditions", net_params).await;
+            } else {
+                let net_params = json!({
+                    "offline": false,
+                    "latency": 0,
+                    "downloadThroughput": -1,
+                    "uploadThroughput": -1
+                });
+                let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Network.emulateNetworkConditions", net_params).await;
+            }
+
+            let cpu_params = json!({
+                "rate": cpu_throttling
+            });
+            let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Emulation.setCPUThrottlingRate", cpu_params).await;
+
+            json!({
+                "content": [{ "type": "text", "text": "Emulation settings applied successfully." }],
+                "isError": false
+            })
+        }
+        "lighthouse_audit" => {
+            let categories = arguments.get("categories").cloned().unwrap_or(json!(["performance", "accessibility", "seo", "best-practices"]));
+            let categories_json = categories.to_string();
+
+            let js_expr = format!(
+                "(function() {{ \
+                    var report = {{ url: location.href, timestamp: new Date().toISOString(), scores: {{}}, details: {{}} }}; \
+                    var categories = {}; \
+                    if (categories.indexOf('performance') !== -1) {{ \
+                        var perfScore = 100; \
+                        var details = []; \
+                        var t = window.performance ? window.performance.timing : null; \
+                        if (t) {{ \
+                            var loadTime = t.loadEventEnd - t.navigationStart; \
+                            var domReady = t.domComplete - t.navigationStart; \
+                            var dnsLookup = t.domainLookupEnd - t.domainLookupStart; \
+                            if (loadTime > 0) {{ \
+                                details.push({{ metric: 'Temps de chargement total', value: (loadTime / 1000).toFixed(2) + 's' }}); \
+                                if (loadTime > 4000) perfScore -= 25; \
+                                else if (loadTime > 2000) perfScore -= 10; \
+                            }} \
+                            if (domReady > 0) {{ \
+                                details.push({{ metric: 'DOM complet', value: (domReady / 1000).toFixed(2) + 's' }}); \
+                                if (domReady > 2500) perfScore -= 15; \
+                            }} \
+                            if (dnsLookup > 0) {{ \
+                                details.push({{ metric: 'Résolution DNS', value: dnsLookup + 'ms' }}); \
+                            }} \
+                        }} \
+                        var images = Array.from(document.querySelectorAll('img')); \
+                        var unoptimizedImages = images.filter(function(img) {{ \
+                            var rect = img.getBoundingClientRect(); \
+                            return rect.width > 0 && !img.src.endsWith('.svg') && !img.srcset; \
+                        }}); \
+                        if (unoptimizedImages.length > 0) {{ \
+                            perfScore -= Math.min(15, unoptimizedImages.length * 3); \
+                            details.push({{ metric: 'Images non réactives (sans srcset)', count: unoptimizedImages.length }}); \
+                        }} \
+                        var scriptsCount = document.querySelectorAll('script').length; \
+                        details.push({{ metric: 'Scripts JavaScript chargés', count: scriptsCount }}); \
+                        if (scriptsCount > 30) perfScore -= 10; \
+                        report.scores.performance = Math.max(20, perfScore); \
+                        report.details.performance = details; \
+                    }} \
+                    if (categories.indexOf('accessibility') !== -1) {{ \
+                        var accScore = 100; \
+                        var details = []; \
+                        var images = Array.from(document.querySelectorAll('img')); \
+                        var missingAlt = images.filter(function(img) {{ return !img.hasAttribute('alt') || img.getAttribute('alt').trim() === ''; }}); \
+                        if (missingAlt.length > 0) {{ \
+                            accScore -= Math.min(30, missingAlt.length * 8); \
+                            details.push({{ metric: 'Images sans attribut alt', count: missingAlt.length }}); \
+                        }} \
+                        var inputs = Array.from(document.querySelectorAll('input:not([type=\"hidden\"]), select, textarea')); \
+                        var unlabeledInputs = inputs.filter(function(inp) {{ \
+                            if (inp.id) {{ \
+                                var label = document.querySelector('label[for=\"' + inp.id + '\"]'); \
+                                if (label) return false; \
+                            }} \
+                            if (inp.closest('label')) return false; \
+                            if (inp.getAttribute('aria-label') || inp.getAttribute('aria-labelledby')) return false; \
+                            if (inp.getAttribute('title')) return false; \
+                            return true; \
+                        }}); \
+                        if (unlabeledInputs.length > 0) {{ \
+                            accScore -= Math.min(25, unlabeledInputs.length * 10); \
+                            details.push({{ metric: 'Champs de saisie sans étiquette ou description', count: unlabeledInputs.length }}); \
+                        }} \
+                        var lang = document.documentElement.getAttribute('lang'); \
+                        if (!lang) {{ \
+                            accScore -= 15; \
+                            details.push({{ metric: 'Balise HTML sans attribut lang de langue', status: 'Manquant' }}); \
+                        }} else {{ \
+                            details.push({{ metric: 'Attribut lang défini', value: lang }}); \
+                        }} \
+                        var hTags = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(function(h) {{ return parseInt(h.tagName[1]); }}); \
+                        var badHeaderOrder = false; \
+                        for (var i = 1; i < hTags.length; i++) {{ \
+                            if (hTags[i] - hTags[i-1] > 1) {{ badHeaderOrder = true; break; }} \
+                        }} \
+                        if (badHeaderOrder) {{ \
+                            accScore -= 10; \
+                            details.push({{ metric: 'Structure des titres (Hn) non séquentielle', status: 'Non-conforme' }}); \
+                        }} \
+                        report.scores.accessibility = Math.max(30, accScore); \
+                        report.details.accessibility = details; \
+                    }} \
+                    if (categories.indexOf('seo') !== -1) {{ \
+                        var seoScore = 100; \
+                        var details = []; \
+                        var title = document.title; \
+                        if (!title || title.trim().length === 0) {{ \
+                            seoScore -= 30; \
+                            details.push({{ metric: 'Titre de la page', status: 'Manquant ou vide' }}); \
+                        }} else {{ \
+                            details.push({{ metric: 'Titre de la page conforme', value: title }}); \
+                            if (title.length > 60) {{ \
+                                seoScore -= 5; \
+                                details.push({{ metric: 'Titre trop long', value: title.length + ' car.' }}); \
+                            }} \
+                        }} \
+                        var metaDesc = document.querySelector('meta[name=\"description\"]'); \
+                        if (!metaDesc || !metaDesc.getAttribute('content') || metaDesc.getAttribute('content').trim().length === 0) {{ \
+                            seoScore -= 30; \
+                            details.push({{ metric: 'Méta-description de la page', status: 'Manquant ou vide' }}); \
+                        }} else {{ \
+                            details.push({{ metric: 'Méta-description trouvée', value: metaDesc.getAttribute('content').substring(0, 40) + '...' }}); \
+                        }} \
+                        var viewport = document.querySelector('meta[name=\"viewport\"]'); \
+                        if (!viewport) {{ \
+                            seoScore -= 20; \
+                            details.push({{ metric: 'Méta viewport mobile', status: 'Manquant' }}); \
+                        }} \
+                        var h1s = document.querySelectorAll('h1'); \
+                        if (h1s.length === 0) {{ \
+                            seoScore -= 15; \
+                            details.push({{ metric: 'Titre H1', status: 'Manquant' }}); \
+                        }} else if (h1s.length > 1) {{ \
+                            seoScore -= 5; \
+                            details.push({{ metric: 'Plusieurs H1 détectés', count: h1s.length }}); \
+                        }} \
+                        report.scores.seo = Math.max(40, seoScore); \
+                        report.details.seo = details; \
+                    }} \
+                    if (categories.indexOf('best-practices') !== -1) {{ \
+                        var bpScore = 100; \
+                        var details = []; \
+                        var isHttps = location.protocol === 'https:'; \
+                        if (!isHttps && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {{ \
+                            bpScore -= 30; \
+                            details.push({{ metric: 'Connexion sécurisée (HTTPS)', status: 'Non-sécurisé (HTTP)' }}); \
+                        }} \
+                        details.push({{ metric: 'Doctype HTML5 présent', status: document.doctype ? 'Oui' : 'Non' }}); \
+                        if (!document.doctype) bpScore -= 10; \
+                        report.scores.bestpractices = Math.max(40, bpScore); \
+                        report.details.bestpractices = details; \
+                    }} \
+                    return report; \
+                }})()",
+                categories_json
+            );
+
+            let cdp_params = json!({
+                "expression": js_expr,
+                "returnByValue": true
+            });
+
+            match call_cdp_command(&client, &base_url, secret, &tab_id, "Runtime.evaluate", cdp_params).await {
+                Ok(val) => {
+                    let result_val = val.get("result").and_then(|r| r.get("value")).cloned().unwrap_or(json!({}));
+                    json!({
+                        "content": [{ "type": "text", "text": result_val.to_string() }],
+                        "isError": false
+                    })
+                }
+                Err(e) => json!({ "content": [{ "type": "text", "text": format!("Lighthouse audit evaluate failed: {e}") }], "isError": true }),
+            }
+        }
+        "analyze_memory_leaks" => {
+            let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Performance.enable", json!({})).await;
+            
+            let metrics_val = match call_cdp_command(&client, &base_url, secret, &tab_id, "Performance.getMetrics", json!({})).await {
+                Ok(val) => val,
+                Err(e) => return json!({ "content": [{ "type": "text", "text": format!("Failed to get performance metrics: {e}") }], "isError": true }),
+            };
+            
+            let mut metrics_map = HashMap::new();
+            if let Some(metrics_arr) = metrics_val.get("result").and_then(|r| r.get("metrics")).and_then(|m| m.as_array()) {
+                for m in metrics_arr {
+                    let name = m.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                    let value = m.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                    metrics_map.insert(name.to_string(), value);
+                }
+            }
+
+            let js_heap_used = metrics_map.get("JSHeapUsedSize").copied().unwrap_or(0.0);
+            let js_heap_total = metrics_map.get("JSHeapTotalSize").copied().unwrap_or(0.0);
+            let dom_nodes_count = metrics_map.get("DOMNodes").copied().unwrap_or(0.0);
+            let layout_count = metrics_map.get("LayoutCount").copied().unwrap_or(0.0);
+            let recalc_style_count = metrics_map.get("RecalcStyleCount").copied().unwrap_or(0.0);
+
+            let js_expr = "(function() { \
+                return { \
+                    totalElements: document.querySelectorAll('*').length, \
+                    iframeCount: document.querySelectorAll('iframe').length, \
+                    scriptsCount: document.querySelectorAll('script').length, \
+                    canvasCount: document.querySelectorAll('canvas').length \
+                }; \
+            })()";
+
+            let dom_stats_val = match call_cdp_command(&client, &base_url, secret, &tab_id, "Runtime.evaluate", json!({"expression": js_expr, "returnByValue": true})).await {
+                Ok(val) => val.get("result").and_then(|r| r.get("value")).cloned().unwrap_or(json!({})),
+                Err(_) => json!({}),
+            };
+
+            let total_elements = dom_stats_val.get("totalElements").and_then(|e| e.as_f64()).unwrap_or(0.0) as i64;
+            let iframe_count = dom_stats_val.get("iframeCount").and_then(|i| i.as_f64()).unwrap_or(0.0) as i64;
+            let scripts_count = dom_stats_val.get("scriptsCount").and_then(|s| s.as_f64()).unwrap_or(0.0) as i64;
+            let canvas_count = dom_stats_val.get("canvasCount").and_then(|c| c.as_f64()).unwrap_or(0.0) as i64;
+
+            let _ = call_cdp_command(&client, &base_url, secret, &tab_id, "Performance.disable", json!({})).await;
+
+            let js_heap_used_mb = js_heap_used / (1024.0 * 1024.0);
+            let js_heap_total_mb = js_heap_total / (1024.0 * 1024.0);
+            let heap_ratio = if js_heap_total > 0.0 { (js_heap_used / js_heap_total) * 100.0 } else { 0.0 };
+
+            let mut diagnostics = Vec::new();
+            if js_heap_used > 80.0 * 1024.0 * 1024.0 {
+                diagnostics.push("⚠️ Utilisation élevée de la mémoire JS. La page consomme plus de 80 Mo.");
+            } else {
+                diagnostics.push("✅ Utilisation saine du tas mémoire (JS Heap).");
+            }
+
+            if dom_nodes_count > 3000.0 {
+                diagnostics.push("⚠️ Arbre DOM volumineux détecté (plus de 3000 nœuds). Cela peut ralentir le rendu.");
+            } else {
+                diagnostics.push("✅ Taille de l'arbre DOM dans les limites optimales.");
+            }
+
+            if iframe_count > 5 {
+                diagnostics.push("⚠️ Nombreux iframes actifs.");
+            }
+
+            let report = json!({
+                "success": true,
+                "timestamp": chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f").to_string(),
+                "memory": {
+                    "jsHeapUsedBytes": js_heap_used as i64,
+                    "jsHeapUsedMb": format!("{:.2} MB", js_heap_used_mb),
+                    "jsHeapTotalBytes": js_heap_total as i64,
+                    "jsHeapTotalMb": format!("{:.2} MB", js_heap_total_mb),
+                    "heapRatio": format!("{:.1}%", heap_ratio)
+                },
+                "dom": {
+                    "cdpDomNodesReported": dom_nodes_count as i64,
+                    "activeElementsCount": total_elements,
+                    "iframeCount": iframe_count,
+                    "scriptsCount": scripts_count,
+                    "canvasCount": canvas_count
+                },
+                "rendering": {
+                    "layoutCount": layout_count as i64,
+                    "recalcStyleCount": recalc_style_count as i64
+                },
+                "diagnostics": diagnostics
+            });
+
+            json!({
+                "content": [{ "type": "text", "text": report.to_string() }],
+                "isError": false
+            })
         }
         _ => json!({ "content": [{ "type": "text", "text": format!("Tool {name} not implemented") }], "isError": true }),
     }

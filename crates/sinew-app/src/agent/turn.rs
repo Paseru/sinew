@@ -260,6 +260,15 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 current_system_prompt.push_str(&team_reminder);
             }
         }
+        if loops >= 5 {
+            current_system_prompt.push_str(
+                "\n\n<system_reminder>\n\
+                Attention : Vous avez effectué plusieurs tours d'outils consécutifs. \
+                Avant d'exécuter d'autres outils, vous DEVEZ prendre du recul, réfléchir sur vos tentatives précédentes \
+                et expliquer précisément ce qui bloque et comment vous allez ajuster votre méthode.\n\
+                </system_reminder>"
+            );
+        }
         let current_system_prompt = if model.provider == "cursor" {
             cursor_system_prompt(
                 &current_system_prompt,

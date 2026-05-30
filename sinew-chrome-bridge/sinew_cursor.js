@@ -1174,6 +1174,7 @@
       };
       const nodes = Array.from(document.querySelectorAll('a[href], button, input, textarea, select, [role], [aria-label], [title], [onclick], [tabindex], [contenteditable="true"], summary, label, h1, h2, h3'));
       const items = [];
+      document.querySelectorAll('.sinew-ref-badge').forEach(b => b.remove());
       for (const el of nodes) {
         const rect = el.getBoundingClientRect();
         const style = window.getComputedStyle(el);
@@ -1186,8 +1187,17 @@
         const ariaName = clean(el.getAttribute("aria-label") || el.getAttribute("title") || el.getAttribute("alt") || el.getAttribute("placeholder") || "");
         if (!editable && !clickable && !ariaName && !text && !role) continue;
         const selector = selectorFor(el);
+        const nodeId = items.length + 1;
+        el.setAttribute("data-sinew-ref", String(nodeId));
+        if (visible) {
+          const badge = document.createElement("div");
+          badge.className = "sinew-ref-badge";
+          badge.textContent = `@ref${nodeId}`;
+          badge.style.cssText = "position:absolute;left:" + Math.max(0, rect.left + window.scrollX) + "px;top:" + Math.max(0, rect.top + window.scrollY - 15) + "px;background:#ff0080;color:#ffffff;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;padding:1px 4px;border-radius:3px;z-index:2147483645;pointer-events:none;box-shadow:0 0 4px #ff0080;opacity:0.85;";
+          document.body.appendChild(badge);
+        }
         items.push({
-          nodeId: items.length + 1,
+          nodeId,
           tagName: el.tagName,
           role,
           visible,
@@ -1203,6 +1213,9 @@
         });
         if (items.length >= limit) break;
       }
+      setTimeout(() => {
+        document.querySelectorAll('.sinew-ref-badge').forEach(b => b.remove());
+      }, 8000);
       sendResponse({ success: true, href: location.href, title: document.title, viewport: { width: window.innerWidth, height: window.innerHeight }, items });
       return true;
     }

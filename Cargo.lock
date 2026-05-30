@@ -2980,6 +2980,7 @@ name = "native-host-wrapper"
 version = "0.1.26"
 dependencies = [
  "anyhow",
+ "chrono",
  "directories",
  "futures-util",
  "reqwest 0.12.28",

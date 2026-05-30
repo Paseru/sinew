@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:51:02]
+- `Cargo.toml` : Ajout de la dépendance `ignore` au niveau de l'espace de travail.
+- `crates/sinew-index/Cargo.toml` : Ajout de la dépendance `ignore`.
+- `crates/sinew-index/src/indexer.rs` : Intégration de la gestion dynamique des fichiers `.gitignore`, `.cursorignore` et `.sinewignore` dans l'indexeur de base de code.
+- `crates/sinew-app/src/workspace.rs` : Ajout de `.sinew` dans la liste des répertoires exclus de l'exploration de l'espace de travail, masquant ainsi `.sinew/worktrees`.
+- `sinew-chrome-bridge/sinew_cursor.js` : Implémentation du système d'étiquetage d'interface (injection visuelle des badges `@ref1`, `@ref2` etc.) et résolution automatique des sélecteurs de référence par l'assistant.
+- `crates/sinew-app/src/agent/turn.rs` : Ajout d'une boucle d'auto-correction (Forced Reflection system reminder) en cas de tours d'outils répétés pour éviter les boucles infinies de l'IA.
+
+
+- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout de la dépendance chrono pour l'analyse de performance.
+- `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Ajout des outils de diagnostic et d'émulation Chrome restants (emulate_experience, lighthouse_audit et analyze_memory_leaks) en Rust natif pour atteindre 100% de parité fonctionnelle et supprimer la dépendance à Node.js.
+
 ## [2026-05-30 02:48:23]
 - `src-tauri/src/cli.rs` : Enregistrement du serveur MCP natif Rust (native-host-wrapper.exe) s'il existe, avec repli automatique sur Node.js (mcp_server.js).
 - `crates/sinew-openai/src/stream.rs` : Correction d'avertissement clippy sur un bloc match pliable.
