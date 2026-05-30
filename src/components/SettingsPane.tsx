@@ -2632,7 +2632,7 @@ function OptionsSection({
                 data-active={theme === "dark" ? "true" : "false"}
                 onClick={() => changeTheme("dark")}
               >
-                {locale === "fr" ? "ï¿½xR" Nuit" : "ï¿½xR" Night"}
+                {locale === "fr" ? "🌙 Nuit" : "🌙 Night"}
               </button>
               <button
                 type="button"
