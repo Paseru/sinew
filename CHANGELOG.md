@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:01:48]
+- `CHANGELOG.md` : Enregistrement de la suppression des fichiers temporaires et rapports d'analyse obsolètes.
+- `AGENTS.md` : Mise à jour de la carte des fichiers (code map) suite au retrait des fichiers inutiles du projet.
+- `afaire.md`, `AMELIORATION_SSH.md`, `COMPARAISON_ARCHITECTURE.md`, `Rapport_Analyse_Composer_2.5.md`, `RAPPORT_ANTIGRAVITY.md`, `Rapport_Codex_Analyse.md`, `RAPPORT_DAEMON_PERSISTANT.md`, `RAPPORT_DECOMPILE_CURSOR.md`, `Rapport_SSH_Analyse.md`, `untitled.txt` : Suppression des fichiers de rapports temporaires et documents d'analyse obsolètes pour nettoyer le projet.
+- `sinew-chrome-bridge/bridge.log`, `sinew-chrome-bridge/bridge_err.log` : Nettoyage des journaux de logs locaux inutiles.
+
+
 ## [2026-05-30 03:02:04]
 - `crates/sinew-agent-daemon/src/protocol.rs` : Création de la structure du protocole d'échange JSON IPC (Requêtes de turn, d'annulation, de statut et Réponses d'événements et d'erreurs).
 - `crates/sinew-agent-daemon/src/main.rs` : Implémentation du serveur d'écoute asynchrone multithread gérant les connexions entrantes sur le Named Pipe et le traitement des messages JSON-RPC délimités par des retours à la ligne (`\n`).

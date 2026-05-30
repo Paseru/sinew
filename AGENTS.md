@@ -9,18 +9,15 @@
 .
 â”œâ”€â”€ .gitignore
 â”œâ”€â”€ AGENTS.md
-â”œâ”€â”€ afaire.md
 â”œâ”€â”€ CHANGELOG.md
 â”œâ”€â”€ Cargo.lock
 â”œâ”€â”€ Cargo.toml
-â”œâ”€â”€ consolidate_rules.py
 â”œâ”€â”€ index.html
 â”œâ”€â”€ launch-sinew-dev.bat
 â”œâ”€â”€ LICENSE
 â”œâ”€â”€ package-lock.json
 â”œâ”€â”€ package.json
 â”œâ”€â”€ README.md
-â”œâ”€â”€ sync_now.py
 â”œâ”€â”€ .sinew
 â”‚   â””â”€â”€ skills
 â”‚       â””â”€â”€ browser
