@@ -2,8 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-05-30 03:42:39]
-- `src/components/SettingsPane.tsx` : Carte DeepSeek — suppression de la double barre de quota redondante ("Limite" toujours à 100% + "Restant"), remplacée par une seule barre "Restant" placée entre le titre et le champ de clé API.
+## [2026-05-30 03:48:15]
+- `scripts/agent-bridge/run-stream.mjs` : Ajout logger JSON fichier vers `logs/agent-bridge.log` + timers (bridge_start, h2_connected, mcp_tool_exec, bridge_end).
+- `scripts/agent-bridge/h2-bridge.mjs` : Ajout logger JSON fichier vers `logs/h2-bridge.log` + timers (bridge_start, h2_stream_end/error).
+- `%LOCALAPPDATA%/sinew/ChromeBridge/server.js` : Mirror des logs vers `logs/chrome-bridge.log`.
+- `%LOCALAPPDATA%/sinew/ChromeBridge/mcp_server.js` : Ajout log fichier vers `logs/chrome-mcp.log`.
+- **Centralisation totale** : tous les logs (Rust + Node.js bridges) convergent maintenant dans `%LOCALAPPDATA%/dev/hyrak/sinew/data/logs/`.
 
 ## [2026-05-30 03:41:07]
 - `crates/sinew-app/src/web.rs` : Ajout timers web_search + web_fetch.

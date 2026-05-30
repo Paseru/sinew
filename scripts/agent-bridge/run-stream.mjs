@@ -392,15 +392,10 @@ function buildRequestContext(workspaceRoot, snapshot, tools) {
 const REJECT = "Tool not available in Sinew agent bridge spike.";
 
 async function handleExecMessage(execMsg, sendFrame, emit, waitToolResponse) {
-  const execCase = execMsg.message?.case;
-  debug(`exec ${execCase ?? "?"}`);
-  const send = (msg, resultCase, result) => sendExecResult(msg, resultCase, result, sendFrame);
-  if (execCase === "requestContextArgs") {
-    const requestContext = buildRequestContext(
-      config.workspaceRoot,
-      config.workspaceSnapshot,
-      config.tools,
-    );
+  const execStart = Date.now();
+  const execCase = Object.keys(execMsg.message.value || {}).find((k) =>
+    k.endsWith("Args")
+  );
     const result = create(RequestContextResultSchema, {
       result: {
         case: "success",
@@ -532,6 +527,8 @@ async function handleExecMessage(execMsg, sendFrame, emit, waitToolResponse) {
       args,
     });
     const resp = await waitToolResponse();
+    const toolMs = timeMs(execStart);
+    logEvent({ event: "mcp_tool_exec", toolName, tool_ms: toolMs, isError: Boolean(resp?.isError) });
     const content = resp?.content || "Error: empty tool response";
     const isError = Boolean(resp?.isError) || content.startsWith("Error:");
     const mcpResult = isError
@@ -694,6 +691,8 @@ const MAX_TURN_MS = 120_000;
 function gracefulFinish(code = 0) {
   if (finished) return;
   finished = true;
+  logEvent({ event: "bridge_end", total_ms: timeMs(bridgeStart), tokens: totalTokenCount, exitCode: code });
+  if (_logStream) { try { _logStream.end(); } catch {} }
   if (heartbeatTimer) clearInterval(heartbeatTimer);
   if (idleTimer) clearTimeout(idleTimer);
   if (maxTurnTimer) clearTimeout(maxTurnTimer);

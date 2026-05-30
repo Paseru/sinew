@@ -4,6 +4,26 @@
  */
 import http2 from "node:http2";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+// Centralized JSON logger
+const LOG_DIR = path.join(
+  process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"),
+  "dev", "hyrak", "sinew", "data", "logs"
+);
+let _logStream = null;
+function _ensureLog() {
+  if (_logStream) return;
+  try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch {}
+  _logStream = fs.createWriteStream(path.join(LOG_DIR, "h2-bridge.log"), { flags: "a" });
+}
+function logEvent(ev) {
+  _ensureLog();
+  try { _logStream.write(JSON.stringify({ ts: Date.now(), ...ev }) + "\n"); } catch {}
+}
+const bridgeStart = Date.now();
 
 function writeMessage(data) {
   const lenBuf = Buffer.alloc(4);
@@ -63,6 +83,7 @@ if (!configBuf) process.exit(1);
 
 const config = JSON.parse(configBuf.toString("utf8"));
 const { accessToken, url, path: rpcPath, unary } = config;
+logEvent({ event: "bridge_start", url: url || "https://agent.api5.cursor.sh", unary });
 const extraHeaders =
   config.headers && typeof config.headers === "object" ? config.headers : {};
 
@@ -116,12 +137,16 @@ h2Stream.on("data", (chunk) => {
 
 h2Stream.on("end", () => {
   clearTimeout(timeout);
+  logEvent({ event: "h2_stream_end", duration_ms: Date.now() - bridgeStart });
+  if (_logStream) { try { _logStream.end(); } catch {} }
   client.close();
   setTimeout(() => process.exit(0), 100);
 });
 
 h2Stream.on("error", () => {
   clearTimeout(timeout);
+  logEvent({ event: "h2_stream_error", duration_ms: Date.now() - bridgeStart });
+  if (_logStream) { try { _logStream.end(); } catch {} }
   client.close();
   process.exit(1);
 });

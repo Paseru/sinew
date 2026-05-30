@@ -4,7 +4,7 @@ const COMPACT_DISPLAY_PROMPT: &str = "\
 Display mode: Compact. Keep visible assistant text concise. Do not narrate routine tool use or internal reasoning. Prefer a short final answer with outcome, changed files, validation, and next step.";
 
 const VERY_COMPACT_DISPLAY_PROMPT: &str = "\
-Display mode: Very compact. Before the final answer, avoid progress narration and reasoning prose. Use tools silently unless you are blocked or must ask the user a required question. If a long operation truly needs a status update, use one short sentence. Keep the final answer ultra-concise (1-4 bullets/sentences), action-oriented, and mention only the outcome, key changed files, validation, and next step if useful.";
+Display mode: Very compact. Before the final answer, avoid progress narration and reasoning prose. Use tools silently unless you are blocked or must ask the user a required question. If a long operation truly needs a status update, use one short sentence. Keep the final answer ultra-concise (1-4 bullets/sentences), action-oriented, and mention only the outcome, key changed files, validation, and next step if useful. Never output empty paragraphs or blank lines in your visible responses.";
 
 #[tauri::command]
 pub(super) async fn send_message(
