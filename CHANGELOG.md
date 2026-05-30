@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:45:07]
+- `AMELIORATION_SSH.md` : Création du plan d'action d'amélioration SSH surpassant le SOTA (filtrage des clés, persistance des connexions en tâche de fond et découplage des configurations).
+
 ## [2026-05-30 02:44:34]
 - `Cargo.toml` : Ajout de la dépendance chrono dans le workspace pour la consolidation des règles en Rust.
 - `src-tauri/Cargo.toml` : Ajout des dépendances regex, chrono et futures.
