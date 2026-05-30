@@ -906,7 +906,7 @@ async fn run_mcp_server(secret: String, port: u16) {
                             }
                         }
                     });
-                    println!("{}", res.to_string());
+                    println!("{}", res);
                 }
                 "tools/list" => {
                     let tools = get_mcp_tools_list();
@@ -915,20 +915,20 @@ async fn run_mcp_server(secret: String, port: u16) {
                         "id": req_id,
                         "result": { "tools": tools }
                     });
-                    println!("{}", res.to_string());
+                    println!("{}", res);
                 }
                 "tools/call" => {
                     let params = req.get("params");
                     let name = params.and_then(|p| p.get("name")).and_then(|n| n.as_str()).unwrap_or("");
                     let arguments = params.and_then(|p| p.get("arguments")).cloned().unwrap_or(json!({}));
-
+ 
                     let call_res = handle_mcp_tool_call(name, arguments, &secret, port).await;
                     let res = json!({
                         "jsonrpc": "2.0",
                         "id": req_id,
                         "result": call_res
                     });
-                    println!("{}", res.to_string());
+                    println!("{}", res);
                 }
                 _ => {
                     if let Some(id) = req_id {
@@ -937,7 +937,7 @@ async fn run_mcp_server(secret: String, port: u16) {
                             "id": id,
                             "error": { "code": -32601, "message": "Method not found" }
                         });
-                        println!("{}", res.to_string());
+                        println!("{}", res);
                     }
                 }
             }

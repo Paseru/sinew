@@ -54,6 +54,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 directories = "5"
 uuid = { version = "1", features = ["v4", "fast-rng"] }
 notify = "6.1"
+ignore = "0.4"
 rand = "0.9"
 sha2 = "0.10"
 url = "2.5"

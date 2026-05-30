@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:48:23]
+- `src-tauri/src/cli.rs` : Enregistrement du serveur MCP natif Rust (native-host-wrapper.exe) s'il existe, avec repli automatique sur Node.js (mcp_server.js).
+- `crates/sinew-openai/src/stream.rs` : Correction d'avertissement clippy sur un bloc match pliable.
+- `crates/sinew-app/src/edit.rs` : Correction d'avertissements clippy sur l'indexation de boucles et les tris personnalisés.
+- `crates/sinew-app/src/agent/cancel.rs` : Correction d'avertissement clippy sur le retour d'un type d'erreur unitaire.
+- `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Suppression des avertissements clippy de conversions redondantes dans l'affichage JSON.
+- `sinew-chrome-bridge/native-host-wrapper.exe` : Recompilation en mode release sans avertissements clippy.
+
 ## [2026-05-30 02:45:07]
 - `AMELIORATION_SSH.md` : Création du plan d'action d'amélioration SSH surpassant le SOTA (filtrage des clés, persistance des connexions en tâche de fond et découplage des configurations).
 

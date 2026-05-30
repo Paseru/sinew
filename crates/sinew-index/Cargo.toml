@@ -12,6 +12,7 @@ regex = { workspace = true }
 directories = { workspace = true }
 fastembed = "4"
 notify = { workspace = true }
+ignore = { workspace = true }
 rayon = { workspace = true }
 rusqlite = { workspace = true }
 serde = { workspace = true }

@@ -122,6 +122,7 @@ impl TurnCancel {
         sent
     }
 
+    #[allow(clippy::result_unit_err)]
     pub fn register_question(
         &self,
         tool_call_id: impl Into<String>,

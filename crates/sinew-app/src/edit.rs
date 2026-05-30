@@ -735,8 +735,8 @@ fn block_anchor_matches(content: &str, find: &str) -> Vec<ReplacementMatch> {
         if line_text(content, spans[start]).trim() != first {
             continue;
         }
-        for end in start + 2..spans.len() {
-            if line_text(content, spans[end]).trim() == last {
+        for (end, span) in spans.iter().enumerate().skip(start + 2) {
+            if line_text(content, *span).trim() == last {
                 candidates.push((start, end));
                 break;
             }
@@ -1124,7 +1124,7 @@ fn next_char_boundary(text: &str, offset: usize) -> usize {
 fn apply_replacements(original: &str, replacements: &[PlannedReplacement]) -> String {
     let mut updated = original.to_string();
     let mut sorted = replacements.iter().collect::<Vec<_>>();
-    sorted.sort_by(|left, right| right.start.cmp(&left.start));
+    sorted.sort_by_key(|right| std::cmp::Reverse(right.start));
 
     for replacement in sorted {
         updated.replace_range(

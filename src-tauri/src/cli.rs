@@ -179,18 +179,24 @@ fn run_register_chrome_cli() -> Result<(), anyhow::Error> {
         source_dir
     };
 
-    let node_path = env::var("SINEW_NODE_PATH")
-        .ok()
-        .or_else(|| {
-            find_executable("node").map(|p| p.to_string_lossy().to_string())
-        })
-        .unwrap_or_else(|| "C:\\Program Files\\nodejs\\node.exe".to_string());
+    let mcp_exe = script_dir.join("native-host-wrapper.exe");
+    let (mcp_cmd, mcp_args) = if mcp_exe.exists() {
+        (mcp_exe.to_string_lossy().to_string(), vec!["--mcp".to_string()])
+    } else {
+        let node_path = env::var("SINEW_NODE_PATH")
+            .ok()
+            .or_else(|| {
+                find_executable("node").map(|p| p.to_string_lossy().to_string())
+            })
+            .unwrap_or_else(|| "C:\\Program Files\\nodejs\\node.exe".to_string());
+        (node_path, vec![script_dir.join("mcp_server.js").to_string_lossy().to_string()])
+    };
 
     let new_server = serde_json::json!({
         "id": "sinew-chrome",
         "name": "Sinew Chrome",
-        "command": node_path,
-        "args": [script_dir.join("mcp_server.js").to_string_lossy().to_string()],
+        "command": mcp_cmd,
+        "args": mcp_args,
         "env": [
             {"key": "MCP_BROWSER_CDP_URL", "value": "http://127.0.0.1:29002"},
             {"key": "SINEW_CHROME_BRIDGE_DIR", "value": script_dir.to_string_lossy().to_string()},

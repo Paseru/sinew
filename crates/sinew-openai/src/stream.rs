@@ -255,10 +255,8 @@ impl EventParser {
                     });
                 }
             }
-            Some("message") => {
-                if message_text(item).is_some() {
-                    self.start_text(index, out);
-                }
+            Some("message") if message_text(item).is_some() => {
+                self.start_text(index, out);
             }
             _ => {}
         }

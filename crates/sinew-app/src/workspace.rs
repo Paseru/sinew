@@ -43,6 +43,7 @@ const IGNORED_DIRS: &[&str] = &[
     "venv",
     ".mypy_cache",
     "out",
+    ".sinew",
 ];
 
 #[derive(Debug, Clone, Serialize)]

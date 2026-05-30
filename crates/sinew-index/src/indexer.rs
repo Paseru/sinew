@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::Result;
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -17,6 +18,29 @@ use crate::{
     store::{FileSignature, IndexFileData, IndexFileMetadata, IndexStore},
     SKIP_DIRS, TEXT_EXTENSIONS,
 };
+
+fn load_gitignore(workspace_root: &Path) -> Gitignore {
+    let mut builder = GitignoreBuilder::new(workspace_root);
+    
+    let gitignore_path = workspace_root.join(".gitignore");
+    if gitignore_path.exists() {
+        let _ = builder.add(&gitignore_path);
+    }
+    
+    let cursorignore_path = workspace_root.join(".cursorignore");
+    if cursorignore_path.exists() {
+        let _ = builder.add(&cursorignore_path);
+    }
+
+    let sinewignore_path = workspace_root.join(".sinewignore");
+    if sinewignore_path.exists() {
+        let _ = builder.add(&sinewignore_path);
+    }
+    
+    let _ = builder.add_line(None, ".sinew/worktrees/");
+
+    builder.build().unwrap_or_else(|_| Gitignore::empty())
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct IndexStats {
@@ -43,10 +67,11 @@ enum PreparedIndexChange {
 }
 
 pub fn ensure_workspace_index(workspace_root: &Path) -> Result<IndexStats> {
+    let gitignore = load_gitignore(workspace_root);
     let store = IndexStore::open(workspace_root)?;
     let mut stats = IndexStats::default();
     let signatures = store.file_signatures()?;
-    let candidates = collect_workspace_candidates(workspace_root, workspace_root, None);
+    let candidates = collect_workspace_candidates(workspace_root, workspace_root, None, &gitignore);
     let seen = candidates
         .iter()
         .map(|candidate| candidate.relative.clone())
@@ -75,6 +100,7 @@ pub fn sync_changed_paths(
 ) -> Result<IndexStats> {
     const MAX_DIRECTORY_FILES_PER_EVENT: usize = 256;
 
+    let gitignore = load_gitignore(workspace_root);
     let store = IndexStore::open(workspace_root)?;
     let mut stats = IndexStats::default();
     let mut unique = HashSet::<String>::new();
@@ -83,7 +109,7 @@ pub fn sync_changed_paths(
 
     for path in paths {
         let path = normalize_absolute_path(&path);
-        if !is_under_workspace(workspace_root, &path) || should_skip_entry(&path, workspace_root) {
+        if !is_under_workspace(workspace_root, &path) || should_skip_entry(&path, workspace_root, &gitignore) {
             continue;
         }
 
@@ -92,6 +118,7 @@ pub fn sync_changed_paths(
                 workspace_root,
                 &path,
                 Some(MAX_DIRECTORY_FILES_PER_EVENT),
+                &gitignore,
             ) {
                 if unique.insert(candidate.relative.clone()) {
                     candidates.push(candidate);
@@ -142,13 +169,14 @@ fn collect_workspace_candidates(
     workspace_root: &Path,
     scan_root: &Path,
     max_files: Option<usize>,
+    gitignore: &Gitignore,
 ) -> Vec<FileCandidate> {
     let mut candidates = Vec::new();
 
     for entry in WalkDir::new(scan_root)
         .follow_links(false)
         .into_iter()
-        .filter_entry(|entry| !should_skip_entry(entry.path(), workspace_root))
+        .filter_entry(|entry| !should_skip_entry(entry.path(), workspace_root, gitignore))
     {
         if max_files.is_some_and(|max| candidates.len() >= max) {
             break;
@@ -267,13 +295,18 @@ fn apply_prepared_changes(
     Ok(())
 }
 
-fn should_skip_entry(path: &Path, workspace_root: &Path) -> bool {
+fn should_skip_entry(path: &Path, workspace_root: &Path, gitignore: &Gitignore) -> bool {
     if path == workspace_root {
         return false;
     }
-    path.components().any(|component| {
+    let base_skip = path.components().any(|component| {
         matches!(component, Component::Normal(name) if SKIP_DIRS.contains(&name.to_string_lossy().as_ref()))
-    })
+    });
+    if base_skip {
+        return true;
+    }
+    let is_dir = path.is_dir();
+    gitignore.matched(path, is_dir).is_ignore()
 }
 
 fn normalize_relative_path(workspace_root: &Path, path: &Path) -> String {
