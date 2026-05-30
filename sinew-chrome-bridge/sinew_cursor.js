@@ -730,6 +730,18 @@
 
   // Listening to messages from background worker
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    const resolveSelector = (sel) => {
+      if (!sel) return "";
+      const s = String(sel).trim();
+      if (s.startsWith('@ref')) {
+        return `[data-sinew-ref="${s.slice(4)}"]`;
+      }
+      if (s.startsWith('@')) {
+        return `[data-sinew-ref="${s.slice(1)}"]`;
+      }
+      return s;
+    };
+
     if (message.type === "AGENT_CURSOR_STATE") {
       handleActivity();
       updateCursorState({
@@ -761,7 +773,7 @@
     else if (message.type === "AGENT_QUERY_SELECTOR") {
       handleActivity();
       const selector = String(message.selector || "");
-      const el = selector ? document.querySelector(selector) : null;
+      const el = selector ? document.querySelector(resolveSelector(selector)) : null;
       if (!el) {
         sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
         return true;
@@ -790,7 +802,7 @@
     else if (message.type === "AGENT_CLICK_SELECTOR") {
       handleActivity();
       const selector = String(message.selector || "");
-      const el = selector ? document.querySelector(selector) : null;
+      const el = selector ? document.querySelector(resolveSelector(selector)) : null;
       if (!el) {
         sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
         return true;
@@ -842,7 +854,7 @@
       handleActivity();
       const selector = String(message.selector || "");
       const text = String(message.text || "");
-      const el = selector ? document.querySelector(selector) : null;
+      const el = selector ? document.querySelector(resolveSelector(selector)) : null;
       if (!el) {
         sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
         return true;
@@ -894,7 +906,7 @@
       handleActivity();
       const selector = String(message.selector || "");
       const key = String(message.key || "Enter");
-      const target = selector ? document.querySelector(selector) : (document.activeElement || document.body);
+      const target = selector ? document.querySelector(resolveSelector(selector)) : (document.activeElement || document.body);
       if (!target) {
         sendResponse({ ok: false, success: false, error: selector ? `Selector not found: ${selector}` : "No active element" });
         return true;
@@ -924,7 +936,7 @@
     else if (message.type === "AGENT_SELECT_OPTION") {
       handleActivity();
       const selector = String(message.selector || "");
-      const select = selector ? document.querySelector(selector) : null;
+      const select = selector ? document.querySelector(resolveSelector(selector)) : null;
       if (!select) {
         sendResponse({ ok: false, success: false, error: `Selector not found: ${selector}` });
         return true;
@@ -961,7 +973,7 @@
       const timeoutMs = Math.max(0, Number(message.timeoutMs) || 5000);
       const started = Date.now();
       const check = () => {
-        const el = selector ? document.querySelector(selector) : null;
+        const el = selector ? document.querySelector(resolveSelector(selector)) : null;
         if (el) {
           const rect = el.getBoundingClientRect();
           const style = window.getComputedStyle(el);
