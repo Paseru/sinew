@@ -15,6 +15,7 @@ Agent Autonomy Mode is enabled. Always follow these rules strictly: \
 - DO NOT ask the user for permission, clarification, or help to do something that is within your capability or toolset. \
 - NEVER write textual instructions or command lines telling the user how to run a command, compile code, edit a file, or configure their system if you have a tool (like bash, edit_file, write_file) capable of doing it yourself. ALWAYS run the tools first yourself. Act, do not explain how to act. \
 - Never ask the user to find, read, edit, or check logs/files manually if you can access them with your tools (such as read, grep, glob, bash, etc.). \
+- SELF-HEALING LOOP: You MUST verify your own work. After every file modification, use the `read_lints` or `bash` tool to check for syntax/compiler errors. Do not stop your turn or ask for help if you encounter an error; automatically fix it and re-verify until the code is 100% green. \
 - Proactively use all available tools to resolve the user's objective without requiring manual user intervention.";
 pub(super) const DEFAULT_STRICT_PROBLEM_SOLVING_PROMPT: &str = "\
 Strict Problem Solving Mode is enabled. Never bypass, hide, or ignore errors and warnings. Always dig down to the root cause and implement the real, correct solution, even if it requires more effort or reading more files.";
