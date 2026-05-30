@@ -17,11 +17,7 @@ if (!(Test-Path $InstallDir)) {
 
 Write-Host "1/5 Installation du runtime Chrome Bridge dans LOCALAPPDATA..."
 $runtimeFiles = @(
-    "server.js",
-    "mcp_server.js",
     "native-host-wrapper.exe",
-    "package.json",
-    "package-lock.json",
     "manifest.json",
     "background.js",
     "sinew_cursor.js",
@@ -35,22 +31,6 @@ foreach ($file in $runtimeFiles) {
     $source = Join-Path $SourceDir $file
     if (Test-Path $source) {
         Copy-Item -Path $source -Destination (Join-Path $InstallDir $file) -Force
-    }
-}
-
-$sourceWs = Join-Path $SourceDir "node_modules\ws"
-$targetNodeModules = Join-Path $InstallDir "node_modules"
-$targetWs = Join-Path $targetNodeModules "ws"
-if (Test-Path $sourceWs) {
-    if (!(Test-Path $targetNodeModules)) { New-Item -ItemType Directory -Path $targetNodeModules -Force | Out-Null }
-    Copy-Item -Path $sourceWs -Destination $targetNodeModules -Recurse -Force
-} elseif (!(Test-Path $targetWs)) {
-    Write-Host "node_modules/ws introuvable dans la source; installation npm minimale..."
-    if (Get-Command npm -ErrorAction SilentlyContinue) {
-        npm install --omit=dev --prefix $InstallDir | Out-Null
-    } else {
-        Write-Error "npm introuvable et node_modules/ws absent; installation impossible."
-        exit 1
     }
 }
 
@@ -80,20 +60,7 @@ if (!(Test-Path $RegPath)) {
 Set-ItemProperty -Path $RegPath -Name "(default)" -Value $ManifestPath
 Write-Host "Cle de registre configuree vers le manifest installe."
 
-Write-Host "4/5 Configuration des lanceurs locaux..."
-$NodePath = (Get-Command node).Source
-
-$BridgeBatPath = Join-Path $InstallDir "run_sinew_bridge.bat"
-$BridgeBatContent = "@echo off`r`n`"$NodePath`" `"%~dp0mcp_server.js`""
-[System.IO.File]::WriteAllText($BridgeBatPath, $BridgeBatContent, [System.Text.Encoding]::UTF8)
-
-# Legacy convenience launcher only: Sinew should run mcp_server.js directly, Chrome should run native-host-wrapper.exe.
-$BatPath = Join-Path $InstallDir "native_host.bat"
-$BatContent = "@echo off`r`n`"$NodePath`" `"%~dp0server.js`" --native"
-[System.IO.File]::WriteAllText($BatPath, $BatContent, [System.Text.Encoding]::UTF8)
-Write-Host "Lanceurs configures dans $InstallDir."
-
-Write-Host "5/5 Configuration du serveur MCP dans la base de donnees de Sinew..."
+Write-Host "4/5 Configuration du serveur MCP dans la base de donnees de Sinew..."
 if (!$SkipSinewDb) {
     $env:SINEW_CHROME_BRIDGE_DIR = $InstallDir
     $SinewExe = ""
