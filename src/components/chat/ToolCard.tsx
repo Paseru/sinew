@@ -55,6 +55,7 @@ export type ToolCardProps = {
   activeTeamNames?: ReadonlySet<string>;
   subAgentName?: string;
   compactMode?: "disabled" | "compact" | "very-compact";
+  onFixCommand?: (commandText: string) => void;
 };
 
 export type ToolCardTeamAgent = {
@@ -978,6 +979,7 @@ export function ToolCard({
   activeTeamNames,
   subAgentName,
   compactMode,
+  onFixCommand,
 }: ToolCardProps) {
   const canonicalName = canonicalToolName(name);
   const isCreateImage = canonicalName === "create_image";
@@ -1315,6 +1317,20 @@ export function ToolCard({
           </span>
         ) : (
           <span className="tool-card__title">{title}</span>
+        )}
+        {isError && isBash && command && onFixCommand && (
+          <button
+            type="button"
+            className="tool-card__fix-action"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFixCommand(command);
+            }}
+            title="Auto-réparer avec un agent"
+          >
+            <Icon icon="solar:wrench-linear" width={12} height={12} />
+            <span>Auto-réparer</span>
+          </button>
         )}
         {showTeamStop && (
           <button

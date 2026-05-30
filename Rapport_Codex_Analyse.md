@@ -73,13 +73,17 @@ Ce rapport présente l'analyse de l'application Codex décompilée (`C:\Users\ju
 
 ---
 
-## 7. 🛠️ Le Brouillon de Travail et l'Auto-Réparation Git (Worktrees & Auto-Fix Setup)
-* **Analogie :** Un espace de brouillon jetable pour exécuter des scripts de préparation, avec un assistant intégré qui se charge de réparer automatiquement les pannes de configuration.
-* **Fonctionnement :**
-  * Pour chaque nouvelle discussion, l'application peut créer un dossier clone temporaire (Git Worktree) pour travailler de manière isolée sans toucher au code principal.
-  * Lors de la première exécution, elle prépare le projet (compilation, installation de packages). Si cette préparation échoue, l'erreur s'affiche avec un bouton **"Auto-réparation"** (Auto-Fix).
-  * Ce bouton lance un agent spécialisé temporaire dont la seule consigne est d'analyser l'erreur, de modifier les configurations cassées et de retenter jusqu'à ce que le démarrage réussisse, avant de proposer les corrections à l'utilisateur.
-* **Intérêt pour Sinew :** Intégrer la gestion des espaces de travail Git temporaires et proposer ce bouton de réparation automatique intelligent lorsque la configuration locale ou l'installation des dépendances d'un projet échoue.
+## 7. 🛠️ Le Brouillon de Travail et l'Auto-Réparation (Git Worktrees & Bouton Auto-Fix)
+* **Analogie :** Un plan de travail jetable (espace de brouillon) où l'assistant peut faire des essais. Si les outils de compilation ou d'installation tombent en panne, un bouton magique permet à un micro-assistant de réparer lui-même les dégâts sans vous déranger.
+* **Fonctionnement détaillé du bouton "Auto-réparer" :**
+  1. **Détection de panne :** Lorsqu'une commande exécutée via le terminal (`bash.rs`) échoue ou qu'un build renvoie des erreurs d'analyse, l'interface utilisateur de Sinew affiche un bouton **"Auto-réparer la configuration"** à côté du rapport d'erreur.
+  2. **Lancement du micro-agent de réparation :** Cliquer sur ce bouton démarre un sous-agent (`subagent.rs` en tâche de fond) dédié uniquement à la résolution de cet échec précis.
+  3. **Boucle d'auto-correction (SOTA) :** 
+     - L'agent lit les journaux d'erreurs (stderr) et utilise l'outil `read_lints` pour obtenir les diagnostics précis.
+     - Il formule des corrections (comme réparer des dépendances obsolètes dans `package.json`, corriger des options incompatibles dans `tsconfig.json` ou ajuster des chemins d'importation cassés dans le code) et applique ces changements via `edit_file`.
+     - Il réexécute la commande de build dans le répertoire de travail pour vérifier si le problème est résolu.
+  4. **Validation finale :** Une fois le code d'erreur ramené à 0 (succès de compilation), l'agent présente un résumé clair des fichiers modifiés et propose à l'utilisateur d'appliquer définitivement ces corrections.
+* **Intérêt pour Sinew :** Cette fonctionnalité rendra l'assistant autonome face aux erreurs de configuration typiques (erreurs TypeScript, dépendances manquantes, scripts npm cassés), évitant à l'utilisateur de devoir chercher la solution à la main.
 
 ---
 

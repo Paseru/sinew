@@ -1968,6 +1968,45 @@ export function ChatPane({
     [conversationId, history, onStop, workspacePath],
   );
 
+  const handleFixCommand = useCallback(
+    async (commandText: string) => {
+      if (isStreaming || view.status === "streaming") return;
+      const prompt = `Auto-répare l'erreur de la commande : \`${commandText}\`. Analyse les erreurs de compilation/exécution ci-dessus, modifie les fichiers nécessaires via edit_file ou write_file, et réexécute la commande de compilation/test pour vérifier que tout fonctionne.`;
+      
+      setView((prev) => {
+        const nextHistoryIndex = history.length;
+        return beginTurn(
+          appendUserMessage(
+            prev,
+            prompt,
+            nextHistoryIndex,
+            [],
+          ),
+        );
+      });
+      
+      try {
+        await onSend(
+          prompt,
+          [],
+          modelRefFromId(model),
+          thinking,
+          effectiveMode,
+          currentSelection.serviceTier,
+        );
+      } catch (err) {
+        setView((prev) => ({
+          ...prev,
+          status: "stopped",
+          streamPhase: "idle",
+          lastError: String(err),
+          turnStartedAtMs: null,
+        }));
+      }
+    },
+    [isStreaming, view.status, history.length, onSend, model, thinking, effectiveMode, currentSelection.serviceTier]
+  );
+
   const sendQueuedPrompt = useCallback(
     (nextPrompt: QueuedPrompt, restoreIndex = 0) => {
       if (dequeueInFlightRef.current !== null) return;
@@ -6441,6 +6480,7 @@ function BlockView({
             }
             subAgentName={block.subAgent?.name}
             compactMode={compactMode}
+            onFixCommand={handleFixCommand}
           />
         </div>
       );

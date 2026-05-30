@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:38:31]
+- `src/components/chat/ToolCard.tsx` : Ajout du bouton "Auto-réparer" sur les cartes de commande bash en cas d'erreur.
+- `src/components/chat/ChatPane.tsx` : Implémentation du callback de réparation `handleFixCommand` et passage du prop à `ToolCard`.
+- `src/styles.css` : Ajout des styles pour le bouton d'auto-réparation `.tool-card__fix-action`.
+
+## [2026-05-30 02:36:45]
+- `search_decompiled.py` : Créé puis supprimé après avoir servi à analyser en profondeur les extensions décompilées de Cursor.
+- `RAPPORT_DECOMPILE_CURSOR.md` : Rapport complet d'analyse de l'architecture de Cursor (Shadow Workspace, Retrieval, MCP Navigateur, Boucle d'agent, Commits) rédigé en français simple.
+
+## [2026-05-30 02:37:33]
+- `Rapport_Codex_Analyse.md` : Détail complet du fonctionnement SOTA du bouton "Auto-réparer" (boucle d'auto-correction via sous-agents et vérification de build).
+
 ## [2026-05-30 02:35:40]
 - `Rapport_Codex_Analyse.md` : Ajout des sections d'analyse sur le pilotage d'ordinateur (Computer Use) et la télécommande par téléphone (Remote Control).
 - Confirmé la présence native du rendu de diagrammes Mermaid dans Sinew.

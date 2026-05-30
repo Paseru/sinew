@@ -7530,6 +7530,28 @@ textarea {
   background: rgba(34, 197, 94, 0.10);
   color: var(--ok);
 }
+.tool-card__fix-action {
+  flex: 0 0 auto;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border-radius: var(--r-med);
+  background: rgba(245, 166, 131, 0.12); /* peach/orange soft background */
+  color: var(--tone-thinking);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  line-height: 1;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  border: none;
+  transition: background 140ms ease;
+  margin-right: 6px;
+}
+.tool-card__fix-action:hover {
+  background: rgba(245, 166, 131, 0.20);
+}
 .tool-card__body {
   padding: 7px 9px;
   background: transparent;
