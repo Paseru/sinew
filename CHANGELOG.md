@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:44:34]
+- `Cargo.toml` : Ajout de la dépendance chrono dans le workspace pour la consolidation des règles en Rust.
+- `src-tauri/Cargo.toml` : Ajout des dépendances regex et chrono.
+- `src-tauri/src/rules.rs` : Création de l'implémentation native en Rust de la consolidation des règles d'apprentissage.
+- `src-tauri/src/lib.rs` : Remplacement de l'appel au script Python par la fonction native Rust.
+
 ## [2026-05-30 02:44:22]
 - `src/components/Welcome.tsx` : Ajout d'un bouton d'accès direct SSH/Sandbox sur la page d'accueil (Switch) pour utiliser le serveur MCP SSH.
 

@@ -8,12 +8,14 @@ version = "0.1.26"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
+ "chrono",
  "directories",
  "notify",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
  "portable-pty",
+ "regex",
  "reqwest 0.12.28",
  "rusqlite",
  "serde",
@@ -576,8 +578,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c673075a2e0e5f4a1dde27ce9dee1ea4558c7ffe648f576438a20ca1d2acc4b0"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-link 0.2.1",
 ]
 
