@@ -49,7 +49,8 @@ All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 15:04:00]
 - src/components/SettingsPane.tsx : Déplacement des barres de quotas sous les boutons d'action (Se déconnecter/Se connecter) afin de gagner de l'espace horizontal.
-- src/components/SettingsPane.tsx : Découpage de l'onglet massif 'Options' en 3 nouveaux onglets dédiés dans la navigation principale ('Apparence', 'Power User', et 'Système') pour aérer l'interface.sur les cartes fournisseurs et éviter qu'elles ne soient écrasées sur de petites résolutions.
+- src/components/SettingsPane.tsx : Découpage de l'onglet massif 'Options' en 3 nouveaux onglets dédiés dans la navigation principale ('Apparence', 'Power User', et 'Système') pour aérer l'interface.
+- src/components/SettingsPane.tsx : Déplacement de la 'Synchronisation Multi-PC', 'Recherche Sémantique', et 'Apprentissage Automatique IA' vers le nouvel onglet 'Système'. Harmonisation de leur apparence dans la grille dédiée.sur les cartes fournisseurs et éviter qu'elles ne soient écrasées sur de petites résolutions.
 - src/components/SettingsPane.tsx : Retrait des mentions explicites de numéros de version (ex: V3 & R1) pour la description de DeepSeek, car ces informations évoluent vite.
 - src/lib/frRuntime.ts : Raccourcissement de "Limite atteinte" en "Limite" pour optimiser l'affichage.
 - src/components/SettingsPane.tsx : Masquage automatique de la description du fournisseur une fois connecté pour gagner de la place verticalement.
@@ -57,6 +58,7 @@ All notable changes to this project will be documented in this file.
 - src/components/SettingsPane.tsx : Optimisation extrême des sous-cartes : les quotas sont maintenant empilés proprement sur toute la largeur, et les détails (emails, plan, etc.) sont fusionnés sur une seule ligne condensée.
 - src/components/SettingsPane.tsx : Transformation des quotas des sous-cartes en blocs pleine largeur avec l'info au-dessus de la barre pour exploiter tout l'espace horizontal.
 - src/components/SettingsPane.tsx : Découpage de l'onglet massif 'Options' en 3 nouveaux onglets dédiés dans la navigation principale ('Apparence', 'Power User', et 'Système') pour aérer l'interface.
+- src/components/SettingsPane.tsx : Déplacement de la 'Synchronisation Multi-PC', 'Recherche Sémantique', et 'Apprentissage Automatique IA' vers le nouvel onglet 'Système'. Harmonisation de leur apparence dans la grille dédiée.
 ## [2026-05-30 15:02:20]
 - `src/lib/recents.ts` : Exclusion automatique du dossier temporaire (`.sinew-sandbox` ou "Sans dossier") de la liste des projets récents affichés sur la page d'accueil pour éviter de polluer l'historique de l'utilisateur, tout en conservant la possibilité de le rouvrir automatiquement au prochain lancement si c'était le dernier projet actif.
 
@@ -475,6 +477,7 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **Outils MCP de diagnostics Chrome avancés :** Intégration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mémoire en local.
 
 ---
+
 
 
 

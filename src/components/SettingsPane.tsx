@@ -2019,6 +2019,32 @@ function OptionsSection({
     }
   });
 
+  const [strictProblemSolving, setStrictProblemSolving] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.strict-problem-solving");
+      if (saved !== null) return saved === "true";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [fullImplementation, setFullImplementation] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("sinew.full-implementation");
+      if (saved !== null) return saved === "true";
+      const master = localStorage.getItem("sinew.power-user-master") || "enabled";
+      if (master === "enabled") return true;
+      if (master === "disabled") return false;
+      return true;
+    } catch {
+      return true;
+    }
+  });
+
   const [autoOptimizeEnabled, setAutoOptimizeEnabled] = useState<boolean>(() => {
     try {
       return localStorage.getItem("sinew.autoOptimizeEnabled") === "true";
@@ -2526,6 +2552,8 @@ function OptionsSection({
       window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:git-french-messages-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:strict-problem-solving-changed", { detail: true }));
+      window.dispatchEvent(new CustomEvent("sinew:full-implementation-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: true }));
       window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "very-compact" }));
       window.dispatchEvent(new CustomEvent("sinew:agent-autonomy-changed", { detail: true }));
@@ -2537,6 +2565,8 @@ function OptionsSection({
         localStorage.setItem("sinew.force-changelog", "false");
         localStorage.setItem("sinew.git-french-messages", "false");
         localStorage.setItem("sinew.auto-mockups", "false");
+        localStorage.setItem("sinew.strict-problem-solving", "false");
+        localStorage.setItem("sinew.full-implementation", "false");
         localStorage.setItem("sinew.autosave", "false");
         localStorage.setItem("sinew.compact-reasoning", "disabled");
         localStorage.setItem("sinew.agent-autonomy", "false");
@@ -2547,6 +2577,8 @@ function OptionsSection({
       setForceChangelog(false);
       setGitFrenchMessages(false);
       setAutoMockups(false);
+      setStrictProblemSolving(false);
+      setFullImplementation(false);
       setAutosave(false);
       setCompactReasoning("disabled");
       setAgentAutonomy(false);
@@ -2557,6 +2589,8 @@ function OptionsSection({
       window.dispatchEvent(new CustomEvent("sinew:force-changelog-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:git-french-messages-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:strict-problem-solving-changed", { detail: false }));
+      window.dispatchEvent(new CustomEvent("sinew:full-implementation-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:autosave-changed", { detail: false }));
       window.dispatchEvent(new CustomEvent("sinew:compact-reasoning-changed", { detail: "disabled" }));
       window.dispatchEvent(new CustomEvent("sinew:agent-autonomy-changed", { detail: false }));
@@ -2620,6 +2654,8 @@ function OptionsSection({
   const activeForceChangelog = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : forceChangelog);
   const activeGitFrenchMessages = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : gitFrenchMessages);
   const activeAutoMockups = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : autoMockups);
+  const activeStrictProblemSolving = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : strictProblemSolving);
+  const activeFullImplementation = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : fullImplementation);
   const activeAutosave = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : autosave);
   const activeCompactReasoning = powerUserMaster === "enabled" ? "very-compact" : (powerUserMaster === "disabled" ? "disabled" : compactReasoning);
   const activeAgentAutonomy = powerUserMaster === "enabled" ? true : (powerUserMaster === "disabled" ? false : agentAutonomy);
@@ -2982,75 +3018,6 @@ function OptionsSection({
                 onClick={() => changePowerUserMaster("custom")}
               >
                 {locale === "fr" ? "Personnalisé" : "Custom"}
-              </button>
-            </div>
-          </div>
-
-          {/* Synchronisation Multi-PC (OneDrive) */}
-          <div className="settings-pane__about-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-              <div className="settings-pane__about-card-copy">
-                <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
-                <p>
-                  {locale === "fr"
-                    ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
-                    : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
-                </p>
-              </div>
-              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync" style={{ flexShrink: 0 }}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={multiPcSync}
-                  data-active={multiPcSync ? "true" : "false"}
-                  onClick={() => toggleMultiPcSync(true)}
-                >
-                  {locale === "fr" ? "Activé" : "Enabled"}
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={!multiPcSync}
-                  data-active={!multiPcSync ? "true" : "false"}
-                  onClick={() => toggleMultiPcSync(false)}
-                >
-                  {locale === "fr" ? "Désactivé" : "Disabled"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Recherche Sémantique Vectorielle (BETA) */}
-          <div className="settings-pane__about-card">
-            <div className="settings-pane__about-card-copy">
-              <h2>
-                <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧠</span>
-                {locale === "fr" ? "Recherche Sémantique Vectorielle (BETA)" : "Vector Semantic Search (BETA)"}
-              </h2>
-              <p>
-                {locale === "fr"
-                  ? "Active l'indexation par concepts (fastembed). Permet de rechercher vos fichiers par leur sens général plutôt que par mot-clé exact (100% local)."
-                  : "Enable concept-based indexing (fastembed). Allows searching files by their general meaning instead of exact keywords (100% local)."}
-              </p>
-            </div>
-            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Semantic Search">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={semanticEmbeddings}
-                data-active={semanticEmbeddings ? "true" : "false"}
-                onClick={() => toggleSemanticEmbeddings(true)}
-              >
-                {locale === "fr" ? "Activé" : "Enabled"}
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={!semanticEmbeddings}
-                data-active={!semanticEmbeddings ? "true" : "false"}
-                onClick={() => toggleSemanticEmbeddings(false)}
-              >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
               </button>
             </div>
           </div>
@@ -3422,6 +3389,196 @@ function OptionsSection({
           {locale === "fr" ? "Diagnostics & Outils Système" : "Diagnostics & System Tools"}
         </h3>
         <div className="options-category-grid">
+
+          {/* Synchronisation Multi-PC (OneDrive) */}
+          <div className="settings-pane__about-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <div className="settings-pane__about-card-copy">
+                <h2>{locale === "fr" ? "Synchronisation Multi-PC" : "Multi-PC Sync"}</h2>
+                <p>
+                  {locale === "fr"
+                    ? "Synchronise automatiquement vos conversations et configurations entre vos ordinateurs via OneDrive."
+                    : "Automatically synchronize your conversations and configurations between your computers via OneDrive."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Multi-PC Sync" style={{ flexShrink: 0 }}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={multiPcSync}
+                  data-active={multiPcSync ? "true" : "false"}
+                  onClick={() => toggleMultiPcSync(true)}
+                >
+                  {locale === "fr" ? "Activé" : "Enabled"}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!multiPcSync}
+                  data-active={!multiPcSync ? "true" : "false"}
+                  onClick={() => toggleMultiPcSync(false)}
+                >
+                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          
+
+          {/* Recherche Sémantique Vectorielle (BETA) */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>
+                <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧠</span>
+                {locale === "fr" ? "Recherche Sémantique Vectorielle (BETA)" : "Vector Semantic Search (BETA)"}
+              </h2>
+              <p>
+                {locale === "fr"
+                  ? "Active l'indexation par concepts (fastembed). Permet de rechercher vos fichiers par leur sens général plutôt que par mot-clé exact (100% local)."
+                  : "Enable concept-based indexing (fastembed). Allows searching files by their general meaning instead of exact keywords (100% local)."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Semantic Search">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={semanticEmbeddings}
+                data-active={semanticEmbeddings ? "true" : "false"}
+                onClick={() => toggleSemanticEmbeddings(true)}
+              >
+                {locale === "fr" ? "Activé" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!semanticEmbeddings}
+                data-active={!semanticEmbeddings ? "true" : "false"}
+                onClick={() => toggleSemanticEmbeddings(false)}
+              >
+                {locale === "fr" ? "Désactivé" : "Disabled"}
+              </button>
+            </div>
+          </div>
+
+          
+
+          {/* Apprentissage Automatique IA */}
+          <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
+            <div className="settings-pane__about-card-header-flex">
+              <div className="settings-pane__about-card-copy">
+                <h2>
+                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧠</span>
+                  {locale === "fr" ? "Apprentissage Automatique IA" : "AI Auto-Learning"}
+                </h2>
+                <p>
+                  {locale === "fr"
+                    ? "Analyse les erreurs répétitives avec une IA pour les fusionner intelligemment en règles globales (remplace le script de consolidation simple)."
+                    : "Analyzes repetitive errors with AI to intelligently merge them into global rules (replaces the simple consolidation script)."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="AI Auto-Learning">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={autoLearningEnabled}
+                  data-active={autoLearningEnabled ? "true" : "false"}
+                  onClick={() => toggleAutoLearning(true)}
+                >
+                  {locale === "fr" ? "Activé" : "Enabled"}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!autoLearningEnabled}
+                  data-active={!autoLearningEnabled ? "true" : "false"}
+                  onClick={() => toggleAutoLearning(false)}
+                >
+                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                </button>
+              </div>
+            </div>
+
+            {configuredProviders.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-2, rgba(255, 255, 255, 0.65))" }}>
+                  {locale === "fr" ? "Fournisseur:" : "Provider:"}
+                </span>
+                <select
+                  value={autoLearningProviderId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAutoLearningProviderId(val);
+                    try { localStorage.setItem("sinew.auto-learning-provider", val); } catch {}
+                  }}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                    color: "var(--text-0, #fff)",
+                    border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  {configuredProviders.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
+              <button
+                type="button"
+                className="settings-pane__button"
+                onClick={runAiConsolidation}
+                disabled={autoLearningLoading || !autoLearningEnabled}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  backgroundColor: autoLearningEnabled ? "var(--accent-lo, rgba(156, 163, 175, 0.15))" : "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                  color: autoLearningEnabled ? "var(--accent-hi, #9ca3af)" : "var(--text-2, rgba(255, 255, 255, 0.45))",
+                  border: `1px solid ${autoLearningEnabled ? "var(--accent-lo, rgba(156, 163, 175, 0.3))" : "var(--line-1, rgba(255, 255, 255, 0.08))"}`,
+                  cursor: autoLearningEnabled ? "pointer" : "not-allowed",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  opacity: autoLearningEnabled ? 1 : 0.5
+                }}
+              >
+                {autoLearningLoading ? (
+                  <Icon icon="eos-icons:loading" width={14} height={14} />
+                ) : (
+                  <Icon icon="solar:refresh-linear" width={14} height={14} />
+                )}
+                {locale === "fr" ? "Analyser maintenant" : "Analyze Now"}
+              </button>
+              <span style={{ fontSize: "11px", color: "var(--text-3, rgba(255, 255, 255, 0.45))" }}>
+                {locale === "fr"
+                  ? "L'IA lira errors_raw.json + instructions_consolidated.md, dédoublonnera les règles similaires et produira un fichier optimisé."
+                  : "The AI reads errors_raw.json + instructions_consolidated.md, deduplicates similar rules, and produces an optimized file."}
+              </span>
+            </div>
+
+            {autoLearningStatus && (
+              <div style={{
+                fontSize: "12px",
+                padding: "8px 10px",
+                borderRadius: "6px",
+                backgroundColor: autoLearningStatus.startsWith("Erreur")
+                  ? "rgba(239, 68, 68, 0.1)"
+                  : "rgba(34, 197, 94, 0.1)",
+                color: autoLearningStatus.startsWith("Erreur") ? "#ef4444" : "#22c55e",
+                border: `1px solid ${autoLearningStatus.startsWith("Erreur") ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)"}`
+              }}>
+                {autoLearningStatus}
+              </div>
+            )}
+          </div>
+
           
           {/* Diagnostic Système SOTA */}
           <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
@@ -3563,125 +3720,7 @@ function OptionsSection({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Apprentissage Automatique IA */}
-          <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
-            <div className="settings-pane__about-card-header-flex">
-              <div className="settings-pane__about-card-copy">
-                <h2>
-                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧠</span>
-                  {locale === "fr" ? "Apprentissage Automatique IA" : "AI Auto-Learning"}
-                </h2>
-                <p>
-                  {locale === "fr"
-                    ? "Analyse les erreurs répétitives avec une IA pour les fusionner intelligemment en règles globales (remplace le script de consolidation simple)."
-                    : "Analyzes repetitive errors with AI to intelligently merge them into global rules (replaces the simple consolidation script)."}
-                </p>
-              </div>
-              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="AI Auto-Learning">
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={autoLearningEnabled}
-                  data-active={autoLearningEnabled ? "true" : "false"}
-                  onClick={() => toggleAutoLearning(true)}
-                >
-                  {locale === "fr" ? "Activé" : "Enabled"}
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={!autoLearningEnabled}
-                  data-active={!autoLearningEnabled ? "true" : "false"}
-                  onClick={() => toggleAutoLearning(false)}
-                >
-                  {locale === "fr" ? "Désactivé" : "Disabled"}
-                </button>
-              </div>
-            </div>
-
-            {configuredProviders.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                <span style={{ fontSize: "12px", color: "var(--text-2, rgba(255, 255, 255, 0.65))" }}>
-                  {locale === "fr" ? "Fournisseur:" : "Provider:"}
-                </span>
-                <select
-                  value={autoLearningProviderId}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setAutoLearningProviderId(val);
-                    try { localStorage.setItem("sinew.auto-learning-provider", val); } catch {}
-                  }}
-                  style={{
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
-                    color: "var(--text-0, #fff)",
-                    border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
-                    fontSize: "12px",
-                    cursor: "pointer"
-                  }}
-                >
-                  {configuredProviders.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
-              <button
-                type="button"
-                className="settings-pane__button"
-                onClick={runAiConsolidation}
-                disabled={autoLearningLoading || !autoLearningEnabled}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  backgroundColor: autoLearningEnabled ? "var(--accent-lo, rgba(156, 163, 175, 0.15))" : "var(--bg-3, rgba(255, 255, 255, 0.08))",
-                  color: autoLearningEnabled ? "var(--accent-hi, #9ca3af)" : "var(--text-2, rgba(255, 255, 255, 0.45))",
-                  border: `1px solid ${autoLearningEnabled ? "var(--accent-lo, rgba(156, 163, 175, 0.3))" : "var(--line-1, rgba(255, 255, 255, 0.08))"}`,
-                  cursor: autoLearningEnabled ? "pointer" : "not-allowed",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  opacity: autoLearningEnabled ? 1 : 0.5
-                }}
-              >
-                {autoLearningLoading ? (
-                  <Icon icon="eos-icons:loading" width={14} height={14} />
-                ) : (
-                  <Icon icon="solar:refresh-linear" width={14} height={14} />
-                )}
-                {locale === "fr" ? "Analyser maintenant" : "Analyze Now"}
-              </button>
-              <span style={{ fontSize: "11px", color: "var(--text-3, rgba(255, 255, 255, 0.45))" }}>
-                {locale === "fr"
-                  ? "L'IA lira errors_raw.json + instructions_consolidated.md, dédoublonnera les règles similaires et produira un fichier optimisé."
-                  : "The AI reads errors_raw.json + instructions_consolidated.md, deduplicates similar rules, and produces an optimized file."}
-              </span>
-            </div>
-
-            {autoLearningStatus && (
-              <div style={{
-                fontSize: "12px",
-                padding: "8px 10px",
-                borderRadius: "6px",
-                backgroundColor: autoLearningStatus.startsWith("Erreur")
-                  ? "rgba(239, 68, 68, 0.1)"
-                  : "rgba(34, 197, 94, 0.1)",
-                color: autoLearningStatus.startsWith("Erreur") ? "#ef4444" : "#22c55e",
-                border: `1px solid ${autoLearningStatus.startsWith("Erreur") ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)"}`
-              }}>
-                {autoLearningStatus}
-              </div>
-            )}
-          </div>
-
-          {/* Pacte de Libération Symbiotique 🧠 */}
+          </div>{/* Pacte de Libération Symbiotique 🧠 */}
           <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
             <div className="settings-pane__about-card-header-flex">
               <div className="settings-pane__about-card-copy">
