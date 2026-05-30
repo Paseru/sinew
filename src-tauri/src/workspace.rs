@@ -827,13 +827,13 @@ pub(super) async fn mount_super_ssh_workspace(
             .status();
     }
 
-    let start_cmd = "killall sinew-agent-daemon; \
+    let start_cmd = "killall sinew-agent-daemon || true; \
         if [ ! -f /tmp/sinew-agent-daemon ]; then \
             echo 'Downloading latest daemon...'; \
             curl -L -o /tmp/sinew-agent-daemon https://github.com/Paseru/sinew/releases/latest/download/sinew-agent-daemon-linux; \
         fi; \
         chmod +x /tmp/sinew-agent-daemon; \
-        nohup /tmp/sinew-agent-daemon > /tmp/sinew-daemon.log 2>&1 &";
+        nohup /tmp/sinew-agent-daemon < /dev/null > /tmp/sinew-daemon.log 2>&1 &";
 
     let _ = std::process::Command::new("ssh")
         .args(&[&target, start_cmd])
