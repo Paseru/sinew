@@ -8112,7 +8112,7 @@ function DeepSeekProviderCard({
               {statusLabel}
             </span>
           </div>
-          <p>Use DeepSeek models (V3 & R1) with your own API key.</p>
+          <p>Use DeepSeek models with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
           {connected && quota && quota.kind === "unavailable" && (
             <div style={{ marginTop: "8px", color: "var(--text-3)", fontSize: "11px", opacity: 0.7 }}>
