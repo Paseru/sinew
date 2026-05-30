@@ -7740,20 +7740,6 @@ function DeepSeekProviderCard({
           </div>
           <p>Use DeepSeek models (V3 & R1) with your own API key.</p>
           {error && <div className="settings-pane__provider-error">{error}</div>}
-          {connected && quota && quota.kind !== "unavailable" && (
-            <div className="settings-pane__provider-meta" style={{ marginTop: "8px", alignItems: "center" }}>
-              {quota.kind === "credits" ? (
-                <>
-                  <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
-                  <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
-                </>
-              ) : (
-                (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
-                  <QuotaBar inline key={item.label} item={item} />
-                ))
-              )}
-            </div>
-          )}
           {connected && quota && quota.kind === "unavailable" && (
             <div style={{ marginTop: "8px", color: "var(--text-3)", fontSize: "11px", opacity: 0.7 }}>
               {quota.label ?? "Quota non disponible"}
@@ -7767,6 +7753,19 @@ function DeepSeekProviderCard({
           )}
         </div>
       </div>
+
+      {connected && quota && quota.kind !== "unavailable" && quota.kind === "credits" && (
+        <div style={{ padding: "4px 0", borderTop: "1px solid var(--line-1)", borderBottom: "1px solid var(--line-1)" }}>
+          <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+        </div>
+      )}
+      {connected && quota && quota.kind !== "unavailable" && quota.kind !== "credits" && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", padding: "4px 0", borderTop: "1px solid var(--line-1)", borderBottom: "1px solid var(--line-1)" }}>
+          {(quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
+            <QuotaBar inline key={item.label} item={item} />
+          ))}
+        </div>
+      )}
 
       <div className="settings-pane__provider-detail">
         <label className="settings-pane__tool-credential">

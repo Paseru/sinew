@@ -1,4 +1,4 @@
-use std::{env, time::Duration};
+use std::{env, time::{Duration, Instant}};
 
 use anyhow::{bail, Context, Result};
 use futures_util::StreamExt;
@@ -106,10 +106,13 @@ impl WebSearchTool {
     }
 
     pub async fn run(&self, input: Value) -> ToolRunResult {
-        match self.search(input).await {
+        let start = Instant::now();
+        let result = match self.search(input).await {
             Ok(output) => ToolRunResult::ok(output, Vec::new()),
             Err(err) => ToolRunResult::err(err.to_string(), Vec::new()),
-        }
+        };
+        tracing::debug!(tool = "web_search", tool_ms = start.elapsed().as_millis(), "web search completed");
+        result
     }
 
     async fn search(&self, input: Value) -> Result<String> {
@@ -278,10 +281,13 @@ impl WebFetchTool {
     }
 
     pub async fn run(&self, input: Value) -> ToolRunResult {
-        match self.fetch(input).await {
+        let start = Instant::now();
+        let result = match self.fetch(input).await {
             Ok(output) => ToolRunResult::ok(output, Vec::new()),
             Err(err) => ToolRunResult::err(err.to_string(), Vec::new()),
-        }
+        };
+        tracing::debug!(tool = "web_fetch", tool_ms = start.elapsed().as_millis(), "web fetch completed");
+        result
     }
 
     async fn fetch(&self, input: Value) -> Result<String> {

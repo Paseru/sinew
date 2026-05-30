@@ -817,6 +817,8 @@ impl AppStore {
         workspace_id: &str,
         id: &str,
     ) -> Result<Option<SavedConversation>> {
+        let start = Instant::now();
+        let conv_id = id.to_string();
         let conn = self.connection()?;
         let conversation = conn
             .query_row(
@@ -907,6 +909,9 @@ impl AppStore {
             history.push(row.context("bad stored message")?);
         }
 
+        let load_ms = start.elapsed().as_millis();
+        let msg_count = history.len();
+        tracing::debug!(conv_id, load_ms, msg_count, "conversation loaded");
         Ok(Some(SavedConversation {
             id: id.to_string(),
             workspace_id: workspace_id.to_string(),

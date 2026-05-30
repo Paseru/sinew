@@ -12,7 +12,7 @@ use reqwest::header::HeaderMap;
 use sinew_core::{AppError, Result};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::connect::decode_connect_frames;
 use crate::identity::CursorIdeIdentity;
@@ -299,6 +299,8 @@ async fn run_agent_stream_inner(
             "agent Run stream ended without text".into(),
         ));
     }
+    let duration_ms = started.elapsed().as_millis();
+    debug!(duration_ms, output_tokens, "cursor h2 agent stream finished");
     Ok(())
 }
 

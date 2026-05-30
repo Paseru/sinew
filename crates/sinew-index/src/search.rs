@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use rusqlite::params;
@@ -31,6 +32,7 @@ pub fn search_workspace(
     path_prefix: Option<&str>,
     limit: usize,
 ) -> Result<Vec<CodebaseHit>> {
+    let start = Instant::now();
     let store = IndexStore::open(workspace_root)?;
     let fts_query = build_fts_query(query);
     if fts_query.is_empty() {
@@ -48,6 +50,9 @@ pub fn search_workspace(
         }
     }
     hits.truncate(limit);
+    let hit_count = hits.len();
+    let search_ms = start.elapsed().as_millis();
+    tracing::debug!(query, hit_count, search_ms, "workspace search completed");
     Ok(hits
         .into_iter()
         .map(|hit| CodebaseHit {
