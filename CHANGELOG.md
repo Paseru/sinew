@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-05-30 15:10:00]
+- `src-tauri/Cargo.toml` & `Cargo.toml` : Activation du plugin natif `tray-icon` pour afficher l'icône de Sinew dans la zone de notification Windows.
+- `src-tauri/src/tray.rs` : Création du module de gestion de l'icône système (Tray Icon) pour proposer le menu des projets récents lors d'un clic droit sur l'icône Sinew (en bas à droite).
+- `src-tauri/src/lib.rs` : Intégration et exposition des commandes Tauri (`get_recent_workspaces_command`, `record_recent_workspace_command`, `clear_recent_workspaces_command`) pour que les projets récents soient sauvegardés directement sur le disque (en Rust) plutôt que dans le `localStorage` volatile du navigateur.
+- `src/lib/recents.ts` : Réécriture de la gestion des projets récents pour s'interfacer avec le backend Rust de manière asynchrone, garantissant la persistance des projets même si les données du navigateur sont effacées.
+- `src/App.tsx` : Modification du processus de démarrage de l'application pour utiliser le dernier projet enregistré via le backend Rust, garantissant que Sinew s'ouvre toujours sur le dernier espace de travail de façon très fiable et ne demande plus le dossier à chaque ouverture.
+
 ## [2026-05-30 15:07:15]
 - `src/lib/recents.ts` & `src/components/Welcome.tsx` : Amélioration SOTA pour le "Sans dossier" (Sandbox). Au lieu de le cacher ou de l'afficher comme un dossier système brut, il est désormais intégré à l'historique avec une interface dédiée : icône de boîte distinctive (`solar:box-bold-duotone`), nom "Brouillon actif (Sandbox)", et un sous-titre clair ("Dernier espace de travail temporaire") masquant le chemin technique.
 
