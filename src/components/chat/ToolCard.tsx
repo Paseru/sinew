@@ -1326,10 +1326,10 @@ export function ToolCard({
               e.stopPropagation();
               onFixCommand(command);
             }}
-            title="Auto"
+            title="Auto-fix"
           >
-            <Icon icon="solar:tuning-linear" width={12} height={12} />
-            <span>Auto</span>
+            <Icon icon="solar:magic-stick-3-linear" width={12} height={12} />
+            <span>Auto-fix</span>
           </button>
         )}
         {showTeamStop && (
