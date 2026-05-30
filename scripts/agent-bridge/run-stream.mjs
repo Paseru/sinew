@@ -851,7 +851,7 @@ async function openRunWithRetry() {
     }
     try {
       await new Promise((resolve, reject) => {
-        const client = http2.connect("https://api2.cursor.sh");
+        const client = http2.connect("https://agent.api5.cursor.sh");
         client.on("error", (err) => {
           try {
             client.close();

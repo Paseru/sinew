@@ -34,7 +34,7 @@ use super::server_decode::{
 use super::state::PersistedAgentConversation;
 use super::transcript::TranscriptTurn;
 
-const API2_RUN: &str = "https://api2.cursor.sh/agent.v1.AgentService/Run";
+const API2_RUN: &str = "https://agent.api5.cursor.sh/agent.v1.AgentService/Run";
 const IDLE_AFTER_TEXT_MS: u64 = 2500;
 const MAX_TURN_MS: u64 = 120_000;
 const HEARTBEAT_INTERVAL_MS: u64 = 15_000;

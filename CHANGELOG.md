@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 02:26:13]
+- `crates/sinew-cursor/src/agent/run_h2.rs` : Redirection du point de contact de l'agent NAL vers le serveur de production express de Cursor (`agent.api5.cursor.sh` au lieu de `api2.cursor.sh`).
+- `scripts/agent-bridge/run-stream.mjs` : Alignement de l'endpoint du pont Node pour utiliser le serveur express `agent.api5.cursor.sh`.
+- `scripts/agent-bridge/h2-bridge.mjs` : Alignement de l'endpoint par défaut du pont HTTP/2 Node pour utiliser `agent.api5.cursor.sh`.
+
+## [2026-05-30 02:26:13]
 - `Rapport_Analyse_Composer_2.5.md` : Ajout du rapport d'analyse synthétique sur le support de Composer 2.5 standalone, les clés de sécurité et la migration vers la ligne express agent.api5.
 
 ## [2026-05-30 02:31:00]

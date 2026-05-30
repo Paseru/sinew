@@ -66,7 +66,7 @@ const { accessToken, url, path: rpcPath, unary } = config;
 const extraHeaders =
   config.headers && typeof config.headers === "object" ? config.headers : {};
 
-const client = http2.connect(url || "https://api2.cursor.sh");
+const client = http2.connect(url || "https://agent.api5.cursor.sh");
 
 let timeout = setTimeout(killBridge, 30_000);
 
