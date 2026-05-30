@@ -1,0 +1,13 @@
+        Info `tauri-build` dependency has workspace inheritance enabled. The features array won't be automatically rewritten. Expected features: []
+        Info `tauri` dependency has workspace inheritance enabled. The features array won't be automatically rewritten. Expected features: [protocol-asset]
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run prepare-sidecars && npm run prepare-agent-bridge && npm run build`
+   Compiling Sinew v0.1.26 (C:\Dev\Sinew\src-tauri)
+    Finished `release` profile [optimized] target(s) in 2m 01s
+       Built application at: C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\Sinew.exe
+        Info Patching C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\Sinew.exe with bundle type information: nsis
+        Info Target: x64
+     Running makensis to produce C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\bundle\nsis\Sinew_0.1.26_x64-setup.exe
+    Finished 1 bundle at:
+        C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\bundle\nsis\Sinew_0.1.26_x64-setup.exe
+

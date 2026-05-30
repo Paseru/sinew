@@ -1,0 +1,48 @@
+=== 1. Lancement de la compilation Tauri (NSIS uniquement) ===
+
+> sinew@0.1.26 prepare-sidecars
+> node scripts/prepare-sidecars.mjs
+
+ripgrep sidecar already present: src-tauri\binaries\rg-x86_64-pc-windows-msvc.exe
+
+> sinew@0.1.26 prepare-agent-bridge
+> node scripts/prepare-agent-bridge.mjs
+
+agent-bridge deps already present: agent-bridge
+agent-bridge ready for bundle/runtime.
+Chrome bridge dependencies already present.
+
+> sinew@0.1.26 build
+> tsc --noEmit && vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 5347 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                            1.48 kB │ gzip:   0.61 kB
+dist/assets/codicon-DCmgc-ay.ttf          80.34 kB
+dist/assets/editor.worker-wFIaQSWA.js    230.61 kB
+dist/assets/json.worker-CdYhYu-b.js      362.27 kB
+dist/assets/html.worker-MgVplfgg.js      668.17 kB
+dist/assets/css.worker-zQUO28Un.js     1,009.37 kB
+dist/assets/ts.worker-BQHvlPb0.js      6,013.96 kB
+dist/assets/xterm-CgzjseLH.css             5.89 kB │ gzip:   2.10 kB
+dist/assets/monaco-DIPB3Vbg.css          130.51 kB │ gzip:  21.01 kB
+dist/assets/index-tY5BIKa2.css           185.17 kB │ gzip:  27.61 kB
+dist/assets/icons-DR2osktw.js             32.83 kB │ gzip:  11.06 kB
+dist/assets/katex-HP8lGamR.js            258.47 kB │ gzip:  77.57 kB
+dist/assets/markdown-DaqiLpSk.js         334.56 kB │ gzip: 101.44 kB
+dist/assets/xterm-Ca-2fTbv.js            602.68 kB │ gzip: 156.70 kB
+dist/assets/index-BdiB8aQN.js            693.57 kB │ gzip: 193.00 kB
+dist/assets/mermaid-BpOho62B.js        2,881.75 kB │ gzip: 782.58 kB
+dist/assets/monaco-CI5vmIO4.js         3,904.22 kB │ gzip: 987.77 kB
+✓ built in 16.96s
+=== 2. Recherche de l'installateur compile ===
+Dossier d'installateurs trouve : C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\bundle\nsis
+Trouve : C:\Users\julie\AppData\Local\Temp\sinew-cargo-target\release\bundle\nsis\Sinew_0.1.26_x64-setup.exe (Modifie le : 05/30/2026 04:14:17)
+=== 3. Copie vers le Bureau OneDrive ===
+Destination : C:\Users\julie\OneDrive\Bureau
+=== Succes ! ===
+L'installateur a ete copie avec succes sur le bureau :
+C:\Users\julie\OneDrive\Bureau\Sinew_0.1.26_x64-setup.exe
