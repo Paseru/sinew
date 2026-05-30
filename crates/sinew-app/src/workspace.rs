@@ -1284,8 +1284,8 @@ fn workspace_entry_from_path(root: &Path, path: &Path) -> Result<WorkspaceEntry>
 #[cfg(target_os = "windows")]
 fn clean_windows_path(path: &Path) -> String {
     let s = path.to_string_lossy().replace('\\', "/");
-    let clean = if s.starts_with("//?/") {
-        s[4..].to_string()
+    let clean = if let Some(stripped) = s.strip_prefix("//?/") {
+        stripped.to_string()
     } else {
         s
     };
@@ -1416,8 +1416,8 @@ fn relative_from_root(root: &Path, path: &Path) -> Result<String> {
     {
         let root_str = root_canonical.to_string_lossy().replace('\\', "/");
         let path_str = path_canonical.to_string_lossy().replace('\\', "/");
-        let clean_root = if root_str.starts_with("//?/") { &root_str[4..] } else { &root_str };
-        let clean_path = if path_str.starts_with("//?/") { &path_str[4..] } else { &path_str };
+        let clean_root = if let Some(stripped) = root_str.strip_prefix("//?/") { stripped } else { &root_str };
+        let clean_path = if let Some(stripped) = path_str.strip_prefix("//?/") { stripped } else { &path_str };
         let root_lower = clean_root.to_lowercase();
         let path_lower = clean_path.to_lowercase();
         if path_lower.starts_with(&root_lower) {

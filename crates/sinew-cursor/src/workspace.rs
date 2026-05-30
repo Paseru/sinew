@@ -35,7 +35,7 @@ pub fn snapshot(workspace_root: &str) -> Option<WorkspaceSnapshot> {
         .and_then(|value| value.to_str())
         .unwrap_or("workspace")
         .to_string();
-    let index_stats = sinew_index::index_stats(&path).unwrap_or_else(|_| IndexStats {
+    let index_stats = sinew_index::index_stats(&path).unwrap_or(IndexStats {
         files_indexed: 0,
         chunks_indexed: 0,
         files_updated: 0,

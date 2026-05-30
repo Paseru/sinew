@@ -118,11 +118,10 @@ impl ReadLintsTool {
         for diag in editor {
             paths.insert(diag.path.clone());
         }
-        if paths.is_empty() {
-            if self.workspace_root.join("Cargo.toml").is_file() {
+        if paths.is_empty()
+            && self.workspace_root.join("Cargo.toml").is_file() {
                 paths.insert(".".to_string());
             }
-        }
         paths.into_iter().collect()
     }
 

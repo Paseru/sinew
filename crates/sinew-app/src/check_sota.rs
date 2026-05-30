@@ -118,7 +118,7 @@ fn check_sinew_chrome_bridge() -> Value {
     {
         use std::os::windows::process::CommandExt;
         let mut cmd = StdCommand::new("reg");
-        cmd.args(&["query", "HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.sinew.chrome_bridge", "/ve"]);
+        cmd.args(["query", "HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.sinew.chrome_bridge", "/ve"]);
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
         match cmd.output() {
             Ok(output) => {
@@ -236,7 +236,7 @@ fn check_binary(name: &str) -> Value {
     if let Some(ref p) = path {
         #[cfg(windows)]
         let mut cmd = {
-            let is_batch = p.extension().map_or(false, |ext| ext == "cmd" || ext == "bat");
+            let is_batch = p.extension().is_some_and(|ext| ext == "cmd" || ext == "bat");
             if is_batch {
                 let mut c = StdCommand::new("cmd");
                 c.arg("/C").arg(p);

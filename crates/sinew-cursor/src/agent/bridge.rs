@@ -169,7 +169,7 @@ pub async fn stream_via_node_bridge(
             if line.is_empty() {
                 continue;
             }
-            let value: serde_json::Value = serde_json::from_str(&line)
+            let value: serde_json::Value = serde_json::from_str(line)
                 .map_err(|err| AppError::Decode(format!("agent bridge line: {err} ({line})")))?;
 
             if let Some(err) = value.get("error").and_then(|v| v.as_str()) {

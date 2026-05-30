@@ -797,11 +797,9 @@ impl AppStore {
         let mut stmt = conn.prepare("select distinct workspace_id from conversations")?;
         let rows = stmt.query_map([], |row| row.get::<_, String>(0))?;
         let mut ids_to_migrate = Vec::new();
-        for id in rows {
-            if let Ok(id) = id {
-                if id.replace('\\', "/").to_lowercase() == src_norm {
-                    ids_to_migrate.push(id);
-                }
+        for id in rows.flatten() {
+            if id.replace('\\', "/").to_lowercase() == src_norm {
+                ids_to_migrate.push(id);
             }
         }
 

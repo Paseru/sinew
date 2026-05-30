@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - `src-tauri/src/lib.rs` : Exposition des fonctions internes de base de données et de copie de fichiers pour le CLI.
 - `consolidate_rules.py`, `sync_now.py`, `sinew-chrome-bridge/add_to_sinew.py`, `scripts/probe_*.py` : Suppression de tous les scripts Python obsolètes suite à leur réécriture native en Rust.
 - `sinew-chrome-bridge/register.ps1` : Utilisation de la commande native Rust `Sinew.exe --register-chrome` au lieu du script Python.
+- `crates/sinew-cursor`, `crates/sinew-app` : Application de corrections automatiques Clippy et résolution manuelle de warnings de syntaxe.
 
 ## [2026-05-30 02:44:22]
 - `src/components/Welcome.tsx` : Ajout d'un bouton d'accès direct SSH/Sandbox sur la page d'accueil (Switch) pour utiliser le serveur MCP SSH.

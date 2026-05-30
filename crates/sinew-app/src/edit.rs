@@ -674,7 +674,7 @@ fn line_spans(text: &str) -> Vec<LineSpan> {
     spans
 }
 
-fn line_text<'a>(text: &'a str, span: LineSpan) -> &'a str {
+fn line_text(text: &str, span: LineSpan) -> &str {
     &text[span.start..span.end]
 }
 

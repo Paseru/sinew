@@ -51,7 +51,7 @@ fn image_dimensions(bytes: &[u8], media_type: &str) -> (i32, i32) {
 }
 
 fn png_dimensions(bytes: &[u8]) -> (i32, i32) {
-    if bytes.len() < 24 || &bytes[0..8] != [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A] {
+    if bytes.len() < 24 || bytes[0..8] != [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A] {
         return (0, 0);
     }
     let width = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]) as i32;

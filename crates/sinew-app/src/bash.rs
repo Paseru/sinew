@@ -313,9 +313,9 @@ impl BashTool {
     ) -> Result<BashSession> {
         #[cfg(windows)]
         {
-            return spawn_windows_piped_session(command, cwd, max_lifetime, before, || {
+            spawn_windows_piped_session(command, cwd, max_lifetime, before, || {
                 self.next_session_id.fetch_add(1, Ordering::Relaxed)
-            });
+            })
         }
 
         #[cfg(not(windows))]

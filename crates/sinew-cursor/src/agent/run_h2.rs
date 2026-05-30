@@ -397,12 +397,11 @@ async fn process_server_payload(
                     BridgeEvent::Usage { output_tokens: o, .. } => {
                         *output_tokens = output_tokens.saturating_add(*o);
                     }
-                    BridgeEvent::StepCompleted | BridgeEvent::TurnEnded => {
-                        if *saw_text || *saw_thinking {
+                    BridgeEvent::StepCompleted | BridgeEvent::TurnEnded
+                        if (*saw_text || *saw_thinking) => {
                             *finished = true;
                             return Ok(true);
                         }
-                    }
                     _ => {}
                 }
                 if event_tx.send(Ok(ev)).await.is_err() {

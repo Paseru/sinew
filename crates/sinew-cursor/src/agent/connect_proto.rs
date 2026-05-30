@@ -4,7 +4,6 @@
 pub use crate::connect::{append_end_stream_frame, decode_connect_frames, frame_connect_json};
 
 #[allow(dead_code)]
-
 /// Wrap raw protobuf payload in a Connect data frame (flags = 0).
 pub fn frame_connect_proto(payload: &[u8]) -> Vec<u8> {
     frame_connect_json(payload, 0)
