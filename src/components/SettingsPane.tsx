@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
@@ -7229,6 +7229,7 @@ function settingsToJson(settings: McpSettings): string {
     const entry: Record<string, unknown> = {
       command: server.command,
     };
+    if (server.id) entry.id = server.id;
     if (server.args.length) entry.args = server.args;
     if (server.cwd) entry.cwd = server.cwd;
     if (server.env.length) entry.env = envToObject(server.env);

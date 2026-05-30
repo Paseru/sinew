@@ -1,9 +1,13 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 11:17:33]
 - `src/styles.css` : Ajustement des styles de l'encart SSH pour forcer l'affichage de l'état de connexion et du bouton sur une seule ligne (sans retour à la ligne) avec troncature automatique du texte en cas de manque d'espace.
+
+## [2026-05-30 11:15:47]
+- src/components/SettingsPane.tsx : Ajout de la sérialisation du champ id dans settingsToJson pour préserver les identifiants uniques des serveurs MCP (tels que sinew-chrome ou mcp_ssh_mcp) lors de leur affichage et de leur édition dans la configuration avancée du frontend, résolvant le problème d'outils manquants dû à des ID non concordants entre le backend et le frontend.
+- crates/sinew-app/src/edit.rs : Normalisation en minuscules des chemins relatifs sous Windows lors de la modification de fichiers pour assurer la cohérence avec l'outil de lecture et éviter le blocage de sécurité (read-before-write) dû aux différences de casse.
 
 ## [2026-05-30 11:14:58]
 - `src-tauri/src/rules.rs` : Suppression automatique du marqueur de début de fichier UTF-8 (BOM `\u{FEFF}`) lors de la lecture de `errors_raw.json` pour éviter l'erreur d'analyse JSON `Format errors_raw.json invalide: expected value at line 1 column 1` qui bloquait la consolidation des règles par l'IA.

@@ -1,4 +1,4 @@
-use std::{
+﻿use std::{
     collections::{BTreeMap, HashMap},
     fs,
     path::{Component, Path, PathBuf},
@@ -133,7 +133,10 @@ impl EditFileTool {
         let mut writes = Vec::new();
 
         for group in grouped.values_mut() {
-            let expected = read_fingerprints.get(&group.relative_path).ok_or_else(|| {
+            let expected = read_fingerprints
+                .get(&group.relative_path)
+                .or_else(|| read_fingerprints.get(&group.relative_path.to_lowercase()))
+                .ok_or_else(|| {
                 anyhow::anyhow!(
                     "edit_file requires a successful read of {} before editing it",
                     group.relative_path
@@ -1368,6 +1371,8 @@ fn resolve_existing_workspace_file(root: &Path, raw: &str) -> Result<(String, Pa
         })
         .collect::<Vec<_>>()
         .join("/");
+    #[cfg(target_os = "windows")]
+    let relative = relative.to_lowercase();
     if relative.is_empty() {
         bail!("path cannot be the workspace root");
     }
