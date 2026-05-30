@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:41:07]
+- `crates/sinew-app/src/web.rs` : Ajout timers web_search + web_fetch.
+- `crates/sinew-app/src/store.rs` : Ajout timer load_conversation.
+- `crates/sinew-cursor/src/agent/run_h2.rs` : Ajout timer Cursor bridge h2 (durée totale + output tokens).
+- `crates/sinew-index/src/search.rs` : Ajout timer workspace search.
+- Couverture complète atteinte : tous les points d'entrée/sortie majeurs sont maintenant tracés avec durée.
+
 ## [2026-05-30 03:35:24]
 - `src-tauri/src/rules.rs` : Refonte du prompt système de `ai_consolidate_rules()` avec un système de confiance à 3 niveaux (🟢 ACTIVE / 🟡 CANDIDATE / 🔴 OBSOLÈTE), traçabilité complète (origine des erreurs, dates, règles remplacées), et dégradation automatique des règles obsolètes (2+ mois sans mise à jour ou contredites par une règle plus récente).
 
