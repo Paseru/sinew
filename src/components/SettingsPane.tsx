@@ -2079,6 +2079,14 @@ function OptionsSection({
     }
   });
 
+  const [autoOptimizeThinking, setAutoOptimizeThinking] = useState<ThinkingLevel>(() => {
+    try {
+      return (localStorage.getItem("sinew.autoOptimizeThinking") as ThinkingLevel) || "off";
+    } catch {
+      return "off";
+    }
+  });
+
   const changeAutoOptimizeMode = (mode: "auto" | "manual" | "disabled") => {
     try {
       localStorage.setItem("sinew.autoOptimizeMode", mode);
@@ -2090,8 +2098,23 @@ function OptionsSection({
   const changeAutoOptimizeModelId = (modelId: string) => {
     try {
       localStorage.setItem("sinew.autoOptimizeModelId", modelId);
+      const nextEntry = availableModels.find((m) => m.value === modelId);
+      if (nextEntry) {
+        const nextThinking = nextEntry.thinking.includes(autoOptimizeThinking)
+          ? autoOptimizeThinking
+          : nextEntry.defaultThinking;
+        localStorage.setItem("sinew.autoOptimizeThinking", nextThinking);
+        setAutoOptimizeThinking(nextThinking);
+      }
     } catch {}
     setAutoOptimizeModelId(modelId);
+  };
+
+  const changeAutoOptimizeThinking = (thinking: ThinkingLevel) => {
+    try {
+      localStorage.setItem("sinew.autoOptimizeThinking", thinking);
+    } catch {}
+    setAutoOptimizeThinking(thinking);
   };
 
   const [autoUpdateCheck, setAutoUpdateCheck] = useState<"blocking" | "notification" | "disabled">(() => {
@@ -3122,6 +3145,26 @@ function OptionsSection({
                   </option>
                 ))}
               </select>
+              {autoOptimizeModelId && (() => {
+                const optimizerModelEntry = availableModels.find((m) => m.value === autoOptimizeModelId);
+                const optimizerThinkingOptions = optimizerModelEntry
+                  ? THINKING_LEVELS.filter((level) => optimizerModelEntry.thinking.includes(level.value))
+                  : [];
+                if (optimizerThinkingOptions.length === 0) return null;
+                return (
+                  <select
+                    className="settings-pane__select"
+                    value={autoOptimizeThinking}
+                    onChange={(e) => changeAutoOptimizeThinking(e.target.value as ThinkingLevel)}
+                  >
+                    {optimizerThinkingOptions.map((level) => (
+                      <option key={level.value} value={level.value}>
+                        {settingsThinkingLabel(level, optimizerModelEntry ?? null)}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()}
               <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Magic Optimization Mode">
                 <button
                   type="button"

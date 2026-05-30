@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:17:59]
+- `src-tauri/src/turns.rs` : Prise en charge du niveau de réflexion (thinking/effort) dans les paramètres d'optimisation de prompt en utilisant `model_with_optional_selection`.
+- `src/lib/ipc.ts` : Ajout de l'état `autoOptimizeThinking` dans la configuration active des options d'optimisation magique.
+- `src/components/SettingsPane.tsx` : Intégration d'un sélecteur de niveau de réflexion (dropdown) dans l'interface d'Optimisation Magique Auto, avec alignement automatique du niveau lors du changement de modèle.
+- `src/components/chat/ChatPane.tsx` : Transmission du niveau de réflexion sélectionné lors des appels à l'API d'optimisation magique automatique et manuelle.
+
 ## [2026-05-30 22:15:36]
 - `src/lib/ipc.ts` : Ajout de la clé de configuration `autoOptimizeMode` avec prise en charge des trois options d'optimisation ("auto", "manual", "disabled").
 - `src/components/SettingsPane.tsx` : Remplacement du commutateur activé/désactivé par un choix explicite à trois options : "Automatique", "Actif à la demande", "Désactivé".

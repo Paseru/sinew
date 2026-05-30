@@ -72,6 +72,7 @@ export interface ActiveSettings {
   autoOptimizeEnabled: boolean;
   autoOptimizeMode: "auto" | "manual" | "disabled";
   autoOptimizeModelId: string | null;
+  autoOptimizeThinking: ThinkingLevel;
 }
 
 export function readActiveSettings(): ActiveSettings {
@@ -83,6 +84,7 @@ export function readActiveSettings(): ActiveSettings {
   let autoOptimizeMode: "auto" | "manual" | "disabled" = "disabled";
   let autoOptimizeEnabled = false;
   let autoOptimizeModelId = null;
+  let autoOptimizeThinking: ThinkingLevel = "off";
   try {
     const savedMode = localStorage.getItem("sinew.autoOptimizeMode");
     if (savedMode === "auto" || savedMode === "manual" || savedMode === "disabled") {
@@ -92,6 +94,7 @@ export function readActiveSettings(): ActiveSettings {
     }
     autoOptimizeEnabled = autoOptimizeMode === "auto";
     autoOptimizeModelId = localStorage.getItem("sinew.autoOptimizeModelId");
+    autoOptimizeThinking = (localStorage.getItem("sinew.autoOptimizeThinking") as ThinkingLevel) || "off";
   } catch {}
 
   if (master === "enabled") {
@@ -107,6 +110,7 @@ export function readActiveSettings(): ActiveSettings {
       autoOptimizeEnabled,
       autoOptimizeMode,
       autoOptimizeModelId,
+      autoOptimizeThinking,
     };
   }
 
@@ -130,6 +134,7 @@ export function readActiveSettings(): ActiveSettings {
     autoOptimizeEnabled,
     autoOptimizeMode,
     autoOptimizeModelId,
+    autoOptimizeThinking,
   };
 }
 
@@ -689,9 +694,13 @@ export const api = {
       input: { workspacePath, settings },
     });
   },
-  optimizePrompt(text: string, model: ModelRef | undefined): Promise<{ mode: AgentMode, rewrittenPrompt: string }> {
+  optimizePrompt(
+    text: string,
+    model: ModelRef | undefined,
+    thinking?: ThinkingLevel
+  ): Promise<{ mode: AgentMode, rewrittenPrompt: string }> {
     return invoke<{ mode: AgentMode, rewrittenPrompt: string }>("optimize_prompt", {
-      input: { text, model },
+      input: { text, model, thinking },
     });
   },
   sendMessage(

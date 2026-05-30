@@ -1809,7 +1809,11 @@ export function ChatPane({
     if (settings.autoOptimizeMode === "auto" && settings.autoOptimizeModelId && text.trim()) {
       try {
         setOptimizing(true);
-        const res = await api.optimizePrompt(text.trim(), modelRefFromId(settings.autoOptimizeModelId));
+        const res = await api.optimizePrompt(
+          text.trim(),
+          modelRefFromId(settings.autoOptimizeModelId),
+          settings.autoOptimizeThinking
+        );
         value = res.rewrittenPrompt || value;
         finalMode = res.mode as AgentMode;
         setMode(finalMode);
@@ -4160,7 +4164,11 @@ export function ChatPane({
                     try {
                       const settings = readActiveSettings();
                       const optimizerModelId = settings.autoOptimizeModelId || model;
-                      const result = await api.optimizePrompt(text.trim(), modelRefFromId(optimizerModelId));
+                      const result = await api.optimizePrompt(
+                        text.trim(),
+                        modelRefFromId(optimizerModelId),
+                        settings.autoOptimizeThinking
+                      );
                       setText(result.rewrittenPrompt);
                       void handleModeSelect(result.mode as AgentMode);
                     } catch (e) {

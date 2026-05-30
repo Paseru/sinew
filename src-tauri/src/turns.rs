@@ -11,6 +11,7 @@ Display mode: Very compact. Before the final answer, avoid progress narration an
 pub(super) struct OptimizePromptInput {
     pub text: String,
     pub model: Option<crate::models::ModelInput>,
+    pub thinking: Option<crate::models::ThinkingLevelInput>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -30,14 +31,11 @@ pub(super) async fn optimize_prompt(
         return Err("prompt cannot be empty".into());
     }
 
-    let model = match input.model {
-        Some(m) => sinew_core::ModelRef {
-            provider: m.provider.clone(),
-            name: m.name.clone(),
-            effort: None,
-        },
-        None => state.default_model.clone(),
-    };
+    let model = crate::providers::model_with_optional_selection(
+        &state.default_model,
+        input.model,
+        input.thinking,
+    );
 
     let provider_ref = {
         let providers_guard = state.providers.lock().unwrap();
