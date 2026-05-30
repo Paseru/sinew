@@ -5015,6 +5015,11 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
   if (item.rawValue != null) {
     if (item.rawValue < 10) customColor = "#ef4444";
     else if (item.rawValue < 20) customColor = "#f97316";
+    else if (item.rawValue < 40) customColor = "#eab308";
+    else if (item.rawValue < 60) customColor = "#84cc16";
+    else if (item.rawValue < 80) customColor = "#10b981";
+    else if (item.rawValue < 100) customColor = "#0ea5e9";
+    else customColor = "#3b82f6";
   }
   
   if (inline) {

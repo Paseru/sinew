@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:54:12]
+- `src/components/SettingsPane.tsx` : Ajout de paliers de couleurs supplémentaires pour le solde DeepSeek : Rouge (<10$), Orange (<20$), Jaune (<40$), Vert clair (<60$), Émeraude (<80$), Cyan (<100$) et Bleu Tech (>=100$).
+
+## [2026-05-30 14:51:15]
+- `src/components/chat/ToolCard.tsx` : Modification du bouton "Auto" en "Auto-fix" avec une nouvelle icône baguette magique, car l'ancienne icône de sliders ressemblait à un caractère chinois et son utilité n'était pas claire.
+
 ## [2026-05-30 14:52:10]
 - `src/components/SettingsPane.tsx` : Ajout d'un code couleur dynamique pour l'affichage du solde (ex: DeepSeek) : rouge si le solde est inférieur à 10$, orange s'il est entre 10$ et 20$, et vert au-delà.
 
