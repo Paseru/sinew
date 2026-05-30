@@ -1175,6 +1175,7 @@ pub fn run() {
             conversations::probe_mcp_tools,
             conversations::list_installed_skills_command,
             conversations::save_skill_settings,
+            turns::optimize_prompt,
             turns::send_message,
             turns::steer_turn,
             turns::answer_question,

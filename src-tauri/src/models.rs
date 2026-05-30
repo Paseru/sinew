@@ -183,6 +183,23 @@ pub(super) struct ConversationInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(super) struct OptimizePromptInput {
+    pub(super) raw_prompt: String,
+    pub(super) model: ModelInput,
+    pub(super) thinking: Option<ThinkingLevelInput>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(super) struct OptimizePromptOutput {
+    pub(super) mode: String,
+    pub(super) optimized_prompt: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(super) struct SteeringInput {
     pub(super) workspace_path: String,
     pub(super) conversation_id: String,

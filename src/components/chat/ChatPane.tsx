@@ -1542,6 +1542,7 @@ export function ChatPane({
   const stickToBottomRef = useRef(true);
   const pendingForceScrollRef = useRef(true);
   const [sendTick, setSendTick] = useState(0);
+  const [optimizing, setOptimizing] = useState(false);
   const scrollViewStatus =
     activeSubAgentId !== null
       ? subAgentViews.get(activeSubAgentId)?.view.status ?? view.status
@@ -4078,6 +4079,32 @@ export function ChatPane({
                 </span>
               </button>
               <ContextMeter state={visibleContextEstimate} />
+              {!viewingSubAgent && (
+                <button
+                  type="button"
+                  className="composer__iconbtn composer__optimize"
+                  onClick={async () => {
+                    if (!text.trim() || !modelEntry || optimizing) return;
+                    setOptimizing(true);
+                    try {
+                      const result = await api.optimizePrompt(text.trim(), modelRefFromId(model));
+                      setText(result.rewrittenPrompt);
+                      void handleModeSelect(result.mode as AgentMode);
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      setOptimizing(false);
+                    }
+                  }}
+                  disabled={optimizing || !text.trim() || !modelEntry}
+                  aria-label="Optimiser le prompt"
+                >
+                  <Icon icon={optimizing ? "solar:hourglass-bold" : "solar:magic-stick-3-bold-duotone"} width={16} height={16} />
+                  <span className="composer__iconbtn-tip" role="tooltip" aria-hidden="true">
+                    Optimiser
+                  </span>
+                </button>
+              )}
               {view.status === "streaming" ? (
                 <button
                   className="composer__send"

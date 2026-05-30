@@ -663,6 +663,11 @@ export const api = {
       input: { workspacePath, settings },
     });
   },
+  optimizePrompt(text: string, model: ModelRef | undefined): Promise<{ mode: AgentMode, rewrittenPrompt: string }> {
+    return invoke<{ mode: AgentMode, rewrittenPrompt: string }>("optimize_prompt", {
+      input: { text, model },
+    });
+  },
   sendMessage(
     workspacePath: string,
     conversationId: string,

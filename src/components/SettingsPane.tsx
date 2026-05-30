@@ -112,7 +112,7 @@ type Props = {
   workspacePath: string;
 };
 
-type Section = "options" | "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
+type Section = "options" | "poweruser" | "diagnostic" | "about" | "providers" | "tools" | "mcp" | "skills" | "subagents";
 
 export function SettingsPane({ workspacePath }: Props) {
   const [section, setSection] = useState<Section>("options");

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 15:43:00]
+- `src-tauri/src/turns.rs` & `src/lib/ipc.ts` : Ajout d'une commande Tauri `optimize_prompt` qui fait appel au modèle sélectionné pour agir comme "Prompt Engineer". Le modèle analyse le brouillon de l'utilisateur, détermine le mode optimal (`act`, `plan`, `goal`), et retourne une consigne réécrite de qualité professionnelle.
+- `src/components/chat/ChatPane.tsx` : Intégration d'un bouton "Baguette magique" (Optimiser) directement dans le panneau de saisie. Un clic envoie le brouillon à l'IA d'optimisation, remplace le texte par la consigne SOTA structurée, et bascule le menu déroulant sur le mode recommandé automatiquement.
+
+## [2026-05-30 15:35:10]
+- `src-tauri/src/models.rs` : Neutralisation de warnings du compilateur Rust (`dead_code`) sur les structures `OptimizePromptInput` et `OptimizePromptOutput`.
+
 ## [2026-05-30 15:27:26]
 - `src-tauri/src/tray.rs` : Nettoyage du code Rust. Suppression des imports de modules inutilisés (`DesktopState`, `Runtime`, `Manager`) et des variables mortes (`handle`, `tray`) signalés par le compilateur pour maintenir une base de code propre et sans avertissements.
 

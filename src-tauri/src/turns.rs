@@ -6,6 +6,91 @@ Display mode: Compact. Keep visible assistant text concise. Do not narrate routi
 const VERY_COMPACT_DISPLAY_PROMPT: &str = "\
 Display mode: Very compact. Before the final answer, avoid progress narration and reasoning prose. Use tools silently unless you are blocked or must ask the user a required question. If a long operation truly needs a status update, use one short sentence. Keep the final answer ultra-concise (1-4 bullets/sentences), action-oriented, and mention only the outcome, key changed files, validation, and next step if useful. Never output empty paragraphs or blank lines in your visible responses.";
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct OptimizePromptInput {
+    pub text: String,
+    pub model: Option<crate::models::ModelRefInput>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct OptimizePromptOutput {
+    pub mode: String,
+    pub rewritten_prompt: String,
+}
+
+#[tauri::command]
+pub(super) async fn optimize_prompt(
+    state: State<'_, DesktopState>,
+    input: OptimizePromptInput,
+) -> std::result::Result<OptimizePromptOutput, String> {
+    let text = input.text.trim();
+    if text.is_empty() {
+        return Err("prompt cannot be empty".into());
+    }
+
+    let model = match input.model {
+        Some(m) => m.into(),
+        None => state.default_model.clone(),
+    };
+
+    let providers = state.providers.lock().await;
+    let provider = providers
+        .get(&model.provider_id)
+        .ok_or_else(|| format!("provider {} not found", model.provider_id))?
+        .clone();
+    drop(providers);
+
+    let system_prompt = "Vous êtes un Prompt Engineer expert pour un agent de développement SOTA.
+Votre tâche est d'analyser le brouillon de l'utilisateur, de déterminer le mode d'exécution idéal, et de réécrire son brouillon en une consigne claire, structurée et exhaustive.
+
+Modes disponibles:
+- act (Action) : pour une tâche simple, un correctif, ou une question qui peut être réglée dans l'immédiat en 1 ou 2 requêtes.
+- plan (Plan) : UNIQUEMENT pour concevoir une architecture complexe, rédiger un document de conception avant de coder, ou planifier un projet entier en plusieurs étapes.
+- goal (Objectif) : pour un chantier autonome massif, le développement complet d'une fonctionnalité complexe de A à Z nécessitant plusieurs sessions de code.
+
+Règles de réécriture:
+- Soyez concis, professionnel et direct.
+- Conservez un langage naturel et métier.
+- Formulez sous forme d'instructions claires ou de description factuelle du besoin.
+- N'inventez pas de choix techniques non suggérés par l'utilisateur, mais structurez ceux présents.
+
+Répondez UNIQUEMENT en JSON valide avec ce format exact :
+{
+  \"mode\": \"act\" | \"plan\" | \"goal\",
+  \"rewritten_prompt\": \"votre texte réécrit ici\"
+}";
+
+    let messages = vec![sinew_core::message::ChatMessage::user(text.to_string())];
+    
+    let request = sinew_core::provider::ProviderRequest::new(model, messages)
+        .with_system_prompt(system_prompt.to_string());
+
+    let mut stream = provider.stream(request).await.map_err(error_to_string)?;
+    let mut response_text = String::new();
+
+    use futures::StreamExt;
+    while let Some(event) = stream.next().await {
+        match event.map_err(error_to_string)? {
+            sinew_core::stream::StreamEvent::TextDelta { delta, .. } => {
+                response_text.push_str(&delta);
+            }
+            _ => {}
+        }
+    }
+
+    let json_text = response_text.trim();
+    let json_text = json_text.strip_prefix("```json").unwrap_or(json_text);
+    let json_text = json_text.strip_prefix("```").unwrap_or(json_text);
+    let json_text = json_text.strip_suffix("```").unwrap_or(json_text).trim();
+
+    let output: OptimizePromptOutput = serde_json::from_str(json_text)
+        .map_err(|e| format!("Échec de l'optimisation (JSON invalide) : {}\nRaw: {}", e, json_text))?;
+
+    Ok(output)
+}
+
 #[tauri::command]
 pub(super) async fn send_message(
     app: AppHandle,
@@ -308,7 +393,7 @@ pub(super) async fn send_message(
                 match run_res {
                     Ok(output) => output,
                     Err(e) => {
-                        tracing::warn!("Failed to run turn via daemon, falling back to local runner: {:?}", e);
+                        tracing::debug!("Failed to run turn via daemon, falling back to local runner: {:?}", e);
                         run_turn(context).await
                     }
                 }
@@ -2097,6 +2182,10 @@ fn spawn_daemon() -> std::io::Result<()> {
     } else {
         std::path::PathBuf::from("target/debug/sinew-agent-daemon.exe")
     };
+
+    if !daemon_exe.exists() {
+        return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "daemon not found"));
+    }
 
     std::process::Command::new(daemon_exe)
         .creation_flags(CREATE_NO_WINDOW)
