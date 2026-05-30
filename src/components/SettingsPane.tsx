@@ -4837,7 +4837,7 @@ function ProviderCard({
           </div>
           {!compact && !connected && <p>{description}</p>}
           {compact && connected && quota && quota.kind !== "unavailable" && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", width: "100%" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "8px", width: "100%" }}>
               {quota.kind === "credits" ? (
                 <>
                   <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
@@ -4850,11 +4850,19 @@ function ProviderCard({
               )}
             </div>
           )}
-          <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "8px" : "8px", alignItems: "center" }}>
-            {meta?.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
+          {compact ? (
+            meta && meta.length > 0 && (
+              <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", color: "var(--text-3)", fontSize: "10px", marginTop: "6px" }}>
+                {meta.join(" • ")}
+              </div>
+            )
+          ) : (
+            <div className="settings-pane__provider-meta" style={{ marginTop: "8px", alignItems: "center" }}>
+              {meta?.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          )}
           {connected && quota && quota.kind === "unavailable" && (
             <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: 0.7 }}>
               {quota.label ?? "Quota non disponible"}
