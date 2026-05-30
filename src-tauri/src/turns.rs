@@ -39,12 +39,13 @@ pub(super) async fn optimize_prompt(
         None => state.default_model.clone(),
     };
 
-    let providers_guard = state.providers.lock().unwrap();
-    let provider_ref = providers_guard
-        .get(&model.provider)
-        .ok_or_else(|| format!("provider {} not found", model.provider))?
-        .clone();
-    drop(providers_guard);
+    let provider_ref = {
+        let providers_guard = state.providers.lock().unwrap();
+        providers_guard
+            .get(&model.provider)
+            .ok_or_else(|| format!("provider {} not found", model.provider))?
+            .clone()
+    };
 
     let system_prompt = "Vous êtes un Prompt Engineer expert pour un agent de développement SOTA.
 Votre tâche est d'analyser le brouillon de l'utilisateur, de déterminer le mode d'exécution idéal, et de réécrire son brouillon en une consigne claire, structurée et exhaustive.
