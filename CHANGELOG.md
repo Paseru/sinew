@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 15:02:20]
+- `src/lib/recents.ts` : Exclusion automatique du dossier temporaire (`.sinew-sandbox` ou "Sans dossier") de la liste des projets récents affichés sur la page d'accueil pour éviter de polluer l'historique de l'utilisateur, tout en conservant la possibilité de le rouvrir automatiquement au prochain lancement si c'était le dernier projet actif.
+
 ## [2026-05-30 14:57:30]
 - `src/components/SettingsPane.tsx` : Ajout d'une fonctionnalité permettant de masquer les fournisseurs de modèles non utilisés (bouton œil barré sur les fournisseurs non connectés) et de les réafficher depuis une nouvelle section "Ajouter un fournisseur" en bas de page. Seuls OpenAI, Google et DeepSeek sont affichés par défaut (ainsi que les fournisseurs ayant déjà des identifiants/comptes).
 
