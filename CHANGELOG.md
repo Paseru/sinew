@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 16:02:15]
+- `src/components/SettingsPane.tsx` : Ajout de deux nouvelles options avancées (Power User) dans l'interface : "Résolution Stricte des Problèmes" (pour interdire à l'agent de contourner les erreurs) et "Implémentation Complète" (pour interdire les faux blocs de code ou les commentaires TODOs).
+- `src/lib/ipc.ts` : Transmission des nouvelles préférences `strictProblemSolving` et `fullImplementation` via les payloads IPC d'estimation et d'envoi de messages.
+- `src-tauri/src/state.rs` : Création des constantes `DEFAULT_STRICT_PROBLEM_SOLVING_PROMPT` et `DEFAULT_FULL_IMPLEMENTATION_PROMPT` définissant les consignes à injecter dans le contexte de l'IA.
+- `src-tauri/src/models.rs` & `src-tauri/src/turns.rs` & `src-tauri/src/context.rs` : Injection de ces nouvelles instructions système aux prompts racines du moteur Rust.
+
 ## [2026-05-30 16:01:20]
 - `src-tauri/src/state.rs` & `src-tauri/src/turns.rs` : Ajout d'une consigne système permanente (`DEFAULT_SSH_OPTIMIZATION_PROMPT`) pour les agents. Lorsqu'ils détectent être sur un espace de travail distant monté en SSHFS, les agents utiliseront désormais leurs outils MCP natifs (`ssh_exec`) pour installer des utilitaires (SOTA) et exécuter des scripts directement sur le serveur, afin de contourner la latence réseau des outils de recherche de fichiers en local.
 

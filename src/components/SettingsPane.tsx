@@ -2635,6 +2635,22 @@ function OptionsSection({
     window.dispatchEvent(new CustomEvent("sinew:auto-mockups-changed", { detail: enabled }));
   };
 
+  const toggleStrictProblemSolving = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.strict-problem-solving", enabled ? "true" : "false");
+    } catch {}
+    setStrictProblemSolving(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:strict-problem-solving-changed", { detail: enabled }));
+  };
+
+  const toggleFullImplementation = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.full-implementation", enabled ? "true" : "false");
+    } catch {}
+    setFullImplementation(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:full-implementation-changed", { detail: enabled }));
+  };
+
   const changeCompactReasoning = (value: "disabled" | "compact" | "very-compact") => {
     try {
       localStorage.setItem("sinew.compact-reasoning", value);
@@ -3367,6 +3383,76 @@ function OptionsSection({
                   </div>
                 </div>
               </div>
+
+              {/* Ligne 6 : Problem Solving & Full Implementation */}
+              <div className="options-subcategory-row">
+                <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                  <div className="settings-pane__about-card-copy">
+                    <h2>{locale === "fr" ? "Résolution Stricte des Problèmes" : "Strict Problem Solving"}</h2>
+                    <p>
+                      {locale === "fr"
+                        ? "Oblige l'agent à résoudre le problème racine au lieu de le cacher ou de le contourner."
+                        : "Forces the agent to fix the root cause of problems instead of hiding or bypassing them."}
+                    </p>
+                  </div>
+                  <div className="settings-pane__locale-switch" role="radiogroup">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={activeStrictProblemSolving}
+                      data-active={activeStrictProblemSolving ? "true" : "false"}
+                      onClick={() => toggleStrictProblemSolving(true)}
+                      disabled={powerUserMaster !== "custom"}
+                    >
+                      {locale === "fr" ? "Activé" : "Enabled"}
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={!activeStrictProblemSolving}
+                      data-active={!activeStrictProblemSolving ? "true" : "false"}
+                      onClick={() => toggleStrictProblemSolving(false)}
+                      disabled={powerUserMaster !== "custom"}
+                    >
+                      {locale === "fr" ? "Désactivé" : "Disabled"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+                  <div className="settings-pane__about-card-copy">
+                    <h2>{locale === "fr" ? "Implémentation Complète (No Mock)" : "Full Implementation (No Fake)"}</h2>
+                    <p>
+                      {locale === "fr"
+                        ? "Interdit les TODOs et le faux code. Tout ce qui est écrit doit être complètement câblé et fonctionnel."
+                        : "Forbids TODOs and fake code. Everything written must be fully wired and functional."}
+                    </p>
+                  </div>
+                  <div className="settings-pane__locale-switch" role="radiogroup">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={activeFullImplementation}
+                      data-active={activeFullImplementation ? "true" : "false"}
+                      onClick={() => toggleFullImplementation(true)}
+                      disabled={powerUserMaster !== "custom"}
+                    >
+                      {locale === "fr" ? "Activé" : "Enabled"}
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={!activeFullImplementation}
+                      data-active={!activeFullImplementation ? "true" : "false"}
+                      onClick={() => toggleFullImplementation(false)}
+                      disabled={powerUserMaster !== "custom"}
+                    >
+                      {locale === "fr" ? "Désactivé" : "Disabled"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
           </div>
