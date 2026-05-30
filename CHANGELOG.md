@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:33:19]
+- `src/components/Workspace.tsx` : Ajout d'un timer automatique (toutes les 5 minutes) qui vérifie si l'apprentissage IA est activé et, si oui, déclenche la consolidation IA des erreurs. Premier déclenchement après 30 secondes au démarrage.
+
 ## [2026-05-30 03:20:13]
 - `src-tauri/src/rules.rs` : Ajout de la fonction `ai_consolidate_rules()` qui lit les erreurs brutes (`errors_raw.json`) et les règles existantes (`instructions_consolidated.md`), les envoie à un fournisseur IA (DeepSeek par défaut) pour analyse, dédoublonnage et fusion intelligente des règles similaires, puis écrit le fichier optimisé.
 - `src-tauri/src/lib.rs` : Ajout de la commande Tauri `trigger_ai_rule_consolidation` pour déclencher manuellement l'analyse IA depuis l'interface.

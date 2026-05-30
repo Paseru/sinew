@@ -150,6 +150,32 @@ export function Workspace({
     };
   }, [workspacePath]);
 
+  // Timer d'apprentissage automatique IA : toutes les 5 minutes
+  useEffect(() => {
+    let cancelled = false;
+    const runAiLearning = async () => {
+      try {
+        const enabled = localStorage.getItem("sinew.auto-learning") === "true";
+        if (!enabled) return;
+        const providerId = localStorage.getItem("sinew.auto-learning-provider") || "deepseek";
+        await api.triggerAiRuleConsolidation(providerId);
+      } catch {
+        // silencieux
+      }
+    };
+    const initial = window.setTimeout(() => {
+      if (!cancelled) runAiLearning();
+    }, 30_000);
+    const timer = window.setInterval(() => {
+      if (!cancelled) runAiLearning();
+    }, 300_000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(initial);
+      window.clearInterval(timer);
+    };
+  }, [workspacePath]);
+
   useEffect(() => {
     navigationSeqRef.current += 1;
     setStreamingConversationIds(new Set());
