@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:10:30]
+- `C:\Users\julie\.agents\skills` : Suppression des dossiers de compétences globales pré-installés superflus pour ne conserver que la compétence Chrome locale (`browser`) de l'espace de travail.
+
 ## [2026-05-30 02:08:33]
 - `src/components/SettingsPane.tsx` : Suppression du bouton de synchronisation manuelle ("Synchroniser maintenant") et de la section de détection/liaison des conversations d'autres projets ("Détection de conversations d'autres projets / PC") pour simplifier l'interface utilisateur.
 
