@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:52:10]
+- `src/components/SettingsPane.tsx` : Ajout d'un code couleur dynamique pour l'affichage du solde (ex: DeepSeek) : rouge si le solde est inférieur à 10$, orange s'il est entre 10$ et 20$, et vert au-delà.
+
 ## [2026-05-30 14:48:45]
 - `src/components/SettingsPane.tsx` : Agrandissement de la police (de 11px à 13px) et changement de la couleur en vert émeraude (`#10b981`) pour le texte du solde restant DeepSeek lorsque le pourcentage est nul, afin qu'il soit bien plus visible et lisible ("plus gros").
 

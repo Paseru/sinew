@@ -4845,7 +4845,7 @@ function ProviderCard({
                 {quota.kind === "credits" ? (
                   <>
                     <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
-                    <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+                    <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
                   </>
                 ) : (
                   (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
@@ -5007,14 +5007,20 @@ function formatWindowLabel(window: { label: string; windowMinutes?: number | nul
   return `${window.label} (${window.windowMinutes}m)`;
 }
 
-function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: number | null; windowMinutes?: number | null; resetAt?: number | null; resetTime?: string | null }; inline?: boolean }) {
+function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: number | null; windowMinutes?: number | null; resetAt?: number | null; resetTime?: string | null; rawValue?: number | null }; inline?: boolean }) {
   const percent = item.remainingPercent;
   const reset = formatResetLabelForWindow(item);
+  
+  let customColor = "#10b981";
+  if (item.rawValue != null) {
+    if (item.rawValue < 10) customColor = "#ef4444";
+    else if (item.rawValue < 20) customColor = "#f97316";
+  }
   
   if (inline) {
     if (percent == null) {
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "4px 10px", borderRadius: "var(--r-med)", color: "#10b981", fontSize: "13px", fontWeight: 700, border: "1px solid var(--line-1)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "4px 10px", borderRadius: "var(--r-med)", color: customColor, fontSize: "13px", fontWeight: 700, border: "1px solid var(--line-1)" }}>
           <span style={{ whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
           {reset && <span style={{ color: "var(--text-3)", fontWeight: 400 }}> - {reset}</span>}
         </span>
@@ -5109,7 +5115,7 @@ function QuotaInlinePanel({ quota, compact, showLabel = true }: { quota: QuotaIn
       {quota.kind === "credits" ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
-          <QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+          <QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: creditRemaining }} />
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : (windows.length > 1 ? "repeat(auto-fill, minmax(220px, 1fr))" : "1fr"), gap: "16px" }}>
@@ -5140,7 +5146,7 @@ function OpenRouterQuotaPanel({ quota, compact }: { quota: QuotaInfo; compact?: 
       {quota.kind === "credits" ? (
         <>
           <div style={{ width: "160px" }}><QuotaBar item={{ label: creditLimit == null ? "Limite" : `Limite $${creditLimit.toFixed(2)}`, remainingPercent: 100 }} /></div>
-          <div style={{ width: "160px" }}><QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} /></div>
+          <div style={{ width: "160px" }}><QuotaBar item={{ label: creditRemaining == null ? "Restant" : `Restant $${creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: creditRemaining }} /></div>
         </>
       ) : (
         <>
@@ -8119,7 +8125,7 @@ function DeepSeekProviderCard({
 
       {connected && quota && quota.kind !== "unavailable" && quota.kind === "credits" && (
         <div style={{ padding: "4px 0", borderTop: "1px solid var(--line-1)", borderBottom: "1px solid var(--line-1)" }}>
-          <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage }} />
+          <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
         </div>
       )}
       {connected && quota && quota.kind !== "unavailable" && quota.kind !== "credits" && (
