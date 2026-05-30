@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 11:14:58]
+- `src-tauri/src/rules.rs` : Suppression automatique du marqueur de début de fichier UTF-8 (BOM `\u{FEFF}`) lors de la lecture de `errors_raw.json` pour éviter l'erreur d'analyse JSON `Format errors_raw.json invalide: expected value at line 1 column 1` qui bloquait la consolidation des règles par l'IA.
+
 ## [2026-05-30 04:01:40]
 - `src/components/Welcome.tsx` : Enregistrement de l'hôte SSH connecté dans le stockage local du navigateur (`localStorage`) pour pouvoir l'identifier plus tard.
 - `src/components/Workspace.tsx` : Ajout d'un encart de connexion SSH au bas de la colonne de gauche (barre latérale). Il affiche un indicateur vert avec le nom du serveur si connecté, ainsi qu'un bouton de déconnexion. Sinon, il propose un bouton "Se connecter" qui ouvre un petit formulaire intégré avec gestion des connexions rapides.

@@ -109,7 +109,9 @@ pub async fn ai_consolidate_rules(
     let errors_data = fs::read_to_string(&errors_path)
         .map_err(|e| format!("Impossible de lire errors_raw.json: {e}"))?;
 
-    let errors: Vec<ErrorItem> = serde_json::from_str(&errors_data)
+    let clean_errors_data = errors_data.strip_prefix('\u{FEFF}').unwrap_or(&errors_data);
+
+    let errors: Vec<ErrorItem> = serde_json::from_str(clean_errors_data)
         .map_err(|e| format!("Format errors_raw.json invalide: {e}"))?;
 
     let unconsolidated: Vec<&ErrorItem> = errors
@@ -230,7 +232,8 @@ pub async fn ai_consolidate_rules(
     fs::write(&rules_path, format!("{refined_rules}\n"))
         .map_err(|e| format!("Impossible d'écrire instructions_consolidated.md: {e}"))?;
 
-    let mut errors: Vec<ErrorItem> = serde_json::from_str(&errors_data).unwrap_or_default();
+    let clean_errors_data = errors_data.strip_prefix('\u{FEFF}').unwrap_or(&errors_data);
+    let mut errors: Vec<ErrorItem> = serde_json::from_str(clean_errors_data).unwrap_or_default();
     let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let mut consolidated_count = 0;
     for error in &mut errors {
@@ -270,7 +273,9 @@ pub fn consolidate_rules() {
         return;
     };
 
-    let mut errors: Vec<ErrorItem> = match serde_json::from_str(&errors_data) {
+    let clean_errors_data = errors_data.strip_prefix('\u{FEFF}').unwrap_or(&errors_data);
+
+    let mut errors: Vec<ErrorItem> = match serde_json::from_str(clean_errors_data) {
         Ok(parsed) => parsed,
         Err(_) => return,
     };
