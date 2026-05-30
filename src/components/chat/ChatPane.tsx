@@ -4104,7 +4104,9 @@ export function ChatPane({
                     if (!text.trim() || !modelEntry || optimizing) return;
                     setOptimizing(true);
                     try {
-                      const result = await api.optimizePrompt(text.trim(), modelRefFromId(model));
+                      const settings = readActiveSettings();
+                      const optimizerModelId = settings.autoOptimizeModelId || model;
+                      const result = await api.optimizePrompt(text.trim(), modelRefFromId(optimizerModelId));
                       setText(result.rewrittenPrompt);
                       void handleModeSelect(result.mode as AgentMode);
                     } catch (e) {

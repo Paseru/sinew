@@ -36,6 +36,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     () => new Set(),
   );
   const [sshTarget, setSshTarget] = useState("");
+  const [sshMode, setSshMode] = useState<"sshfs" | "super">("sshfs");
   const [connectingSsh, setConnectingSsh] = useState(false);
   const [sshError, setSshError] = useState<string | null>(null);
   const [sshHosts, setSshHosts] = useState<string[]>([]);
@@ -47,9 +48,12 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     setConnectingSsh(true);
     setSshError(null);
     try {
-      const bootstrap = await api.mountSshWorkspace(target);
+      const bootstrap = sshMode === "super"
+        ? await api.mountSuperSshWorkspace(target)
+        : await api.mountSshWorkspace(target);
       try {
         localStorage.setItem(`ssh_mount_${bootstrap.workspace.path}`, target);
+        localStorage.setItem(`ssh_mode_${bootstrap.workspace.path}`, sshMode);
       } catch (e) {}
       onPick(bootstrap.workspace.path);
     } catch (err) {
@@ -64,9 +68,12 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     setConnectingSsh(true);
     setSshError(null);
     try {
-      const bootstrap = await api.mountSshWorkspace(host);
+      const bootstrap = sshMode === "super"
+        ? await api.mountSuperSshWorkspace(host)
+        : await api.mountSshWorkspace(host);
       try {
         localStorage.setItem(`ssh_mount_${bootstrap.workspace.path}`, host);
+        localStorage.setItem(`ssh_mode_${bootstrap.workspace.path}`, sshMode);
       } catch (e) {}
       onPick(bootstrap.workspace.path);
     } catch (err) {
@@ -217,6 +224,30 @@ export function Welcome({ onPick, error, deriveName }: Props) {
         </div>
 
         <form onSubmit={handleConnectSsh} style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px", width: "100%" }}>
+          <div style={{ display: "flex", gap: "12px", marginBottom: "4px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-2)", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="sshMode"
+                value="sshfs"
+                checked={sshMode === "sshfs"}
+                onChange={() => setSshMode("sshfs")}
+                disabled={connectingSsh}
+              />
+              Zero Footprint (SSHFS)
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-2)", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="sshMode"
+                value="super"
+                checked={sshMode === "super"}
+                onChange={() => setSshMode("super")}
+                disabled={connectingSsh}
+              />
+              Super SSH (Native Agent)
+            </label>
+          </div>
           <div style={{ display: "flex", gap: "8px" }}>
             <input
               type="text"

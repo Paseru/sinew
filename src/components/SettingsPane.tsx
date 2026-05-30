@@ -3806,7 +3806,8 @@ function OptionsSection({
                 </div>
               </div>
             )}
-          </div>{/* Pacte de Libération Symbiotique 🧠 */}
+          </div>
+          {/* Pacte de Libération Symbiotique 🧠 */}
           <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
             <div className="settings-pane__about-card-header-flex">
               <div className="settings-pane__about-card-copy">

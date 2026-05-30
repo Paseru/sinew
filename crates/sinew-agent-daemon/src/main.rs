@@ -9,8 +9,10 @@ mod protocol;
 
 #[cfg(windows)]
 use tokio::net::windows::named_pipe::{ServerOptions, NamedPipeServer};
-#[cfg(windows)]
+
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(not(windows))]
+use tokio::net::{TcpListener, TcpStream};
 
 fn load_all_providers() -> HashMap<String, Arc<dyn sinew_core::Provider>> {
     let mut providers: HashMap<String, Arc<dyn sinew_core::Provider>> = HashMap::new();
@@ -117,8 +119,26 @@ async fn main() -> Result<()> {
 
     #[cfg(not(windows))]
     {
-        info!("Daemon placeholder on Unix (no named pipe)");
-        tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
+        let addr = "127.0.0.1:47990";
+        info!("Listening on TCP: {}", addr);
+        let listener = TcpListener::bind(addr).await.context("Failed to bind TCP listener")?;
+
+        loop {
+            match listener.accept().await {
+                Ok((stream, _)) => {
+                    info!("Client connected via TCP!");
+                    let providers_clone = providers.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = handle_client_tcp(stream, providers_clone).await {
+                            error!("Error handling TCP client: {:?}", e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    error!("Error accepting TCP connection: {}", e);
+                }
+            }
+        }
     }
 
     Ok(())
@@ -129,7 +149,28 @@ async fn handle_client(
     stream: NamedPipeServer,
     providers: Arc<tokio::sync::RwLock<HashMap<String, Arc<dyn sinew_core::Provider>>>>,
 ) -> Result<()> {
-    let (reader, mut writer) = tokio::io::split(stream);
+    let (reader, writer) = tokio::io::split(stream);
+    handle_client_inner(reader, writer, providers).await
+}
+
+#[cfg(not(windows))]
+async fn handle_client_tcp(
+    stream: TcpStream,
+    providers: Arc<tokio::sync::RwLock<HashMap<String, Arc<dyn sinew_core::Provider>>>>,
+) -> Result<()> {
+    let (reader, writer) = tokio::io::split(stream);
+    handle_client_inner(reader, writer, providers).await
+}
+
+async fn handle_client_inner<R, W>(
+    reader: R,
+    mut writer: W,
+    providers: Arc<tokio::sync::RwLock<HashMap<String, Arc<dyn sinew_core::Provider>>>>,
+) -> Result<()>
+where
+    R: tokio::io::AsyncRead + Unpin,
+    W: tokio::io::AsyncWrite + Unpin + Send + 'static,
+{
     let mut reader = BufReader::new(reader);
     let mut line = String::new();
     

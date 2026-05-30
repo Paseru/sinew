@@ -85,10 +85,12 @@ Répondez UNIQUEMENT en JSON valide avec ce format exact :
         }
     }
 
-    let json_text = response_text.trim();
-    let json_text = json_text.strip_prefix("```json").unwrap_or(json_text);
-    let json_text = json_text.strip_prefix("```").unwrap_or(json_text);
-    let json_text = json_text.strip_suffix("```").unwrap_or(json_text).trim();
+    let mut json_text = response_text.trim();
+    if let Some(start) = json_text.find('{') {
+        if let Some(end) = json_text.rfind('}') {
+            json_text = &json_text[start..=end];
+        }
+    }
 
     let output: OptimizePromptOutput = serde_json::from_str(json_text)
         .map_err(|e| format!("Échec de l'optimisation (JSON invalide) : {}\nRaw: {}", e, json_text))?;

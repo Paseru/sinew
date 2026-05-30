@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 16:15:00]
+- `src/components/SettingsPane.tsx` : Amélioration de "Optimisation Magique Auto" qui s'active de manière totalement invisible lors de l'appui sur "Entrée" dans le panneau de chat.
+- `src/components/chat/ChatPane.tsx` : Interception de l'envoi de message pour appeler l'API d'optimisation, basculer le mode (Action, Plan, Objectif) en temps réel, puis relayer automatiquement le prompt structuré à l'agent sans aucune friction.
+- `src-tauri/src/turns.rs` : Remplacement complet de la méthode d'extraction du JSON par une recherche textuelle du bloc JSON au lieu du pattern `trim` pour garantir que le prompt de retour soit correctement identifié même s'il est noyé dans le texte.
+
 ## [2026-05-30 16:02:15]
 - `src/components/SettingsPane.tsx` : Ajout de deux nouvelles options avancées (Power User) dans l'interface : "Résolution Stricte des Problèmes" (pour interdire à l'agent de contourner les erreurs) et "Implémentation Complète" (pour interdire les faux blocs de code ou les commentaires TODOs).
 - `src/lib/ipc.ts` : Transmission des nouvelles préférences `strictProblemSolving` et `fullImplementation` via les payloads IPC d'estimation et d'envoi de messages.
