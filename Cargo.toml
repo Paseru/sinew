@@ -8,6 +8,7 @@ members = [
     "crates/sinew-openai",
     "crates/sinew-openrouter",
     "crates/sinew-deepseek",
+    "crates/sinew-ollama",
     "crates/sinew-cursor",
     "crates/sinew-index",
     "crates/sinew-app",
@@ -32,6 +33,7 @@ sinew-kimi = { path = "crates/sinew-kimi" }
 sinew-openai = { path = "crates/sinew-openai" }
 sinew-openrouter = { path = "crates/sinew-openrouter" }
 sinew-deepseek = { path = "crates/sinew-deepseek" }
+sinew-ollama = { path = "crates/sinew-ollama" }
 sinew-cursor = { path = "crates/sinew-cursor" }
 sinew-index = { path = "crates/sinew-index" }
 sinew-app = { path = "crates/sinew-app" }

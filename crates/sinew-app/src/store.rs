@@ -30,6 +30,7 @@ const SUB_AGENT_SETTINGS_KEY: &str = "sub_agent_settings";
 const TOOL_SETTINGS_KEY: &str = "tool_settings";
 const SKILL_SETTINGS_KEY: &str = "skill_settings";
 const OPENROUTER_MODELS_KEY: &str = "openrouter_models";
+const OLLAMA_MODELS_KEY: &str = "ollama_models";
 const HIDDEN_TOOL_SETTING_NAMES: &[&str] = &["skill"];
 
 pub const DEFAULT_PLAN_MODE_PROMPT: &str = r#"You are in Plan mode.
@@ -1420,6 +1421,48 @@ impl AppStore {
             .filter(|model| model.id != id)
             .collect::<Vec<_>>();
         self.save_openrouter_models(&models)
+    }
+
+    pub fn load_ollama_models(&self) -> Result<Vec<OpenRouterModelRecord>> {
+        let conn = self.connection()?;
+        let stored = conn
+            .query_row(
+                "select value_json from app_settings where key = ?1",
+                params![OLLAMA_MODELS_KEY],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .context("unable to read Ollama model list")?;
+
+        if let Some(json) = stored {
+            if let Ok(models) = serde_json::from_str::<Vec<OpenRouterModelRecord>>(&json) {
+                return Ok(normalize_openrouter_models(models));
+            }
+        }
+
+        Ok(Vec::new())
+    }
+
+    pub fn save_ollama_models(
+        &self,
+        models: &[OpenRouterModelRecord],
+    ) -> Result<Vec<OpenRouterModelRecord>> {
+        let normalized = normalize_openrouter_models(models.to_vec());
+        let conn = self.connection()?;
+        conn.execute(
+            "insert into app_settings (key, value_json, updated_at_ms)
+             values (?1, ?2, ?3)
+             on conflict(key) do update set
+                value_json = excluded.value_json,
+                updated_at_ms = excluded.updated_at_ms",
+            params![
+                OLLAMA_MODELS_KEY,
+                serde_json::to_string(&normalized)?,
+                now_ms(),
+            ],
+        )
+        .context("unable to save Ollama model list")?;
+        Ok(normalized)
     }
 
     pub fn save_sub_agent_settings(&self, settings: &SubAgentSettings) -> Result<SubAgentSettings> {

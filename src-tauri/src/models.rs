@@ -107,6 +107,24 @@ pub(super) struct DeepSeekProviderStatus {
     pub(super) error: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct OllamaProviderStatus {
+    pub(super) connected: bool,
+    pub(super) connection_state: String,
+    pub(super) base_url: Option<String>,
+    pub(super) last_validated_ms: Option<i64>,
+    pub(super) model_count: usize,
+    pub(super) error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ConnectOllamaInput {
+    #[serde(default)]
+    pub(super) base_url: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct WorkspaceInput {

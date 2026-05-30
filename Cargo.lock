@@ -29,6 +29,7 @@ dependencies = [
  "sinew-google",
  "sinew-index",
  "sinew-kimi",
+ "sinew-ollama",
  "sinew-openai",
  "sinew-openrouter",
  "tauri",
@@ -5287,6 +5288,23 @@ dependencies = [
  "eventsource-stream",
  "futures",
  "rand 0.9.4",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sinew-core",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "sinew-ollama"
+version = "0.1.27"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "directories",
+ "eventsource-stream",
+ "futures",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
