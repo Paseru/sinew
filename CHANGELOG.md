@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:27:43]
+- `README.md` : Réintégration du contenu officiel en anglais (les modes, les outils, le swarm, etc.) et retrait de toutes les instructions et sections relatives à l'installation et à la compilation.
+
 ## [2026-05-30 22:24:17]
 - `README.md` : Condensation du fichier et intégration de la présentation des fonctionnalités majeures du fork premium.
 
