@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-05-30 15:07:15]
+- `src/lib/recents.ts` & `src/components/Welcome.tsx` : Amélioration SOTA pour le "Sans dossier" (Sandbox). Au lieu de le cacher ou de l'afficher comme un dossier système brut, il est désormais intégré à l'historique avec une interface dédiée : icône de boîte distinctive (`solar:box-bold-duotone`), nom "Brouillon actif (Sandbox)", et un sous-titre clair ("Dernier espace de travail temporaire") masquant le chemin technique.
+
 ## [2026-05-30 15:04:00]
 - src/components/SettingsPane.tsx : Déplacement des barres de quotas sous les boutons d'action (Se déconnecter/Se connecter) afin de gagner de l'espace horizontal sur les cartes fournisseurs et éviter qu'elles ne soient écrasées sur de petites résolutions.
 - src/components/SettingsPane.tsx : Retrait des mentions explicites de numéros de version (ex: V3 & R1) pour la description de DeepSeek, car ces informations évoluent vite.

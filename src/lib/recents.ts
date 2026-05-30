@@ -11,7 +11,7 @@ export function loadRecents(): RecentWorkspace[] {
     const parsed = JSON.parse(raw) as RecentWorkspace[];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((r) => r && typeof r.path === "string" && !r.path.endsWith(".sinew-sandbox"))
+      .filter((r) => r && typeof r.path === "string")
       .sort((a, b) => b.lastOpenedMs - a.lastOpenedMs);
   } catch {
     return [];
@@ -21,14 +21,10 @@ export function loadRecents(): RecentWorkspace[] {
 export function recordRecent(path: string, name: string): RecentWorkspace[] {
   const now = Date.now();
   const existing = loadRecents().filter((r) => r.path !== path);
-  
-  const isSandbox = path.endsWith(".sinew-sandbox") || name === ".sinew-sandbox" || name === "Sans dossier";
-  
-  const next: RecentWorkspace[] = isSandbox ? existing : [
+  const next: RecentWorkspace[] = [
     { path, name, lastOpenedMs: now },
     ...existing,
   ].slice(0, MAX_RECENTS);
-
   try {
     localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
     localStorage.setItem(LAST_KEY, path);

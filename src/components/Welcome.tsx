@@ -319,6 +319,8 @@ export function Welcome({ onPick, error, deriveName }: Props) {
             <div className="welcome__recents">
               {recents.slice(0, MAX_VISIBLE_RECENTS).map((recent) => {
                 const isActive = activeWorkspaces.has(recent.path);
+                const isSandbox = recent.path.endsWith(".sinew-sandbox") || recent.name === "Sans dossier";
+
                 return (
                   <div
                     key={recent.path}
@@ -343,17 +345,20 @@ export function Welcome({ onPick, error, deriveName }: Props) {
                         />
                       ) : (
                         <Icon
-                          icon="solar:folder-bold-duotone"
+                          icon={isSandbox ? "solar:box-bold-duotone" : "solar:folder-bold-duotone"}
                           width={18}
                           height={18}
+                          color={isSandbox ? "var(--accent-2)" : undefined}
                         />
                       )}
                     </span>
                     <span className="welcome__recent-body">
                       <span className="welcome__recent-name">
-                        {recent.name || deriveName(recent.path)}
+                        {isSandbox ? "Brouillon actif (Sandbox)" : (recent.name || deriveName(recent.path))}
                       </span>
-                      <span className="welcome__recent-path">{recent.path}</span>
+                      <span className="welcome__recent-path">
+                        {isSandbox ? "Dernier espace de travail temporaire" : recent.path}
+                      </span>
                     </span>
                     <button
                       type="button"
