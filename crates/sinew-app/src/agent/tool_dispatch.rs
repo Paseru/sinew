@@ -4,7 +4,7 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::{
-    tool_names, BashTool, CheckSotaTool, CodebaseSearchTool, CreateImageTool, DeleteFileTool,
+    tool_names, BashTool, CheckSotaTool, CodebaseSearchTool, ComputerUseTool, CreateImageTool, DeleteFileTool,
     EditFileTool, GlobTool, GrepTool, ListDirTool, McpToolRegistry, QuestionTool, ReadFingerprint,
     ReadLintsTool, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolRunResult,
     ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
@@ -33,6 +33,7 @@ pub(super) async fn run_tool(
     grep: &GrepTool,
     codebase_search: &CodebaseSearchTool,
     check_sota: &CheckSotaTool,
+    computer_use: &ComputerUseTool,
     read: &ReadTool,
     edit_file: &EditFileTool,
     write_file: &WriteFileTool,
@@ -85,6 +86,8 @@ pub(super) async fn run_tool(
         codebase_search.run(input).await
     } else if canonical_name == tool_names::CHECK_SOTA {
         check_sota.run(input).await
+    } else if canonical_name == tool_names::COMPUTER_USE {
+        computer_use.run(input).await
     } else if canonical_name == tool_names::READ {
         read.run(input).await
     } else if canonical_name == tool_names::EDIT_FILE {

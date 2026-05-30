@@ -1992,7 +1992,7 @@ export function ChatPane({
           modelRefFromId(model),
           thinking,
           effectiveMode,
-          currentSelection.serviceTier,
+          serviceTier,
         );
       } catch (err) {
         setView((prev) => ({
@@ -2004,7 +2004,7 @@ export function ChatPane({
         }));
       }
     },
-    [isStreaming, view.status, history.length, onSend, model, thinking, effectiveMode, currentSelection.serviceTier]
+    [isStreaming, view.status, history.length, onSend, model, thinking, effectiveMode, serviceTier]
   );
 
   const sendQueuedPrompt = useCallback(
@@ -3481,6 +3481,7 @@ export function ChatPane({
                   activeTeamNames={activeTeamNames}
                   activeAgentName={viewingSubAgent ? activeSubAgent?.name : undefined}
                   workspacePath={workspacePath}
+                  onFixCommand={viewingSubAgent ? undefined : handleFixCommand}
                 />
               )}
               {showPlanningNextMove && (
@@ -6087,6 +6088,7 @@ function ChatBlocks({
   activeTeamNames,
   activeAgentName,
   workspacePath,
+  onFixCommand,
 }: {
   blocks: ChatBlock[];
   lastUserTextBlockId?: string | null;
@@ -6116,6 +6118,7 @@ function ChatBlocks({
   activeTeamNames?: ReadonlySet<string>;
   activeAgentName?: string;
   workspacePath: string;
+  onFixCommand?: (commandText: string) => void;
 }) {
   const deferred = useDeferredValue(blocks);
   const items = useMemo(() => renderItemsFromBlocks(deferred), [deferred]);
@@ -6164,6 +6167,7 @@ function ChatBlocks({
             activeTeamNames={activeTeamNames}
             activeAgentName={activeAgentName}
             workspacePath={workspacePath}
+            onFixCommand={onFixCommand}
           />
         );
       })}
@@ -6193,6 +6197,7 @@ function BlockView({
   activeTeamNames,
   activeAgentName,
   workspacePath,
+  onFixCommand,
 }: {
   block: ChatBlock;
   isLastUserText?: boolean;
@@ -6215,6 +6220,7 @@ function BlockView({
   activeTeamNames?: ReadonlySet<string>;
   activeAgentName?: string;
   workspacePath: string;
+  onFixCommand?: (commandText: string) => void;
 }) {
   const [compactMode, setCompactMode] = useState<"disabled" | "compact" | "very-compact">(() => {
     try {
@@ -6480,7 +6486,7 @@ function BlockView({
             }
             subAgentName={block.subAgent?.name}
             compactMode={compactMode}
-            onFixCommand={handleFixCommand}
+            onFixCommand={onFixCommand}
           />
         </div>
       );

@@ -37,6 +37,7 @@ pub enum DaemonResponse {
         conversation_id: String,
         success: bool,
         error: Option<String>,
+        output: Option<serde_json::Value>,
     },
     Error {
         message: String,

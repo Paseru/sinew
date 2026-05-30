@@ -25,6 +25,7 @@ pub const SKILL: &str = "skill";
 pub const UPDATE_GOAL: &str = "update_goal";
 pub const CONTEXT_COMPACTION: &str = "context_compaction";
 pub const CHECK_SOTA: &str = "check_sota";
+pub const COMPUTER_USE: &str = "computer_use";
 
 pub const TEAM_RUN: &str = "team_run";
 pub const TEAM_CREATE: &str = "team_create";
@@ -57,6 +58,7 @@ pub fn canonical_tool_name(name: &str) -> &str {
         "TaskList" => TASK_LIST,
         "TaskUpdate" => TASK_UPDATE,
         "CheckSota" | "check_sota" => CHECK_SOTA,
+        "ComputerUse" | "computer_use" => COMPUTER_USE,
         _ => name,
     }
 }
@@ -84,5 +86,6 @@ pub fn is_cursor_compatible_tool(name: &str) -> bool {
             | TODO_LIST
             | QUESTION
             | LOAD_MCP_TOOL
+            | COMPUTER_USE
     ) || name.starts_with("mcp__")
 }

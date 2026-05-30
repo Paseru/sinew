@@ -7,8 +7,8 @@ use tokio::sync::mpsc;
 
 use crate::tool_run::FileChange;
 use crate::{
-    run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CheckSotaTool, CreateImageTool,
-    EditFileTool, GlobTool, GoalWorkflowState, GrepTool, CodebaseSearchTool, McpSettings, McpToolRegistry,
+    run_turn, AgentEvent, AgentEventScope, AgentMode, BashTool, CheckSotaTool, CodebaseSearchTool, ComputerUseTool, CreateImageTool,
+    EditFileTool, GlobTool, GoalWorkflowState, GrepTool, McpSettings, McpToolRegistry,
     QuestionTool, ReadTool, SkillSettings, SkillTool, ToDoListTool, TodoListState, ToolRunResult,
     DeleteFileTool, ListDirTool, ReadLintsTool, SharedEditorDiagnosticsStore, ToolSettings, TurnCancel, TurnContext, WebFetchTool, WebSearchTool,
     WriteFileTool,
@@ -222,6 +222,7 @@ impl SubAgentTool {
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
             codebase_search: Arc::new(CodebaseSearchTool::new(self.workspace_root.clone())),
             check_sota: Arc::new(CheckSotaTool::new()),
+            computer_use: Arc::new(ComputerUseTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(EditFileTool::new(self.workspace_root.clone())),
             write_file: Arc::new(WriteFileTool::new(self.workspace_root.clone())),

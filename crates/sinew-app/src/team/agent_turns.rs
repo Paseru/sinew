@@ -75,6 +75,7 @@ impl TeamTool {
             grep: Arc::new(GrepTool::new(self.workspace_root.clone())),
             codebase_search: Arc::new(CodebaseSearchTool::new(self.workspace_root.clone())),
             check_sota: Arc::new(CheckSotaTool::new()),
+            computer_use: Arc::new(ComputerUseTool::new()),
             read: Arc::new(ReadTool::new(self.workspace_root.clone())),
             edit_file: Arc::new(
                 EditFileTool::new(self.workspace_root.clone())

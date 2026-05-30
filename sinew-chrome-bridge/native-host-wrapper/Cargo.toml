@@ -16,6 +16,7 @@ directories = { workspace = true }
 uuid = { workspace = true }
 reqwest = { workspace = true }
 chrono = { workspace = true }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
 
 [lints]
 workspace = true

@@ -2,6 +2,7 @@ pub mod agent;
 pub mod bash;
 pub mod check_sota;
 pub mod codebase_search;
+pub mod computer_use;
 pub mod compact;
 pub mod delete_file;
 pub mod editor_diagnostics;
@@ -35,6 +36,7 @@ pub use agent::{
 pub use bash::{active_shell_display_name, shell_system_prompt, BashTool};
 pub use codebase_search::CodebaseSearchTool;
 pub use check_sota::CheckSotaTool;
+pub use computer_use::ComputerUseTool;
 pub use compact::{compact_conversation_history, CompactConversationOutput};
 pub use delete_file::DeleteFileTool;
 pub use editor_diagnostics::{

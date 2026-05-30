@@ -3,8 +3,27 @@
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 03:00:17]
+- `.sinew/skills/computer_use/SKILL.md` : Création de la compétence (Skill) documentant le pilotage Windows pour l'agent.
+- `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Exposition de la commande MCP `computer_use` et implémentation Windows native correspondante.
+- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout de la dépendance `image` pour le wrapper MCP.
+- `crates/sinew-app/src/subagent.rs`, `crates/sinew-app/src/team.rs`, `crates/sinew-app/src/team/agent_turns.rs` : Instanciation de l'outil `ComputerUseTool` pour les sous-agents et les agents d'équipe.
+- `src-tauri/src/lib.rs` : Import de `ComputerUseTool` dans le binaire principal de Tauri.
+- `src-tauri/src/turns.rs`, `src-tauri/src/swarm.rs` : Instanciation de l'outil `ComputerUseTool` dans les contextes de turn.
+- `crates/sinew-app/src/agent/turn.rs` : Intégration de l'appel et des descripteurs de `ComputerUseTool` dans le flux principal de discussion de l'agent.
+- `crates/sinew-app/src/agent/tool_dispatch.rs` : Routage dynamique de la commande `computer_use` vers la simulation système correspondante.
+- `crates/sinew-app/src/agent/context.rs` : Intégration de `ComputerUseTool` dans le contexte de discussion de l'agent.
+- `crates/sinew-app/src/lib.rs` : Exportation du nouvel outil `ComputerUseTool`.
+- `crates/sinew-app/src/tool_names.rs` : Définition de la constante d'outil `computer_use` et prise en charge de sa résolution canonique.
 - `crates/sinew-app/Cargo.toml` : Ajout de la dépendance `image` pour compresser les captures d'écran du Computer Use.
 - `crates/sinew-app/src/computer_use.rs` : Création du module d'automatisation et de pilotage d'ordinateur (Computer Use) natif pour Windows (GDI screenshots, simulation clavier/souris).
+
+
+
+
+
+
+
+
 
 
 ## [2026-05-30 03:01:48]
