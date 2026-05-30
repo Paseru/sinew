@@ -7,6 +7,8 @@
 import http2 from "node:http2";
 import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
+import fs from "node:fs";
+import os from "node:os";
 import readline from "node:readline";
 import {
   buildProjectLayout,
@@ -69,6 +71,27 @@ import {
 const CONNECT_END = 0b00000010;
 let outputTokenCount = 0;
 let totalTokenCount = 0;
+
+// --- Centralized JSON logger → %LOCALAPPDATA%/dev/hyrak/sinew/data/logs/agent-bridge.log ---
+const LOG_DIR = path.join(
+  process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"),
+  "dev", "hyrak", "sinew", "data", "logs"
+);
+let _logStream = null;
+function _ensureLog() {
+  if (_logStream) return;
+  try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch {}
+  _logStream = fs.createWriteStream(path.join(LOG_DIR, "agent-bridge.log"), { flags: "a" });
+}
+function logEvent(ev) {
+  _ensureLog();
+  try {
+    _logStream.write(JSON.stringify({ ts: Date.now(), ...ev }) + "\n");
+  } catch {}
+}
+function timeMs(start) {
+  return Date.now() - start;
+}
 
 function sha256Hex(input) {
   return createHash("sha256").update(input, "utf8").digest("hex");
@@ -706,6 +729,8 @@ function bumpIdleFinish() {
 }
 
 const stdinRl = readline.createInterface({ input: process.stdin, terminal: false });
+const bridgeStart = Date.now();
+logEvent({ event: "bridge_start" });
 const config = await readConfigLine(stdinRl);
 const {
   accessToken,
@@ -844,6 +869,7 @@ function wireH2Stream() {
 }
 
 async function openRunWithRetry() {
+  const openStart = Date.now();
   for (let attempt = 0; attempt < MAX_RUN_ATTEMPTS; attempt++) {
     if (attempt > 0) {
       debug(`Run retry ${attempt + 1}/${MAX_RUN_ATTEMPTS}`);
@@ -890,6 +916,7 @@ async function openRunWithRetry() {
         });
       });
       wireH2Stream();
+      logEvent({ event: "h2_connected", attempt, connect_ms: timeMs(openStart) });
       return;
     } catch (err) {
       if (attempt + 1 < MAX_RUN_ATTEMPTS && isRetryableNetworkError(err)) {
