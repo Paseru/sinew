@@ -119,6 +119,7 @@ use tokio::{
     sync::{mpsc, Mutex, Notify, RwLock},
 };
 
+mod boost;
 mod context;
 mod conversations;
 mod git;
@@ -1246,6 +1247,10 @@ pub fn run() {
             get_recent_workspaces_command,
             record_recent_workspace_command,
             clear_recent_workspaces_command,
+            boost::boost_local_status,
+            boost::boost_local_start,
+            boost::boost_local_stop,
+            boost::boost_local_distill,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")
