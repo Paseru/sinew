@@ -2766,7 +2766,7 @@ function OptionsSection({
                 data-active={theme === "light" ? "true" : "false"}
                 onClick={() => changeTheme("light")}
               >
-                {locale === "fr" ? "—Ü¬ï¸ Jour" : "—Ü¬ï¸ Day"}
+                {locale === "fr" ? "☀️ Jour" : "☀️ Day"}
               </button>
               <button
                 type="button"
@@ -2784,7 +2784,7 @@ function OptionsSection({
                 data-active={theme === "system" ? "true" : "false"}
                 onClick={() => changeTheme("system")}
               >
-                {locale === "fr" ? "—x⏳Système" : "—x⏳System"}
+                {locale === "fr" ? "💻 Système" : "💻 System"}
               </button>
               <button
                 type="button"
@@ -2805,7 +2805,7 @@ function OptionsSection({
           {/* Tailles de police (Côte à côte) */}
           <div className="options-subcategory-row">
             {/* Éditeur */}
-            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+            <div className="settings-pane__about-card">
               <div className="settings-pane__about-card-copy">
                 <h2>{locale === "fr" ? "Taille du texte (Éditeur)" : "Editor Font Size"}</h2>
                 <p>
@@ -2814,20 +2814,18 @@ function OptionsSection({
                     : "Adjust the text size in the code editor."}
                 </p>
               </div>
-              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Editor Font Size">
+              <div className="settings-pane__number-adjuster" role="group" aria-label="Editor Font Size">
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeEditorFontSize(Math.max(10, editorFontSize - 1))}
                 >
                   -
                 </button>
-                <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                <span>
                   {editorFontSize}px
                 </span>
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeEditorFontSize(Math.min(22, editorFontSize + 1))}
                 >
                   +
@@ -2836,7 +2834,7 @@ function OptionsSection({
             </div>
 
             {/* Chat */}
-            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+            <div className="settings-pane__about-card">
               <div className="settings-pane__about-card-copy">
                 <h2>{locale === "fr" ? "Taille du texte (Chat)" : "Chat Font Size"}</h2>
                 <p>
@@ -2845,20 +2843,18 @@ function OptionsSection({
                     : "Adjust the text size in the chat pane."}
                 </p>
               </div>
-              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Font Size">
+              <div className="settings-pane__number-adjuster" role="group" aria-label="Chat Font Size">
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeChatFontSize(Math.max(10, chatFontSize - 1))}
                 >
                   -
                 </button>
-                <span style={{ minWidth: "32px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                <span>
                   {chatFontSize}px
                 </span>
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeChatFontSize(Math.min(22, chatFontSize + 1))}
                 >
                   +
@@ -2870,7 +2866,7 @@ function OptionsSection({
           {/* Largeurs (Côte à côte) */}
           <div className="options-subcategory-row">
             {/* Chat Width */}
-            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+            <div className="settings-pane__about-card">
               <div className="settings-pane__about-card-copy">
                 <h2>{locale === "fr" ? "Largeur du chat" : "Chat Column Width"}</h2>
                 <p>
@@ -2879,20 +2875,18 @@ function OptionsSection({
                     : "Adjust the default width of the right chat column."}
                 </p>
               </div>
-              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Chat Column Width">
+              <div className="settings-pane__number-adjuster" role="group" aria-label="Chat Column Width">
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeRightWidth(Math.max(220, rightWidth - 20))}
                 >
                   -
                 </button>
-                <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                <span>
                   {Math.round(rightWidth)}px
                 </span>
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeRightWidth(Math.min(1200, rightWidth + 20))}
                 >
                   +
@@ -2901,7 +2895,7 @@ function OptionsSection({
             </div>
 
             {/* Sidebar Width */}
-            <div className="settings-pane__about-card" style={{ flex: 1 }}>
+            <div className="settings-pane__about-card">
               <div className="settings-pane__about-card-copy">
                 <h2>{locale === "fr" ? "Largeur du menu latéral" : "Sidebar Column Width"}</h2>
                 <p>
@@ -2910,20 +2904,18 @@ function OptionsSection({
                     : "Adjust the default width of the left sidebar column."}
                 </p>
               </div>
-              <div className="settings-pane__locale-switch" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }} role="group" aria-label="Sidebar Column Width">
+              <div className="settings-pane__number-adjuster" role="group" aria-label="Sidebar Column Width">
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeLeftWidth(Math.max(220, leftWidth - 20))}
                 >
                   -
                 </button>
-                <span style={{ minWidth: "48px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "var(--text-0)" }}>
+                <span>
                   {Math.round(leftWidth)}px
                 </span>
                 <button
                   type="button"
-                  style={{ width: "28px", height: "28px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px", backgroundColor: "var(--bg-3)", color: "var(--text-0)", border: "none", cursor: "pointer", fontWeight: "bold" }}
                   onClick={() => changeLeftWidth(Math.min(800, leftWidth + 20))}
                 >
                   +
@@ -3522,7 +3514,9 @@ function OptionsSection({
       {currentTab === "diagnostic" && (
         <>
       {/* ========================================================================= */}
-      {/* —x   CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
+      {/* 🛠️ CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
+      {/* ========================================================================= */}
+      {/* 🛠️ CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
       {/* ========================================================================= */}
       {/* —x CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
       {/* ========================================================================= */}
@@ -8452,7 +8446,7 @@ function DeepSeekProviderCard({
           )}
           {connected && displayStatus.models && displayStatus.models.length > 0 && (
             <div style={{ fontSize: "11px", opacity: 0.9, color: "var(--color-success)", marginTop: "10px" }}>
-              <strong>—S Modèles vérifiés sur votre clé :</strong>{" "}
+              <strong>✓ Modèles vérifiés sur votre clé :</strong>{" "}
               {displayStatus.models.map(id => id === "deepseek-chat" ? "DeepSeek V3" : id === "deepseek-reasoner" ? "DeepSeek R1" : id).join(", ")}
             </div>
           )}

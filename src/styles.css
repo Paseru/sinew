@@ -4059,6 +4059,7 @@ textarea {
 }
 
 .settings-pane__about-card-copy {
+  flex: 1 1 240px;
   min-width: 0;
   display: grid;
   gap: 4px;
@@ -4123,7 +4124,7 @@ textarea {
   }
 }
 
-@container (max-width: 500px) {
+@container (max-width: 600px) {
   .settings-pane__about-card {
     flex-direction: column;
     align-items: stretch;
@@ -10558,7 +10559,46 @@ html[data-theme="ai"] .mermaid-zoom__hint {
   gap: 12px;
 }
 
-@media (max-width: 768px) {
+.settings-pane__number-adjuster {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-med);
+  background: var(--bg-2);
+}
+
+.settings-pane__number-adjuster button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--r-med) - 2px);
+  background: var(--bg-3);
+  color: var(--text-0);
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.settings-pane__number-adjuster button:hover {
+  background: var(--bg-0);
+  color: var(--primary-light, var(--text-0));
+}
+
+.settings-pane__number-adjuster span {
+  min-width: 48px;
+  text-align: center;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+@container (max-width: 700px) {
   .options-subcategory-row {
     grid-template-columns: 1fr;
   }
