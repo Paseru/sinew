@@ -5531,6 +5531,16 @@ function McpSection({
           <button
             type="button"
             className="settings-pane__btn"
+            onClick={onRefreshProbes}
+            disabled={probing || enabledCount === 0}
+            title="Reconnecter et rafraîchir tous les serveurs MCP"
+          >
+            <Icon icon="solar:restart-linear" width={13} height={13} />
+            <span>{probing ? "Scan…" : "Refresh"}</span>
+          </button>
+          <button
+            type="button"
+            className="settings-pane__btn"
             onClick={() => onAdvancedOpenChange(!advancedOpen)}
             disabled={loading}
           >
@@ -5774,18 +5784,6 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
           <span className="settings-pane__chip-dot" />
           {statusLabel}
         </span>
-        {server.enabled && onRefreshProbes && (
-          <button
-            type="button"
-            className="settings-pane__btn"
-            onClick={onRefreshProbes}
-            disabled={probing}
-            title="Reconnecter et rafraîchir la liste des outils"
-          >
-            <Icon icon={probing ? "solar:refresh-linear" : "solar:restart-linear"} width={13} height={13} />
-            <span>{probing ? "Scan…" : "Refresh"}</span>
-          </button>
-        )}
       </div>
 
       <div className="settings-pane__detail-body">

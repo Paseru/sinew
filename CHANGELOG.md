@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 03:22:45]
-- `src/components/SettingsPane.tsx` : Ajout d'un bouton "Refresh" toujours visible dans le panneau de détail de chaque serveur MCP, permettant de reconnecter et rafraîchir la liste des outils à tout moment (pas seulement quand aucune sonde n'a encore été faite).
+- `src/components/SettingsPane.tsx` : Ajout d'un bouton "Refresh" global dans l'en-tête de la section MCP pour reconnecter et rafraîchir tous les serveurs MCP en un clic.
 
 ## [2026-05-30 03:21:11]
 - `.sinew/skills/browser/` & `.sinew/skills/computer_use/` : Déplacement des compétences `browser` et `computer_use` du workspace vers le dossier global utilisateur `~/.agents/skills/`, afin qu'elles soient disponibles pour tous les workspaces et non uniquement pour celui de Sinew.
