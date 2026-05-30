@@ -391,4 +391,142 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn sinew_ui_fast_default_maps_to_composer_25_fast() {
+        use sinew_core::ServiceTier;
+
+        let ui_model = ModelRef::new("cursor", "composer-2.5");
+        let effective =
+            crate::model_info::resolve_agent_model_id(&ui_model, Some(ServiceTier::Fast));
+        assert_eq!(effective, crate::model_info::MODEL_COMPOSER_25_FAST);
+    }
+
+    async fn live_sinew_stream(
+        label: &str,
+        request: ProviderRequest,
+        max_wait: std::time::Duration,
+    ) -> Result<(), String> {
+        use futures::StreamExt;
+        use sinew_core::{Provider, StreamEvent};
+
+        let provider = crate::client::CursorProvider::from_default_sources()
+            .map_err(|e| format!("provider: {e}"))?;
+        let setup_started = std::time::Instant::now();
+        let mut stream = tokio::time::timeout(max_wait, provider.stream(request))
+            .await
+            .map_err(|_| format!("stream setup timed out after {:?}", max_wait))?
+            .map_err(|e| format!("stream setup: {e}"))?;
+        println!(
+            "{label}: stream setup OK in {}ms",
+            setup_started.elapsed().as_millis()
+        );
+        let read_started = std::time::Instant::now();
+        let result = tokio::time::timeout(max_wait, async {
+            let mut saw_token = false;
+            while let Some(event) = stream.next().await {
+                match event {
+                    Ok(StreamEvent::MessageStart { model }) => {
+                        println!("{label}: MessageStart model={model}");
+                    }
+                    Ok(StreamEvent::TextDelta { .. }) | Ok(StreamEvent::ThinkingDelta { .. }) => {
+                        saw_token = true;
+                        break;
+                    }
+                    Ok(_) => {}
+                    Err(err) => return Err(format!("stream event: {err}")),
+                }
+            }
+            if saw_token {
+                Ok(())
+            } else {
+                Err("no text/thinking delta before stream ended".into())
+            }
+        })
+        .await;
+        match result {
+            Ok(Ok(())) => {
+                println!(
+                    "{label}: OK (first token in {}ms)",
+                    read_started.elapsed().as_millis()
+                );
+                Ok(())
+            }
+            Ok(Err(err)) => Err(err),
+            Err(_) => Err(format!("read timed out after {:?}", max_wait)),
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_live_sinew_composer_25_fast_tier() {
+        use sinew_core::{ChatMessage, ServiceTier};
+
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2.5"),
+            vec![ChatMessage::user_text("Réponds uniquement: OK")],
+        )
+        .with_service_tier(ServiceTier::Fast)
+        .with_workspace_root(r"C:\Dev\sinew")
+        .with_cache_key(format!("sinew-fast-{}", uuid::Uuid::new_v4()));
+
+        let effective = crate::model_info::resolve_agent_model_id(
+            &request.model,
+            request.service_tier,
+        );
+        println!("Sinew UI model=composer-2.5 + fast tier → agent model_id={effective}");
+
+        match live_sinew_stream(
+            "composer-2.5 + ServiceTier::Fast (éclair Sinew)",
+            request,
+            std::time::Duration::from_secs(90),
+        )
+        .await
+        {
+            Ok(()) => {}
+            Err(err) => {
+                println!("FAIL: {err}");
+                if std::env::var("SINEW_CURSOR_LIVE_ASSERT")
+                    .map(|v| v.trim() == "1" || v.eq_ignore_ascii_case("true"))
+                    .unwrap_or(false)
+                {
+                    panic!("{err}");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_live_sinew_composer_25_no_fast_tier() {
+        let request = ProviderRequest::new(
+            ModelRef::new("cursor", "composer-2.5"),
+            vec![ChatMessage::user_text("Réponds uniquement: OK")],
+        )
+        .with_workspace_root(r"C:\Dev\sinew")
+        .with_cache_key(format!("sinew-slow-{}", uuid::Uuid::new_v4()));
+
+        let effective =
+            crate::model_info::resolve_agent_model_id(&request.model, request.service_tier);
+        println!("Sinew UI model=composer-2.5 sans fast → agent model_id={effective}");
+
+        match live_sinew_stream(
+            "composer-2.5 sans fast",
+            request,
+            std::time::Duration::from_secs(90),
+        )
+        .await
+        {
+            Ok(()) => {}
+            Err(err) => {
+                println!("FAIL: {err}");
+                if std::env::var("SINEW_CURSOR_LIVE_ASSERT")
+                    .map(|v| v.trim() == "1" || v.eq_ignore_ascii_case("true"))
+                    .unwrap_or(false)
+                {
+                    panic!("{err}");
+                }
+            }
+        }
+    }
 }
