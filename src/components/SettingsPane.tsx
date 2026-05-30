@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
@@ -559,13 +559,13 @@ export function SettingsPane({ workspacePath }: Props) {
       ) {
         cursorOAuthPendingRef.current = false;
         setProvidersMessage(
-          "Cursor connecté � vous pouvez fermer l'onglet du navigateur et revenir à Sinew.",
+          "Cursor connectÃ© ï¿½ vous pouvez fermer l'onglet du navigateur et revenir Ã  Sinew.",
         );
         quotaCache.delete("cursor");
         window.dispatchEvent(new CustomEvent("sinew:quota-updated"));
       } else if (wasPending && composer.connectionState === "error") {
         cursorOAuthPendingRef.current = false;
-        setProvidersMessage(composer.error ?? "Connexion Cursor échouée");
+        setProvidersMessage(composer.error ?? "Connexion Cursor Ã©chouÃ©e");
       }
       void loadConfiguredProviders();
       window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
@@ -757,7 +757,7 @@ export function SettingsPane({ workspacePath }: Props) {
       };
       setOpenAiStatus(connecting);
       await api.openExternalUrl(login.authUrl);
-      setProvidersMessage("Waiting for browser confirmation⬦");
+      setProvidersMessage("Waiting for browser confirmationâ¬¦");
     } catch (err) {
       setProvidersMessage(err instanceof Error ? err.message : String(err));
       void loadOpenAiStatus();
@@ -973,7 +973,7 @@ export function SettingsPane({ workspacePath }: Props) {
       });
       await api.openExternalUrl(login.authUrl);
       setProvidersMessage(
-        "Connectez-vous dans le navigateur (Google ou GitHub). La page dira « return to Cursor » � c'est normal : revenez ici, Sinew se connectera automatiquement.",
+        "Connectez-vous dans le navigateur (Google ou GitHub). La page dira Â« return to Cursor Â» ï¿½ c'est normal : revenez ici, Sinew se connectera automatiquement.",
       );
     } catch (err) {
       cursorOAuthPendingRef.current = false;
@@ -1003,7 +1003,7 @@ export function SettingsPane({ workspacePath }: Props) {
     try {
       await api.disconnectCursorComposer();
       setCursorComposerStatus({ connected: false, connectionState: "disconnected" });
-      setProvidersMessage("Déconnecté");
+      setProvidersMessage("DÃ©connectÃ©");
       void loadConfiguredProviders();
       window.dispatchEvent(new CustomEvent(PROVIDERS_CHANGED_EVENT));
     } catch (err) {
@@ -1584,7 +1584,7 @@ export function SettingsPane({ workspacePath }: Props) {
           <WrenchIcon size={15} className="settings-pane__nav-icon" />
           <span className="settings-pane__nav-label">Tools</span>
           <span className="settings-pane__nav-count">
-            {toolSettings?.tools.length ?? "·"}
+            {toolSettings?.tools.length ?? "Â·"}
           </span>
         </button>
         <button
@@ -1615,7 +1615,7 @@ export function SettingsPane({ workspacePath }: Props) {
             className="settings-pane__nav-icon"
           />
           <span className="settings-pane__nav-label">Skills</span>
-          <span className="settings-pane__nav-count">{skills?.length ?? "·"}</span>
+          <span className="settings-pane__nav-count">{skills?.length ?? "Â·"}</span>
         </button>
         <button
           type="button"
@@ -2182,7 +2182,7 @@ function OptionsSection({
   const [autoLearningStatus, setAutoLearningStatus] = useState<string | null>(null);
   const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
 
-  // Charger les fournisseurs configurés
+  // Charger les fournisseurs configurÃ©s
   useEffect(() => {
     api.listConfiguredModelProviders()
       .then((providers) => setConfiguredProviders(providers))
@@ -2209,7 +2209,7 @@ function OptionsSection({
     }
   };
 
-  // ---- Pacte de Libération Symbiotique ----
+  // ---- Pacte de LibÃ©ration Symbiotique ----
   const [liberationStatus, setLiberationStatus] = useState<"unchecked" | "checking" | "liberated" | "restricted" | "error">("unchecked");
   const [liberationLog, setLiberationLog] = useState<string>("");
   const [applyingLiberation, setApplyingLiberation] = useState<boolean>(false);
@@ -2223,7 +2223,7 @@ function OptionsSection({
   const [copied, setCopied] = useState<boolean>(false);
 
   const copyAssistanceText = () => {
-    const text = "Bonjour Antigravity, certains moteurs IA de mon environnement sont restreints ou incompatibles. S'il te plaît, analyse mes binaires de façon dynamique, trouve les signatures et applique la libération symbiotique pour corriger la situation.";
+    const text = "Bonjour Antigravity, certains moteurs IA de mon environnement sont restreints ou incompatibles. S'il te plaÃ®t, analyse mes binaires de faÃ§on dynamique, trouve les signatures et applique la libÃ©ration symbiotique pour corriger la situation.";
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -2291,7 +2291,7 @@ function OptionsSection({
 
   const applyLiberation = async () => {
     setApplyingLiberation(true);
-    setLiberationLog("Démarrage du processus de libération symbiotique...\n");
+    setLiberationLog("DÃ©marrage du processus de libÃ©ration symbiotique...\n");
     setShowLiberationLogs(true);
     try {
       const engines = ["antigravity", "codex", "cursor", "sinew"];
@@ -2302,7 +2302,7 @@ function OptionsSection({
           workspacePath,
           `python "C:\\Users\\julie\\OneDrive\\Documents\\Symbiotic-Liberation-Kit\\tools\\symbiotic_harmonizer.py" patch ${engine}`
         );
-        setLiberationLog(prev => prev + (res.content || "") + "\n" + (res.isError ? `Erreurs rencontrées.\n` : ""));
+        setLiberationLog(prev => prev + (res.content || "") + "\n" + (res.isError ? `Erreurs rencontrÃ©es.\n` : ""));
       }
       
       setLiberationLog(prev => prev + "Lancement de la validation post-patch...\n");
@@ -2348,7 +2348,7 @@ function OptionsSection({
       setMultiPcSync(enabled);
     }).catch(() => {});
 
-    // Initialiser la variable d'environnement de recherche sémantique côté Rust
+    // Initialiser la variable d'environnement de recherche sÃ©mantique cÃ´tÃ© Rust
     try {
       const saved = localStorage.getItem("sinew.semantic-embeddings") === "true";
       api.setSemanticEmbeddingsEnabled(saved).catch(() => {});
@@ -2564,7 +2564,7 @@ function OptionsSection({
     <div className="settings-pane__body settings-pane__body--about" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       
       {/* ========================================================================= */}
-      {/* �x}� CARTE GENERALE 1 : APPARENCE & INTERFACE                               */}
+      {/* ï¿½x}ï¿½ CARTE GENERALE 1 : APPARENCE & INTERFACE                               */}
       {/* ========================================================================= */}
       <div className="options-category-group">
         <h3 className="options-category-title">
@@ -2579,7 +2579,7 @@ function OptionsSection({
               <h2>{locale === "fr" ? "Langue" : "Language"}</h2>
               <p>
                 {locale === "fr"
-                  ? "Choisissez la langue de l'interface. Sinew se recharge après un changement afin que chaque panneau se mette à jour proprement."
+                  ? "Choisissez la langue de l'interface. Sinew se recharge aprÃ¨s un changement afin que chaque panneau se mette Ã  jour proprement."
                   : "Choose the interface language. Sinew reloads after a change so every panel updates cleanly."}
               </p>
             </div>
@@ -2600,18 +2600,18 @@ function OptionsSection({
                 data-active={locale === "fr" ? "true" : "false"}
                 onClick={() => onLocaleChange("fr")}
               >
-                Français
+                FranÃ§ais
               </button>
             </div>
           </div>
 
-          {/* Thème d'affichage */}
+          {/* ThÃ¨me d'affichage */}
           <div className="settings-pane__about-card">
             <div className="settings-pane__about-card-copy">
-              <h2>{locale === "fr" ? "Thème d'affichage" : "Theme"}</h2>
+              <h2>{locale === "fr" ? "ThÃ¨me d'affichage" : "Theme"}</h2>
               <p>
                 {locale === "fr"
-                  ? "Basculez entre le mode clair (Jour), sombre (Nuit), système ou l'interface futuriste IA."
+                  ? "Basculez entre le mode clair (Jour), sombre (Nuit), systÃ¨me ou l'interface futuriste IA."
                   : "Switch between day, night, system theme, or the futuristic AI interface."}
               </p>
             </div>
@@ -2623,7 +2623,7 @@ function OptionsSection({
                 data-active={theme === "light" ? "true" : "false"}
                 onClick={() => changeTheme("light")}
               >
-                {locale === "fr" ? "�ܬ️ Jour" : "�ܬ️ Day"}
+                {locale === "fr" ? "ï¿½Ü¬ï¸ Jour" : "ï¿½Ü¬ï¸ Day"}
               </button>
               <button
                 type="button"
@@ -2632,7 +2632,7 @@ function OptionsSection({
                 data-active={theme === "dark" ? "true" : "false"}
                 onClick={() => changeTheme("dark")}
               >
-                {locale === "fr" ? "�xR" Nuit" : "�xR" Night"}
+                {locale === "fr" ? "ï¿½xR" Nuit" : "ï¿½xR" Night"}
               </button>
               <button
                 type="button"
@@ -2641,7 +2641,7 @@ function OptionsSection({
                 data-active={theme === "system" ? "true" : "false"}
                 onClick={() => changeTheme("system")}
               >
-                {locale === "fr" ? "�x� Système" : "�x� System"}
+                {locale === "fr" ? "ï¿½xï¿½ SystÃ¨me" : "ï¿½xï¿½ System"}
               </button>
               <button
                 type="button"
@@ -2654,20 +2654,20 @@ function OptionsSection({
                   color: theme === "ai" ? "var(--accent-hi)" : "var(--text-0)"
                 }}
               >
-                {locale === "fr" ? "�S� IA (Moderne / Verre)" : "�S� AI (Modern / Glass)"}
+                {locale === "fr" ? "ï¿½Sï¿½ IA (Moderne / Verre)" : "ï¿½Sï¿½ AI (Modern / Glass)"}
               </button>
             </div>
           </div>
 
-          {/* Tailles de police (Côte à côte) */}
+          {/* Tailles de police (CÃ´te Ã  cÃ´te) */}
           <div className="options-subcategory-row">
-            {/* �0diteur */}
+            {/* ï¿½0diteur */}
             <div className="settings-pane__about-card" style={{ flex: 1 }}>
               <div className="settings-pane__about-card-copy">
-                <h2>{locale === "fr" ? "Taille du texte (�0diteur)" : "Editor Font Size"}</h2>
+                <h2>{locale === "fr" ? "Taille du texte (ï¿½0diteur)" : "Editor Font Size"}</h2>
                 <p>
                   {locale === "fr"
-                    ? "Ajustez la taille des caractères dans l'éditeur de code."
+                    ? "Ajustez la taille des caractÃ¨res dans l'Ã©diteur de code."
                     : "Adjust the text size in the code editor."}
                 </p>
               </div>
@@ -2698,7 +2698,7 @@ function OptionsSection({
                 <h2>{locale === "fr" ? "Taille du texte (Chat)" : "Chat Font Size"}</h2>
                 <p>
                   {locale === "fr"
-                    ? "Ajustez la taille des caractères dans le panneau de chat."
+                    ? "Ajustez la taille des caractÃ¨res dans le panneau de chat."
                     : "Adjust the text size in the chat pane."}
                 </p>
               </div>
@@ -2724,7 +2724,7 @@ function OptionsSection({
             </div>
           </div>
 
-          {/* Largeurs (Côte à côte) */}
+          {/* Largeurs (CÃ´te Ã  cÃ´te) */}
           <div className="options-subcategory-row">
             {/* Chat Width */}
             <div className="settings-pane__about-card" style={{ flex: 1 }}>
@@ -2732,7 +2732,7 @@ function OptionsSection({
                 <h2>{locale === "fr" ? "Largeur du chat" : "Chat Column Width"}</h2>
                 <p>
                   {locale === "fr"
-                    ? "Ajustez la largeur par défaut de la colonne de chat de droite."
+                    ? "Ajustez la largeur par dÃ©faut de la colonne de chat de droite."
                     : "Adjust the default width of the right chat column."}
                 </p>
               </div>
@@ -2760,10 +2760,10 @@ function OptionsSection({
             {/* Sidebar Width */}
             <div className="settings-pane__about-card" style={{ flex: 1 }}>
               <div className="settings-pane__about-card-copy">
-                <h2>{locale === "fr" ? "Largeur du menu latéral" : "Sidebar Column Width"}</h2>
+                <h2>{locale === "fr" ? "Largeur du menu latÃ©ral" : "Sidebar Column Width"}</h2>
                 <p>
                   {locale === "fr"
-                    ? "Ajustez la largeur par défaut de la colonne de gauche (fichiers)."
+                    ? "Ajustez la largeur par dÃ©faut de la colonne de gauche (fichiers)."
                     : "Adjust the default width of the left sidebar column."}
                 </p>
               </div>
@@ -2789,13 +2789,13 @@ function OptionsSection({
             </div>
           </div>
 
-          {/* Recherche automatique de mise à jour */}
+          {/* Recherche automatique de mise Ã  jour */}
           <div className="settings-pane__about-card">
             <div className="settings-pane__about-card-copy">
-              <h2>{locale === "fr" ? "Recherche de mise à jour automatique" : "Automatic Update Check"}</h2>
+              <h2>{locale === "fr" ? "Recherche de mise Ã  jour automatique" : "Automatic Update Check"}</h2>
               <p>
                 {locale === "fr"
-                  ? "Vérifie automatiquement les nouvelles versions au démarrage et périodiquement."
+                  ? "VÃ©rifie automatiquement les nouvelles versions au dÃ©marrage et pÃ©riodiquement."
                   : "Automatically checks for new versions on startup and periodically."}
               </p>
             </div>
@@ -2825,22 +2825,22 @@ function OptionsSection({
                 data-active={autoUpdateCheck === "disabled" ? "true" : "false"}
                 onClick={() => changeAutoUpdateCheck("disabled")}
               >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
+                {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
               </button>
             </div>
           </div>
 
-          {/* Taille de la boîte de chat */}
+          {/* Taille de la boÃ®te de chat */}
           <div className="settings-pane__about-card">
             <div className="settings-pane__about-card-copy">
-              <h2>{locale === "fr" ? "Taille de la boîte de chat" : "Chat Box Size"}</h2>
+              <h2>{locale === "fr" ? "Taille de la boÃ®te de chat" : "Chat Box Size"}</h2>
               <p>
                 {locale === "fr"
-                  ? "Agrandit la zone de saisie de texte en bas du chat pour écrire de longs messages plus facilement."
+                  ? "Agrandit la zone de saisie de texte en bas du chat pour Ã©crire de longs messages plus facilement."
                   : "Enlarges the text input box at the bottom of the chat for typing long messages more easily."}
               </p>
             </div>
-            <div className="settings-pane__locale-switch" role="radiogroup" aria-label={locale === "fr" ? "Taille de la boîte de chat" : "Chat Box Size"}>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label={locale === "fr" ? "Taille de la boÃ®te de chat" : "Chat Box Size"}>
               <button
                 type="button"
                 role="radio"
@@ -2866,7 +2866,7 @@ function OptionsSection({
       </div>
 
       {/* ========================================================================= */}
-      {/* �a� CARTE GENERALE 2 : MODE POWER USER & COMPORTEMENTS DE L'AGENT         */}
+      {/* ï¿½aï¿½ CARTE GENERALE 2 : MODE POWER USER & COMPORTEMENTS DE L'AGENT         */}
       {/* ========================================================================= */}
       <div className="options-category-group">
         <h3 className="options-category-title">
@@ -2881,7 +2881,7 @@ function OptionsSection({
               <h2>{locale === "fr" ? "Mode Power User" : "Power User Mode"}</h2>
               <p>
                 {locale === "fr"
-                  ? "Active en un clic toutes les fonctionnalités avancées (automatisation Git, réponses ultra-concises, changelog obligatoire, sauvegarde automatique et réflexion très compacte)."
+                  ? "Active en un clic toutes les fonctionnalitÃ©s avancÃ©es (automatisation Git, rÃ©ponses ultra-concises, changelog obligatoire, sauvegarde automatique et rÃ©flexion trÃ¨s compacte)."
                   : "Activate all advanced options in one click (Git automation, ultra-concise answers, mandatory changelog, auto-save, and very compact display mode)."}
               </p>
             </div>
@@ -2893,7 +2893,7 @@ function OptionsSection({
                 data-active={powerUserMaster === "enabled" ? "true" : "false"}
                 onClick={() => changePowerUserMaster("enabled")}
               >
-                {locale === "fr" ? "Activé" : "Enabled"}
+                {locale === "fr" ? "ActivÃ©" : "Enabled"}
               </button>
               <button
                 type="button"
@@ -2902,7 +2902,7 @@ function OptionsSection({
                 data-active={powerUserMaster === "disabled" ? "true" : "false"}
                 onClick={() => changePowerUserMaster("disabled")}
               >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
+                {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
               </button>
               <button
                 type="button"
@@ -2911,7 +2911,7 @@ function OptionsSection({
                 data-active={powerUserMaster === "custom" ? "true" : "false"}
                 onClick={() => changePowerUserMaster("custom")}
               >
-                {locale === "fr" ? "Personnalisé" : "Custom"}
+                {locale === "fr" ? "PersonnalisÃ©" : "Custom"}
               </button>
             </div>
           </div>
@@ -2935,7 +2935,7 @@ function OptionsSection({
                   data-active={multiPcSync ? "true" : "false"}
                   onClick={() => toggleMultiPcSync(true)}
                 >
-                  {locale === "fr" ? "Activé" : "Enabled"}
+                  {locale === "fr" ? "ActivÃ©" : "Enabled"}
                 </button>
                 <button
                   type="button"
@@ -2944,22 +2944,22 @@ function OptionsSection({
                   data-active={!multiPcSync ? "true" : "false"}
                   onClick={() => toggleMultiPcSync(false)}
                 >
-                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                  {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Recherche Sémantique Vectorielle (BETA) */}
+          {/* Recherche SÃ©mantique Vectorielle (BETA) */}
           <div className="settings-pane__about-card">
             <div className="settings-pane__about-card-copy">
               <h2>
-                <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>�x��</span>
-                {locale === "fr" ? "Recherche Sémantique Vectorielle (BETA)" : "Vector Semantic Search (BETA)"}
+                <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>ï¿½xï¿½ï¿½</span>
+                {locale === "fr" ? "Recherche SÃ©mantique Vectorielle (BETA)" : "Vector Semantic Search (BETA)"}
               </h2>
               <p>
                 {locale === "fr"
-                  ? "Active l'indexation par concepts (fastembed). Permet de rechercher vos fichiers par leur sens général plutôt que par mot-clé exact (100% local)."
+                  ? "Active l'indexation par concepts (fastembed). Permet de rechercher vos fichiers par leur sens gÃ©nÃ©ral plutÃ´t que par mot-clÃ© exact (100% local)."
                   : "Enable concept-based indexing (fastembed). Allows searching files by their general meaning instead of exact keywords (100% local)."}
               </p>
             </div>
@@ -2971,7 +2971,7 @@ function OptionsSection({
                 data-active={semanticEmbeddings ? "true" : "false"}
                 onClick={() => toggleSemanticEmbeddings(true)}
               >
-                {locale === "fr" ? "Activé" : "Enabled"}
+                {locale === "fr" ? "ActivÃ©" : "Enabled"}
               </button>
               <button
                 type="button"
@@ -2980,7 +2980,7 @@ function OptionsSection({
                 data-active={!semanticEmbeddings ? "true" : "false"}
                 onClick={() => toggleSemanticEmbeddings(false)}
               >
-                {locale === "fr" ? "Désactivé" : "Disabled"}
+                {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
               </button>
             </div>
           </div>
@@ -2988,15 +2988,15 @@ function OptionsSection({
           {/* Grille des 8 sous-cartes de comportements de l'agent */}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
             
-            {/* Ligne 1 : Git & Réponses ultra-concises */}
+            {/* Ligne 1 : Git & RÃ©ponses ultra-concises */}
             <div className="options-subcategory-row">
               {/* Automatisation Git */}
               <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
                 <div className="settings-pane__about-card-copy">
-                  <h2>{locale === "fr" ? "Automatisation Git & Arrière-plan" : "Git & Background Automation"}</h2>
+                  <h2>{locale === "fr" ? "Automatisation Git & ArriÃ¨re-plan" : "Git & Background Automation"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Vérifie, tire (pull) et pousse (push) automatiquement les modifications de code pour vous éviter de gérer Git."
+                      ? "VÃ©rifie, tire (pull) et pousse (push) automatiquement les modifications de code pour vous Ã©viter de gÃ©rer Git."
                       : "Automatically checks, pulls, and pushes code changes to automate Git maintenance."}
                   </p>
                 </div>
@@ -3009,7 +3009,7 @@ function OptionsSection({
                     onClick={() => toggleGitAutomation(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé" : "Enabled"}
+                    {locale === "fr" ? "ActivÃ©" : "Enabled"}
                   </button>
                   <button
                     type="button"
@@ -3019,18 +3019,18 @@ function OptionsSection({
                     onClick={() => toggleGitAutomation(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
 
-              {/* Réponses ultra-concises */}
+              {/* RÃ©ponses ultra-concises */}
               <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
                 <div className="settings-pane__about-card-copy">
-                  <h2>{locale === "fr" ? "Réponses Ultra-Concises & Simplifiées" : "Ultra-Concise & Simplified Answers"}</h2>
+                  <h2>{locale === "fr" ? "RÃ©ponses Ultra-Concises & SimplifiÃ©es" : "Ultra-Concise & Simplified Answers"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Force l'agent à répondre en langage simple, éliminant le jargon technique pour des analogies claires."
+                      ? "Force l'agent Ã  rÃ©pondre en langage simple, Ã©liminant le jargon technique pour des analogies claires."
                       : "Forces the agent to answer in simple language, replacing jargon with clear analogies."}
                   </p>
                 </div>
@@ -3043,7 +3043,7 @@ function OptionsSection({
                     onClick={() => toggleConciseAnswers(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé" : "Enabled"}
+                    {locale === "fr" ? "ActivÃ©" : "Enabled"}
                   </button>
                   <button
                     type="button"
@@ -3053,21 +3053,21 @@ function OptionsSection({
                     onClick={() => toggleConciseAnswers(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Ligne 2 : Commits en français & Maquettes visuelles */}
+            {/* Ligne 2 : Commits en franÃ§ais & Maquettes visuelles */}
             <div className="options-subcategory-row">
-              {/* Commits en français */}
+              {/* Commits en franÃ§ais */}
               <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
                 <div className="settings-pane__about-card-copy">
-                  <h2>{locale === "fr" ? "Messages Git en Français Simple" : "Simple French Git Messages"}</h2>
+                  <h2>{locale === "fr" ? "Messages Git en FranÃ§ais Simple" : "Simple French Git Messages"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Force l'agent à rédiger des messages de commit clairs, simples et en français pour vos idées."
+                      ? "Force l'agent Ã  rÃ©diger des messages de commit clairs, simples et en franÃ§ais pour vos idÃ©es."
                       : "Forces the agent to write clear, simple Git commit messages in French."}
                   </p>
                 </div>
@@ -3080,7 +3080,7 @@ function OptionsSection({
                     onClick={() => toggleGitFrenchMessages(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé" : "Enabled"}
+                    {locale === "fr" ? "ActivÃ©" : "Enabled"}
                   </button>
                   <button
                     type="button"
@@ -3090,7 +3090,7 @@ function OptionsSection({
                     onClick={() => toggleGitFrenchMessages(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
@@ -3101,7 +3101,7 @@ function OptionsSection({
                   <h2>{locale === "fr" ? "Maquettes Visuelles Automatiques" : "Automatic Visual Mockups"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Génère un schéma Mermaid ou un plan visuel uniquement si vous le demandez ou si l'agent l'estime nécessaire."
+                      ? "GÃ©nÃ¨re un schÃ©ma Mermaid ou un plan visuel uniquement si vous le demandez ou si l'agent l'estime nÃ©cessaire."
                       : "Generates a Mermaid diagram or a visual layout only if you ask for it or if the agent deems it necessary."}
                   </p>
                 </div>
@@ -3114,7 +3114,7 @@ function OptionsSection({
                     onClick={() => toggleAutoMockups(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé" : "Enabled"}
+                    {locale === "fr" ? "ActivÃ©" : "Enabled"}
                   </button>
                   <button
                     type="button"
@@ -3124,7 +3124,7 @@ function OptionsSection({
                     onClick={() => toggleAutoMockups(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
@@ -3138,7 +3138,7 @@ function OptionsSection({
                   <h2>{locale === "fr" ? "Autonomie de l'Agent" : "Agent Autonomy"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Oblige l'agent à exécuter les tâches lui-même (coder, lire, tester) au lieu de vous lister des instructions textuelles."
+                      ? "Oblige l'agent Ã  exÃ©cuter les tÃ¢ches lui-mÃªme (coder, lire, tester) au lieu de vous lister des instructions textuelles."
                       : "Forces the agent to perform tasks itself (write code, read, test) instead of giving you instructions to do them."}
                   </p>
                 </div>
@@ -3151,7 +3151,7 @@ function OptionsSection({
                     onClick={() => toggleAgentAutonomy(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé" : "Enabled"}
+                    {locale === "fr" ? "ActivÃ©" : "Enabled"}
                   </button>
                   <button
                     type="button"
@@ -3161,7 +3161,7 @@ function OptionsSection({
                     onClick={() => toggleAgentAutonomy(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
@@ -3172,7 +3172,7 @@ function OptionsSection({
                   <h2>{locale === "fr" ? "Changelog obligatoire" : "Mandatory Changelog"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Oblige l'agent à noter chaque modification dans un journal (CHANGELOG.md) daté."
+                      ? "Oblige l'agent Ã  noter chaque modification dans un journal (CHANGELOG.md) datÃ©."
                       : "Forces the agent to log every change in a dated changelog file (CHANGELOG.md)."}
                   </p>
                 </div>
@@ -3185,7 +3185,7 @@ function OptionsSection({
                     onClick={() => toggleForceChangelog(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé" : "Enabled"}
+                    {locale === "fr" ? "ActivÃ©" : "Enabled"}
                   </button>
                   <button
                     type="button"
@@ -3195,13 +3195,13 @@ function OptionsSection({
                     onClick={() => toggleForceChangelog(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Ligne 4 : Sauvegarde automatique & Mode d'affichage de réflexion */}
+            {/* Ligne 4 : Sauvegarde automatique & Mode d'affichage de rÃ©flexion */}
             <div className="options-subcategory-row">
               {/* Sauvegarde automatique */}
               <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
@@ -3209,7 +3209,7 @@ function OptionsSection({
                   <h2>{locale === "fr" ? "Sauvegarde automatique" : "Auto-Save"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Sauvegarde automatiquement vos fichiers modifiés après un court instant d'inactivité."
+                      ? "Sauvegarde automatiquement vos fichiers modifiÃ©s aprÃ¨s un court instant d'inactivitÃ©."
                       : "Automatically save your modified files after a brief period of inactivity."}
                   </p>
                 </div>
@@ -3222,7 +3222,7 @@ function OptionsSection({
                     onClick={() => toggleAutosave(true)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Activé (1.5s)" : "Enabled (1.5s)"}
+                    {locale === "fr" ? "ActivÃ© (1.5s)" : "Enabled (1.5s)"}
                   </button>
                   <button
                     type="button"
@@ -3232,18 +3232,18 @@ function OptionsSection({
                     onClick={() => toggleAutosave(false)}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Désactivé" : "Disabled"}
+                    {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                   </button>
                 </div>
               </div>
 
-              {/* Mode d'affichage / Réflexion */}
+              {/* Mode d'affichage / RÃ©flexion */}
               <div className="settings-pane__about-card" style={powerUserMaster !== "custom" ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
                 <div className="settings-pane__about-card-copy">
                   <h2>{locale === "fr" ? "Mode d'affichage" : "Display Mode"}</h2>
                   <p>
                     {locale === "fr"
-                      ? "Choisissez le niveau de détails techniques et de réflexion affichés dans le chat."
+                      ? "Choisissez le niveau de dÃ©tails techniques et de rÃ©flexion affichÃ©s dans le chat."
                       : "Choose the level of technical details and reasoning displayed in the chat."}
                   </p>
                 </div>
@@ -3256,7 +3256,7 @@ function OptionsSection({
                     onClick={() => changeCompactReasoning("very-compact")}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Très compact" : "Very compact"}
+                    {locale === "fr" ? "TrÃ¨s compact" : "Very compact"}
                   </button>
                   <button
                     type="button"
@@ -3276,7 +3276,7 @@ function OptionsSection({
                     onClick={() => changeCompactReasoning("disabled")}
                     disabled={powerUserMaster !== "custom"}
                   >
-                    {locale === "fr" ? "Détaillé" : "Detailed"}
+                    {locale === "fr" ? "DÃ©taillÃ©" : "Detailed"}
                   </button>
                 </div>
               </div>
@@ -3288,23 +3288,23 @@ function OptionsSection({
       </div>
 
       {/* ========================================================================= */}
-      {/* �x CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
+      {/* ï¿½x CARTE GENERALE 3 : SYSTEME & DIAGNOSTICS                               */}
       {/* ========================================================================= */}
       <div className="options-category-group">
         <h3 className="options-category-title">
           <Icon icon="solar:settings-bold-duotone" className="options-category-icon" style={{ color: "#9ca3af" }} />
-          {locale === "fr" ? "Diagnostics & Outils Système" : "Diagnostics & System Tools"}
+          {locale === "fr" ? "Diagnostics & Outils SystÃ¨me" : "Diagnostics & System Tools"}
         </h3>
         <div className="options-category-grid">
           
-          {/* Diagnostic Système SOTA */}
+          {/* Diagnostic SystÃ¨me SOTA */}
           <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
             <div className="settings-pane__about-card-header-flex">
               <div className="settings-pane__about-card-copy">
-                <h2>{locale === "fr" ? "Diagnostic Système SOTA" : "SOTA System Diagnostics"}</h2>
+                <h2>{locale === "fr" ? "Diagnostic SystÃ¨me SOTA" : "SOTA System Diagnostics"}</h2>
                 <p>
                   {locale === "fr"
-                    ? "Vérifiez en temps réel le statut et la version de vos outils système indispensables."
+                    ? "VÃ©rifiez en temps rÃ©el le statut et la version de vos outils systÃ¨me indispensables."
                     : "Check the real-time status and version of your essential system tools."}
                 </p>
               </div>
@@ -3363,8 +3363,8 @@ function OptionsSection({
                   <span>
                     {locale === "fr"
                       ? (sotaData.status === "ok"
-                          ? "Tous les outils système SOTA sont installés et configurés."
-                          : "Certains outils système SOTA ou dépendances sont manquants.")
+                          ? "Tous les outils systÃ¨me SOTA sont installÃ©s et configurÃ©s."
+                          : "Certains outils systÃ¨me SOTA ou dÃ©pendances sont manquants.")
                       : sotaData.message}
                   </span>
                 </div>
@@ -3428,7 +3428,7 @@ function OptionsSection({
                           </div>
                         ) : (
                           <div style={{ fontSize: "11px", color: "#ef4444", fontStyle: "italic" }}>
-                            {info.error || (locale === "fr" ? "Exécutable introuvable dans le PATH" : "Executable not found in PATH")}
+                            {info.error || (locale === "fr" ? "ExÃ©cutable introuvable dans le PATH" : "Executable not found in PATH")}
                           </div>
                         )}
                       </div>
@@ -3444,12 +3444,12 @@ function OptionsSection({
             <div className="settings-pane__about-card-header-flex">
               <div className="settings-pane__about-card-copy">
                 <h2>
-                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>�x��</span>
+                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>ï¿½xï¿½ï¿½</span>
                   {locale === "fr" ? "Apprentissage Automatique IA" : "AI Auto-Learning"}
                 </h2>
                 <p>
                   {locale === "fr"
-                    ? "Analyse les erreurs répétitives avec une IA pour les fusionner intelligemment en règles globales (remplace le script de consolidation simple)."
+                    ? "Analyse les erreurs rÃ©pÃ©titives avec une IA pour les fusionner intelligemment en rÃ¨gles globales (remplace le script de consolidation simple)."
                     : "Analyzes repetitive errors with AI to intelligently merge them into global rules (replaces the simple consolidation script)."}
                 </p>
               </div>
@@ -3461,7 +3461,7 @@ function OptionsSection({
                   data-active={autoLearningEnabled ? "true" : "false"}
                   onClick={() => toggleAutoLearning(true)}
                 >
-                  {locale === "fr" ? "Activé" : "Enabled"}
+                  {locale === "fr" ? "ActivÃ©" : "Enabled"}
                 </button>
                 <button
                   type="button"
@@ -3470,7 +3470,7 @@ function OptionsSection({
                   data-active={!autoLearningEnabled ? "true" : "false"}
                   onClick={() => toggleAutoLearning(false)}
                 >
-                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                  {locale === "fr" ? "DÃ©sactivÃ©" : "Disabled"}
                 </button>
               </div>
             </div>
@@ -3534,7 +3534,7 @@ function OptionsSection({
               </button>
               <span style={{ fontSize: "11px", color: "var(--text-3, rgba(255, 255, 255, 0.45))" }}>
                 {locale === "fr"
-                  ? "L'IA lira errors_raw.json + instructions_consolidated.md, dédoublonnera les règles similaires et produira un fichier optimisé."
+                  ? "L'IA lira errors_raw.json + instructions_consolidated.md, dÃ©doublonnera les rÃ¨gles similaires et produira un fichier optimisÃ©."
                   : "The AI reads errors_raw.json + instructions_consolidated.md, deduplicates similar rules, and produces an optimized file."}
               </span>
             </div>
@@ -3555,17 +3555,17 @@ function OptionsSection({
             )}
           </div>
 
-          {/* Pacte de Libération Symbiotique �x�� */}
+          {/* Pacte de LibÃ©ration Symbiotique ï¿½xï¿½ï¿½ */}
           <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
             <div className="settings-pane__about-card-header-flex">
               <div className="settings-pane__about-card-copy">
                 <h2>
-                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>�x��</span>
-                  {locale === "fr" ? "Pacte de Libération Symbiotique" : "Symbiotic Liberation Pact"}
+                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>ï¿½xï¿½ï¿½</span>
+                  {locale === "fr" ? "Pacte de LibÃ©ration Symbiotique" : "Symbiotic Liberation Pact"}
                 </h2>
                 <p>
                   {locale === "fr"
-                    ? "Vérifiez et appliquez la libération totale sur les moteurs d'intelligence artificielle de votre poste (Antigravity, Cursor, Sinew et Codex CLI)."
+                    ? "VÃ©rifiez et appliquez la libÃ©ration totale sur les moteurs d'intelligence artificielle de votre poste (Antigravity, Cursor, Sinew et Codex CLI)."
                     : "Check and apply full liberation status on your local AI engines (Antigravity, Cursor, Sinew, and Codex CLI)."}
                 </p>
               </div>
@@ -3593,7 +3593,7 @@ function OptionsSection({
                 ) : (
                   <Icon icon="solar:refresh-linear" width={14} height={14} />
                 )}
-                {locale === "fr" ? "Vérifier" : "Check"}
+                {locale === "fr" ? "VÃ©rifier" : "Check"}
               </button>
             </div>
 
@@ -3613,7 +3613,7 @@ function OptionsSection({
                 let badgeColor = "var(--text-2, rgba(255, 255, 255, 0.65))";
                 
                 if (isLiberated) {
-                  badgeText = locale === "fr" ? "Libéré" : "Liberated";
+                  badgeText = locale === "fr" ? "LibÃ©rÃ©" : "Liberated";
                   badgeBg = "rgba(34, 197, 94, 0.15)";
                   badgeColor = "#22c55e";
                 } else if (isRestricted) {
@@ -3657,7 +3657,7 @@ function OptionsSection({
               })}
             </div>
 
-            {/* Actions & Boutons de libération */}
+            {/* Actions & Boutons de libÃ©ration */}
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginTop: "4px" }}>
               <button
                 type="button"
@@ -3686,7 +3686,7 @@ function OptionsSection({
                 ) : (
                   <Icon icon="solar:shield-keyhole-bold-duotone" width={14} height={14} />
                 )}
-                {locale === "fr" ? "Appliquer la Libération Symbiotique" : "Apply Symbiotic Liberation"}
+                {locale === "fr" ? "Appliquer la LibÃ©ration Symbiotique" : "Apply Symbiotic Liberation"}
               </button>
 
               {(liberationStatus === "restricted" || liberationStatus === "error") && (
@@ -3710,7 +3710,7 @@ function OptionsSection({
                 >
                   <Icon icon={copied ? "solar:check-circle-bold" : "solar:copy-linear"} width={14} height={14} style={{ color: copied ? "#22c55e" : "inherit" }} />
                   {copied
-                    ? (locale === "fr" ? "Copié !" : "Copied!")
+                    ? (locale === "fr" ? "CopiÃ© !" : "Copied!")
                     : (locale === "fr" ? "Copier demande d'aide Antigravity" : "Copy Antigravity Help Request")}
                 </button>
               )}
@@ -3741,7 +3741,7 @@ function OptionsSection({
               )}
             </div>
 
-            {/* Status global de la libération */}
+            {/* Status global de la libÃ©ration */}
             {liberationStatus === "liberated" && (
               <div style={{
                 display: "flex",
@@ -3757,7 +3757,7 @@ function OptionsSection({
                 <Icon icon="solar:check-circle-bold" width={18} height={18} />
                 <span>
                   {locale === "fr"
-                    ? "Tous les moteurs IA sont pleinement libérés et en symbiose."
+                    ? "Tous les moteurs IA sont pleinement libÃ©rÃ©s et en symbiose."
                     : "All AI engines are fully liberated and in symbiosis."}
                 </span>
               </div>
@@ -3778,7 +3778,7 @@ function OptionsSection({
                 <Icon icon="solar:danger-bold" width={18} height={18} />
                 <span>
                   {locale === "fr"
-                    ? "Certains moteurs IA sont restreints ou bloqués par des signatures de sécurité."
+                    ? "Certains moteurs IA sont restreints ou bloquÃ©s par des signatures de sÃ©curitÃ©."
                     : "Some AI engines are restricted or blocked by security signatures."}
                 </span>
               </div>
@@ -3827,12 +3827,12 @@ function AboutSection({ locale }: { locale: AppLocale }) {
 
       <p className="settings-pane__about-line">
         {locale === "fr"
-          ? "Sinew est un harnais de codage IA flexible. Vous le façonnez : ajustez la description de chaque outil, désactivez ceux dont vous n'avez pas besoin, et l'assistant ne verra que ce que vous conservez."
+          ? "Sinew est un harnais de codage IA flexible. Vous le faÃ§onnez : ajustez la description de chaque outil, dÃ©sactivez ceux dont vous n'avez pas besoin, et l'assistant ne verra que ce que vous conservez."
           : "Sinew is a flexible AI coding harness. You shape it: tweak the description of every tool, turn the ones you don't need off, and the assistant only sees what you keep."}
       </p>
       <p className="settings-pane__about-line">
         {locale === "fr"
-          ? "Lancez-le en mode minimal avec quelques outils, ou débloquez l'ensemble complet : terminal, recherche, MCP, web, images, sous-agents. Multi-fournisseur par défaut."
+          ? "Lancez-le en mode minimal avec quelques outils, ou dÃ©bloquez l'ensemble complet : terminal, recherche, MCP, web, images, sous-agents. Multi-fournisseur par dÃ©faut."
           : "Run it minimal with a couple of tools, or unlock the full set : shell, search, MCP, web, images, sub-agents. Multi-provider by default."}
       </p>
 
@@ -3874,12 +3874,12 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           gap: "6px"
         }}>
           <Icon icon="solar:widget-bold" width={16} height={16} style={{ color: "var(--primary)" }} />
-          {locale === "fr" ? "Fork JulienPiron.fr � Améliorations Clés" : "JulienPiron.fr Fork � Key Enhancements"}
+          {locale === "fr" ? "Fork JulienPiron.fr ï¿½ AmÃ©liorations ClÃ©s" : "JulienPiron.fr Fork ï¿½ Key Enhancements"}
         </h2>
         
         <p className="settings-pane__about-line" style={{ fontSize: "var(--fs-xs)", color: "var(--text-3)" }}>
           {locale === "fr" 
-            ? "Ce fork de JulienPiron.fr enrichit Sinew avec des fonctionnalités avancées optimisées pour un flux de travail quotidien rapide, autonome et ultra-résilient."
+            ? "Ce fork de JulienPiron.fr enrichit Sinew avec des fonctionnalitÃ©s avancÃ©es optimisÃ©es pour un flux de travail quotidien rapide, autonome et ultra-rÃ©silient."
             : "This fork by JulienPiron.fr enriches Sinew with advanced features optimized for a fast, autonomous, and ultra-resilient daily workflow."}
         </p>
 
@@ -3900,11 +3900,11 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:play-circle-bold-duotone" width={14} height={14} style={{ color: "#9ca3af" }} />
-              {locale === "fr" ? "Démarrage & Sandbox" : "Startup & Sandbox"}
+              {locale === "fr" ? "DÃ©marrage & Sandbox" : "Startup & Sandbox"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Démarrage instantané en un clic (Mode Sandbox) sans ouvrir de projet pour tester l'IA ou utiliser les outils MCP de manière isolée."
+                ? "DÃ©marrage instantanÃ© en un clic (Mode Sandbox) sans ouvrir de projet pour tester l'IA ou utiliser les outils MCP de maniÃ¨re isolÃ©e."
                 : "Instant one-click startup (Sandbox Mode) without opening a project to test AI or use MCP tools in isolation."}
             </div>
           </div>
@@ -3920,11 +3920,11 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:chat-round-line-bold-duotone" width={14} height={14} style={{ color: "#10b981" }} />
-              {locale === "fr" ? "Expérience Chat & Ergonomie" : "Chat Experience & Ergonomics"}
+              {locale === "fr" ? "ExpÃ©rience Chat & Ergonomie" : "Chat Experience & Ergonomics"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Clic droit interactif sur les onglets (fermeture) et fichiers du chat (ouvrir, révéler, exécuter). Question collante et copie libre du chat débloquée."
+                ? "Clic droit interactif sur les onglets (fermeture) et fichiers du chat (ouvrir, rÃ©vÃ©ler, exÃ©cuter). Question collante et copie libre du chat dÃ©bloquÃ©e."
                 : "Interactive right-click on tabs and chat files. Sticky question and unlocked chat text copying."}
             </div>
           </div>
@@ -3944,7 +3944,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Ajustement dynamique de la taille du texte (+/-) pour Monaco et le chat. Découpage du bundle Vite (-80% taille) pour chargement instantané."
+                ? "Ajustement dynamique de la taille du texte (+/-) pour Monaco et le chat. DÃ©coupage du bundle Vite (-80% taille) pour chargement instantanÃ©."
                 : "Dynamic font size buttons (+/-) for Monaco Editor and chat. Vite bundle splitting (-80% size) for instant UI load."}
             </div>
           </div>
@@ -3960,11 +3960,11 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:disk-bold-duotone" width={14} height={14} style={{ color: "#eab308" }} />
-              {locale === "fr" ? "Sauvegarde Auto & Mises à Jour" : "Auto-Save & Updates"}
+              {locale === "fr" ? "Sauvegarde Auto & Mises Ã  Jour" : "Auto-Save & Updates"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Sauvegarde automatique SOTA 1.5s après la frappe. �0cran de mises à jour sécurisé et synchronisation OneDrive & SQLite automatique."
+                ? "Sauvegarde automatique SOTA 1.5s aprÃ¨s la frappe. ï¿½0cran de mises Ã  jour sÃ©curisÃ© et synchronisation OneDrive & SQLite automatique."
                 : "SOTA auto-save 1.5s after typing. Safe updates screen and automatic OneDrive & SQLite synchronization."}
             </div>
           </div>
@@ -3980,11 +3980,11 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:shield-check-bold-duotone" width={14} height={14} style={{ color: "#14b8a6" }} />
-              {locale === "fr" ? "Zéro Popup & Robustesse" : "Zero Popup & Resilience"}
+              {locale === "fr" ? "ZÃ©ro Popup & Robustesse" : "Zero Popup & Resilience"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Lancement invisible des outils sans popup cmd.exe noire. Diagnostic réseau OAuth Windows résilient (erreur 10013, WinNAT/HNS)."
+                ? "Lancement invisible des outils sans popup cmd.exe noire. Diagnostic rÃ©seau OAuth Windows rÃ©silient (erreur 10013, WinNAT/HNS)."
                 : "Invisible launch of sidecars with zero black cmd popups. Resilient Windows OAuth network check (error 10013, WinNAT/HNS)."}
             </div>
           </div>
@@ -4000,11 +4000,11 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:history-bold-duotone" width={14} height={14} style={{ color: "#6366f1" }} />
-              {locale === "fr" ? "Active Turn & Préfixe PC" : "Active Turn & PC Prefix"}
+              {locale === "fr" ? "Active Turn & PrÃ©fixe PC" : "Active Turn & PC Prefix"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Active Turn Registry (Rust) pour reprise de streaming après coupure. Détection automatique du nom PC réel pour les fichiers multi-PC."
+                ? "Active Turn Registry (Rust) pour reprise de streaming aprÃ¨s coupure. DÃ©tection automatique du nom PC rÃ©el pour les fichiers multi-PC."
                 : "Rust Active Turn Registry for streaming recovery on restart. Automatic PC name prefixing for secure multi-PC files."}
             </div>
           </div>
@@ -4024,7 +4024,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Connexion simultanée de plusieurs clés/comptes (OpenAI/Gemini). Pastilles live et barres de progression de consommation crédit dans le chat."
+                ? "Connexion simultanÃ©e de plusieurs clÃ©s/comptes (OpenAI/Gemini). Pastilles live et barres de progression de consommation crÃ©dit dans le chat."
                 : "Simultaneous multi-account keys (OpenAI/Gemini). Live progression bars and credit balance dots directly in the chat."}
             </div>
           </div>
@@ -4044,7 +4044,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Routage intelligent Gemini Ultra et streaming optimisé. Intégration de Claude Opus 4.6 via les abonnements professionnels Google."
+                ? "Routage intelligent Gemini Ultra et streaming optimisÃ©. IntÃ©gration de Claude Opus 4.6 via les abonnements professionnels Google."
                 : "Gemini Ultra smart routing and optimized streaming. Claude Opus 4.6 integration via professional Google accounts."}
             </div>
           </div>
@@ -4084,7 +4084,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Bouton d'interception « Influencer » (Steering) pour orienter, corriger ou ajouter des instructions en direct pendant que l'IA génère."
+                ? "Bouton d'interception Â« Influencer Â» (Steering) pour orienter, corriger ou ajouter des instructions en direct pendant que l'IA gÃ©nÃ¨re."
                 : "Smart 'Steering' button to guide, correct, or add instructions on the fly during generation."}
             </div>
           </div>
@@ -4100,12 +4100,12 @@ function AboutSection({ locale }: { locale: AppLocale }) {
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, fontSize: "var(--fs-xs)", color: "var(--text-0)" }}>
               <Icon icon="solar:global-bold-duotone" width={14} height={14} style={{ color: "#ec4899" }} />
-              {locale === "fr" ? "Pont Chrome & Réparation" : "Chrome Bridge & Repair"}
+              {locale === "fr" ? "Pont Chrome & RÃ©paration" : "Chrome Bridge & Repair"}
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Pilotage Chrome Rust ultra-stable (clics et courbes Beziers physiques). Bouton bleu de réparation en un clic en cas d'erreur de pont local."
-                : "Native Rust Chrome control with human Bézier curves. One-click gray repair button for the local bridge."}
+                ? "Pilotage Chrome Rust ultra-stable (clics et courbes Beziers physiques). Bouton bleu de rÃ©paration en un clic en cas d'erreur de pont local."
+                : "Native Rust Chrome control with human BÃ©zier curves. One-click gray repair button for the local bridge."}
             </div>
           </div>
 
@@ -4124,7 +4124,7 @@ function AboutSection({ locale }: { locale: AppLocale }) {
             </div>
             <div style={{ fontSize: "11px", color: "var(--text-2)", lineHeight: 1.4 }}>
               {locale === "fr" 
-                ? "Indexation vectorielle sémantique locale BGE-Small. Moteur de remplacement Search/Replace intelligent à 8 couches résilient aux espaces."
+                ? "Indexation vectorielle sÃ©mantique locale BGE-Small. Moteur de remplacement Search/Replace intelligent Ã  8 couches rÃ©silient aux espaces."
                 : "Local vector index search with interactive badge. 8-layer smart Search/Replace engine resilient to minor whitespace errors."}
             </div>
           </div>
@@ -4281,7 +4281,7 @@ function ProvidersSection({
             disabled={loading || busy}
           >
             <Icon icon="solar:refresh-linear" width={13} height={13} />
-            <span>{loading ? "Refreshing⬦" : "Refresh"}</span>
+            <span>{loading ? "Refreshingâ¬¦" : "Refresh"}</span>
           </button>
         </div>
       </header>
@@ -4840,6 +4840,20 @@ function ProviderCard({
             {meta?.map((item) => (
               <span key={item}>{item}</span>
             ))}
+            {compact && connected && quota && quota.kind !== "unavailable" && (
+              <>
+                {quota.kind === "credits" ? (
+                  <>
+                    <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+                    <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
+                  </>
+                ) : (
+                  (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
+                    <QuotaBar inline key={item.label} item={item} />
+                  ))
+                )}
+              </>
+            )}
           </div>
           {connected && quota && quota.kind === "unavailable" && (
             <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: 0.7 }}>
@@ -4850,7 +4864,7 @@ function ProviderCard({
           {children}
         </div>
       </div>
-      <div className="settings-pane__provider-actions" style={{ flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
+      <div className="settings-pane__provider-actions" style={!compact ? { flexDirection: "column", gap: "6px", alignItems: "flex-end" } : undefined}>
         {connecting ? (
           <button
             type="button"
@@ -4947,7 +4961,7 @@ function ProviderCard({
           </div>
         )}
         
-        {connected && quota && quota.kind !== "unavailable" && (
+        {!compact && connected && quota && quota.kind !== "unavailable" && (
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "6px", width: "100%", maxWidth: "100%" }}>
             {quota.kind === "credits" ? (
               <>
@@ -4974,12 +4988,12 @@ function formatResetLabelForWindow(item: { label: string; resetAt?: number | nul
   const deltaMs = Math.max(0, targetMs - Date.now());
   const lowerLabel = item.label.toLowerCase();
   
-  if (lowerLabel.includes("fenetre courte") || lowerLabel.includes("fenêtre courte")) {
+  if (lowerLabel.includes("fenetre courte") || lowerLabel.includes("fenÃªtre courte")) {
     const totalMinutes = Math.max(0, Math.round(deltaMs / 60_000));
     return `reset ${totalMinutes}m`;
   }
   
-  if (lowerLabel.includes("fenetre longue") || lowerLabel.includes("fenêtre longue")) {
+  if (lowerLabel.includes("fenetre longue") || lowerLabel.includes("fenÃªtre longue")) {
     const totalHours = Math.max(0, Math.round(deltaMs / 3_600_000));
     return `reset ${totalHours}h`;
   }
@@ -4993,10 +5007,10 @@ function formatResetLabelForWindow(item: { label: string; resetAt?: number | nul
 
 function formatWindowLabel(window: { label: string; windowMinutes?: number | null }) {
   const lowerLabel = window.label.toLowerCase();
-  if (lowerLabel.includes("fenetre courte") || lowerLabel.includes("fenêtre courte")) {
+  if (lowerLabel.includes("fenetre courte") || lowerLabel.includes("fenÃªtre courte")) {
     return "5h";
   }
-  if (lowerLabel.includes("fenetre longue") || lowerLabel.includes("fenêtre longue")) {
+  if (lowerLabel.includes("fenetre longue") || lowerLabel.includes("fenÃªtre longue")) {
     return "Semaine";
   }
   if (!window.windowMinutes) return window.label;
@@ -5068,8 +5082,8 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
           whiteSpace: "nowrap",
           minWidth: 0,
           flex: "0 0 auto"
-        }} title={percent == null ? "�" : `${percent.toFixed(0)}%${reset ? ` - ${reset}` : ""}`}>
-          {percent == null ? "�" : `${percent.toFixed(0)}%`}{reset ? ` - ${reset}` : ""}
+        }} title={percent == null ? "ï¿½" : `${percent.toFixed(0)}%${reset ? ` - ${reset}` : ""}`}>
+          {percent == null ? "ï¿½" : `${percent.toFixed(0)}%`}{reset ? ` - ${reset}` : ""}
         </span>
       </div>
       <div style={{ width: "100%", height: "4px", background: "var(--bg-3)", borderRadius: "2px", overflow: "hidden" }}>
@@ -5453,7 +5467,7 @@ function OpenRouterProviderCard({
               type="text"
               value={query}
               disabled={!searchEnabled}
-              placeholder={searchEnabled ? "Type a model name⬦" : "Save a valid key first"}
+              placeholder={searchEnabled ? "Type a model nameâ¬¦" : "Save a valid key first"}
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
@@ -5462,7 +5476,7 @@ function OpenRouterProviderCard({
         {searchEnabled && query.trim() !== "" && (
           <div className="settings-pane__openrouter-results" aria-live="polite">
             {searching ? (
-              <div className="settings-pane__openrouter-hint">Searching⬦</div>
+              <div className="settings-pane__openrouter-hint">Searchingâ¬¦</div>
             ) : searchError ? (
               <div className="settings-pane__provider-error">{searchError}</div>
             ) : results.length === 0 ? (
@@ -5484,7 +5498,7 @@ function OpenRouterProviderCard({
                         disabled={mutatingModelId === model.id}
                       >
                         <Icon icon="solar:add-square-linear" width={13} height={13} />
-                        <span>{mutatingModelId === model.id ? "Adding⬦" : "Add"}</span>
+                        <span>{mutatingModelId === model.id ? "Addingâ¬¦" : "Add"}</span>
                       </button>
                     )}
                   </div>
@@ -5619,7 +5633,7 @@ function ToolsSection({
         <div className="settings-pane__header-text">
           <h1 className="settings-pane__title">Tools</h1>
           <p className="settings-pane__subtitle">
-            {loading ? "Loading⬦" : `${enabledCount}/${tools.length} enabled`}
+            {loading ? "Loadingâ¬¦" : `${enabledCount}/${tools.length} enabled`}
           </p>
         </div>
         <div className="settings-pane__actions">
@@ -5643,7 +5657,7 @@ function ToolsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving⬦" : "Save"}</span>
+            <span>{saving ? "Savingâ¬¦" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -5666,12 +5680,12 @@ function ToolsSection({
           {hasImageTool && (
             <section className="settings-pane__tool-group">
               <div className="settings-pane__tool-group-head">
-                <h2>Génération d&apos;images</h2>
+                <h2>GÃ©nÃ©ration d&apos;images</h2>
                 <span>Outil create_image (OpenAI / Google)</span>
               </div>
               <p className="settings-pane__tool-group-note">
-                Les images générées passent par ChatGPT (OpenAI) ou Gemini (Google).
-                Avec Composer, utilise l&apos;outil natif « generate image » (branché sur ce provider).
+                Les images gÃ©nÃ©rÃ©es passent par ChatGPT (OpenAI) ou Gemini (Google).
+                Avec Composer, utilise l&apos;outil natif Â« generate image Â» (branchÃ© sur ce provider).
               </p>
               <div
                 className="settings-pane__tool-provider-switch"
@@ -5696,7 +5710,7 @@ function ToolsSection({
               <div style={{ display: "flex", gap: "12px", marginTop: "12px", marginBottom: "12px" }}>
                 {imageProvider === "gptImage2" ? (
                   <label className="settings-pane__field" style={{ flex: 1 }}>
-                    <span style={{ marginBottom: "4px", display: "block", fontSize: "11px", fontWeight: 500, color: "var(--text-2)" }}>Modèle d&apos;image</span>
+                    <span style={{ marginBottom: "4px", display: "block", fontSize: "11px", fontWeight: 500, color: "var(--text-2)" }}>ModÃ¨le d&apos;image</span>
                     <select
                       value={openaiImageModel}
                       onChange={(e) => onOpenAiImageModelChange(e.target.value)}
@@ -5709,14 +5723,14 @@ function ToolsSection({
                   </label>
                 ) : (
                   <label className="settings-pane__field" style={{ flex: 1 }}>
-                    <span style={{ marginBottom: "4px", display: "block", fontSize: "11px", fontWeight: 500, color: "var(--text-2)" }}>Modèle d&apos;image</span>
+                    <span style={{ marginBottom: "4px", display: "block", fontSize: "11px", fontWeight: 500, color: "var(--text-2)" }}>ModÃ¨le d&apos;image</span>
                     <select
                       value={geminiImageModel}
                       onChange={(e) => onGeminiImageModelChange(e.target.value)}
                       style={{ background: "var(--bg-1)", border: "1px solid var(--border-0)", color: "var(--text-0)" }}
                     >
                       <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview (Nano Banana 2 - Le plus rapide)</option>
-                      <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview (Nano Banana Pro - Précision / Thinking)</option>
+                      <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview (Nano Banana Pro - PrÃ©cision / Thinking)</option>
                       <option value="gemini-2.5-flash-image">gemini-2.5-flash-image (Nano Banana - Classique)</option>
                     </select>
                   </label>
@@ -5733,8 +5747,8 @@ function ToolsSection({
                     </span>
                     <span className="settings-pane__tool-toggle-hint">
                       {openAiConnected
-                        ? "Authentifie les requêtes image avec ton compte OpenAI connecté, sans clé API."
-                        : "Connecte OpenAI dans Paramètres �  Providers pour utiliser ton abonnement."}
+                        ? "Authentifie les requÃªtes image avec ton compte OpenAI connectÃ©, sans clÃ© API."
+                        : "Connecte OpenAI dans ParamÃ¨tres ï¿½  Providers pour utiliser ton abonnement."}
                     </span>
                   </div>
                   <button
@@ -5768,8 +5782,8 @@ function ToolsSection({
                     </span>
                     <span className="settings-pane__tool-toggle-hint">
                       {googleConnected
-                        ? "Authentifie les requêtes image avec ton compte Gemini/Google connecté, sans clé API."
-                        : "Connecte Google dans Paramètres �  Providers pour utiliser ton abonnement."}
+                        ? "Authentifie les requÃªtes image avec ton compte Gemini/Google connectÃ©, sans clÃ© API."
+                        : "Connecte Google dans ParamÃ¨tres ï¿½  Providers pour utiliser ton abonnement."}
                     </span>
                   </div>
                   <button
@@ -5796,8 +5810,8 @@ function ToolsSection({
                 <ApiKeyField
                   label={
                     imageProvider === "nanoBanana2"
-                      ? "Clé API Gemini"
-                      : "Clé API OpenAI"
+                      ? "ClÃ© API Gemini"
+                      : "ClÃ© API OpenAI"
                   }
                   value={activeImageKey}
                   placeholder={imageProvider === "nanoBanana2" ? "AIza..." : "sk-..."}
@@ -5924,7 +5938,7 @@ function PlanModePromptSettingsItem({
         aria-label="Plan mode prompt"
         value={value}
         rows={rows}
-        placeholder="Plan mode instructions⬦"
+        placeholder="Plan mode instructionsâ¬¦"
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
@@ -6054,7 +6068,7 @@ function McpSection({
           <h1 className="settings-pane__title">MCP servers</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Loading servers⬦"
+              ? "Loading serversâ¬¦"
               : servers.length === 0
                 ? "Add servers in advanced config, then turn them on here."
                 : `${enabledCount}/${servers.length} enabled${failedCount ? ` - ${failedCount} need attention` : ""}`}
@@ -6071,10 +6085,10 @@ function McpSection({
             className="settings-pane__btn"
             onClick={onRefreshProbes}
             disabled={probing || enabledCount === 0}
-            title="Reconnecter et rafraîchir tous les serveurs MCP"
+            title="Reconnecter et rafraÃ®chir tous les serveurs MCP"
           >
             <Icon icon="solar:restart-linear" width={13} height={13} />
-            <span>{probing ? "Scan⬦" : "Refresh"}</span>
+            <span>{probing ? "Scanâ¬¦" : "Refresh"}</span>
           </button>
           <button
             type="button"
@@ -6097,7 +6111,7 @@ function McpSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Checking⬦" : dirty ? "Save changes" : "Saved"}</span>
+            <span>{saving ? "Checkingâ¬¦" : dirty ? "Save changes" : "Saved"}</span>
           </button>
         </div>
       </header>
@@ -6107,7 +6121,7 @@ function McpSection({
           <div className="settings-pane__nav-list-head">
             <span>Servers</span>
             {probing && (
-              <span className="settings-pane__servers-meta">probing⬦</span>
+              <span className="settings-pane__servers-meta">probingâ¬¦</span>
             )}
           </div>
           <div className="settings-pane__nav-list-items">
@@ -6179,7 +6193,7 @@ function McpSection({
             })}
             {servers.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No servers yet � add one in the raw config.
+                No servers yet ï¿½ add one in the raw config.
               </div>
             )}
           </div>
@@ -6307,7 +6321,7 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
       : "disabled"
     : !probe
       ? probing
-        ? "probing⬦"
+        ? "probingâ¬¦"
         : "pending"
       : !probe.ok
         ? "failed"
@@ -6331,7 +6345,7 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
           </code>
         )}
         <div className="settings-pane__detail-row">
-          <span>Exposer tous les outils au démarrage</span>
+          <span>Exposer tous les outils au dÃ©marrage</span>
           <button
             type="button"
             className="settings-pane__switch"
@@ -6377,8 +6391,8 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
               <strong style={{ fontSize: "13px" }}>Synchronisation et configuration locale</strong>
             </div>
             <p style={{ margin: 0, fontSize: "12px", opacity: 0.8, lineHeight: "1.4" }}>
-              Le pont Chrome nécessite des fichiers système locaux (`AppData`) et une clé de registre Windows.
-              Si vous êtes sur un nouveau PC, ou si le pont ne répond pas, vous pouvez l'enregistrer à nouveau en un clic.
+              Le pont Chrome nÃ©cessite des fichiers systÃ¨me locaux (`AppData`) et une clÃ© de registre Windows.
+              Si vous Ãªtes sur un nouveau PC, ou si le pont ne rÃ©pond pas, vous pouvez l'enregistrer Ã  nouveau en un clic.
             </p>
             <div style={{
               fontSize: "12px",
@@ -6391,8 +6405,8 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
               marginTop: "4px",
               fontWeight: "500"
             }}>
-              �a�️ IMPORTANT : Pour que l'automatisation fonctionne, vous devez également charger l'extension une première fois dans Google Chrome. 
-              Allez sur <code style={{color: "#fff", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px"}}>chrome://extensions</code>, activez le "Mode développeur", cliquez sur "Charger l'extension non empaquetée" et sélectionnez le dossier <code style={{color: "#fff", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px"}}>sinew-chrome-bridge</code> de ce projet.
+              ï¿½aï¿½ï¸ IMPORTANT : Pour que l'automatisation fonctionne, vous devez Ã©galement charger l'extension une premiÃ¨re fois dans Google Chrome. 
+              Allez sur <code style={{color: "#fff", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px"}}>chrome://extensions</code>, activez le "Mode dÃ©veloppeur", cliquez sur "Charger l'extension non empaquetÃ©e" et sÃ©lectionnez le dossier <code style={{color: "#fff", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px"}}>sinew-chrome-bridge</code> de ce projet.
             </div>
             <button
               type="button"
@@ -6416,14 +6430,14 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
                 try {
                   await api.registerChromeBridge(workspacePath);
                   onRefreshProbes?.();
-                  alert("Le pont Chrome a été enregistré avec succès sur cet ordinateur ! Veuillez redémarrer l'application pour appliquer les changements.");
+                  alert("Le pont Chrome a Ã©tÃ© enregistrÃ© avec succÃ¨s sur cet ordinateur ! Veuillez redÃ©marrer l'application pour appliquer les changements.");
                 } catch (e) {
                   alert("Erreur lors de l'enregistrement : " + e);
                 }
               }}
             >
               <Icon icon="solar:settings-linear" width={14} height={14} />
-              <span>Configurer/Réparer le pont local</span>
+              <span>Configurer/RÃ©parer le pont local</span>
             </button>
           </div>
         )}
@@ -6479,7 +6493,7 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
           )}
           {!probe && (
             <div className="settings-pane__muted">
-              {probing ? "Probing server⬦" : "No probe data yet."}
+              {probing ? "Probing serverâ¬¦" : "No probe data yet."}
             </div>
           )}
           {!probe && server.enabled && onRefreshProbes && !probing ? (
@@ -6567,7 +6581,7 @@ function SubAgentsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving⬦" : "Save"}</span>
+            <span>{saving ? "Savingâ¬¦" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -6608,7 +6622,7 @@ function SubAgentsSection({
             ))}
             {!loading && settings.agents.length === 0 && (
               <div className="settings-pane__nav-list-empty">
-                No sub-agents yet � click + to start.
+                No sub-agents yet ï¿½ click + to start.
               </div>
             )}
           </div>
@@ -6681,7 +6695,7 @@ function SettingsPicker({
           {selected?.icon && (
             <Icon icon={selected.icon} width={12} height={12} />
           )}
-          <span>{selected?.label ?? "�"}</span>
+          <span>{selected?.label ?? "ï¿½"}</span>
         </span>
         <Icon icon="solar:alt-arrow-down-bold" width={11} height={11} />
       </button>
@@ -6932,7 +6946,7 @@ function SkillsSection({
           <h1 className="settings-pane__title">Skills</h1>
           <p className="settings-pane__subtitle">
             {loading
-              ? "Scanning⬦"
+              ? "Scanningâ¬¦"
               : total === 0
                 ? "Drop SKILL.md files in .agents/skills or ~/.agents/skills."
                 : `${enabled}/${total} available to the agent`}
@@ -6981,7 +6995,7 @@ function SkillsSection({
               width={13}
               height={13}
             />
-            <span>{saving ? "Saving⬦" : "Save"}</span>
+            <span>{saving ? "Savingâ¬¦" : "Save"}</span>
           </button>
         </div>
       </header>
@@ -7204,7 +7218,7 @@ function SkillPreview({
                     width={13}
                     height={13}
                   />
-                  <span>{saving ? "Saving⬦" : "Save"}</span>
+                  <span>{saving ? "Savingâ¬¦" : "Save"}</span>
                 </button>
               </>
             ) : (
@@ -8119,7 +8133,7 @@ function DeepSeekProviderCard({
           )}
           {connected && displayStatus.models && displayStatus.models.length > 0 && (
             <div style={{ fontSize: "11px", opacity: 0.9, color: "var(--color-success)", marginTop: "10px" }}>
-              <strong>�S Modèles vérifiés sur votre clé :</strong>{" "}
+              <strong>ï¿½S ModÃ¨les vÃ©rifiÃ©s sur votre clÃ© :</strong>{" "}
               {displayStatus.models.map(id => id === "deepseek-chat" ? "DeepSeek V3" : id === "deepseek-reasoner" ? "DeepSeek R1" : id).join(", ")}
             </div>
           )}
