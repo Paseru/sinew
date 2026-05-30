@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 16:17:12]
+- `src-tauri/src/workspace.rs` : Automatisation du déploiement du daemon Linux "Super SSH". Si le binaire local est absent, la commande de démarrage télécharge automatiquement la dernière release stable du daemon `sinew-agent-daemon-linux` via `curl` sur le serveur distant depuis GitHub, garantissant une utilisation sans configuration pour les utilisateurs.
+- `.github/workflows/release.yml` : Ajout d'une étape de compilation native du daemon (`cargo build --release -p sinew-agent-daemon`) sur les runners Linux de l'intégration continue. Le binaire est ensuite publié en tant qu'asset additionnel (`sinew-agent-daemon-linux`) sur les releases GitHub.
+
+
+
 ## [2026-05-30 16:01:00]
 - `src-tauri/src/workspace.rs` : Création de la commande Tauri `mount_super_ssh_workspace` qui orchestre la connexion "Super SSH". Cette commande déploie dynamiquement le daemon natif compilé sur le serveur distant via SCP, le démarre en arrière-plan, puis met en place un port forwarding SSH local (47990 -> 127.0.0.1:47990) sans bloquer l'interface.
 - `src-tauri/src/workspace.rs` : Ajout de la méthode `proxy_to_daemon` et interception des requêtes de fichiers (`list_workspace_entries_command`, `list_workspace_files_command`, `read_workspace_file_command`, `write_workspace_file_command`, `search_workspace_files_command`). Si l'espace de travail est préfixé par `super-ssh://`, les commandes ne lisent pas le disque local mais encapsulent l'appel en JSON et le transmettent au daemon distant sur le port 47990 pour une latence nulle.

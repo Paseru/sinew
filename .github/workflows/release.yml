@@ -241,6 +241,16 @@ jobs:
             echo "No .deb produced - skipping .deb alias."
           fi
 
+      - name: Build & upload Linux Daemon (for Super SSH)
+        if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          cargo build --release -p sinew-agent-daemon
+          cp target/release/sinew-agent-daemon sinew-agent-daemon-linux
+          gh release upload "${{ needs.create-release.outputs.tag_name }}" sinew-agent-daemon-linux --clobber
+
   finalize-release:
     name: Finalize release
     needs: [create-release, build-tauri]

@@ -178,6 +178,17 @@ pub(super) async fn codebase_index_stats_command(
 pub(super) async fn list_workspace_entries_command(
     input: WorkspaceEntriesInput,
 ) -> std::result::Result<Vec<sinew_app::WorkspaceEntry>, String> {
+    if input.workspace_path.starts_with("super-ssh://") {
+        let req = serde_json::json!({
+            "type": "list_entries",
+            "workspace_path": input.workspace_path,
+            "relative_path": input.relative_path
+        });
+        let res = proxy_to_daemon(req).await?;
+        let output = res.get("entries").ok_or("Missing entries")?;
+        return serde_json::from_value(output.clone()).map_err(|e| e.to_string());
+    }
+
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let relative_path = input.relative_path;
@@ -193,6 +204,16 @@ pub(super) async fn list_workspace_entries_command(
 pub(super) async fn list_workspace_files_command(
     input: WorkspaceInput,
 ) -> std::result::Result<Vec<sinew_app::WorkspaceEntry>, String> {
+    if input.workspace_path.starts_with("super-ssh://") {
+        let req = serde_json::json!({
+            "type": "list_all_files",
+            "workspace_path": input.workspace_path
+        });
+        let res = proxy_to_daemon(req).await?;
+        let output = res.get("entries").ok_or("Missing entries")?;
+        return serde_json::from_value(output.clone()).map_err(|e| e.to_string());
+    }
+
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     tauri::async_runtime::spawn_blocking(move || list_workspace_files(&workspace_root))
@@ -205,6 +226,17 @@ pub(super) async fn list_workspace_files_command(
 pub(super) async fn search_workspace_files_command(
     input: WorkspaceSearchInput,
 ) -> std::result::Result<WorkspaceSearchResult, String> {
+    if input.workspace_path.starts_with("super-ssh://") {
+        let req = serde_json::json!({
+            "type": "search_files",
+            "workspace_path": input.workspace_path,
+            "query": input.query
+        });
+        let res = proxy_to_daemon(req).await?;
+        let output = res.get("output").ok_or("Missing output")?;
+        return serde_json::from_value(output.clone()).map_err(|e| e.to_string());
+    }
+
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let query = input.query;
@@ -245,6 +277,28 @@ pub(super) async fn import_workspace_paths_command(
 pub(super) async fn read_workspace_file_command(
     input: WorkspaceFileInput,
 ) -> std::result::Result<sinew_app::FileDocument, String> {
+    if input.workspace_path.starts_with("super-ssh://") {
+        let req = serde_json::json!({
+            "type": "read_file",
+            "workspace_path": input.workspace_path,
+            "relative_path": input.relative_path
+        });
+        let res = proxy_to_daemon(req).await?;
+        let content = res.get("content").and_then(|c| c.as_str()).ok_or("Missing content")?;
+        return Ok(sinew_app::FileDocument {
+            name: input.relative_path.split('/').last().unwrap_or(&input.relative_path).to_string(),
+            relative_path: input.relative_path.clone(),
+            absolute_path: format!("{}/{}", input.workspace_path, input.relative_path),
+            editable: true,
+            content: Some(content.to_string()),
+            reason: None,
+            size: content.len() as u64,
+            last_modified_ms: None,
+            image_media_type: None,
+            image_data: None,
+        });
+    }
+
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let relative_path = input.relative_path;
@@ -261,6 +315,31 @@ pub(super) async fn write_workspace_file_command(
     app: AppHandle,
     input: WriteWorkspaceFileInput,
 ) -> std::result::Result<sinew_app::FileDocument, String> {
+    if input.workspace_path.starts_with("super-ssh://") {
+        let req = serde_json::json!({
+            "type": "write_file",
+            "workspace_path": input.workspace_path,
+            "relative_path": input.relative_path,
+            "content": input.content
+        });
+        let _res = proxy_to_daemon(req).await?;
+        let doc = sinew_app::FileDocument {
+            name: input.relative_path.split('/').last().unwrap_or(&input.relative_path).to_string(),
+            relative_path: input.relative_path.clone(),
+            absolute_path: format!("{}/{}", input.workspace_path, input.relative_path),
+            editable: true,
+            content: Some(input.content.clone()),
+            reason: None,
+            size: input.content.len() as u64,
+            last_modified_ms: None,
+            image_media_type: None,
+            image_data: None,
+        };
+        // Maybe we shouldn't emit here, or we need a fake workspace root?
+        // emit_workspace_file_change(&app, &workspace_root, &doc.relative_path);
+        return Ok(doc);
+    }
+
     let workspace_root =
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let doc = write_workspace_file(&workspace_root, &input.relative_path, &input.content)
@@ -732,6 +811,64 @@ pub(crate) fn resolve_project_id_str(workspace_path_str: &str) -> String {
 }
 
 #[tauri::command]
+pub(super) async fn mount_super_ssh_workspace(
+    state: State<'_, DesktopState>,
+    window: tauri::WebviewWindow,
+    host_or_alias: String,
+) -> std::result::Result<WorkspaceBootstrap, String> {
+    // 1. Déployer et lancer le daemon via SSH
+    let target = host_or_alias.clone();
+    
+    let local_bin = "binaries/sinew-agent-daemon-linux";
+    if std::path::Path::new(local_bin).exists() {
+        let _ = std::process::Command::new("scp")
+            .arg(local_bin)
+            .arg(format!("{}:/tmp/sinew-agent-daemon", target))
+            .status();
+    }
+
+    let start_cmd = "killall sinew-agent-daemon; \
+        if [ ! -f /tmp/sinew-agent-daemon ]; then \
+            echo 'Downloading latest daemon...'; \
+            curl -L -o /tmp/sinew-agent-daemon https://github.com/Paseru/sinew/releases/latest/download/sinew-agent-daemon-linux; \
+        fi; \
+        chmod +x /tmp/sinew-agent-daemon; \
+        nohup /tmp/sinew-agent-daemon > /tmp/sinew-daemon.log 2>&1 &";
+
+    let _ = std::process::Command::new("ssh")
+        .args(&[&target, start_cmd])
+        .status()
+        .map_err(|e| format!("Failed to start remote daemon: {}", e))?;
+
+    // 2. Mettre en place le port forwarding local 47990 -> 127.0.0.1:47990
+    let _child = std::process::Command::new("ssh")
+        .args(&["-N", "-L", "47990:127.0.0.1:47990", &target])
+        .spawn()
+        .map_err(|e| format!("Failed to forward port: {}", e))?;
+
+    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+
+    let workspace_path = format!("super-ssh://{}/~", host_or_alias);
+    
+    // Create a local dummy folder to let Tauri workspace loader work
+    let safe_local_id = format!("super-ssh-{}", host_or_alias);
+    let mut db_path = std::env::temp_dir();
+    db_path.push("sinew-workspaces");
+    db_path.push(&safe_local_id);
+    let _ = std::fs::create_dir_all(&db_path);
+    
+    let input = WorkspaceInput { workspace_path: db_path.to_string_lossy().to_string() };
+    
+    let mut bootstrap = open_workspace(state, window, input).await?;
+    
+    // Override with real SSH info
+    bootstrap.workspace.path = workspace_path;
+    bootstrap.workspace.name = format!("SSH: {}", host_or_alias);
+    
+    Ok(bootstrap)
+}
+
+#[tauri::command]
 pub(super) async fn mount_ssh_workspace(
     state: State<'_, DesktopState>,
     window: tauri::WebviewWindow,
@@ -820,4 +957,27 @@ pub(super) async fn list_ssh_hosts() -> std::result::Result<Vec<String>, String>
         }
     }
     Ok(hosts)
+}
+
+pub(super) async fn proxy_to_daemon(
+    request: serde_json::Value,
+) -> std::result::Result<serde_json::Value, String> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    let mut stream = tokio::net::TcpStream::connect("127.0.0.1:47990")
+        .await
+        .map_err(|e| format!("Proxy failed to connect to daemon: {}", e))?;
+    let mut req_bytes = serde_json::to_vec(&request).map_err(|e| e.to_string())?;
+    req_bytes.push(b'\n');
+    stream.write_all(&req_bytes).await.map_err(|e| e.to_string())?;
+    
+    let mut reader = BufReader::new(stream);
+    let mut line = String::new();
+    reader.read_line(&mut line).await.map_err(|e| e.to_string())?;
+    
+    let resp: serde_json::Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+    if resp.get("type").and_then(|t| t.as_str()) == Some("error") {
+        return Err(resp.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown daemon error").to_string());
+    }
+    
+    Ok(resp)
 }
