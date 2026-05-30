@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:18:39]
+- `crates/sinew-app/src/write.rs` : Résolution d'un bug critique bloquant l'écriture de nouveaux fichiers sur Windows en harmonisant la comparaison insensible à la casse et la suppression des préfixes UNC (`\\?\`).
+- `crates/sinew-app/src/read.rs` : Harmonisation de la fonction `relative_from_root` pour nettoyer correctement les préfixes UNC sous Windows et éviter les fausses alertes d'accès hors espace de travail.
+
 ## [2026-05-30 02:16:06]
 - `consolidate_rules.py` : Correction d'un bug cosmétique de double point final lors de la génération de règles d'auto-apprentissage si la description d'erreur contenait déjà un point.
 - `test_consolidation.py` : Ajout puis suppression du script temporaire de test de validation du système d'auto-apprentissage des erreurs.

@@ -258,6 +258,16 @@ fn fingerprint_for_bytes(
     }
 }
 
+fn clean_windows_path(path: &Path) -> String {
+    let s = path.to_string_lossy().replace('\\', "/");
+    let clean = if s.starts_with("//?/") {
+        s[4..].to_string()
+    } else {
+        s
+    };
+    clean.to_lowercase()
+}
+
 fn relative_from_root(root: &Path, path: &Path) -> Result<String> {
     let root_canonical = root
         .canonicalize()
@@ -268,15 +278,12 @@ fn relative_from_root(root: &Path, path: &Path) -> Result<String> {
 
     #[cfg(target_os = "windows")]
     {
-        let root_str = root_canonical.to_string_lossy().replace('\\', "/");
-        let path_str = path_canonical.to_string_lossy().replace('\\', "/");
-        let root_lower = root_str.to_lowercase();
-        let path_lower = path_str.to_lowercase();
+        let root_str = clean_windows_path(&root_canonical);
+        let path_str = clean_windows_path(&path_canonical);
         
-        if path_lower.starts_with(&root_lower) {
-            let relative_part = &path_str[root_lower.len()..];
-            let trimmed = relative_part.trim_start_matches('/');
-            Ok(trimmed.to_string())
+        if path_str == root_str || path_str.starts_with(&format!("{}/", root_str)) {
+            let relative = &path_str[root_str.len()..];
+            Ok(relative.trim_start_matches('/').to_string())
         } else {
             bail!("{} is outside the workspace", path.display());
         }

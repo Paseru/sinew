@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -10,6 +10,9 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use sinew_core::ToolDescriptor;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+
+#[cfg(not(target_os = "windows"))]
+use std::path::Component;
 
 use crate::{
     read::{fingerprint_path, ReadFingerprint},
@@ -218,14 +221,38 @@ fn resolve_relative_target(root: &Path, normalized: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
+fn clean_windows_path(path: &Path) -> String {
+    let s = path.to_string_lossy().replace('\\', "/");
+    let clean = if s.starts_with("//?/") {
+        s[4..].to_string()
+    } else {
+        s
+    };
+    clean.to_lowercase()
+}
+
+fn is_under_root(root: &Path, path: &Path) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let root_str = clean_windows_path(root);
+        let path_str = clean_windows_path(path);
+        path_str == root_str || path_str.starts_with(&format!("{}/", root_str))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        path.starts_with(root)
+    }
+}
+
 fn ensure_target_in_workspace(root: &Path, path: &Path) -> Result<()> {
     if path_has_entry(path) {
-        if path.starts_with(root) {
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        if is_under_root(root, &canonical) {
             return Ok(());
         }
         bail!("{} is outside the workspace", path.display());
     }
-    if path.starts_with(root) {
+    if is_under_root(root, path) {
         ensure_existing_ancestor_in_workspace(root, path)
     } else {
         bail!("{} is outside the workspace", path.display())
@@ -245,7 +272,7 @@ fn ensure_existing_ancestor_in_workspace(root: &Path, path: &Path) -> Result<()>
             let canonical = ancestor
                 .canonicalize()
                 .with_context(|| format!("unable to resolve path {}", ancestor.display()))?;
-            if canonical.starts_with(root) {
+            if is_under_root(root, &canonical) {
                 return Ok(());
             }
             bail!("{} is outside the workspace", path.display());
@@ -257,36 +284,41 @@ fn ensure_existing_ancestor_in_workspace(root: &Path, path: &Path) -> Result<()>
 }
 
 fn ensure_new_absolute_path_is_under_root(root: &Path, path: &Path) -> Result<()> {
-    let relative = path
-        .strip_prefix(root)
-        .with_context(|| format!("{} is outside the workspace", path.display()))?;
-    if relative.as_os_str().is_empty() {
-        bail!("path cannot be the workspace root");
+    if is_under_root(root, path) {
+        Ok(())
+    } else {
+        bail!("{} is outside the workspace", path.display())
     }
-    for component in relative.components() {
-        match component {
-            Component::Normal(_) => {}
-            Component::CurDir => {}
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
-                bail!("{} is outside the workspace", path.display())
-            }
-        }
-    }
-    Ok(())
 }
 
 fn relative_path(root: &Path, path: &Path) -> Result<String> {
-    let relative = path
-        .strip_prefix(root)
-        .with_context(|| format!("{} is outside the workspace", path.display()))?;
-    Ok(relative
-        .components()
-        .filter_map(|component| match component {
-            Component::Normal(value) => Some(value.to_string_lossy().into_owned()),
-            _ => None,
-        })
-        .collect::<Vec<_>>()
-        .join("/"))
+    #[cfg(target_os = "windows")]
+    {
+        let root_str = clean_windows_path(root);
+        let path_str = clean_windows_path(path);
+        if path_str == root_str {
+            bail!("path cannot be the workspace root");
+        }
+        if path_str.starts_with(&format!("{}/", root_str)) {
+            let relative = &path_str[root_str.len() + 1..];
+            return Ok(relative.to_string());
+        }
+        bail!("{} is outside the workspace", path.display());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let relative = path
+            .strip_prefix(root)
+            .with_context(|| format!("{} is outside the workspace", path.display()))?;
+        Ok(relative
+            .components()
+            .filter_map(|component| match component {
+                Component::Normal(value) => Some(value.to_string_lossy().into_owned()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("/"))
+    }
 }
 
 fn write_text_file(path: &Path, content: &str) -> Result<()> {
