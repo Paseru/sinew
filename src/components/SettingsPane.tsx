@@ -5012,6 +5012,14 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
   const reset = formatResetLabelForWindow(item);
   
   if (inline) {
+    if (percent == null) {
+      return (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "4px 8px", borderRadius: "var(--r-med)", color: "var(--text-1)", fontSize: "11px", fontWeight: 600, border: "1px solid var(--line-1)" }}>
+          <span style={{ whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
+          {reset && <span style={{ color: "var(--text-3)", fontWeight: 400 }}> - {reset}</span>}
+        </span>
+      );
+    }
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "3px 7px", borderRadius: "var(--r-med)", color: "var(--text-2)", fontSize: "10px", border: "1px solid var(--line-1)" }}>
         <span style={{ whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
@@ -5026,7 +5034,7 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
           />
         </div>
         <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-          {percent == null ? "—" : `${percent.toFixed(0)}%`}{reset ? ` - ${reset}` : ""}
+          {`${percent.toFixed(0)}%`}{reset ? ` - ${reset}` : ""}
         </span>
       </span>
     );

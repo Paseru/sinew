@@ -228,17 +228,19 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
       const currency = activeInfo.currency || "USD";
 
       const totalEver = toppedUpBalance + grantedBalance;
-
-      if (totalEver > 0) {
-        const percentage = Math.max(0, Math.min(100, (totalBalance / totalEver) * 100));
+      
+      // DeepSeek total_balance is often equal to the sum of topped_up + granted initially,
+      // and when it changes, we don't have a reliable "starting" amount.
+      // So percentage is mostly meaningless (always 100%).
+      if (totalBalance >= 0) {
         return {
           kind: "credits",
-          percentage,
+          percentage: null,
           isReal: true,
           label: `Solde DeepSeek (${currency})`,
           source: "DeepSeek /user/balance",
-          creditLimit: totalEver,
-          creditUsed: totalEver - totalBalance > 0 ? totalEver - totalBalance : 0,
+          creditLimit: null,
+          creditUsed: null,
           creditRemaining: totalBalance,
         };
       }

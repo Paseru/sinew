@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-05-30 14:26:45]
+## [2026-05-30 14:46:07]
+- `src/lib/quotas.ts` : Suppression du calcul inutile du pourcentage pour DeepSeek car le point de terminaison de l'API rendait toujours `100%` (le dénominateur est souvent égal au reste), renvoyant `null` à la place.
+- `src/components/SettingsPane.tsx` : Modification de l'affichage en ligne du composant `QuotaBar` pour masquer la barre de progression complète et afficher uniquement le texte centré et agrandi lorsque le pourcentage restant est nul (`null`), ce qui permet d'afficher la ligne de crédit DeepSeek ("Restant $17.08") plus clairement sans une barre `100%` trompeuse.
+
+
 - `src-tauri/src/turns.rs` : Implémentation de la lecture "Hot-Reload" en temps réel des règles d'IA (Cerveau Cloud via OneDrive). L'application lit désormais dynamiquement `instructions_consolidated.md` directement depuis OneDrive (avant de basculer sur LocalAppData) à chaque nouveau message, permettant des améliorations SOTA immédiates sans recharger ni recompiler l'application.
 
 ## [2026-05-30 14:21:14]
