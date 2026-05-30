@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - src/components/SettingsPane.tsx : Déplacement des barres de quotas sous les boutons d'action (Se déconnecter/Se connecter) afin de gagner de l'espace horizontal sur les cartes fournisseurs et éviter qu'elles ne soient écrasées sur de petites résolutions.
 - src/components/SettingsPane.tsx : Retrait des mentions explicites de numéros de version (ex: V3 & R1) pour la description de DeepSeek, car ces informations évoluent vite.
 - src/lib/frRuntime.ts : Raccourcissement de "Limite atteinte" en "Limite" pour optimiser l'affichage.
+- src/components/SettingsPane.tsx : Masquage automatique de la description du fournisseur une fois connecté pour gagner de la place verticalement.
 ## [2026-05-30 15:02:20]
 - `src/lib/recents.ts` : Exclusion automatique du dossier temporaire (`.sinew-sandbox` ou "Sans dossier") de la liste des projets récents affichés sur la page d'accueil pour éviter de polluer l'historique de l'utilisateur, tout en conservant la possibilité de le rouvrir automatiquement au prochain lancement si c'était le dernier projet actif.
 
@@ -435,4 +436,6 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **Outils MCP de diagnostics Chrome avancés :** Intégration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mémoire en local.
 
 ---
+
+
 

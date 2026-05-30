@@ -4835,7 +4835,7 @@ function ProviderCard({
               {statusLabel}
             </span>
           </div>
-          {!compact && <p>{description}</p>}
+          {!compact && !connected && <p>{description}</p>}
           <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "4px" : "8px", alignItems: "center" }}>
             {meta?.map((item) => (
               <span key={item}>{item}</span>
