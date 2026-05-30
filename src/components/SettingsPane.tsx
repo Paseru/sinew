@@ -4837,15 +4837,15 @@ function ProviderCard({
           </div>
           {!compact && !connected && <p>{description}</p>}
           {compact && connected && quota && quota.kind !== "unavailable" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "8px", width: "100%" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "8px", width: "100%" }}>
               {quota.kind === "credits" ? (
                 <>
-                  <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
-                  <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
+                  <QuotaBar item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+                  <QuotaBar item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
                 </>
               ) : (
                 (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
-                  <QuotaBar inline key={item.label} item={item} />
+                  <QuotaBar key={item.label} item={item} />
                 ))
               )}
             </div>

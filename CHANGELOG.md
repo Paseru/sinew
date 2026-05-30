@@ -34,6 +34,7 @@ All notable changes to this project will be documented in this file.
 - src/components/SettingsPane.tsx : Masquage automatique de la description du fournisseur une fois connecté pour gagner de la place verticalement.
 - src/components/SettingsPane.tsx : Correction de l'affichage interne des sous-cartes de fournisseurs pour que les barres de quotas ne détruisent plus l'alignement des emails.
 - src/components/SettingsPane.tsx : Optimisation extrême des sous-cartes : les quotas sont maintenant empilés proprement sur toute la largeur, et les détails (emails, plan, etc.) sont fusionnés sur une seule ligne condensée.
+- src/components/SettingsPane.tsx : Transformation des quotas des sous-cartes en blocs pleine largeur avec l'info au-dessus de la barre pour exploiter tout l'espace horizontal.
 ## [2026-05-30 15:02:20]
 - `src/lib/recents.ts` : Exclusion automatique du dossier temporaire (`.sinew-sandbox` ou "Sans dossier") de la liste des projets récents affichés sur la page d'accueil pour éviter de polluer l'historique de l'utilisateur, tout en conservant la possibilité de le rouvrir automatiquement au prochain lancement si c'était le dernier projet actif.
 
@@ -452,6 +453,7 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **Outils MCP de diagnostics Chrome avancés :** Intégration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mémoire en local.
 
 ---
+
 
 
 
