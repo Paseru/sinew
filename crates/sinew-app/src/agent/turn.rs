@@ -31,6 +31,7 @@ use super::{
         successful_read_fingerprints,
     },
     mode::{run_update_goal, system_prompt_for_turn, update_goal_descriptor},
+    repeat_guard::{record_repeated_error, RepeatGuard},
     tool_dispatch::{run_tool, should_wait_for_cooperative_cancel},
     tool_summary::{display_mcp_server_name, pretty_json, should_stream_tool_args, summarize_tool},
 };
@@ -160,6 +161,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     let mut loops = 0usize;
     let mut auto_compaction_attempts = 0usize;
     let mut current_turn_tool_result_ids = BTreeSet::new();
+    let mut repeat_guard = RepeatGuard::new();
     let mut eager_tool_results = BTreeMap::<String, JoinHandle<ToolRunResult>>::new();
     let mut read_fingerprints = successful_read_fingerprints(&history, &read);
     todo_list.normalize();
@@ -271,6 +273,9 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 et expliquer précisément ce qui bloque et comment vous allez ajuster votre méthode.\n\
                 </system_reminder>"
             );
+        }
+        if let Some(reminder) = repeat_guard.take_reminder() {
+            current_system_prompt.push_str(&reminder);
         }
         let current_system_prompt = if model.provider == "cursor" {
             cursor_system_prompt(
@@ -960,6 +965,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                     result
                 };
                 let canonical_name = tool_names::canonical_tool_name(name);
+                repeat_guard.observe(canonical_name, input, result.is_error);
                 if (canonical_name == tool_names::READ
                     || canonical_name == tool_names::EDIT_FILE
                     || canonical_name == tool_names::WRITE_FILE)
@@ -1072,6 +1078,26 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             event_scope.as_ref(),
         );
         if cancelled {
+            break 'conversation;
+        }
+        if let Some(hit) = repeat_guard.take_break() {
+            record_repeated_error(&hit);
+            tracing::warn!(
+                error_id = %hit.id,
+                count = hit.count,
+                "repeated tool loop detected, recorded and stopping turn"
+            );
+            send_event(
+                &event_tx,
+                event_scope.as_ref(),
+                AgentEvent::Error {
+                    message: format!(
+                        "Boucle d'outil détectée et stoppée : la même action a été répétée {} fois. \
+                         Incident enregistré pour auto-amélioration ({}).",
+                        hit.count, hit.id
+                    ),
+                },
+            );
             break 'conversation;
         }
         if stop_after_question_result {

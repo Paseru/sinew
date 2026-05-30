@@ -6,6 +6,7 @@ mod context;
 mod events;
 mod history;
 mod mode;
+mod repeat_guard;
 #[cfg(test)]
 mod tests;
 mod tool_dispatch;

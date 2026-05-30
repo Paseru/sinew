@@ -5146,6 +5146,7 @@ version = "0.1.27"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
+ "chrono",
  "directories",
  "eventsource-stream",
  "futures-util",

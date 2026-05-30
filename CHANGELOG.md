@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 19:17:08]
+- `crates/sinew-app/src/agent/repeat_guard.rs` (nouveau) : Ajout du maillon « Capture » manquant du système d'auto-amélioration. Détecte quand l'agent rejoue la même commande shell ou le même appel d'outil en erreur sans progresser : injecte un rappel fort à 3 répétitions, puis enregistre l'incident dans `errors_raw.json` et coupe le tour à 4. Ces incidents alimentent désormais automatiquement la consolidation en règles globales (avant, `errors_raw.json` n'était jamais rempli par le code).
+- `crates/sinew-app/src/agent/turn.rs` : Branchement du détecteur de boucle dans la boucle d'outils (observation de chaque résultat, injection du rappel dans le prompt système, enregistrement + arrêt propre du tour avec événement d'erreur quand une boucle est avérée).
+- `crates/sinew-app/src/agent.rs` : Déclaration du module `repeat_guard`.
+- `crates/sinew-app/Cargo.toml` : Ajout de la dépendance `chrono` (horodatage des incidents).
 ## [2026-05-30 18:22:51]
 - `src/components/SettingsPane.tsx` : Déplacement de "Optimisation Magique Auto" en tête de l'onglet Power User sous forme de carte pleine largeur responsive. Rétablissement de l'accès au menu de choix de modèle d'analyse indépendamment de l'état d'activation de l'optimisation. Transfert de l'option "Recherche de mise à jour automatique" vers l'onglet Système (Diagnostics) pour une cohérence thématique parfaite.
 - `src/styles.css` : Ajout de la classe `.settings-pane__select` pour habiller proprement les listes déroulantes de paramètres.
