@@ -36,6 +36,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true }
+futures = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tokio = { workspace = true }

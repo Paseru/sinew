@@ -1,7 +1,6 @@
-use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 fn find_executable(name: &str) -> Option<PathBuf> {
@@ -43,6 +42,14 @@ pub fn handle_args() -> bool {
                 std::process::exit(1);
             }
             println!("Registration completed successfully!");
+            true
+        }
+        "--probe" | "probe" => {
+            println!("Probing Cursor connection...");
+            if let Err(e) = run_probe_cli() {
+                eprintln!("Error during probe: {:?}", e);
+                std::process::exit(1);
+            }
             true
         }
         _ => false,
@@ -226,7 +233,7 @@ fn run_register_chrome_cli() -> Result<(), anyhow::Error> {
 
     let value_json = serde_json::to_string(&settings)?;
     let now_ms = std::time::SystemTime::now()
-        .duration_since(std::time::UNISO_EPOCH)
+        .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as i64;
 
@@ -241,4 +248,59 @@ fn run_register_chrome_cli() -> Result<(), anyhow::Error> {
 
     println!("MCP server 'Sinew Chrome' registered at {:?}", script_dir);
     Ok(())
+}
+
+fn run_probe_cli() -> Result<(), anyhow::Error> {
+    use sinew_core::{ChatMessage, ModelRef, Provider, ProviderRequest};
+    use sinew_cursor::CursorProvider;
+    use futures::StreamExt;
+
+    println!("Loading Cursor provider configuration...");
+    let provider = CursorProvider::from_default_sources().map_err(|e| {
+        anyhow::anyhow!("Failed to initialize Cursor provider: {:?}", e)
+    })?;
+
+    println!("Configuration loaded. Sending test message: 'Reply with exactly: OK'...");
+    let request = ProviderRequest::new(
+        ModelRef::new("cursor", "composer-2.5-fast"),
+        vec![ChatMessage::user_text("Reply with exactly: OK")],
+    )
+    .with_system("You are a connection test probe.")
+    .with_workspace_root(std::env::current_dir().unwrap_or_default().display().to_string());
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    rt.block_on(async {
+        println!("Sending Unified Chat request...");
+        let mut stream = provider.stream(request).await.map_err(|e| {
+            anyhow::anyhow!("Stream initiation failed: {:?}", e)
+        })?;
+
+        println!("Stream opened. Receiving chunks:");
+        let mut full_response = String::new();
+        while let Some(chunk_res) = stream.next().await {
+            match chunk_res {
+                Ok(event) => {
+                    if let sinew_core::StreamEvent::TextDelta { delta, .. } = event {
+                        print!("{}", delta);
+                        let _ = std::io::Write::flush(&mut std::io::stdout());
+                        full_response.push_str(&delta);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("\nError during stream decoding: {:?}", e);
+                    return Err(anyhow::anyhow!("Stream decoding error: {:?}", e));
+                }
+            }
+        }
+        println!("\nStream completed!");
+        if full_response.trim() == "OK" {
+            println!("SUCCESS: connection and decryption working perfectly!");
+        } else {
+            println!("WARNING: received unexpected response: {:?}", full_response);
+        }
+        Ok(())
+    })
 }

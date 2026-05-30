@@ -95,13 +95,30 @@ Write-Host "Lanceurs configures dans $InstallDir."
 
 Write-Host "5/5 Configuration du serveur MCP dans la base de donnees de Sinew..."
 if (!$SkipSinewDb) {
-    $PyScriptPath = Join-Path $SourceDir "add_to_sinew.py"
     $env:SINEW_CHROME_BRIDGE_DIR = $InstallDir
-    if (Get-Command python -ErrorAction SilentlyContinue) {
-        python $PyScriptPath
-    } else {
-        Write-Host "Python introuvable. Veuillez executer 'python add_to_sinew.py' manuellement avec SINEW_CHROME_BRIDGE_DIR=$InstallDir."
+    $SinewExe = ""
+    $PathsToCheck = @(
+        (Join-Path $SourceDir "..\src-tauri\target\release\Sinew.exe"),
+        (Join-Path $SourceDir "..\src-tauri\target\debug\Sinew.exe"),
+        (Join-Path $env:LOCALAPPDATA "Programs\Sinew\Sinew.exe")
+    )
+    foreach ($p in $PathsToCheck) {
+        if (Test-Path $p) {
+            $SinewExe = $p
+            break
+        }
     }
+    if (!$SinewExe) {
+        $SinewExe = (Get-Command Sinew -ErrorAction SilentlyContinue).Source
+    }
+    
+    if ($SinewExe) {
+        Write-Host "Execution de l'enregistrement via $SinewExe..."
+        & $SinewExe --register-chrome
+    } else {
+        Write-Warning "Sinew.exe introuvable : enregistrement du serveur MCP dans la base SQLite impossible."
+    }
+}
 }
 
 Write-Host "SUCCESS: Sinew Chrome Bridge et son serveur MCP sont enregistres et automatises !"

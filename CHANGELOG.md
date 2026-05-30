@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2026-05-30 02:44:34]
 - `Cargo.toml` : Ajout de la dépendance chrono dans le workspace pour la consolidation des règles en Rust.
-- `src-tauri/Cargo.toml` : Ajout des dépendances regex et chrono.
+- `src-tauri/Cargo.toml` : Ajout des dépendances regex, chrono et futures.
 - `src-tauri/src/rules.rs` : Création de l'implémentation native en Rust de la consolidation des règles d'apprentissage.
-- `src-tauri/src/lib.rs` : Remplacement de l'appel au script Python par la fonction native Rust.
+- `src-tauri/src/cli.rs` : Création du CLI natif en Rust pour synchroniser le projet et enregistrer les extensions MCP sans dépendance Python (et nettoyage des imports inutilisés), ajout de l'outil de diagnostic de connexion (--probe) avec gestion des événements de flux.
+- `src-tauri/src/main.rs` : Interception des paramètres en ligne de commande pour le CLI de synchronisation et de configuration.
+- `src-tauri/src/lib.rs` : Exposition des fonctions internes de base de données et de copie de fichiers pour le CLI.
+- `consolidate_rules.py`, `sync_now.py`, `sinew-chrome-bridge/add_to_sinew.py`, `scripts/probe_*.py` : Suppression de tous les scripts Python obsolètes suite à leur réécriture native en Rust.
+- `sinew-chrome-bridge/register.ps1` : Utilisation de la commande native Rust `Sinew.exe --register-chrome` au lieu du script Python.
 
 ## [2026-05-30 02:44:22]
 - `src/components/Welcome.tsx` : Ajout d'un bouton d'accès direct SSH/Sandbox sur la page d'accueil (Switch) pour utiliser le serveur MCP SSH.

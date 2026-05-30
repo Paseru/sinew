@@ -122,6 +122,7 @@ mod terminal;
 #[cfg(test)]
 mod tests;
 mod turns;
+pub mod cli;
 mod rules;
 mod updater;
 mod workflow;
@@ -176,7 +177,7 @@ impl<'a> tracing_subscriber::fmt::writer::MakeWriter<'a> for MakeLogWriter {
     }
 }
 
-fn merge_databases(
+pub(crate) fn merge_databases(
     local_path: &std::path::Path,
     onedrive_path: &std::path::Path,
 ) -> Result<(), rusqlite::Error> {
@@ -481,7 +482,7 @@ pub(crate) fn run_git_auto_commit_and_push(workspace_path: &str) {
     let _ = workspace_path;
 }
 
-fn sync_auth_files(localappdata: &str, onedrive_db_dir: &std::path::Path, to_onedrive: bool) {
+pub(crate) fn sync_auth_files(localappdata: &str, onedrive_db_dir: &std::path::Path, to_onedrive: bool) {
     use std::fs;
     use std::path::PathBuf;
 
