@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:39:37]
+- `mcp_settings` : Intégration du serveur MCP SOTA `slepp-ssh-mcp` dans la base SQLite locale pour donner aux agents un accès SSH complet aux machines distantes.
+
 ## [2026-05-30 02:38:31]
 - `src/components/chat/ToolCard.tsx` : Ajout du bouton "Auto-réparer" sur les cartes de commande bash en cas d'erreur.
 - `src/components/chat/ChatPane.tsx` : Implémentation du callback de réparation `handleFixCommand` et passage du prop à `ToolCard`.
