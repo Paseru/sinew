@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 15:25:37]
+- `Cargo.lock`, `Cargo.toml`, `package.json`, `src-tauri/tauri.conf.json` : Mise à jour de la version vers la `0.1.27` via la fusion avec le dépôt upstream.
+- `crates/sinew-app/src/store.rs` : Amélioration SOTA du mode Plan. L'IA a interdiction de détailler l'implémentation (code, shell), mais doit impérativement conserver les choix de design, les technologies et les paramètres décidés lors de la discussion pour un plan plus précis et actionnable.
+- `src-tauri/src/state.rs` : Simplification du prompt système pour supprimer l'obligation fastidieuse des mises à jour utilisateur toutes les 30 secondes en mode exploration, rendant l'IA plus silencieuse et efficace.
 
 ## [2026-05-30 15:21:45]
 - `src/components/SettingsPane.tsx` : Rétablissement intégral des emojis et des caractères accentués suite à une corruption d'encodage (passage de UTF-8 à ISO-8859-1). Remplacement par regex de toutes les entités corrompues (ex: soleil, lune, ordinateur, etc.) pour garantir un affichage propre du panneau de paramètres.
