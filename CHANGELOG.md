@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:20:52]
+- `Rapport_SSH_Analyse.md` : Création du rapport détaillé d'analyse de l'implémentation SSH dans Antigravity, Codexx et Cursor en utilisant les perspectives des 4 sous-agents.
+
 ## [2026-05-30 02:18:39]
 - `crates/sinew-app/src/write.rs` : Résolution d'un bug critique bloquant l'écriture de nouveaux fichiers sur Windows en harmonisant la comparaison insensible à la casse et la suppression des préfixes UNC (`\\?\`).
 - `crates/sinew-app/src/read.rs` : Harmonisation de la fonction `relative_from_root` pour nettoyer correctement les préfixes UNC sous Windows et éviter les fausses alertes d'accès hors espace de travail.
