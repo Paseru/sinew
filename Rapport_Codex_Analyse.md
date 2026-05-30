@@ -30,6 +30,18 @@ Ce rapport présente l'analyse de l'application Codex décompilée (`C:\Users\ju
   2. **Automatique / Granulaire :** L'assistant peut écrire dans le dossier de projet, mais demande votre accord pour toute commande sensible.
   3. **Inspecteur Gardien :** Un second assistant virtuel (un sous-agent inspecteur) valide et filtre les actions de l'assistant principal avant de vous les présenter.
   4. **Accès Total (Danger) :** L'assistant a carte blanche et agit de manière 100% autonome.
+* **Mécanismes techniques sous le capot (Windows) :**
+  * **La Relocalisation Tactique (Contournement MSIX/WindowsApps) :** 
+    * *Métaphore :* Copier ses outils d'un coffre scellé vers un établi personnel pour pouvoir s'en servir.
+    * *Détail :* Les outils natifs (`codex.exe`, `codex-command-runner.exe`, etc.) sont extraits du dossier protégé d'installation (`WindowsApps`) et copiés dans `LOCALAPPDATA` de l'utilisateur pour contourner les blocages d'écriture et de droits.
+  * **Le Bocal Réseau Hermétique (Windows Sandbox & WFP) :**
+    * *Métaphore :* Une bulle de quarantaine étanche surveillée par un garde-barrière réseau.
+    * *Détail :* L'application configure Windows Sandbox avec des filtres réseau persistants de bas niveau (Windows Filtering Platform) via des transactions systeme (`FwpmFilterAdd0`, `FwpmProviderAdd0`), interdisant tout accès local ou Internet depuis le bocal.
+  * **Les Menottes Système et la Loupe (Command Runner local) :**
+    * *Métaphore :* Des menottes limitant les mouvements (Capability SIDs) et une loupe qui ne montre qu'un tiroir spécifique (jonction NTFS `.codex.sandbox`) pour masquer le reste de l'ordinateur.
+    * *Détail :* Les commandes locales tournent sous un profil restreint (AppContainer) et accèdent uniquement à un lien virtuel sécurisé contenant le projet.
+  * **Mappage des Permissions :**
+    * *Détail :* Les configurations de sécurité de l'utilisateur sont directement traduites en profils d'exécution (`readOnly` -> `read-only`, `acceptEdits` -> `workspace-write`, `dangerFullAccess` -> `danger-full-access`).
 * **Intérêt pour Sinew :** Mettre en place un mode "Inspecteur Gardien" où une IA plus petite et rapide vérifie les commandes générées pour éviter les bêtises avant de demander la validation humaine.
 
 ---

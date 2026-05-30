@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:26:01]
+- `Rapport_Codex_Analyse.md` : Ajout des analyses détaillées sur la sécurité de Codex (relocalisation de binaires hors WindowsApps, filtres réseau WFP persistants pour Windows Sandbox et jetons AppContainer/Capability SIDs pour le Command Runner).
+
 ## [2026-05-30 02:29:00]
 - `Rapport_Codex_Analyse.md` : Création du rapport de synthèse de Codex analysant son architecture, son intégration avec le clavier Work Louder, son isolation d'exécutables (staging) et ses politiques de bac à sable (sandbox).
 
