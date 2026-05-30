@@ -336,6 +336,10 @@ async fn process_server_payload(
     finished: &mut bool,
 ) -> Result<bool> {
     let msg = decode_agent_server_message(payload)?;
+    if tracing::enabled!(tracing::Level::DEBUG) {
+        let case = super::proto_dynamic::oneof_case(&msg);
+        debug!(server_case = ?case, payload_len = payload.len(), "cursor h2 server message");
+    }
 
     if let Some(exec) = get_message_field(&msg, "exec_server_message") {
         match handle_exec_server_message(&exec, exec_ctx).await? {

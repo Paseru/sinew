@@ -266,6 +266,14 @@ mod tests {
         use futures::StreamExt;
         use sinew_core::{ChatMessage, ModelRef, ProviderRequest, StreamEvent};
 
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("sinew_cursor=debug")),
+            )
+            .with_test_writer()
+            .try_init();
+
         let session = match crate::auth::composer::load_composer_session() {
             Ok(Some(session)) => session,
             _ => {
@@ -287,7 +295,7 @@ mod tests {
         };
         let identity = crate::identity::CursorIdeIdentity::load();
         let request = ProviderRequest::new(
-            ModelRef::new("cursor", "composer-2-fast"),
+            ModelRef::new("cursor", "composer-2.5"),
             vec![ChatMessage::user_text("Dis OK en une phrase.")],
         )
         .with_workspace_root(r"C:\Dev\Sinew")

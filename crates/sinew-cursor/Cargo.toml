@@ -38,5 +38,8 @@ tokio-util = { version = "0.7", features = ["io"] }
 tokio-stream = "0.1"
 hex = "0.4"
 
+[dev-dependencies]
+tracing-subscriber = { workspace = true }
+
 [lints]
 workspace = true
