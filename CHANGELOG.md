@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:48:45]
+- `src/components/SettingsPane.tsx` : Agrandissement de la police (de 11px à 13px) et changement de la couleur en vert émeraude (`#10b981`) pour le texte du solde restant DeepSeek lorsque le pourcentage est nul, afin qu'il soit bien plus visible et lisible ("plus gros").
+
 ## [2026-05-30 14:46:07]
 - `src/lib/quotas.ts` : Suppression du calcul inutile du pourcentage pour DeepSeek car le point de terminaison de l'API rendait toujours `100%` (le dénominateur est souvent égal au reste), renvoyant `null` à la place.
 - `src/components/SettingsPane.tsx` : Modification de l'affichage en ligne du composant `QuotaBar` pour masquer la barre de progression complète et afficher uniquement le texte centré et agrandi lorsque le pourcentage restant est nul (`null`), ce qui permet d'afficher la ligne de crédit DeepSeek ("Restant $17.08") plus clairement sans une barre `100%` trompeuse.

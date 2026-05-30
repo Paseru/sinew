@@ -5014,7 +5014,7 @@ function QuotaBar({ item, inline }: { item: { label: string; remainingPercent: n
   if (inline) {
     if (percent == null) {
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "4px 8px", borderRadius: "var(--r-med)", color: "var(--text-1)", fontSize: "11px", fontWeight: 600, border: "1px solid var(--line-1)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--bg-2)", padding: "4px 10px", borderRadius: "var(--r-med)", color: "#10b981", fontSize: "13px", fontWeight: 700, border: "1px solid var(--line-1)" }}>
           <span style={{ whiteSpace: "nowrap" }}>{formatWindowLabel(item)}</span>
           {reset && <span style={{ color: "var(--text-3)", fontWeight: 400 }}> - {reset}</span>}
         </span>
