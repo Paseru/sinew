@@ -1,6 +1,6 @@
 ﻿# Règles anti-boucle locales
 
-- **Dossier de travail des commandes** : ne jamais utiliser `cwd: "."` ni un chemin absolu avec l'outil terminal. Utiliser `cwd: ""` pour rester dans le workspace courant et éviter les erreurs `path escapes workspace` / `cwd must stay inside the workspace`.
+- **Dossier de travail des commandes** : **ATTENTION EXCEPTION** : Contrairement aux outils `read`/`write` qui exigent des chemins absolus, l'outil terminal (bash) ne supporte **PAS** les chemins absolus ni `cwd: "."`. Vous devez obligatoirement utiliser `cwd: ""` pour rester à la racine sous peine d'erreur de snapshot `path escapes workspace`.
 - **CHANGELOG avant modification** : juste avant toute modification de `CHANGELOG.md`, toujours relire `C:\dev\sinew\CHANGELOG.md` avec l'outil `read`, puis modifier `CHANGELOG.md` dans le même lot que les autres fichiers touchés.
 - **Chemins de fichiers** : pour `read`, `edit_file` et `write_file`, utiliser les chemins absolus Windows du workspace, par exemple `C:\dev\sinew\...`.
 - **Grep Limit** : le paramètre `limit` est strictement obligatoire pour les outils `grep` et `glob`. Ne jamais l'omettre.

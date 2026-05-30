@@ -423,31 +423,34 @@ mod tests {
         );
         let read_started = std::time::Instant::now();
         let result = tokio::time::timeout(max_wait, async {
-            let mut saw_token = false;
+            let mut saw_lifecycle = false;
             while let Some(event) = stream.next().await {
                 match event {
                     Ok(StreamEvent::MessageStart { model }) => {
                         println!("{label}: MessageStart model={model}");
+                        // Same criterion as sinew_app::agent::turn "first token received".
+                        saw_lifecycle = true;
+                        break;
                     }
                     Ok(StreamEvent::TextDelta { .. }) | Ok(StreamEvent::ThinkingDelta { .. }) => {
-                        saw_token = true;
+                        saw_lifecycle = true;
                         break;
                     }
                     Ok(_) => {}
                     Err(err) => return Err(format!("stream event: {err}")),
                 }
             }
-            if saw_token {
+            if saw_lifecycle {
                 Ok(())
             } else {
-                Err("no text/thinking delta before stream ended".into())
+                Err("stream ended before MessageStart or text/thinking".into())
             }
         })
         .await;
         match result {
             Ok(Ok(())) => {
                 println!(
-                    "{label}: OK (first token in {}ms)",
+                    "{label}: OK (first event in {}ms)",
                     read_started.elapsed().as_millis()
                 );
                 Ok(())

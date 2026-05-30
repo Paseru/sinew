@@ -1708,17 +1708,44 @@ pub(super) fn system_prompt_for_workspace(
     }
 
     // Inject machine-wide global consolidated rules if present
-    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-        let global_rules_path = std::path::PathBuf::from(local_app_data)
+    let mut global_rules_content = None;
+    
+    // 1. Try reading directly from OneDrive for real-time Multi-PC updates without restart
+    let onedrive = std::env::var("ONEDRIVE").unwrap_or_else(|_| {
+        std::env::var("USERPROFILE")
+            .map(|u| format!("{}\\OneDrive", u))
+            .unwrap_or_default()
+    });
+    
+    if !onedrive.is_empty() {
+        let onedrive_rules = std::path::PathBuf::from(&onedrive)
+            .join("Documents")
             .join("Sinew")
             .join("instructions_consolidated.md");
-        if let Ok(global_rules) = std::fs::read_to_string(&global_rules_path) {
-            sections.push(format!(
-                "# Global Consolidated Instructions (Machine-wide Rules)\n\n\
-                IMPORTANT: The following machine-wide rules are consolidated from previous agent sessions on this PC. \
-                You MUST respect and follow these instructions strictly:\n\n{global_rules}"
-            ));
+            
+        if let Ok(content) = std::fs::read_to_string(&onedrive_rules) {
+            global_rules_content = Some(content);
         }
+    }
+    
+    // 2. Fallback to LocalAppData if OneDrive is not configured or file missing
+    if global_rules_content.is_none() {
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let global_rules_path = std::path::PathBuf::from(local_app_data)
+                .join("Sinew")
+                .join("instructions_consolidated.md");
+            if let Ok(content) = std::fs::read_to_string(&global_rules_path) {
+                global_rules_content = Some(content);
+            }
+        }
+    }
+
+    if let Some(global_rules) = global_rules_content {
+        sections.push(format!(
+            "# Global Consolidated Instructions (Machine-wide Rules)\n\n\
+            IMPORTANT: The following machine-wide rules are consolidated from previous agent sessions on this PC. \
+            You MUST respect and follow these instructions strictly:\n\n{global_rules}"
+        ));
     }
 
     if let Some(instructions) =

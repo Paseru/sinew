@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:26:45]
+- `src-tauri/src/turns.rs` : Implémentation de la lecture "Hot-Reload" en temps réel des règles d'IA (Cerveau Cloud via OneDrive). L'application lit désormais dynamiquement `instructions_consolidated.md` directement depuis OneDrive (avant de basculer sur LocalAppData) à chaque nouveau message, permettant des améliorations SOTA immédiates sans recharger ni recompiler l'application.
+
+## [2026-05-30 14:21:14]
+- `AGENTS.md` : Clarification de la règle sur `cwd` dans le terminal pour éviter la confusion avec la règle d'utilisation des chemins absolus (les chemins absolus sont interdits pour l'outil bash mais requis pour read/write).
+
 ## [2026-05-30 14:14:00]
 - `crates/sinew-cursor/src/agent/run_h2.rs` : Remplacement de l'appel `hyper::body::to_bytes(resp.into_body()).await` par `resp.into_body().collect().await.map(|c| c.to_bytes())` pour s'adapter à l'API de Hyper 1.x et corriger l'erreur de compilation `E0425: cannot find function to_bytes in module hyper::body` remontée dans `build-error.txt`.
 
