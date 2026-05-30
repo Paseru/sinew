@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:06:42]
+- `src-tauri/src/turns.rs` : Correction d'une erreur d'emprunt de valeur déplacée (borrow of moved value) en clonant les paramètres de configuration dans la fonction d'orchestration des turns.
+
 ## [2026-05-30 03:03:29]
 - `crates/sinew-app/src/lib.rs` : Re-exportation de la structure `TurnOutput` pour la rendre accessible par l'application Tauri.
 - `crates/sinew-app/src/agent/events.rs` : Dérivation du trait `Deserialize` pour la structure `AgentEvent`, permettant au client de désérialiser les évènements de l'agent.
