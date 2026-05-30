@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-05-30 16:15:00]
+## [2026-05-30 16:05:00]
+- `src/components/Welcome.tsx` : Ajout de l'option de sélection "Super SSH (Native Agent)" dans le formulaire de connexion SSH pour utiliser le nouveau mode de connexion proxy distant SOTA.
+- `src/lib/ipc.ts` : Ajout de la méthode `mountSuperSshWorkspace` qui appelle la commande Tauri `connect_super_ssh` de `@backend_ssh` pour gérer la connexion "Super SSH".
+
+## [2026-05-30 16:01:00]
+- `crates/sinew-agent-daemon/src/main.rs` : Adaptation du démon persistant pour écouter sur le port TCP `127.0.0.1:47990` sur les environnements Linux (en plus de l'écoute sur le Named Pipe sous Windows), permettant la création de l'architecture "Super SSH" et la connexion proxy du frontend vers le serveur distant.
+
+
 - `src/components/SettingsPane.tsx` : Amélioration de "Optimisation Magique Auto" qui s'active de manière totalement invisible lors de l'appui sur "Entrée" dans le panneau de chat.
 - `src/components/chat/ChatPane.tsx` : Interception de l'envoi de message pour appeler l'API d'optimisation, basculer le mode (Action, Plan, Objectif) en temps réel, puis relayer automatiquement le prompt structuré à l'agent sans aucune friction.
 - `src-tauri/src/turns.rs` : Remplacement complet de la méthode d'extraction du JSON par une recherche textuelle du bloc JSON au lieu du pattern `trim` pour garantir que le prompt de retour soit correctement identifié même s'il est noyé dans le texte.

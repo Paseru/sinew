@@ -151,6 +151,11 @@ export const api = {
       hostOrAlias,
     });
   },
+  mountSuperSshWorkspace(hostOrAlias: string) {
+    return invoke<WorkspaceBootstrap>("connect_super_ssh", {
+      hostOrAlias,
+    });
+  },
   listSshHosts() {
     return invoke<string[]>("list_ssh_hosts");
   },
