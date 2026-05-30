@@ -3849,6 +3849,8 @@ function OptionsSection({
 
         </div>
       </div>
+      </>
+      )}
 
     </div>
   );
