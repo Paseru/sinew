@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:52:05]
+- `DESIGN.md` : Création de la charte graphique et des règles de design d'interface utilisateur en français pour le projet.
+
 ## [2026-05-30 02:54:37]
 - `src/components/Welcome.tsx` : Retrait du bouton d'accès SSH/Sandbox de la page d'accueil pour respecter la préférence de l'utilisateur de travailler exclusivement dans un dossier projet monté.
 
