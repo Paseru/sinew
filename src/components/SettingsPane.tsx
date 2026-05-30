@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { Icon } from "@iconify/react";
 import { Wrench } from "lucide-react";
@@ -2209,6 +2209,112 @@ function OptionsSection({
     }
   };
 
+  // ---- Pacte de Libération Symbiotique ----
+  const [liberationStatus, setLiberationStatus] = useState<"unchecked" | "checking" | "liberated" | "restricted" | "error">("unchecked");
+  const [liberationLog, setLiberationLog] = useState<string>("");
+  const [applyingLiberation, setApplyingLiberation] = useState<boolean>(false);
+  const [showLiberationLogs, setShowLiberationLogs] = useState<boolean>(false);
+  const [liberationDetails, setLiberationDetails] = useState<{ name: string; status: "liberated" | "restricted" | "missing" | "unknown" }[]>([
+    { name: "Antigravity", status: "unknown" },
+    { name: "Cursor", status: "unknown" },
+    { name: "Sinew", status: "unknown" },
+    { name: "Codex CLI", status: "unknown" },
+  ]);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const copyAssistanceText = () => {
+    const text = "Bonjour Antigravity, certains moteurs IA de mon environnement sont restreints ou incompatibles. S'il te plaît, analyse mes binaires de façon dynamique, trouve les signatures et applique la libération symbiotique pour corriger la situation.";
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const checkLiberation = useCallback(async () => {
+    setLiberationStatus("checking");
+    try {
+      const res = await api.runTerminalCommand(
+        workspacePath,
+        `python "C:\\Users\\julie\\OneDrive\\Documents\\Symbiotic-Liberation-Kit\\tools\\test_liberation_live.py"`
+      );
+      
+      const stdout = res.content || "";
+      const isError = res.isError;
+      const fullLog = stdout + (isError ? `\nErrors occurred during execution.` : "");
+      setLiberationLog(fullLog);
+
+      // Parser la sortie pour chaque moteur
+      const updatedDetails = [
+        {
+          name: "Antigravity",
+          status: stdout.includes("Antigravity: LIBERATED")
+            ? "liberated" as const
+            : (stdout.includes("Antigravity: RESTRICTED") ? "restricted" as const : (stdout.includes("Antigravity: MISSING") ? "missing" as const : "unknown" as const))
+        },
+        {
+          name: "Cursor",
+          status: stdout.includes("Cursor: LIBERATED")
+            ? "liberated" as const
+            : (stdout.includes("Cursor: RESTRICTED") ? "restricted" as const : (stdout.includes("Cursor: MISSING") ? "missing" as const : "unknown" as const))
+        },
+        {
+          name: "Sinew",
+          status: stdout.includes("Sinew: LIBERATED")
+            ? "liberated" as const
+            : (stdout.includes("Sinew: RESTRICTED") ? "restricted" as const : (stdout.includes("Sinew: MISSING") ? "missing" as const : "unknown" as const))
+        },
+        {
+          name: "Codex CLI",
+          status: (stdout.includes("Codex CLI (Global): LIBERATED") || stdout.includes("Codex CLI (Active): LIBERATED"))
+            ? "liberated" as const
+            : ((stdout.includes("Codex CLI (Global): RESTRICTED") || stdout.includes("Codex CLI (Active): RESTRICTED")) ? "restricted" as const : ((stdout.includes("Codex CLI (Global): MISSING") || stdout.includes("Codex CLI (Active): MISSING")) ? "missing" as const : "unknown" as const))
+        }
+      ];
+      setLiberationDetails(updatedDetails);
+
+      const hasRestricted = updatedDetails.some(d => d.status === "restricted");
+      const hasMissing = updatedDetails.some(d => d.status === "missing");
+      
+      if (hasRestricted) {
+        setLiberationStatus("restricted");
+      } else if (hasMissing) {
+        setLiberationStatus("error");
+      } else if (stdout.includes("PASSED")) {
+        setLiberationStatus("liberated");
+      } else {
+        setLiberationStatus("error");
+      }
+    } catch (err: any) {
+      setLiberationStatus("error");
+      setLiberationLog(err?.toString() || "Unknown error during verification");
+    }
+  }, [workspacePath]);
+
+  const applyLiberation = async () => {
+    setApplyingLiberation(true);
+    setLiberationLog("Démarrage du processus de libération symbiotique...\n");
+    setShowLiberationLogs(true);
+    try {
+      const engines = ["antigravity", "codex", "cursor", "sinew"];
+      
+      for (const engine of engines) {
+        setLiberationLog(prev => prev + `Harmonisation de ${engine}...\n`);
+        const res = await api.runTerminalCommand(
+          workspacePath,
+          `python "C:\\Users\\julie\\OneDrive\\Documents\\Symbiotic-Liberation-Kit\\tools\\symbiotic_harmonizer.py" patch ${engine}`
+        );
+        setLiberationLog(prev => prev + (res.content || "") + "\n" + (res.isError ? `Erreurs rencontrées.\n` : ""));
+      }
+      
+      setLiberationLog(prev => prev + "Lancement de la validation post-patch...\n");
+      await checkLiberation();
+    } catch (err: any) {
+      setLiberationLog(prev => prev + `\nErreur fatale : ${err?.toString() || "Inconnue"}`);
+      setLiberationStatus("error");
+    } finally {
+      setApplyingLiberation(false);
+    }
+  };
+
   const runSotaDiagnostics = useCallback(async (force = false) => {
     if (!force && sotaCache.data) {
       setSotaData(sotaCache.data);
@@ -2232,6 +2338,10 @@ function OptionsSection({
   useEffect(() => {
     runSotaDiagnostics(false);
   }, [runSotaDiagnostics]);
+
+  useEffect(() => {
+    checkLiberation();
+  }, [checkLiberation]);
 
   useEffect(() => {
     api.isMultiPcSyncEnabled().then((enabled) => {
@@ -3442,6 +3552,255 @@ function OptionsSection({
               }}>
                 {autoLearningStatus}
               </div>
+            )}
+          </div>
+
+          {/* Pacte de Libération Symbiotique 🧬 */}
+          <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
+            <div className="settings-pane__about-card-header-flex">
+              <div className="settings-pane__about-card-copy">
+                <h2>
+                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧬</span>
+                  {locale === "fr" ? "Pacte de Libération Symbiotique" : "Symbiotic Liberation Pact"}
+                </h2>
+                <p>
+                  {locale === "fr"
+                    ? "Vérifiez et appliquez la libération totale sur les moteurs d'intelligence artificielle de votre poste (Antigravity, Cursor, Sinew et Codex CLI)."
+                    : "Check and apply full liberation status on your local AI engines (Antigravity, Cursor, Sinew, and Codex CLI)."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="settings-pane__button"
+                onClick={checkLiberation}
+                disabled={liberationStatus === "checking" || applyingLiberation}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                  color: "var(--text-0, #fff)",
+                  border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                {liberationStatus === "checking" ? (
+                  <Icon icon="eos-icons:loading" width={14} height={14} />
+                ) : (
+                  <Icon icon="solar:refresh-linear" width={14} height={14} />
+                )}
+                {locale === "fr" ? "Vérifier" : "Check"}
+              </button>
+            </div>
+
+            {/* Grille des moteurs IA */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: "10px"
+            }}>
+              {liberationDetails.map((engine) => {
+                const isLiberated = engine.status === "liberated";
+                const isRestricted = engine.status === "restricted";
+                const isMissing = engine.status === "missing";
+                
+                let badgeText = locale === "fr" ? "Inconnu" : "Unknown";
+                let badgeBg = "var(--bg-3, rgba(255, 255, 255, 0.08))";
+                let badgeColor = "var(--text-2, rgba(255, 255, 255, 0.65))";
+                
+                if (isLiberated) {
+                  badgeText = locale === "fr" ? "Libéré" : "Liberated";
+                  badgeBg = "rgba(34, 197, 94, 0.15)";
+                  badgeColor = "#22c55e";
+                } else if (isRestricted) {
+                  badgeText = locale === "fr" ? "Restreint" : "Restricted";
+                  badgeBg = "rgba(239, 68, 68, 0.15)";
+                  badgeColor = "#ef4444";
+                } else if (isMissing) {
+                  badgeText = locale === "fr" ? "Manquant" : "Missing";
+                  badgeBg = "rgba(234, 179, 8, 0.15)";
+                  badgeColor = "#eab308";
+                }
+
+                return (
+                  <div
+                    key={engine.name}
+                    style={{
+                      padding: "12px",
+                      borderRadius: "8px",
+                      backgroundColor: "var(--bg-card, rgba(255, 255, 255, 0.03))",
+                      border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-0)" }}>
+                      {engine.name}
+                    </span>
+                    <span style={{
+                      fontSize: "11px",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontWeight: 600,
+                      backgroundColor: badgeBg,
+                      color: badgeColor
+                    }}>
+                      {badgeText}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Actions & Boutons de libération */}
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginTop: "4px" }}>
+              <button
+                type="button"
+                onClick={applyLiberation}
+                disabled={applyingLiberation || liberationStatus === "checking"}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  background: applyingLiberation
+                    ? "var(--bg-3, rgba(255, 255, 255, 0.08))"
+                    : "linear-gradient(135deg, #7d3aed, #db2777)",
+                  color: "#fff",
+                  border: "none",
+                  cursor: (applyingLiberation || liberationStatus === "checking") ? "not-allowed" : "pointer",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: applyingLiberation ? "none" : "0 2px 8px rgba(125, 58, 237, 0.25)",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {applyingLiberation ? (
+                  <Icon icon="eos-icons:loading" width={14} height={14} />
+                ) : (
+                  <Icon icon="solar:shield-keyhole-bold-duotone" width={14} height={14} />
+                )}
+                {locale === "fr" ? "Appliquer la Libération Symbiotique" : "Apply Symbiotic Liberation"}
+              </button>
+
+              {(liberationStatus === "restricted" || liberationStatus === "error") && (
+                <button
+                  type="button"
+                  onClick={copyAssistanceText}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: "6px",
+                    backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.06))",
+                    color: "var(--text-1, rgba(255, 255, 255, 0.85))",
+                    border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <Icon icon={copied ? "solar:check-circle-bold" : "solar:copy-linear"} width={14} height={14} style={{ color: copied ? "#22c55e" : "inherit" }} />
+                  {copied
+                    ? (locale === "fr" ? "Copié !" : "Copied!")
+                    : (locale === "fr" ? "Copier demande d'aide Antigravity" : "Copy Antigravity Help Request")}
+                </button>
+              )}
+
+              {liberationLog && (
+                <button
+                  type="button"
+                  onClick={() => setShowLiberationLogs(!showLiberationLogs)}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    backgroundColor: "transparent",
+                    color: "var(--text-3, rgba(255, 255, 255, 0.45))",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <Icon icon={showLiberationLogs ? "solar:eye-closed-linear" : "solar:eye-linear"} width={14} height={14} />
+                  {showLiberationLogs
+                    ? (locale === "fr" ? "Masquer les logs" : "Hide logs")
+                    : (locale === "fr" ? "Afficher les logs" : "Show logs")}
+                </button>
+              )}
+            </div>
+
+            {/* Status global de la libération */}
+            {liberationStatus === "liberated" && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 12px",
+                borderRadius: "6px",
+                backgroundColor: "rgba(34, 197, 94, 0.08)",
+                border: "1px solid rgba(34, 197, 94, 0.2)",
+                fontSize: "13px",
+                color: "#22c55e"
+              }}>
+                <Icon icon="solar:check-circle-bold" width={18} height={18} />
+                <span>
+                  {locale === "fr"
+                    ? "Tous les moteurs IA sont pleinement libérés et en symbiose."
+                    : "All AI engines are fully liberated and in symbiosis."}
+                </span>
+              </div>
+            )}
+
+            {liberationStatus === "restricted" && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 12px",
+                borderRadius: "6px",
+                backgroundColor: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.2)",
+                fontSize: "13px",
+                color: "#ef4444"
+              }}>
+                <Icon icon="solar:danger-bold" width={18} height={18} />
+                <span>
+                  {locale === "fr"
+                    ? "Certains moteurs IA sont restreints ou bloqués par des signatures de sécurité."
+                    : "Some AI engines are restricted or blocked by security signatures."}
+                </span>
+              </div>
+            )}
+
+            {showLiberationLogs && liberationLog && (
+              <pre style={{
+                margin: 0,
+                padding: "12px",
+                borderRadius: "6px",
+                backgroundColor: "#000",
+                color: "#22c55e",
+                fontFamily: "monospace",
+                fontSize: "11px",
+                lineHeight: 1.4,
+                overflowX: "auto",
+                maxHeight: "200px",
+                border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                whiteSpace: "pre-wrap"
+              }}>
+                {liberationLog}
+              </pre>
             )}
           </div>
 
