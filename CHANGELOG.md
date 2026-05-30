@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:57:30]
+- `src/components/SettingsPane.tsx` : Ajout d'une fonctionnalité permettant de masquer les fournisseurs de modèles non utilisés (bouton œil barré sur les fournisseurs non connectés) et de les réafficher depuis une nouvelle section "Ajouter un fournisseur" en bas de page. Seuls OpenAI, Google et DeepSeek sont affichés par défaut (ainsi que les fournisseurs ayant déjà des identifiants/comptes).
+
+
 ## [2026-05-30 14:56:52]
 - `src/components/SettingsPane.tsx` : Correction d'un problème d'affichage où le composant `QuotaBar` en mode inline dépassait du bord de la carte pour les fournisseurs ayant de longs libellés de quotas (ex: "Claude & GPT-OSS"). Ajout de `maxWidth: "100%"`, `overflow: "hidden"` et `textOverflow: "ellipsis"` pour tronquer proprement le texte à l'intérieur.
 
