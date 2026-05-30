@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 17:51:00]
+- `src/components/chat/chatUtils.ts` : Ajout de la fonction `playNotificationSound` utilisant l'API Web Audio pour jouer un carillon agréable à la fin d'un chat.
+- `src/components/chat/ChatPane.tsx` : Importation et déclenchement de la sonnerie de notification lors de la réception de l'événement `turn_finished`.
+- `src/components/SettingsPane.tsx` : Ajout de l'option de configuration pour activer/désactiver la sonnerie de fin de chat sous l'onglet Apparence, avec synchronisation de l'état dans le stockage local.
+
 ## [2026-05-30 16:58:12]
 - `src/components/Workspace.tsx` : Correction du comportement des menus de fermeture d'onglets (Fermer les autres, Fermer à droite, Fermer tous) pour qu'ils ferment également l'onglet "Paramètres" s'il est ouvert et actif, évitant ainsi le rendu d'un écran noir vide.
 - `src/components/EditorPane.tsx` : Mise à jour du composant `EditorTabContextMenu` pour accepter la propriété `settingsOpen`. Le bouton "Fermer les onglets à droite" reste désormais cliquable même sur le dernier onglet fichier si l'onglet Paramètres est ouvert (puisqu'il est situé à sa droite).

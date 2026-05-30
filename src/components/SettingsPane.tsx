@@ -2230,6 +2230,31 @@ function OptionsSection({
     return () => window.removeEventListener("sinew:large-chat-box-changed", handler as any);
   }, []);
 
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.sound-enabled") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const changeSoundEnabled = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.sound-enabled", enabled ? "true" : "false");
+    } catch {}
+    setSoundEnabled(enabled);
+    window.dispatchEvent(new CustomEvent("sinew:sound-enabled-changed", { detail: enabled }));
+  };
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      setSoundEnabled(enabled);
+    };
+    window.addEventListener("sinew:sound-enabled-changed", handler as any);
+    return () => window.removeEventListener("sinew:sound-enabled-changed", handler as any);
+  }, []);
+
   const [theme, setTheme] = useState<"dark" | "light" | "system" | "ai">(() => {
     try {
       const val = localStorage.getItem("sinew.theme");
@@ -2976,6 +3001,38 @@ function OptionsSection({
                 onClick={() => toggleLargeChatBox(true)}
               >
                 {locale === "fr" ? "Agrandie" : "Enlarged"}
+              </button>
+            </div>
+          </div>
+
+          {/* Sonnerie de Fin de Chat */}
+          <div className="settings-pane__about-card">
+            <div className="settings-pane__about-card-copy">
+              <h2>{locale === "fr" ? "Sonnerie de fin de chat" : "Chat completion sound"}</h2>
+              <p>
+                {locale === "fr"
+                  ? "Joue un signal sonore agréable dès que l'agent a terminé sa tâche."
+                  : "Play a pleasant sound notification as soon as the agent completes its task."}
+              </p>
+            </div>
+            <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Chat completion sound">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={soundEnabled}
+                data-active={soundEnabled ? "true" : "false"}
+                onClick={() => changeSoundEnabled(true)}
+              >
+                {locale === "fr" ? "Activée" : "Enabled"}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!soundEnabled}
+                data-active={!soundEnabled ? "true" : "false"}
+                onClick={() => changeSoundEnabled(false)}
+              >
+                {locale === "fr" ? "Désactivée" : "Disabled"}
               </button>
             </div>
           </div>

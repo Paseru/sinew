@@ -1,4 +1,4 @@
-import { formatTurnDuration, formatFullTokenCount, formatCompactTokenCount, hashString } from "./chatUtils";
+import { formatTurnDuration, formatFullTokenCount, formatCompactTokenCount, hashString, playNotificationSound } from "./chatUtils";
 import {
   useCallback,
   useDeferredValue,
@@ -1423,6 +1423,9 @@ export function ChatPane({
         event.type === "interrupted" ||
         event.type === "error"
       ) {
+        if (event.type === "turn_finished") {
+          playNotificationSound();
+        }
         setPromptQueuesByConversation((current) =>
           updatePromptQueue(current, cid, (queue) =>
             queue.map((prompt) =>

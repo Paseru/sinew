@@ -36,3 +36,51 @@ export function hashString(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+export function playNotificationSound(): void {
+  try {
+    const isSoundEnabled = localStorage.getItem("sinew.sound-enabled") !== "false";
+    if (!isSoundEnabled) return;
+
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    // Note 1: E5 (659.25 Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(659.25, now);
+
+    gain1.gain.setValueAtTime(0, now);
+    gain1.gain.linearRampToValueAtTime(0.08, now + 0.03); // Attack
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3); // Decay
+
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+
+    // Note 2: A5 (880 Hz) starting slightly later
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(880.00, now + 0.07);
+
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.setValueAtTime(0, now + 0.07);
+    gain2.gain.linearRampToValueAtTime(0.08, now + 0.1); // Attack
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4); // Decay
+
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+    osc2.start(now);
+    osc2.stop(now + 0.45);
+  } catch (err) {
+    console.error("Failed to play notification sound", err);
+  }
+}
+
+
