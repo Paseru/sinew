@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:20:13]
+- `src-tauri/src/rules.rs` : Ajout de la fonction `ai_consolidate_rules()` qui lit les erreurs brutes (`errors_raw.json`) et les règles existantes (`instructions_consolidated.md`), les envoie à un fournisseur IA (DeepSeek par défaut) pour analyse, dédoublonnage et fusion intelligente des règles similaires, puis écrit le fichier optimisé.
+- `src-tauri/src/lib.rs` : Ajout de la commande Tauri `trigger_ai_rule_consolidation` pour déclencher manuellement l'analyse IA depuis l'interface.
+- `src/lib/ipc.ts` : Ajout de la méthode `triggerAiRuleConsolidation(providerId)` au bridge IPC.
+- `src/components/SettingsPane.tsx` : Ajout d'une carte "Apprentissage Automatique IA" dans la section Diagnostics, avec bouton ON/OFF, sélecteur de fournisseur IA, bouton d'analyse manuelle, et affichage du statut. Cette IA remplace le script de consolidation simple pour fusionner les règles redondantes.
+
 ## [2026-05-30 03:22:45]
 - `src/components/SettingsPane.tsx` : Ajout d'un bouton "Refresh" global dans l'en-tête de la section MCP pour reconnecter et rafraîchir tous les serveurs MCP en un clic.
 

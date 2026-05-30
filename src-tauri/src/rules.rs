@@ -8,7 +8,7 @@ use regex::Regex;
 use chrono::Local;
 use futures::StreamExt;
 use sinew_core::{
-    ChatMessage, ModelRef, Part, Provider, ProviderRequest, Role, StreamEvent,
+    ChatMessage, ModelRef, Provider, ProviderRequest, StreamEvent,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -96,7 +96,7 @@ fn build_rule(number: usize, error_id: &str, description: &str) -> String {
 }
 
 pub async fn ai_consolidate_rules(
-    provider: &(dyn Provider + Send + Sync),
+    provider: Arc<dyn Provider>,
     model_name: &str,
 ) -> Result<String, String> {
     let Ok(local_app_data) = std::env::var("LOCALAPPDATA") else {
@@ -127,7 +127,6 @@ pub async fn ai_consolidate_rules(
         String::from("# 🛡️ Instructions Globales Consolidées (Règles anti-erreurs répétitives)\n\nCes instructions ont été validées et consolidées après avoir été rencontrées au moins 3 fois. Tout agent intervenant sur ce projet doit les respecter à la lettre.\n")
     };
 
-    // Build the prompt for the AI
     let errors_json = serde_json::to_string_pretty(
         &unconsolidated
             .iter()
@@ -140,46 +139,33 @@ pub async fn ai_consolidate_rules(
     )
     .unwrap_or_default();
 
-    let system_prompt = indoc::indoc! {r#"
-        Tu es un assistant d'auto-amélioration pour Sinew, un IDE agentique. Ta seule mission est d'analyser des erreurs répétitives rencontrées par l'agent et de produire ou mettre à jour le fichier de règles globales consolidées.
-
-        CONTEXTE :
-        - Le fichier "instructions_consolidated.md" contient les règles globales actuelles, injectées dans le prompt système de l'agent.
-        - Le fichier "errors_raw.json" contient les erreurs brutes détectées (avec un compteur d'occurrences).
-        - Quand une erreur atteint 3 occurrences, une règle est normalement créée.
-
-        TA MISSION :
-        1. Analyse les erreurs fournies ci-dessous.
-        2. Identifie les doublons ou les erreurs qui partagent la MÊME CAUSE RACINE mais avec des chemins/noms différents.
-        3. Fusionne les règles similaires en UNE SEULE règle plus générale (ex: "Ne jamais utiliser de chemins relatifs" au lieu d'avoir une règle par chemin).
-        4. Crée une nouvelle règle pour chaque erreur vraiment distincte (avec le format standard ### N. 🧠 Règle auto-consolidée — Titre).
-        5. Produit le fichier COMPLET mis à jour (règles existantes + nouvelles, dédoublonnées et numérotées proprement).
-
-        FORMAT DE SORTIE ATTENDU :
-        Tu dois retourner UNIQUEMENT le contenu complet du fichier instructions_consolidated.md mis à jour, sans commentaire ni explication avant ou après. Le fichier doit commencer par :
-        "# 🛡️ Instructions Globales Consolidées (Règles anti-erreurs répétitives)"
-    "#};
-
-    let user_prompt = format!(
-        "FICHIER DE RÈGLES ACTUEL :\n```markdown\n{current_rules}\n```\n\nERREURS À ANALYSER (JSON) :\n```json\n{errors_json}\n```\n\nProduis le fichier instructions_consolidated.md complet et mis à jour."
+    let system_prompt = concat!(
+        "Tu es un assistant d'auto-amélioration pour Sinew, un IDE agentique. ",
+        "Ta seule mission est d'analyser des erreurs répétitives rencontrées par l'agent et de produire ou mettre à jour le fichier de règles globales consolidées.\n\n",
+        "CONTEXTE :\n",
+        "- Le fichier instructions_consolidated.md contient les règles globales actuelles, injectées dans le prompt système de l'agent.\n",
+        "- Le fichier errors_raw.json contient les erreurs brutes détectées (avec un compteur d'occurrences).\n",
+        "- Quand une erreur atteint 3 occurrences, une règle est créée.\n\n",
+        "TA MISSION :\n",
+        "1. Analyse les erreurs fournies.\n",
+        "2. Identifie les doublons ou les erreurs qui partagent la MÊME CAUSE RACINE mais avec des chemins/noms différents.\n",
+        "3. Fusionne les règles similaires en UNE SEULE règle plus générale.\n",
+        "4. Crée une nouvelle règle pour chaque erreur vraiment distincte (format: ### N. 🧠 Règle auto-consolidée — Titre).\n",
+        "5. Produit le fichier COMPLET mis à jour (règles existantes + nouvelles, dédoublonnées, numérotées proprement).\n\n",
+        "FORMAT DE SORTIE :\n",
+        "Retourne UNIQUEMENT le contenu complet du fichier instructions_consolidated.md mis à jour, sans commentaire. ",
+        "Le fichier doit commencer par : \"# 🛡️ Instructions Globales Consolidées (Règles anti-erreurs répétitives)\""
     );
 
-    let transcript = vec![ChatMessage {
-        role: Role::User,
-        parts: vec![Part::Text {
-            text: user_prompt,
-            meta: None,
-        }],
-    }];
+    let user_prompt = format!(
+        "FICHIER DE RÈGLES ACTUEL :\n```markdown\n{}\n```\n\nERREURS À ANALYSER (JSON) :\n```json\n{}\n```\n\nProduis le fichier instructions_consolidated.md complet et mis à jour.",
+        current_rules, errors_json
+    );
 
     let request = ProviderRequest {
-        model: ModelRef {
-            provider: "deepseek".to_string(),
-            name: model_name.to_string(),
-            effort: None,
-        },
+        model: ModelRef::new("deepseek", model_name),
         system_prompt: Some(system_prompt.to_string()),
-        transcript,
+        transcript: vec![ChatMessage::user_text(user_prompt)],
         tools: Vec::new(),
         max_output_tokens: Some(4096),
         effort: None,
@@ -212,7 +198,6 @@ pub async fn ai_consolidate_rules(
         return Err("L'IA n'a produit aucune réponse.".to_string());
     }
 
-    // Validate the response starts with the header
     let header = "# 🛡️ Instructions Globales Consolidées";
     let refined_rules = if response_text.contains(header) {
         let start = response_text.find(header).unwrap();
@@ -224,14 +209,12 @@ pub async fn ai_consolidate_rules(
         ));
     };
 
-    // Write the refined rules
     if let Some(parent) = rules_path.parent() {
         let _ = fs::create_dir_all(parent);
     }
     fs::write(&rules_path, format!("{refined_rules}\n"))
         .map_err(|e| format!("Impossible d'écrire instructions_consolidated.md: {e}"))?;
 
-    // Mark all errors as consolidated
     let mut errors: Vec<ErrorItem> = serde_json::from_str(&errors_data).unwrap_or_default();
     let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let mut consolidated_count = 0;
@@ -248,7 +231,7 @@ pub async fn ai_consolidate_rules(
     }
 
     let result = format!(
-        "Consolidation IA terminée : {} règle(s) analysée(s), {} erreur(s) consolidée(s).",
+        "Consolidation IA terminée : {} erreur(s) analysée(s), {} erreur(s) consolidée(s).",
         unconsolidated.len(),
         consolidated_count
     );

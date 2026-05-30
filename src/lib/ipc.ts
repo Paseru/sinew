@@ -927,5 +927,8 @@ export const api = {
   setSemanticEmbeddingsEnabled(enabled: boolean) {
     return invoke<void>("set_semantic_embeddings_enabled", { enabled });
   },
+  triggerAiRuleConsolidation(providerId: string) {
+    return invoke<string>("trigger_ai_rule_consolidation", { providerId });
+  },
 };
 

@@ -526,6 +526,19 @@ pub(crate) fn sync_auth_files(localappdata: &str, onedrive_db_dir: &std::path::P
     }
 }
 
+#[tauri::command]
+async fn trigger_ai_rule_consolidation(
+    state: State<'_, DesktopState>,
+    provider_id: String,
+) -> std::result::Result<String, String> {
+    let provider = provider_from_registry(&state, &provider_id)?;
+    let model_name = match provider_id.as_str() {
+        "deepseek" => "deepseek-chat",
+        _ => return Err(format!("Le fournisseur '{}' n'est pas supporté pour la consolidation IA. Utilisez 'deepseek' actuellement.", provider_id)),
+    };
+    rules::ai_consolidate_rules(provider, model_name).await
+}
+
 fn consolidate_global_learning_once() {
     #[cfg(target_os = "windows")]
     {
@@ -875,13 +888,13 @@ fn configure_agent_bridge_paths(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let file = directories::ProjectDirs::from("dev", "hyrak", "sinew").and_then(|dirs| {
-        let log_dir = dirs.data_local_dir();
-        let _ = fs::create_dir_all(log_dir);
-        let log_path = log_dir.join("desktop-app.log");
-        const MAX_LOG_BYTES: u64 = 32 * 1024 * 1024;
+        let log_dir = dirs.data_local_dir().join("logs");
+        let _ = fs::create_dir_all(&log_dir);
+        let log_path = log_dir.join("sinew.log");
+        const MAX_LOG_BYTES: u64 = 64 * 1024 * 1024;
         if let Ok(meta) = fs::metadata(&log_path) {
             if meta.len() > MAX_LOG_BYTES {
-                let backup = log_dir.join("desktop-app.log.old");
+                let backup = log_dir.join("sinew.log.old");
                 let _ = fs::remove_file(&backup);
                 let _ = fs::rename(&log_path, &backup);
             }
@@ -898,15 +911,13 @@ pub fn run() {
         file: Arc::new(StdMutex::new(file)),
     };
 
+    let default_filter = tracing_subscriber::EnvFilter::new(
+        "trace,sinew_app=trace,sinew_cursor=trace,sinew_openai=trace,sinew_anthropic=trace,sinew_google=trace,sinew_kimi=trace,sinew_deepseek=trace,sinew_openrouter=trace,sinew_index=trace,sinew_core=trace,ort=warn,hyper=warn,h2=debug,h3=warn,tower=warn,tonic=warn,mio=warn,tokio=warn,rustls=warn,trust_dns=warn,reqwest=debug,sqlx=warn,rusqlite=warn",
+    );
     let _ = tracing_subscriber::fmt()
         .with_writer(make_writer)
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // `debug` par dÃ©faut gonfle la RAM (ort/hyper/reqwest) et produit des logs Ã©normes.
-                tracing_subscriber::EnvFilter::new(
-                    "info,sinew_app=debug,sinew_cursor=info,ort=warn,hyper=warn,reqwest=warn,h2=warn",
-                )
-            }),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or(default_filter),
         )
         .try_init();
 
@@ -1170,6 +1181,7 @@ pub fn run() {
             context::estimate_sub_agent_context,
             turns::cancel_turn,
             turns::check_sota_diagnostics,
+            trigger_ai_rule_consolidation,
             swarm::stop_agent_swarm_command,
             terminal::run_terminal_command,
             terminal::spawn_terminal,

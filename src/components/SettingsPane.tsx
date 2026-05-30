@@ -2163,6 +2163,52 @@ function OptionsSection({
   const [loadingSota, setLoadingSota] = useState<boolean>(!sotaCache.data && !!sotaCache.promise);
   const [sotaError, setSotaError] = useState<string | null>(sotaCache.error);
 
+  // ---- Apprentissage automatique IA ----
+  const [autoLearningEnabled, setAutoLearningEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.auto-learning") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [autoLearningProviderId, setAutoLearningProviderId] = useState<string>(() => {
+    try {
+      return localStorage.getItem("sinew.auto-learning-provider") || "deepseek";
+    } catch {
+      return "deepseek";
+    }
+  });
+  const [autoLearningLoading, setAutoLearningLoading] = useState(false);
+  const [autoLearningStatus, setAutoLearningStatus] = useState<string | null>(null);
+  const [configuredProviders, setConfiguredProviders] = useState<string[]>([]);
+
+  // Charger les fournisseurs configurés
+  useEffect(() => {
+    api.listConfiguredModelProviders()
+      .then((providers) => setConfiguredProviders(providers))
+      .catch(() => setConfiguredProviders([]));
+  }, []);
+
+  const toggleAutoLearning = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.auto-learning", enabled ? "true" : "false");
+    } catch {}
+    setAutoLearningEnabled(enabled);
+  };
+
+  const runAiConsolidation = async () => {
+    setAutoLearningLoading(true);
+    setAutoLearningStatus(null);
+    try {
+      const result = await api.triggerAiRuleConsolidation(autoLearningProviderId);
+      setAutoLearningStatus(result);
+    } catch (err: any) {
+      setAutoLearningStatus(`Erreur: ${err?.toString() || "Inconnue"}`);
+    } finally {
+      setAutoLearningLoading(false);
+    }
+  };
+
   const runSotaDiagnostics = useCallback(async (force = false) => {
     if (!force && sotaCache.data) {
       setSotaData(sotaCache.data);
@@ -3279,6 +3325,122 @@ function OptionsSection({
                     );
                   })}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Apprentissage Automatique IA */}
+          <div className="settings-pane__about-card" style={{ flexDirection: "column", gap: "16px", alignItems: "stretch" }}>
+            <div className="settings-pane__about-card-header-flex">
+              <div className="settings-pane__about-card-copy">
+                <h2>
+                  <span style={{ color: "var(--accent-hi)", marginRight: "6px" }}>🧠</span>
+                  {locale === "fr" ? "Apprentissage Automatique IA" : "AI Auto-Learning"}
+                </h2>
+                <p>
+                  {locale === "fr"
+                    ? "Analyse les erreurs répétitives avec une IA pour les fusionner intelligemment en règles globales (remplace le script de consolidation simple)."
+                    : "Analyzes repetitive errors with AI to intelligently merge them into global rules (replaces the simple consolidation script)."}
+                </p>
+              </div>
+              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="AI Auto-Learning">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={autoLearningEnabled}
+                  data-active={autoLearningEnabled ? "true" : "false"}
+                  onClick={() => toggleAutoLearning(true)}
+                >
+                  {locale === "fr" ? "Activé" : "Enabled"}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!autoLearningEnabled}
+                  data-active={!autoLearningEnabled ? "true" : "false"}
+                  onClick={() => toggleAutoLearning(false)}
+                >
+                  {locale === "fr" ? "Désactivé" : "Disabled"}
+                </button>
+              </div>
+            </div>
+
+            {configuredProviders.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                <span style={{ fontSize: "12px", color: "var(--text-2, rgba(255, 255, 255, 0.65))" }}>
+                  {locale === "fr" ? "Fournisseur:" : "Provider:"}
+                </span>
+                <select
+                  value={autoLearningProviderId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAutoLearningProviderId(val);
+                    try { localStorage.setItem("sinew.auto-learning-provider", val); } catch {}
+                  }}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    backgroundColor: "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                    color: "var(--text-0, #fff)",
+                    border: "1px solid var(--line-1, rgba(255, 255, 255, 0.12))",
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  {configuredProviders.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px" }}>
+              <button
+                type="button"
+                className="settings-pane__button"
+                onClick={runAiConsolidation}
+                disabled={autoLearningLoading || !autoLearningEnabled}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  backgroundColor: autoLearningEnabled ? "var(--accent-lo, rgba(59, 130, 246, 0.15))" : "var(--bg-3, rgba(255, 255, 255, 0.08))",
+                  color: autoLearningEnabled ? "var(--accent-hi, #3b82f6)" : "var(--text-2, rgba(255, 255, 255, 0.45))",
+                  border: `1px solid ${autoLearningEnabled ? "var(--accent-lo, rgba(59, 130, 246, 0.3))" : "var(--line-1, rgba(255, 255, 255, 0.08))"}`,
+                  cursor: autoLearningEnabled ? "pointer" : "not-allowed",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  opacity: autoLearningEnabled ? 1 : 0.5
+                }}
+              >
+                {autoLearningLoading ? (
+                  <Icon icon="eos-icons:loading" width={14} height={14} />
+                ) : (
+                  <Icon icon="solar:refresh-linear" width={14} height={14} />
+                )}
+                {locale === "fr" ? "Analyser maintenant" : "Analyze Now"}
+              </button>
+              <span style={{ fontSize: "11px", color: "var(--text-3, rgba(255, 255, 255, 0.45))" }}>
+                {locale === "fr"
+                  ? "L'IA lira errors_raw.json + instructions_consolidated.md, dédoublonnera les règles similaires et produira un fichier optimisé."
+                  : "The AI reads errors_raw.json + instructions_consolidated.md, deduplicates similar rules, and produces an optimized file."}
+              </span>
+            </div>
+
+            {autoLearningStatus && (
+              <div style={{
+                fontSize: "12px",
+                padding: "8px 10px",
+                borderRadius: "6px",
+                backgroundColor: autoLearningStatus.startsWith("Erreur")
+                  ? "rgba(239, 68, 68, 0.1)"
+                  : "rgba(34, 197, 94, 0.1)",
+                color: autoLearningStatus.startsWith("Erreur") ? "#ef4444" : "#22c55e",
+                border: `1px solid ${autoLearningStatus.startsWith("Erreur") ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)"}`
+              }}>
+                {autoLearningStatus}
               </div>
             )}
           </div>
