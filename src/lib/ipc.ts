@@ -70,6 +70,7 @@ export interface ActiveSettings {
   strictProblemSolving: boolean;
   fullImplementation: boolean;
   autoOptimizeEnabled: boolean;
+  autoOptimizeMode: "auto" | "manual" | "disabled";
   autoOptimizeModelId: string | null;
 }
 
@@ -79,10 +80,17 @@ export function readActiveSettings(): ActiveSettings {
     master = localStorage.getItem("sinew.power-user-master") || "enabled";
   } catch {}
 
+  let autoOptimizeMode: "auto" | "manual" | "disabled" = "disabled";
   let autoOptimizeEnabled = false;
   let autoOptimizeModelId = null;
   try {
-    autoOptimizeEnabled = localStorage.getItem("sinew.autoOptimizeEnabled") === "true";
+    const savedMode = localStorage.getItem("sinew.autoOptimizeMode");
+    if (savedMode === "auto" || savedMode === "manual" || savedMode === "disabled") {
+      autoOptimizeMode = savedMode;
+    } else {
+      autoOptimizeMode = localStorage.getItem("sinew.autoOptimizeEnabled") === "true" ? "auto" : "disabled";
+    }
+    autoOptimizeEnabled = autoOptimizeMode === "auto";
     autoOptimizeModelId = localStorage.getItem("sinew.autoOptimizeModelId");
   } catch {}
 
@@ -97,6 +105,7 @@ export function readActiveSettings(): ActiveSettings {
       strictProblemSolving: true,
       fullImplementation: true,
       autoOptimizeEnabled,
+      autoOptimizeMode,
       autoOptimizeModelId,
     };
   }
@@ -119,6 +128,7 @@ export function readActiveSettings(): ActiveSettings {
     strictProblemSolving: readBool("sinew.strict-problem-solving"),
     fullImplementation: readBool("sinew.full-implementation"),
     autoOptimizeEnabled,
+    autoOptimizeMode,
     autoOptimizeModelId,
   };
 }

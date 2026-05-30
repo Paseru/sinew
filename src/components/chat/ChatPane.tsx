@@ -480,6 +480,7 @@ export function ChatPane({
   externalDrops,
   dropZoneRef,
 }: Props) {
+  const activeSettings = readActiveSettings();
   const conversationViewsRef = useRef<Map<string, ChatViewState>>(new Map());
   const composerDraftsRef = useRef<Map<string, ComposerDraft>>(new Map());
   const promptQueuesByConversationRef = useRef<Map<string, QueuedPrompt[]>>(
@@ -1805,7 +1806,7 @@ export function ChatPane({
     
     let finalMode = effectiveMode;
     const settings = readActiveSettings();
-    if (settings.autoOptimizeEnabled && settings.autoOptimizeModelId && text.trim()) {
+    if (settings.autoOptimizeMode === "auto" && settings.autoOptimizeModelId && text.trim()) {
       try {
         setOptimizing(true);
         const res = await api.optimizePrompt(text.trim(), modelRefFromId(settings.autoOptimizeModelId));
@@ -4152,8 +4153,9 @@ export function ChatPane({
                 <button
                   type="button"
                   className="composer__iconbtn composer__optimize"
+                  data-mode={activeSettings.autoOptimizeMode}
                   onClick={async () => {
-                    if (!text.trim() || !modelEntry || optimizing) return;
+                    if (activeSettings.autoOptimizeMode !== "manual" || !text.trim() || !modelEntry || optimizing) return;
                     setOptimizing(true);
                     try {
                       const settings = readActiveSettings();
@@ -4167,12 +4169,32 @@ export function ChatPane({
                       setOptimizing(false);
                     }
                   }}
-                  disabled={optimizing || !text.trim() || !modelEntry}
+                  disabled={
+                    optimizing ||
+                    activeSettings.autoOptimizeMode !== "manual" ||
+                    !text.trim() ||
+                    !modelEntry
+                  }
                   aria-label="Optimiser le prompt"
+                  title={
+                    activeSettings.autoOptimizeMode === "auto"
+                      ? "Optimisation automatique active à l'envoi"
+                      : activeSettings.autoOptimizeMode === "disabled"
+                        ? "Optimisation magique désactivée"
+                        : "Optimiser le prompt"
+                  }
                 >
-                  <Icon icon={optimizing ? "solar:hourglass-bold" : "solar:magic-stick-3-bold-duotone"} width={16} height={16} />
+                  <Icon
+                    icon={optimizing ? "solar:hourglass-bold" : "solar:magic-stick-3-bold-duotone"}
+                    width={16}
+                    height={16}
+                  />
                   <span className="composer__iconbtn-tip" role="tooltip" aria-hidden="true">
-                    Optimiser
+                    {activeSettings.autoOptimizeMode === "auto"
+                      ? "Optimisation Auto"
+                      : activeSettings.autoOptimizeMode === "disabled"
+                        ? "Optimisation Désactivée"
+                        : "Optimiser"}
                   </span>
                 </button>
               )}

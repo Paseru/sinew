@@ -2059,11 +2059,15 @@ function OptionsSection({
     }
   });
 
-  const [autoOptimizeEnabled, setAutoOptimizeEnabled] = useState<boolean>(() => {
+  const [autoOptimizeMode, setAutoOptimizeMode] = useState<"auto" | "manual" | "disabled">(() => {
     try {
-      return localStorage.getItem("sinew.autoOptimizeEnabled") === "true";
+      const savedMode = localStorage.getItem("sinew.autoOptimizeMode");
+      if (savedMode === "auto" || savedMode === "manual" || savedMode === "disabled") {
+        return savedMode;
+      }
+      return localStorage.getItem("sinew.autoOptimizeEnabled") === "true" ? "auto" : "disabled";
     } catch {
-      return false;
+      return "disabled";
     }
   });
 
@@ -2075,11 +2079,12 @@ function OptionsSection({
     }
   });
 
-  const toggleAutoOptimizeEnabled = (enabled: boolean) => {
+  const changeAutoOptimizeMode = (mode: "auto" | "manual" | "disabled") => {
     try {
-      localStorage.setItem("sinew.autoOptimizeEnabled", enabled ? "true" : "false");
+      localStorage.setItem("sinew.autoOptimizeMode", mode);
+      localStorage.setItem("sinew.autoOptimizeEnabled", mode === "auto" ? "true" : "false");
     } catch {}
-    setAutoOptimizeEnabled(enabled);
+    setAutoOptimizeMode(mode);
   };
 
   const changeAutoOptimizeModelId = (modelId: string) => {
@@ -3117,22 +3122,31 @@ function OptionsSection({
                   </option>
                 ))}
               </select>
-              <div className="settings-pane__locale-switch" role="radiogroup">
+              <div className="settings-pane__locale-switch" role="radiogroup" aria-label="Magic Optimization Mode">
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={autoOptimizeEnabled}
-                  data-active={autoOptimizeEnabled ? "true" : "false"}
-                  onClick={() => toggleAutoOptimizeEnabled(true)}
+                  aria-checked={autoOptimizeMode === "auto"}
+                  data-active={autoOptimizeMode === "auto" ? "true" : "false"}
+                  onClick={() => changeAutoOptimizeMode("auto")}
                 >
-                  {locale === "fr" ? "Activé" : "Enabled"}
+                  {locale === "fr" ? "Automatique" : "Automatic"}
                 </button>
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={!autoOptimizeEnabled}
-                  data-active={!autoOptimizeEnabled ? "true" : "false"}
-                  onClick={() => toggleAutoOptimizeEnabled(false)}
+                  aria-checked={autoOptimizeMode === "manual"}
+                  data-active={autoOptimizeMode === "manual" ? "true" : "false"}
+                  onClick={() => changeAutoOptimizeMode("manual")}
+                >
+                  {locale === "fr" ? "Actif à la demande" : "On demand"}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={autoOptimizeMode === "disabled"}
+                  data-active={autoOptimizeMode === "disabled" ? "true" : "false"}
+                  onClick={() => changeAutoOptimizeMode("disabled")}
                 >
                   {locale === "fr" ? "Désactivé" : "Disabled"}
                 </button>

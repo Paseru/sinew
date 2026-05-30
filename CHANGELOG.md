@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:15:36]
+- `src/lib/ipc.ts` : Ajout de la clé de configuration `autoOptimizeMode` avec prise en charge des trois options d'optimisation ("auto", "manual", "disabled").
+- `src/components/SettingsPane.tsx` : Remplacement du commutateur activé/désactivé par un choix explicite à trois options : "Automatique", "Actif à la demande", "Désactivé".
+- `src/components/chat/ChatPane.tsx` : Affichage permanent du bouton d'optimisation (baguette magique) en bas dans la barre de saisie, avec une désactivation et un titre adaptés au mode choisi.
+- `src/styles.css` : Ajustement de l'opacité et du curseur du bouton d'optimisation lorsqu'il est rendu inactif.
+
 ## [2026-05-30 22:09:30]
 - `src/components/chat/ChatPane.tsx` : Intégration de l'effet visuel et du blocage de l'interface lors de l'Optimisation Magique. Toutes les commandes de saisie et de validation sont désactivées durant l'optimisation, et un scroll automatique amène le squelette d'optimisation en vue.
 - `src/styles.css` : Ajout des animations de reflets mouvants (effet shimmer) et du style de squelette de chargement pour la carte d'optimisation, ainsi que le style semi-opaque inactif pour le conteneur du composeur.

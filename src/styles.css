@@ -10952,3 +10952,9 @@ html[data-theme="ai"] .mermaid-zoom__hint {
   opacity: 0.6;
   pointer-events: none;
 }
+
+.composer__optimize[data-mode="disabled"],
+.composer__optimize[data-mode="auto"] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
