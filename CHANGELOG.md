@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:03:29]
+- `crates/sinew-app/src/lib.rs` : Re-exportation de la structure `TurnOutput` pour la rendre accessible par l'application Tauri.
+- `crates/sinew-app/src/agent/events.rs` : Dérivation du trait `Deserialize` pour la structure `AgentEvent`, permettant au client de désérialiser les évènements de l'agent.
+- `src-tauri/src/turns.rs` : Implémentation du pont Named Pipe IPC client (`run_turn_via_daemon`) qui envoie la commande `StartTurn` au démon Windows, écoute les réponses en temps réel, redirige les évènements vers le moteur principal de l'UI, et démarre automatiquement le binaire detached (`spawn_daemon`) en cas d'absence.
+
+
 ## [2026-05-30 03:06:42]
 - `src-tauri/src/turns.rs` : Utilisation explicite des types ré-exportés par `sinew_app` dans le proxy du démon de fond (AgentEvent, TurnOutput, McpSettings, etc.) pour résoudre les conflits de types et d'importations.
 - `src-tauri/src/workspace.rs` : Ajout de l'installation automatique et silencieuse en tâche de fond de WinFsp et SSHFS-Win via Winget s'ils sont absents lors de la connexion.
