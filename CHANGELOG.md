@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 11:26:12]
+- `src/components/chat/ToolCard.tsx` : Remplacement du libellé du bouton de dépannage de "Auto-réparer" par "Auto" pour plus de clarté.
+
 ## [2026-05-30 11:17:33]
 - `src/styles.css` : Ajustement des styles de l'encart SSH pour forcer l'affichage de l'état de connexion et du bouton sur une seule ligne (sans retour à la ligne) avec troncature automatique du texte en cas de manque d'espace.
 
