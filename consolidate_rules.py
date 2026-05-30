@@ -66,7 +66,7 @@ def title_from_error_id(error_id: str) -> str:
 def build_rule(number: int, error: dict) -> str:
     error_id = str(error.get("id", "erreur_repetee"))
     description = str(error.get("description", "Erreur répétitive sans description.")).strip()
-    description = re.sub(r"\s+", " ", description)
+    description = re.sub(r"\s+", " ", description).rstrip(".")
     return (
         f"\n\n### {number}. 🧠 Règle auto-consolidée — {title_from_error_id(error_id)}\n"
         f"* **Règle** : Cette erreur répétée a été détectée automatiquement : {description}. "
