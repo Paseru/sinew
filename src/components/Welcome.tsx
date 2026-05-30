@@ -38,6 +38,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
   const [sshTarget, setSshTarget] = useState("");
   const [connectingSsh, setConnectingSsh] = useState(false);
   const [sshError, setSshError] = useState<string | null>(null);
+  const [sshHosts, setSshHosts] = useState<string[]>([]);
 
   const handleConnectSsh = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +55,24 @@ export function Welcome({ onPick, error, deriveName }: Props) {
       setConnectingSsh(false);
     }
   };
+
+  const handleQuickConnect = async (host: string) => {
+    setSshTarget(host);
+    setConnectingSsh(true);
+    setSshError(null);
+    try {
+      const bootstrap = await api.mountSshWorkspace(host);
+      onPick(bootstrap.workspace.path);
+    } catch (err) {
+      setSshError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setConnectingSsh(false);
+    }
+  };
+
+  useEffect(() => {
+    void api.listSshHosts().then(setSshHosts).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setRecents(loadRecents());
@@ -243,6 +262,46 @@ export function Welcome({ onPick, error, deriveName }: Props) {
             </div>
           )}
         </form>
+
+        {sshHosts.length > 0 && (
+          <div style={{ width: "100%", textAlign: "left", marginTop: "8px" }}>
+            <span style={{ fontSize: "11px", color: "var(--text-3)", display: "block", marginBottom: "6px" }}>
+              Quick Connect (SSH config) :
+            </span>
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              {sshHosts.map((host) => (
+                <button
+                  key={host}
+                  type="button"
+                  disabled={connectingSsh}
+                  onClick={() => handleQuickConnect(host)}
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    border: "1px solid var(--accent-soft)",
+                    color: "var(--text-2)",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(16, 185, 129, 0.1)";
+                    e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.3)";
+                    e.currentTarget.style.color = "#10b981";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
+                    e.currentTarget.style.borderColor = "var(--accent-soft)";
+                    e.currentTarget.style.color = "var(--text-2)";
+                  }}
+                >
+                  {host}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="welcome__error">{error}</div>

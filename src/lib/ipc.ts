@@ -162,6 +162,9 @@ export const api = {
       hostOrAlias,
     });
   },
+  listSshHosts() {
+    return invoke<string[]>("list_ssh_hosts");
+  },
   getOrCreateSandboxWorkspace() {
     return invoke<string>("get_or_create_sandbox_workspace");
   },

@@ -799,3 +799,25 @@ pub(super) async fn mount_ssh_workspace(
 
     Ok(bootstrap)
 }
+
+#[tauri::command]
+pub(super) async fn list_ssh_hosts() -> std::result::Result<Vec<String>, String> {
+    let home = crate::platform::home_dir().ok_or_else(|| "Impossible de trouver le dossier utilisateur".to_string())?;
+    let config_path = home.join(".ssh").join("config");
+    if !config_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let content = std::fs::read_to_string(config_path).map_err(|e| e.to_string())?;
+    let mut hosts = Vec::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("Host ") {
+            let host_value = trimmed["Host ".len()..].trim();
+            if host_value != "*" && host_value != "github.com" && !host_value.is_empty() {
+                hosts.push(host_value.to_string());
+            }
+        }
+    }
+    Ok(hosts)
+}

@@ -1063,6 +1063,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             workspace::open_workspace,
             workspace::mount_ssh_workspace,
+            workspace::list_ssh_hosts,
             workspace::open_new_window,
             workspace::get_or_create_sandbox_workspace,
             workspace::reset_window_title,

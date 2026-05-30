@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:13:06]
+- `src-tauri/src/workspace.rs` : Création de la commande `list_ssh_hosts` pour extraire automatiquement les serveurs/alias configurés dans le fichier `~/.ssh/config` de l'utilisateur.
+- `src-tauri/src/lib.rs` : Enregistrement de la commande `list_ssh_hosts` dans le gestionnaire Tauri.
+- `src/lib/ipc.ts` : Exposition de la méthode `listSshHosts`.
+- `src/components/Welcome.tsx` : Intégration des boutons de connexion rapide ("Quick Connect") basés sur la liste des serveurs configurés pour une connexion instantanée en un clic.
+
 ## [2026-05-30 03:06:42]
 - `src-tauri/src/turns.rs` : Correction d'une erreur d'emprunt de valeur déplacée (borrow of moved value) en clonant les paramètres de configuration dans la fonction d'orchestration des turns.
 
