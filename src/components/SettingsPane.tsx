@@ -4836,24 +4836,24 @@ function ProviderCard({
             </span>
           </div>
           {!compact && !connected && <p>{description}</p>}
-          <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "4px" : "8px", alignItems: "center" }}>
+          {compact && connected && quota && quota.kind !== "unavailable" && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", width: "100%" }}>
+              {quota.kind === "credits" ? (
+                <>
+                  <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
+                  <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
+                </>
+              ) : (
+                (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
+                  <QuotaBar inline key={item.label} item={item} />
+                ))
+              )}
+            </div>
+          )}
+          <div className="settings-pane__provider-meta" style={{ marginTop: compact ? "8px" : "8px", alignItems: "center" }}>
             {meta?.map((item) => (
               <span key={item}>{item}</span>
             ))}
-            {compact && connected && quota && quota.kind !== "unavailable" && (
-              <>
-                {quota.kind === "credits" ? (
-                  <>
-                    <QuotaBar inline item={{ label: quota.creditLimit == null ? "Limite" : `Limite $${quota.creditLimit.toFixed(2)}`, remainingPercent: 100 }} />
-                    <QuotaBar inline item={{ label: quota.creditRemaining == null ? "Restant" : `Restant $${quota.creditRemaining.toFixed(2)}`, remainingPercent: quota.percentage, rawValue: quota.creditRemaining }} />
-                  </>
-                ) : (
-                  (quota.kind === "groups" ? quota.groups ?? [] : quota.windows ?? []).map((item) => (
-                    <QuotaBar inline key={item.label} item={item} />
-                  ))
-                )}
-              </>
-            )}
           </div>
           {connected && quota && quota.kind === "unavailable" && (
             <div style={{ marginTop: compact ? "4px" : "8px", color: "var(--text-3)", fontSize: compact ? "10px" : "11px", opacity: 0.7 }}>

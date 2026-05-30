@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 
+## [2026-05-30 15:21:45]
+- `src/components/SettingsPane.tsx` : Rétablissement intégral des emojis et des caractères accentués suite à une corruption d'encodage (passage de UTF-8 à ISO-8859-1). Remplacement par regex de toutes les entités corrompues (ex: soleil, lune, ordinateur, etc.) pour garantir un affichage propre du panneau de paramètres.
+
 ## [2026-05-30 15:14:38]
 - `src/components/SettingsPane.tsx` : Correction des erreurs d'encodage (mojibake) où les caractères accentués français apparaissaient sous la forme de caractères corrompus à cause d'une précédente écriture dans un format de texte incorrect. Le fichier a été restauré en UTF-8 pur.
 - `AGENTS.md` : Correction identique de l'encodage pour restaurer les caractères français.
