@@ -6,14 +6,14 @@ Display mode: Compact. Keep visible assistant text concise. Do not narrate routi
 const VERY_COMPACT_DISPLAY_PROMPT: &str = "\
 Display mode: Very compact. Before the final answer, avoid progress narration and reasoning prose. Use tools silently unless you are blocked or must ask the user a required question. If a long operation truly needs a status update, use one short sentence. Keep the final answer ultra-concise (1-4 bullets/sentences), action-oriented, and mention only the outcome, key changed files, validation, and next step if useful. Never output empty paragraphs or blank lines in your visible responses.";
 
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct OptimizePromptInput {
     pub text: String,
-    pub model: Option<crate::models::ModelRefInput>,
+    pub model: Option<crate::models::ModelInput>,
 }
 
-#[derive(Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct OptimizePromptOutput {
     pub mode: String,
@@ -31,16 +31,20 @@ pub(super) async fn optimize_prompt(
     }
 
     let model = match input.model {
-        Some(m) => m.into(),
+        Some(m) => sinew_core::ModelRef {
+            provider: m.provider.clone(),
+            name: m.name.clone(),
+            effort: None,
+        },
         None => state.default_model.clone(),
     };
 
-    let providers = state.providers.lock().await;
-    let provider = providers
-        .get(&model.provider_id)
-        .ok_or_else(|| format!("provider {} not found", model.provider_id))?
+    let providers_guard = state.providers.lock().unwrap();
+    let provider_ref = providers_guard
+        .get(&model.provider)
+        .ok_or_else(|| format!("provider {} not found", model.provider))?
         .clone();
-    drop(providers);
+    drop(providers_guard);
 
     let system_prompt = "Vous êtes un Prompt Engineer expert pour un agent de développement SOTA.
 Votre tâche est d'analyser le brouillon de l'utilisateur, de déterminer le mode d'exécution idéal, et de réécrire son brouillon en une consigne claire, structurée et exhaustive.
@@ -62,12 +66,12 @@ Répondez UNIQUEMENT en JSON valide avec ce format exact :
   \"rewritten_prompt\": \"votre texte réécrit ici\"
 }";
 
-    let messages = vec![sinew_core::message::ChatMessage::user(text.to_string())];
+    let messages = vec![sinew_core::message::ChatMessage::user_text(text.to_string())];
     
     let request = sinew_core::provider::ProviderRequest::new(model, messages)
-        .with_system_prompt(system_prompt.to_string());
+        .with_system(system_prompt.to_string());
 
-    let mut stream = provider.stream(request).await.map_err(error_to_string)?;
+    let mut stream = provider_ref.stream(request).await.map_err(error_to_string)?;
     let mut response_text = String::new();
 
     use futures::StreamExt;
