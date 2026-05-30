@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 14:55:00]
+- `src/components/chat/ToolCard.tsx` : Suppression complète du bouton "Auto" / "Auto-fix", car les relances et correctifs automatiques doivent être gérés par l'agent de manière autonome sans nécessiter d'intervention manuelle.
+
 ## [2026-05-30 14:54:12]
 - `src/components/SettingsPane.tsx` : Ajout de paliers de couleurs supplémentaires pour le solde DeepSeek : Rouge (<10$), Orange (<20$), Jaune (<40$), Vert clair (<60$), Émeraude (<80$), Cyan (<100$) et Bleu Tech (>=100$).
 
