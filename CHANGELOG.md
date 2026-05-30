@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 20:41:00]
+- `crates/sinew-app/src/agent/boost_distill.rs` (nouveau) : Auto-distillation des grosses sorties d'outils dans la boucle de l'agent. Quand le Boost Local est actif (drapeau `SINEW_BOOST_DISTILLER`), les sorties volumineuses de `bash`/`bash_input`/`web_fetch` (> ~6 000 jetons) sont résumées par le modèle local avant d'entrer dans le contexte du modèle principal. Garde-fous SOTA : jamais sur `read`/`grep`/`codebase_search` (texte exact requis pour les éditions), jamais sur une sortie en erreur, fin de sortie conservée brute (codes d'erreur), repli sur la sortie brute si le distillateur échoue.
+- `crates/sinew-app/src/agent.rs` : Déclaration du module `boost_distill`.
+- `crates/sinew-app/src/agent/turn.rs` : Branchement de la distillation sur le contenu envoyé au modèle (l'interface continue d'afficher la sortie complète).
+- `src-tauri/src/boost.rs` : Pose/retrait du drapeau `SINEW_BOOST_DISTILLER` au démarrage/arrêt du Boost Local (même mécanisme que la sémantique).
+
 ## [2026-05-30 20:24:01]
 - `src-tauri/src/boost.rs` (nouveau) : Ajout de la fonctionnalité « Boost Local ». Un seul interrupteur démarre le serveur Ollama si besoin, charge un petit modèle distillateur (`qwen2.5:3b` par défaut) et le garde en mémoire toute la session (`keep_alive = -1`), et active la recherche sémantique vectorielle. Expose 4 commandes : `boost_local_status`, `boost_local_start`, `boost_local_stop`, `boost_local_distill` (cette dernière compresse un gros texte — log, fichier, sortie d'outil — en faits utiles pour économiser les jetons des IA).
 - `src-tauri/src/lib.rs` : Déclaration du module `boost` et enregistrement des 4 commandes dans le handler Tauri.

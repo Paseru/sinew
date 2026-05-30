@@ -203,8 +203,9 @@ pub async fn boost_local_start(distiller: Option<String>) -> Result<BoostStatus,
         ));
     }
 
-    // 3) Activer la recherche semantique vectorielle.
+    // 3) Activer la recherche semantique + signaler le distillateur a l'agent.
     std::env::set_var("SINEW_INDEX_EMBEDDINGS", "1");
+    std::env::set_var("SINEW_BOOST_DISTILLER", &model);
 
     // 4) Memoriser l'etat.
     if let Ok(mut guard) = BOOST.lock() {
@@ -231,6 +232,7 @@ pub async fn boost_local_stop() -> Result<BoostStatus, String> {
     }
 
     std::env::remove_var("SINEW_INDEX_EMBEDDINGS");
+    std::env::remove_var("SINEW_BOOST_DISTILLER");
     if let Ok(mut guard) = BOOST.lock() {
         guard.active = false;
     }

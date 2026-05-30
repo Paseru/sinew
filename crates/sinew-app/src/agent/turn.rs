@@ -32,6 +32,7 @@ use super::{
     },
     mode::{run_update_goal, system_prompt_for_turn, update_goal_descriptor},
     repeat_guard::{record_repeated_error, RepeatGuard},
+    boost_distill::maybe_distill_tool_output,
     tool_dispatch::{run_tool, should_wait_for_cooperative_cancel},
     tool_summary::{display_mcp_server_name, pretty_json, should_stream_tool_args, summarize_tool},
 };
@@ -1014,9 +1015,18 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                 if canonical_name != tool_names::CLEAN_CONTEXT {
                     current_turn_tool_result_ids.insert(id.clone());
                 }
+                // Boost Local : si actif, distille les grosses sorties (bash/web_fetch)
+                // pour le contexte du modèle. L'UI a déjà reçu la sortie complète.
+                let history_content =
+                    match maybe_distill_tool_output(canonical_name, &result_content, result.is_error)
+                        .await
+                    {
+                        Some(distilled) => distilled,
+                        None => result_content.clone(),
+                    };
                 tool_results.push(Part::ToolResult {
                     tool_call_id: id.clone(),
-                    content: result_content,
+                    content: history_content,
                     images: result_images
                         .into_iter()
                         .map(|image| ToolResultImage {

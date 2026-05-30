@@ -1,4 +1,5 @@
 mod assistant_message;
+mod boost_distill;
 mod cancel;
 mod clean_context;
 mod compaction;
