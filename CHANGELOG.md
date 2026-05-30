@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 15:44:10]
+- `src-tauri/src/turns.rs` : Masquage de l'avertissement répétitif (`WARN`) signalant l'absence du démon d'agent (qui bascule silencieusement sur le moteur local) en abaissant le niveau de log à `DEBUG` pour ne plus polluer la console. Arrêt propre de la tentative de création de processus si le binaire `sinew-agent-daemon.exe` n'est pas compilé.
+
 ## [2026-05-30 15:43:00]
 - `src-tauri/src/turns.rs` & `src/lib/ipc.ts` : Ajout d'une commande Tauri `optimize_prompt` qui fait appel au modèle sélectionné pour agir comme "Prompt Engineer". Le modèle analyse le brouillon de l'utilisateur, détermine le mode optimal (`act`, `plan`, `goal`), et retourne une consigne réécrite de qualité professionnelle.
 - `src/components/chat/ChatPane.tsx` : Intégration d'un bouton "Baguette magique" (Optimiser) directement dans le panneau de saisie. Un clic envoie le brouillon à l'IA d'optimisation, remplace le texte par la consigne SOTA structurée, et bascule le menu déroulant sur le mode recommandé automatiquement.

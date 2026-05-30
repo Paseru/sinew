@@ -1556,7 +1556,35 @@ export function SettingsPane({ workspacePath }: Props) {
             height={15}
             className="settings-pane__nav-icon"
           />
-          <span className="settings-pane__nav-label">Options</span>
+          <span className="settings-pane__nav-label">{locale === "fr" ? "Apparence" : "Appearance"}</span>
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
+          data-active={section === "poweruser" ? "true" : "false"}
+          onClick={() => setSection("poweruser")}
+        >
+          <Icon
+            icon="solar:bolt-bold-duotone"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">Power User</span>
+        </button>
+        <button
+          type="button"
+          className="settings-pane__nav-item"
+          data-active={section === "diagnostic" ? "true" : "false"}
+          onClick={() => setSection("diagnostic")}
+        >
+          <Icon
+            icon="solar:settings-bold-duotone"
+            width={15}
+            height={15}
+            className="settings-pane__nav-icon"
+          />
+          <span className="settings-pane__nav-label">{locale === "fr" ? "Système" : "System"}</span>
         </button>
         <button
           type="button"
@@ -1652,11 +1680,12 @@ export function SettingsPane({ workspacePath }: Props) {
       </nav>
 
       <section className="settings-pane__main">
-        {section === "options" ? (
+        {(section === "options" || section === "poweruser" || section === "diagnostic") ? (
           <OptionsSection
             locale={locale}
             onLocaleChange={setLocale}
             workspacePath={workspacePath}
+            currentTab={section}
           />
         ) : section === "about" ? (
           <AboutSection locale={locale} />
@@ -1825,10 +1854,12 @@ function OptionsSection({
   locale,
   onLocaleChange,
   workspacePath,
+  currentTab,
 }: {
   locale: AppLocale;
   onLocaleChange: (locale: AppLocale) => void;
   workspacePath: string;
+  currentTab: string;
 }) {
   const [powerUserMaster, setPowerUserMaster] = useState<"enabled" | "disabled" | "custom">(() => {
     try {
@@ -2563,9 +2594,11 @@ function OptionsSection({
   return (
     <div className="settings-pane__body settings-pane__body--about" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       
-      {/* ========================================================================= */}
-      {/* 🛠️ CARTE GENERALE 1 : APPARENCE & INTERFACE                               */}
-      {/* ========================================================================= */}
+      {currentTab === "options" && (
+        <>
+        {/* ========================================================================= */}
+        {/* 🛠️ CARTE GENERALE 1 : APPARENCE & INTERFACE                               */}
+        {/* ========================================================================= */}
       <div className="options-category-group">
         <h3 className="options-category-title">
           <Icon icon="solar:palette-bold-duotone" className="options-category-icon" />
@@ -2863,11 +2896,15 @@ function OptionsSection({
           </div>
 
         </div>
-      </div>
+        </div>
+        </>
+      )}
 
-      {/* ========================================================================= */}
-      {/* ⚡ CARTE GENERALE 2 : MODE POWER USER & COMPORTEMENTS DE L'AGENT         */}
-      {/* ========================================================================= */}
+      {currentTab === "poweruser" && (
+        <>
+        {/* ========================================================================= */}
+        {/* ⚡ CARTE GENERALE 2 : MODE POWER USER & COMPORTEMENTS DE L'AGENT         */}
+        {/* ========================================================================= */}
       <div className="options-category-group">
         <h3 className="options-category-title">
           <Icon icon="solar:bolt-bold-duotone" className="options-category-icon" style={{ color: "#eab308" }} />
