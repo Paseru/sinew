@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 22:24:17]
+- `README.md` : Condensation du fichier et intégration de la présentation des fonctionnalités majeures du fork premium.
+
 ## [2026-05-30 22:19:45]
 - `crates/sinew-app/src/store.rs` : Ajout d'une table SQLite `provider_states` pour gérer l'archivage/restauration des fournisseurs avec les méthodes correspondantes `set_provider_status`, `get_provider_status` et `list_archived_providers`. Passage à la version 12 du schéma. Ajout du test unitaire `provider_archiving_and_restoring` pour valider le bon fonctionnement de l'archivage/restauration en base SQLite.
 - `src-tauri/src/providers.rs` : Enregistrement des commandes Tauri `archive_provider`, `restore_provider`, `list_archived_providers` et filtrage des fournisseurs archivés dans `list_configured_model_providers`.
