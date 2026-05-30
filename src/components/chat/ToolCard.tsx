@@ -365,8 +365,8 @@ function TodoListCard({
             <Icon
               icon={
                 open
-                  ? "solar:alt-arrow-down-linear"
-                  : "solar:alt-arrow-right-linear"
+                  ? "solar:alt-arrow-down-bold"
+                  : "solar:alt-arrow-right-bold"
               }
               width={12}
               height={12}
@@ -468,8 +468,8 @@ function CleanContextCard({
             <Icon
               icon={
                 open
-                  ? "solar:alt-arrow-down-linear"
-                  : "solar:alt-arrow-right-linear"
+                  ? "solar:alt-arrow-down-bold"
+                  : "solar:alt-arrow-right-bold"
               }
               width={12}
               height={12}
@@ -1359,10 +1359,10 @@ export function ToolCard({
             <Icon
               icon={
                 isSubAgent
-                  ? "solar:alt-arrow-right-linear"
+                  ? "solar:alt-arrow-right-bold"
                   : showBody
-                  ? "solar:alt-arrow-down-linear"
-                  : "solar:alt-arrow-right-linear"
+                  ? "solar:alt-arrow-down-bold"
+                  : "solar:alt-arrow-right-bold"
               }
               width={12}
               height={12}

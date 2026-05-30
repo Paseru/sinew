@@ -224,18 +224,21 @@ async function doFetchProviderQuota(providerId: string): Promise<QuotaInfo> {
 
       const totalBalance = parseFloat(activeInfo.total_balance || "0");
       const toppedUpBalance = parseFloat(activeInfo.topped_up_balance || "0");
+      const grantedBalance = parseFloat(activeInfo.granted_balance || "0");
       const currency = activeInfo.currency || "USD";
 
-      if (toppedUpBalance > 0) {
-        const percentage = Math.max(0, Math.min(100, (totalBalance / toppedUpBalance) * 100));
+      const totalEver = toppedUpBalance + grantedBalance;
+
+      if (totalEver > 0) {
+        const percentage = Math.max(0, Math.min(100, (totalBalance / totalEver) * 100));
         return {
           kind: "credits",
           percentage,
           isReal: true,
           label: `Solde DeepSeek (${currency})`,
           source: "DeepSeek /user/balance",
-          creditLimit: toppedUpBalance,
-          creditUsed: toppedUpBalance - totalBalance > 0 ? toppedUpBalance - totalBalance : 0,
+          creditLimit: totalEver,
+          creditUsed: totalEver - totalBalance > 0 ? totalEver - totalBalance : 0,
           creditRemaining: totalBalance,
         };
       }

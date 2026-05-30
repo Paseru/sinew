@@ -3803,7 +3803,7 @@ export function ChatPane({
                 >
                   <span className="composer__picker-label">{modeEntry.label}</span>
                   <Icon
-                    icon="solar:alt-arrow-down-linear"
+                    icon="solar:alt-arrow-down-bold"
                     width={11}
                     height={11}
                   />
@@ -3892,7 +3892,7 @@ export function ChatPane({
                     />
                   )}
                   <Icon
-                    icon="solar:alt-arrow-down-linear"
+                    icon="solar:alt-arrow-down-bold"
                     width={11}
                     height={11}
                   />
@@ -3992,7 +3992,7 @@ export function ChatPane({
                   >
                     <span className="composer__picker-label">{thinkingLabel}</span>
                     <Icon
-                      icon="solar:alt-arrow-down-linear"
+                      icon="solar:alt-arrow-down-bold"
                       width={11}
                       height={11}
                     />
@@ -4190,13 +4190,13 @@ function SubAgentRuntimeCard({
           <div className="composer__picker" data-kind="model">
             <button type="button" className="composer__picker-btn" disabled tabIndex={-1}>
               <span className="composer__picker-label">{modelLabel}</span>
-              <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
+              <Icon icon="solar:alt-arrow-down-bold" width={11} height={11} />
             </button>
           </div>
           <div className="composer__picker" data-kind="thinking">
             <button type="button" className="composer__picker-btn" disabled tabIndex={-1}>
               <span className="composer__picker-label">{thinkingLabel}</span>
-              <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
+              <Icon icon="solar:alt-arrow-down-bold" width={11} height={11} />
             </button>
           </div>
         </div>
@@ -6745,8 +6745,8 @@ function CompactionSummaryBlock({
           <Icon
             icon={
               open
-                ? "solar:alt-arrow-down-linear"
-                : "solar:alt-arrow-right-linear"
+                ? "solar:alt-arrow-down-bold"
+                : "solar:alt-arrow-right-bold"
             }
             width={12}
             height={12}

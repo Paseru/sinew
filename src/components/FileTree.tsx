@@ -1387,8 +1387,8 @@ const TreeNode = memo(function TreeNode({
               <Icon
                 icon={
                   open
-                    ? "solar:alt-arrow-down-linear"
-                    : "solar:alt-arrow-right-linear"
+                    ? "solar:alt-arrow-down-bold"
+                    : "solar:alt-arrow-right-bold"
                 }
                 width={12}
                 height={12}

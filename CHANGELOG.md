@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:57:31]
+- `src/lib/quotas.ts` : Correction du calcul du pourcentage DeepSeek — la barre incluait seulement le solde rechargé (`toppedUpBalance`) comme dénominateur, ce qui donnait toujours ≥100% tant que des crédits gratuits (`grantedBalance`) étaient disponibles. Le dénominateur devient `toppedUpBalance + grantedBalance` pour refléter le total réel.
+
 ## [2026-05-30 03:55:30]
 - **Icônes globales — 12 fichiers, ~50 icônes modernisées** :
   - `circle` → `square` : `close` (20 occurrences), `add` (8), `minus` (3) — style carré plus net et cohérent.
