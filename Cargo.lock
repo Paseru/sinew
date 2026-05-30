@@ -2980,6 +2980,7 @@ name = "native-host-wrapper"
 version = "0.1.26"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "chrono",
  "directories",
  "futures-util",
@@ -5102,9 +5103,15 @@ dependencies = [
  "anyhow",
  "serde",
  "serde_json",
+ "sinew-anthropic",
  "sinew-app",
  "sinew-core",
  "sinew-cursor",
+ "sinew-deepseek",
+ "sinew-google",
+ "sinew-kimi",
+ "sinew-openai",
+ "sinew-openrouter",
  "tokio",
  "tracing",
  "tracing-subscriber",

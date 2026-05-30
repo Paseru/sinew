@@ -17,6 +17,12 @@ tracing-subscriber = { workspace = true }
 sinew-core = { path = "../sinew-core" }
 sinew-app = { path = "../sinew-app" }
 sinew-cursor = { path = "../sinew-cursor" }
+sinew-anthropic = { workspace = true }
+sinew-google = { workspace = true }
+sinew-kimi = { workspace = true }
+sinew-openai = { workspace = true }
+sinew-openrouter = { workspace = true }
+sinew-deepseek = { workspace = true }
 
 [lints]
 workspace = true

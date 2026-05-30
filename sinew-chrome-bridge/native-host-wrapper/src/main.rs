@@ -2220,5 +2220,3 @@ fn run_computer_use_action(action: &str, coordinate: Option<&Vec<serde_json::Val
         _ => anyhow::bail!("Unknown computer use action: {}", action)
     }
 }
-    }
-}

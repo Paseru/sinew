@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:06:42]
+- `src-tauri/src/turns.rs` : Utilisation explicite des types ré-exportés par `sinew_app` dans le proxy du démon de fond (AgentEvent, TurnOutput, McpSettings, etc.) pour résoudre les conflits de types et d'importations.
+- `src-tauri/src/workspace.rs` : Ajout de l'installation automatique et silencieuse en tâche de fond de WinFsp et SSHFS-Win via Winget s'ils sont absents lors de la connexion.
+- `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Correction d'une erreur de syntaxe (accolades fermantes superflues) empêchant la compilation du binaire natif du pont Chrome.
+
 ## [2026-05-30 03:04:09]
 - `src-tauri/src/lib.rs` : Restauration des imports accidentellement supprimés par la session précédente (`DeleteFileTool`, `EditFileTool`, `GlobTool`, `GoalWorkflowState`, `GrepTool`), résolvant les erreurs de compilation du projet principal.
 - `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout de la dépendance `base64` pour permettre la compilation du binaire natif du pont Chrome.

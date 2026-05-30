@@ -235,10 +235,10 @@ pub(super) async fn send_message(
             workspace_root.clone(),
             turn_system_prompt.clone(),
             providers,
-            sub_agent_settings,
-            mcp_settings,
+            sub_agent_settings.clone(),
+            mcp_settings.clone(),
             tool_settings.clone(),
-            skill_settings,
+            skill_settings.clone(),
             conversation.model.clone(),
             state.max_tool_rounds,
             service_tier,
@@ -246,7 +246,7 @@ pub(super) async fn send_message(
             state.editor_diagnostics.clone(),
             cancel.clone(),
         ))),
-        tool_settings,
+        tool_settings: tool_settings.clone(),
         event_scope: None,
         max_tool_rounds: state.max_tool_rounds,
         event_tx,
@@ -278,9 +278,45 @@ pub(super) async fn send_message(
     let plan_requested = policy.attach_plan;
     let before_turn_snapshot_for_checkpoint = before_turn_snapshot;
 
+    let mcp_settings_clone = mcp_settings.clone();
+    let tool_settings_clone = tool_settings.clone();
+    let skill_settings_clone = skill_settings.clone();
+    let sub_agent_settings_clone = sub_agent_settings.clone();
+
     tauri::async_runtime::spawn(async move {
+        let conversation_id_clone = conversation_id.clone();
+        let workspace_id_clone = workspace_id.clone();
+        let model_name_clone = conversation_model.name.clone();
+        let provider_clone = conversation_model.provider.clone();
+        let event_tx_clone = context.event_tx.clone();
+
         let mut engine = Box::pin(tauri::async_runtime::spawn(async move {
-            run_turn(context).await
+            #[cfg(windows)]
+            {
+                let run_res = run_turn_via_daemon(
+                    &context,
+                    &conversation_id_clone,
+                    &workspace_id_clone,
+                    &model_name_clone,
+                    &provider_clone,
+                    &mcp_settings_clone,
+                    &tool_settings_clone,
+                    &skill_settings_clone,
+                    &sub_agent_settings_clone,
+                    event_tx_clone,
+                ).await;
+                match run_res {
+                    Ok(output) => output,
+                    Err(e) => {
+                        tracing::warn!("Failed to run turn via daemon, falling back to local runner: {:?}", e);
+                        run_turn(context).await
+                    }
+                }
+            }
+            #[cfg(not(windows))]
+            {
+                run_turn(context).await
+            }
         }));
         let mut engine_done = false;
         let mut events_done = false;
@@ -1909,4 +1945,137 @@ pub(super) async fn check_sota_diagnostics() -> std::result::Result<String, Stri
     } else {
         Ok(result.content)
     }
+}
+
+#[cfg(windows)]
+async fn run_turn_via_daemon(
+    context: &sinew_app::TurnContext,
+    conversation_id: &str,
+    workspace_path: &str,
+    model_name: &str,
+    provider: &str,
+    mcp_settings: &sinew_app::McpSettings,
+    tool_settings: &sinew_app::ToolSettings,
+    skill_settings: &sinew_app::SkillSettings,
+    sub_agent_settings: &sinew_app::SubAgentSettings,
+    event_tx: tokio::sync::mpsc::UnboundedSender<sinew_app::AgentEvent>,
+) -> anyhow::Result<sinew_app::TurnOutput> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::windows::named_pipe::ClientOptions;
+    use anyhow::Context;
+
+    let pipe_name = r"\\.\pipe\sinew-agent-ipc";
+
+    // Connect or spawn daemon
+    let mut client = match ClientOptions::new().open(pipe_name) {
+        Ok(c) => c,
+        Err(_) => {
+            let _ = spawn_daemon();
+            tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
+            ClientOptions::new().open(pipe_name).context("Failed to connect to agent daemon after spawn")?
+        }
+    };
+
+    let request = serde_json::json!({
+        "type": "start_turn",
+        "conversation_id": conversation_id,
+        "workspace_path": workspace_path,
+        "system_prompt": context.system_prompt,
+        "model_name": model_name,
+        "provider": provider,
+        "history": context.history,
+        "todo_list": context.todo_list,
+        "goal_workflow": context.goal_workflow,
+        "mcp_settings": mcp_settings,
+        "tool_settings": tool_settings,
+        "skill_settings": skill_settings,
+        "sub_agent_settings": sub_agent_settings,
+    });
+
+    let mut req_bytes = serde_json::to_vec(&request)?;
+    req_bytes.push(b'\n');
+    client.write_all(&req_bytes).await?;
+
+    let (reader, _) = tokio::io::split(client);
+    let mut reader = BufReader::new(reader);
+    let mut line = String::new();
+
+    loop {
+        line.clear();
+        let bytes_read = reader.read_line(&mut line).await?;
+        if bytes_read == 0 {
+            anyhow::bail!("Connection closed prematurely by daemon");
+        }
+
+        let response: serde_json::Value = serde_json::from_str(&line)?;
+        let resp_type = response.get("type").and_then(|v| v.as_str()).unwrap_or("");
+
+        match resp_type {
+            "event" => {
+                if let Some(event_val) = response.get("event") {
+                    if let Ok(event) = serde_json::from_value::<sinew_app::AgentEvent>(event_val.clone()) {
+                        let _ = event_tx.send(event);
+                    }
+                }
+            }
+            "turn_finished" => {
+                let success = response.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+                if !success {
+                    let err = response.get("error").and_then(|v| v.as_str()).unwrap_or("Daemon execution failed");
+                    anyhow::bail!("{}", err);
+                }
+                if let Some(output_val) = response.get("output") {
+                    let history = serde_json::from_value::<Vec<sinew_core::ChatMessage>>(
+                        output_val.get("history").cloned().unwrap_or(serde_json::Value::Null)
+                    ).unwrap_or_default();
+                    let todo_list = serde_json::from_value::<sinew_app::TodoListState>(
+                        output_val.get("todo_list").cloned().unwrap_or(serde_json::Value::Null)
+                    ).unwrap_or_default();
+                    let goal_workflow = serde_json::from_value::<sinew_app::GoalWorkflowState>(
+                        output_val.get("goal_workflow").cloned().unwrap_or(serde_json::Value::Null)
+                    ).unwrap_or_default();
+                    let interrupted = output_val.get("interrupted").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let compacted = output_val.get("compacted").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                    return Ok(sinew_app::TurnOutput {
+                        history,
+                        todo_list,
+                        goal_workflow,
+                        interrupted,
+                        compacted,
+                    });
+                }
+                anyhow::bail!("Daemon finished turn but did not return valid output");
+            }
+            "error" => {
+                let msg = response.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown daemon error");
+                anyhow::bail!("Daemon error: {}", msg);
+            }
+            _ => {}
+        }
+    }
+}
+
+#[cfg(windows)]
+fn spawn_daemon() -> std::io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    let current_exe = std::env::current_exe()?;
+    let exe_dir = current_exe.parent().unwrap_or(&current_exe);
+    let daemon_exe = exe_dir.join("sinew-agent-daemon.exe");
+
+    let daemon_exe = if daemon_exe.exists() {
+        daemon_exe
+    } else {
+        std::path::PathBuf::from("target/debug/sinew-agent-daemon.exe")
+    };
+
+    std::process::Command::new(daemon_exe)
+        .creation_flags(CREATE_NO_WINDOW)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()?;
+    Ok(())
 }

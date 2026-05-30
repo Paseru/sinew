@@ -753,10 +753,20 @@ pub(super) async fn mount_ssh_workspace(
     // 2. Préparer le préfixe SSHFS-Win pour l'authentification par clé (.k)
     let prefix = format!("\\sshfs.k\\{}", host_or_alias);
 
-    // 3. Exécuter le montage sshfs-win
+    // 3. Exécuter le montage sshfs-win (avec installation automatique silencieuse si absent)
     let program = r"C:\Program Files\SSHFS-Win\bin\sshfs-win.exe";
     if !std::path::Path::new(program).exists() {
-        return Err("L'utilitaire SSHFS-Win n'est pas installé sur ce PC.".to_string());
+        // Lancer les installations silencieuses en arrière-plan via Winget
+        let _ = std::process::Command::new("winget")
+            .args(&["install", "-e", "--id", "WinFsp.WinFsp", "--silent", "--accept-package-agreements", "--accept-source-agreements"])
+            .status();
+        let _ = std::process::Command::new("winget")
+            .args(&["install", "-e", "--id", "SSHFS-Win.SSHFS-Win", "--silent", "--accept-package-agreements", "--accept-source-agreements"])
+            .status();
+    }
+
+    if !std::path::Path::new(program).exists() {
+        return Err("L'utilitaire SSHFS-Win n'est pas encore installé. Veuillez relancer la connexion dans quelques instants le temps que l'installation en arrière-plan se termine.".to_string());
     }
 
     let _child = std::process::Command::new(program)

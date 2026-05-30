@@ -12,6 +12,10 @@ pub enum DaemonRequest {
         history: serde_json::Value,
         todo_list: serde_json::Value,
         goal_workflow: serde_json::Value,
+        mcp_settings: Option<serde_json::Value>,
+        tool_settings: Option<serde_json::Value>,
+        skill_settings: Option<serde_json::Value>,
+        sub_agent_settings: Option<serde_json::Value>,
     },
     CancelTurn {
         conversation_id: String,
