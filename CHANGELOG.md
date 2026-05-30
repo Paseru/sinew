@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:42:39]
+- `src/components/SettingsPane.tsx` : Carte DeepSeek — suppression de la double barre de quota redondante ("Limite" toujours à 100% + "Restant"), remplacée par une seule barre "Restant" placée entre le titre et le champ de clé API.
+
 ## [2026-05-30 03:41:07]
 - `crates/sinew-app/src/web.rs` : Ajout timers web_search + web_fetch.
 - `crates/sinew-app/src/store.rs` : Ajout timer load_conversation.
