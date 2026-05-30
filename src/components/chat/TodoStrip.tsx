@@ -688,7 +688,7 @@ export function TodoStrip({
           aria-expanded={open ? "true" : "false"}
           aria-label={open ? "Collapse tasks" : "Expand tasks"}
         >
-          <Icon icon="solar:alt-arrow-down-linear" width={13} height={13} />
+          <Icon icon="solar:alt-arrow-down-bold" width={13} height={13} />
         </button>
       </div>
       {active === "messages" && visibleMessages.length > 0 && (
@@ -865,7 +865,7 @@ function QueuedPromptRow({
           aria-label="Move queued prompt up"
           title="Move up"
         >
-          <Icon icon="solar:alt-arrow-up-linear" width={13} height={13} />
+          <Icon icon="solar:alt-arrow-up-bold" width={13} height={13} />
         </button>
         <button
           type="button"
@@ -878,7 +878,7 @@ function QueuedPromptRow({
           aria-label="Move queued prompt down"
           title="Move down"
         >
-          <Icon icon="solar:alt-arrow-down-linear" width={13} height={13} />
+          <Icon icon="solar:alt-arrow-down-bold" width={13} height={13} />
         </button>
         <button
           type="button"

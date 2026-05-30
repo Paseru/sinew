@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:53:56]
+- `src/components/chat/ChatPane.tsx` : 12 icônes modernisées — zoom lightbox (`magnifer-zoom` → `minimize/maximize-square`), pièce jointe (`paperclip-bold` → `paperclip-rounded-bold`), retour (`alt-arrow-left` → `arrow-left`), scroll question (`arrow-up` → `arrow-to-top-left`), téléchargement (`download-linear` → `download-square`), retour arrière (`rewind-back` → `undo-left`), archives `linear` → `bold` (3 occurrences), historique (`clock-circle` → `history`).
+- `src/components/chat/ToolCard.tsx` : Icône clé à molette (`wrench` → `tuning`) plus moderne, stop (`stop-circle-linear` → `stop-bold`).
+- `src/components/chat/MermaidDiagram.tsx` : Zoom (`minus-circle`/`add-circle` → `minimize/maximize-square`) plus cohérent avec la lightbox.
+- `src/components/chat/TodoStrip.tsx` : Flèches expand/collapse (`alt-arrow-down/up-linear` → `bold`) plus visibles.
+
 ## [2026-05-30 03:53:45]
 - `crates/sinew-app/src/agent/turn.rs` : Passage de `info!` à `debug!` pour compaction et turn_finished (uniformité totale).
 
