@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 15:44:34]
+- `src/components/Workspace.tsx` : Suppression du composant de connexion SSH dans la barre latérale inférieure de l'espace de travail. Le bouton "Se connecter" et ses états associés ont été retirés pour éviter toute confusion avec le changement de projet, réservant ainsi l'accès SSH à l'écran de bienvenue.
+
+
+
 ## [2026-05-30 15:44:10]
 - `src-tauri/src/turns.rs` : Masquage de l'avertissement répétitif (`WARN`) signalant l'absence du démon d'agent (qui bascule silencieusement sur le moteur local) en abaissant le niveau de log à `DEBUG` pour ne plus polluer la console. Arrêt propre de la tentative de création de processus si le binaire `sinew-agent-daemon.exe` n'est pas compilé.
 
