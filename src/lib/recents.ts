@@ -1,4 +1,5 @@
 import type { RecentWorkspace } from "../types";
+import { invoke } from "@tauri-apps/api/core";
 
 const RECENTS_KEY = "sinew.recentWorkspaces";
 const LAST_KEY = "sinew.lastWorkspace";
@@ -31,6 +32,9 @@ export function recordRecent(path: string, name: string): RecentWorkspace[] {
   } catch {
     // ignore quota errors
   }
+  
+  invoke("record_recent_workspace_command", { path, name }).catch(() => {});
+  
   return next;
 }
 
@@ -40,6 +44,18 @@ export function loadLastWorkspace(): string | null {
   } catch {
     return null;
   }
+}
+
+export async function loadLastWorkspaceAsync(): Promise<string | null> {
+  try {
+    const recents = await invoke<RecentWorkspace[]>("get_recent_workspaces_command");
+    if (recents && recents.length > 0) {
+      return recents[0].path;
+    }
+  } catch {
+    // fallback
+  }
+  return loadLastWorkspace();
 }
 
 export function clearLastWorkspace(): void {
@@ -57,6 +73,9 @@ export function removeRecent(path: string): RecentWorkspace[] {
       localStorage.removeItem(LAST_KEY);
     }
   } catch {}
+
+  invoke("clear_recent_workspaces_command", { path }).catch(() => {});
+
   return existing;
 }
 

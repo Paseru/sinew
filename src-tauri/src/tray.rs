@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItemBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, Emitter,
+    AppHandle, Manager, Runtime,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,30 +66,37 @@ pub fn record_recent(path: &str, name: &str) {
 pub fn update_tray_menu(app: &AppHandle) -> anyhow::Result<()> {
     let recents = load_recents();
     
-    let mut items: Vec<tauri::menu::MenuItemKind> = Vec::new();
-    
-    // Add "Nouvelle fenêtre" item
     let new_window_item = MenuItemBuilder::with_id("new_window", "Nouvelle fenêtre").build(app)?;
-    items.push(new_window_item.into());
-    items.push(PredefinedMenuItem::separator(app)?.into());
+    let sep1 = PredefinedMenuItem::separator(app)?;
     
+    let mut recent_items = Vec::new();
+    let empty_item;
     if recents.is_empty() {
-        let empty_item = MenuItemBuilder::with_id("empty", "Aucun projet récent")
-            .enabled(false)
-            .build(app)?;
-        items.push(empty_item.into());
+        empty_item = Some(MenuItemBuilder::with_id("empty", "Aucun projet récent").enabled(false).build(app)?);
     } else {
+        empty_item = None;
         for (i, recent) in recents.iter().enumerate() {
-            let item = MenuItemBuilder::with_id(format!("recent_{}", i), &recent.name).build(app)?;
-            items.push(item.into());
+            recent_items.push(MenuItemBuilder::with_id(format!("recent_{}", i), &recent.name).build(app)?);
         }
     }
     
-    items.push(PredefinedMenuItem::separator(app)?.into());
+    let sep2 = PredefinedMenuItem::separator(app)?;
     let quit_item = MenuItemBuilder::with_id("quit", "Quitter Sinew").build(app)?;
-    items.push(quit_item.into());
 
-    let menu = Menu::with_items(app, &items.iter().collect::<Vec<_>>())?;
+    let mut refs: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = Vec::new();
+    refs.push(&new_window_item);
+    refs.push(&sep1);
+    if let Some(ref e) = empty_item {
+        refs.push(e);
+    } else {
+        for item in &recent_items {
+            refs.push(item);
+        }
+    }
+    refs.push(&sep2);
+    refs.push(&quit_item);
+
+    let menu = Menu::with_items(app, &refs)?;
 
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_menu(Some(menu));
@@ -112,35 +119,33 @@ pub fn setup_tray(app: &tauri::App) -> anyhow::Result<()> {
                 if let Ok(idx) = id["recent_".len()..].parse::<usize>() {
                     let recents = load_recents();
                     if let Some(recent) = recents.get(idx) {
-                        // Open a new window and tell it to open this workspace
-                        // We can use an event or create a window with query parameter
-                        if let Ok(mut builder) = tauri::WebviewWindowBuilder::new(
+                        let mut builder = tauri::WebviewWindowBuilder::new(
                             app_handle,
                             crate::platform::next_window_label(app_handle),
                             tauri::WebviewUrl::App(std::path::PathBuf::from(format!(
                                 "index.html?workspace={}",
-                                urlencoding::encode(&recent.path)
+                                url::form_urlencoded::byte_serialize(recent.path.as_bytes()).collect::<String>()
                             ))),
                         )
                         .title("Sinew")
                         .inner_size(1500.0, 940.0)
                         .min_inner_size(1100.0, 720.0)
                         .resizable(true)
-                        .center()
+                        .center();
+
+                        #[cfg(target_os = "windows")]
                         {
-                            #[cfg(target_os = "windows")]
-                            {
-                                builder = builder.decorations(false);
-                            }
-                            let _ = builder.build();
+                            builder = builder.decorations(false);
                         }
+                        let _ = builder.build();
                     }
                 }
             }
         })
-        .on_tray_icon_event(|tray, event| {
-            tauri::tray::TrayIconEvent::Click { .. } = event;
-            // On left click, open a new window or focus existing
+        .on_tray_icon_event(|_tray, event| {
+            if let tauri::tray::TrayIconEvent::Click { .. } = event {
+                // Focus existing on click
+            }
         })
         .build(app)?;
 

@@ -121,6 +121,7 @@ mod swarm;
 mod terminal;
 #[cfg(test)]
 mod tests;
+mod tray;
 mod turns;
 pub mod cli;
 mod rules;
@@ -1022,6 +1023,10 @@ pub fn run() {
         .setup(|app| {
             configure_agent_bridge_paths(app.handle());
 
+            if let Err(err) = tray::setup_tray(app) {
+                tracing::warn!("failed to setup tray: {}", err);
+            }
+
             // One-shot purge of legacy Google OAuth tokens so users coming from
             // pre-0.1.14 builds reconnect against the fixed Antigravity flow.
             match purge_legacy_google_oauth() {
@@ -1207,6 +1212,9 @@ pub fn run() {
             set_multi_pc_sync_enabled,
             force_multi_pc_sync,
             log_frontend_error,
+            get_recent_workspaces_command,
+            record_recent_workspace_command,
+            clear_recent_workspaces_command,
         ])
         .build(tauri::generate_context!())
         .expect("error while building sinew desktop")
@@ -1240,6 +1248,45 @@ fn log_frontend_error(message: String, source: String) {
         use std::io::Write;
         let _ = f.write_all(line.as_bytes());
     }
+}
+
+#[tauri::command]
+fn get_recent_workspaces_command() -> Vec<tray::RecentWorkspace> {
+    tray::load_recents()
+}
+
+#[tauri::command]
+fn record_recent_workspace_command(app: tauri::AppHandle, path: String, name: String) -> Vec<tray::RecentWorkspace> {
+    tray::record_recent(&path, &name);
+    let _ = tray::update_tray_menu(&app);
+    crate::save_last_workspace_path(&path);
+    tray::load_recents()
+}
+
+#[tauri::command]
+fn clear_recent_workspaces_command(app: tauri::AppHandle, path: String) -> Vec<tray::RecentWorkspace> {
+    let mut recents = tray::load_recents();
+    recents.retain(|r| r.path != path);
+    tray::save_recents(&recents);
+    let _ = tray::update_tray_menu(&app);
+    
+    if let Some(last) = crate::load_last_workspace_path() {
+        if last == path {
+            #[cfg(target_os = "windows")]
+            {
+                if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
+                    let file = std::path::PathBuf::from(localappdata)
+                        .join("hyrak")
+                        .join("sinew")
+                        .join("data")
+                        .join("last_workspace.txt");
+                    let _ = std::fs::remove_file(&file);
+                }
+            }
+        }
+    }
+    
+    recents
 }
 
 

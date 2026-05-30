@@ -3,7 +3,7 @@ import { Welcome } from "./components/Welcome";
 import { Workspace } from "./components/Workspace";
 import { UpdaterLockScreen } from "./components/UpdaterLockScreen";
 import { SinewMark } from "./components/SinewMark";
-import { loadLastWorkspace, recordRecent, deriveName, clearLastWorkspace } from "./lib/recents";
+import { loadLastWorkspace, recordRecent, deriveName, clearLastWorkspace, loadLastWorkspaceAsync } from "./lib/recents";
 import { api } from "./lib/ipc";
 import type { UpdateInfo, WorkspaceBootstrap } from "./types";
 
@@ -148,7 +148,11 @@ export default function App() {
         await transitionTo({ kind: "welcome" });
         return;
       }
-      const last = loadLastWorkspace();
+      
+      const windowUrlParams = new URLSearchParams(window.location.search);
+      const urlWorkspace = windowUrlParams.get("workspace");
+      const last = urlWorkspace || await loadLastWorkspaceAsync();
+      
       if (!last) {
         await transitionTo({ kind: "welcome" });
         return;
@@ -201,7 +205,10 @@ export default function App() {
       setState({ kind: "welcome" });
       return;
     }
-    const last = loadLastWorkspace();
+    const windowUrlParams = new URLSearchParams(window.location.search);
+    const urlWorkspace = windowUrlParams.get("workspace");
+    const last = urlWorkspace || await loadLastWorkspaceAsync();
+    
     if (!last) {
       setState({ kind: "welcome" });
       return;
