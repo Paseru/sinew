@@ -288,7 +288,7 @@ export function UpdaterLockScreen({ info, autoInstall = false, onSkip }: Props) 
                 </span>
                 <span className="updater-lock__cta-chev">
                   <Icon
-                    icon="solar:alt-arrow-right-linear"
+                    icon="solar:alt-arrow-right-bold"
                     width={16}
                     height={16}
                   />

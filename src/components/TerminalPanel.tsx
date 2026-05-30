@@ -131,7 +131,7 @@ export function TerminalPanel({
                   closeSession(session.id);
                 }}
               >
-                <Icon icon="solar:close-circle-linear" width={13} height={13} />
+                <Icon icon="solar:close-square-linear" width={13} height={13} />
               </span>
             </button>
           ))}
@@ -143,7 +143,7 @@ export function TerminalPanel({
             onClick={addSession}
             title="New terminal"
           >
-            <Icon icon="solar:add-circle-linear" width={14} height={14} />
+            <Icon icon="solar:add-square-linear" width={14} height={14} />
           </button>
           <button
             type="button"
@@ -152,7 +152,7 @@ export function TerminalPanel({
             title="Close all terminals"
             aria-label="Close all terminals"
           >
-            <Icon icon="solar:trash-bin-trash-linear" width={14} height={14} />
+            <Icon icon="solar:trash-bin-minimalistic-linear" width={14} height={14} />
           </button>
           <button
             type="button"
@@ -178,7 +178,7 @@ export function TerminalPanel({
             title="Hide terminal"
           >
             <Icon
-              icon="solar:square-alt-arrow-down-linear"
+              icon="solar:square-alt-arrow-down-bold"
               width={14}
               height={14}
             />

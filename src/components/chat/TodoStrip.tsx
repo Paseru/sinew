@@ -904,7 +904,7 @@ function QueuedPromptRow({
           aria-label="Remove queued prompt"
           title="Remove"
         >
-          <Icon icon="solar:close-circle-linear" width={13} height={13} />
+          <Icon icon="solar:close-square-linear" width={13} height={13} />
         </button>
       </div>
     </div>

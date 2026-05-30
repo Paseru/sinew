@@ -110,8 +110,8 @@ export function FileChangeBlock({
           <Icon
             icon={
               open
-                ? "solar:alt-arrow-down-linear"
-                : "solar:alt-arrow-right-linear"
+                ? "solar:alt-arrow-down-bold"
+                : "solar:alt-arrow-right-bold"
             }
             width={14}
             height={14}

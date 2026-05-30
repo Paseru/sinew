@@ -119,7 +119,7 @@ export function AIThinkingBlock({
         aria-expanded={contentOpen}
       >
         <Icon
-          icon="solar:alt-arrow-right-linear"
+          icon="solar:alt-arrow-right-bold"
           width={12}
           height={12}
           className="thinking-block__caret"

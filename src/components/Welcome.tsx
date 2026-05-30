@@ -186,7 +186,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
               </span>
             </span>
             <span className="welcome__cta-chev">
-              <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
+              <Icon icon="solar:alt-arrow-right-bold" width={16} height={16} />
             </span>
           </button>
 
@@ -205,7 +205,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
               </span>
             </span>
             <span className="welcome__cta-chev">
-              <Icon icon="solar:alt-arrow-right-linear" width={16} height={16} />
+              <Icon icon="solar:alt-arrow-right-bold" width={16} height={16} />
             </span>
           </button>
         </div>
@@ -362,7 +362,7 @@ export function Welcome({ onPick, error, deriveName }: Props) {
                         e.stopPropagation();
                       }}
                     >
-                      <Icon icon="solar:close-circle-linear" width={16} height={16} />
+                      <Icon icon="solar:close-square-linear" width={16} height={16} />
                     </button>
                   </div>
                 );

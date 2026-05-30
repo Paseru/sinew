@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:55:30]
+- **Icônes globales — 12 fichiers, ~50 icônes modernisées** :
+  - `circle` → `square` : `close` (20 occurrences), `add` (8), `minus` (3) — style carré plus net et cohérent.
+  - `trash-bin-trash` → `trash-bin-minimalistic` : (6 occurrences) icône poubelle plus moderne.
+  - `linear` → `bold` : toutes les flèches (`alt-arrow-right/down/up`, `square-alt-arrow-up/down`) pour une meilleure visibilité.
+  - Spécifiques : `wrench` → `tuning`, `download-linear` → `download-square`, `play-linear` → `play-circle`, `rewind-back` → `undo-left`, `clock-circle` → `history`.
+
 ## [2026-05-30 03:53:56]
 - `src/components/chat/ChatPane.tsx` : 12 icônes modernisées — zoom lightbox (`magnifer-zoom` → `minimize/maximize-square`), pièce jointe (`paperclip-bold` → `paperclip-rounded-bold`), retour (`alt-arrow-left` → `arrow-left`), scroll question (`arrow-up` → `arrow-to-top-left`), téléchargement (`download-linear` → `download-square`), retour arrière (`rewind-back` → `undo-left`), archives `linear` → `bold` (3 occurrences), historique (`clock-circle` → `history`).
 - `src/components/chat/ToolCard.tsx` : Icône clé à molette (`wrench` → `tuning`) plus moderne, stop (`stop-circle-linear` → `stop-bold`).

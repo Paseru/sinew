@@ -308,7 +308,7 @@ function MermaidLightbox({ svg, onClose }: LightboxProps) {
         </button>
         <span className="mermaid-zoom__sep" aria-hidden />
         <button type="button" onClick={onClose} title="Close (Esc)">
-          <Icon icon="solar:close-circle-linear" width={16} height={16} />
+          <Icon icon="solar:close-square-linear" width={16} height={16} />
         </button>
       </div>
       <div

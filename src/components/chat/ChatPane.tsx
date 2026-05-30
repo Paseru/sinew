@@ -3348,7 +3348,7 @@ export function ChatPane({
                 onClick={() => setPreviewImage(null)}
                 title="Fermer"
               >
-                <Icon icon="solar:close-circle-linear" width={18} height={18} />
+                <Icon icon="solar:close-square-linear" width={18} height={18} />
               </button>
             </div>
           </div>
@@ -3578,7 +3578,7 @@ export function ChatPane({
                         title="Remove attachment"
                       >
                         <Icon
-                          icon="solar:close-circle-linear"
+                          icon="solar:close-square-linear"
                           width={12}
                           height={12}
                         />
@@ -3759,7 +3759,7 @@ export function ChatPane({
                   onClick={() => setCompactInstructionOpen(false)}
                   aria-label="Cancel compaction"
                 >
-                  <Icon icon="solar:close-circle-linear" width={18} height={18} />
+                  <Icon icon="solar:close-square-linear" width={18} height={18} />
                 </button>
               </div>
             ) : (
@@ -3772,7 +3772,7 @@ export function ChatPane({
                 title="Attach files"
                 aria-label="Attach files"
               >
-                <Icon icon="solar:add-circle-linear" width={18} height={18} />
+                <Icon icon="solar:add-square-linear" width={18} height={18} />
               </button>
               {noProvidersConfigured ? (
                 <button
@@ -4520,7 +4520,7 @@ function RewindChangesPreview({
           aria-label="Cancel rewind"
           title="Cancel"
         >
-          <Icon icon="solar:close-circle-linear" width={14} height={14} />
+          <Icon icon="solar:close-square-linear" width={14} height={14} />
         </button>
       </div>
       <div className="rewind-preview__changes">

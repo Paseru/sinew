@@ -1289,9 +1289,9 @@ export function ToolCard({
             ) : isTeamMessage ? (
               <Icon icon="solar:chat-round-dots-linear" width={13} height={13} />
             ) : isContextCompaction ? (
-              <Icon icon="solar:archive-linear" width={13} height={13} />
+              <Icon icon="solar:archive-bold" width={13} height={13} />
             ) : (
-              <Icon icon="solar:tuning-2-linear" width={12} height={12} />
+              <Icon icon="solar:tuning-linear" width={12} height={12} />
             )}
           </span>
         )}

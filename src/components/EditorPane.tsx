@@ -600,7 +600,7 @@ export function EditorPane({
               }}
               title="Close tab"
             >
-              <Icon icon="solar:close-circle-linear" width={13} height={13} />
+              <Icon icon="solar:close-square-linear" width={13} height={13} />
             </button>
           </div>
         ))}
@@ -632,7 +632,7 @@ export function EditorPane({
               }}
               title="Close tab"
             >
-              <Icon icon="solar:close-circle-linear" width={13} height={13} />
+              <Icon icon="solar:close-square-linear" width={13} height={13} />
             </button>
           </div>
         )}
@@ -1030,7 +1030,7 @@ function EditorTabContextMenu({
       onContextMenu={(event) => event.preventDefault()}
     >
       <TabMenuItem
-        icon="solar:close-circle-linear"
+        icon="solar:close-square-linear"
         label={isFr ? "Fermer l'onglet" : "Close Tab"}
         shortcut="Ctrl+F4"
         onClick={runAction(onCloseTab)}
@@ -1042,7 +1042,7 @@ function EditorTabContextMenu({
         onClick={runAction(onCloseOthers)}
       />
       <TabMenuItem
-        icon="solar:alt-arrow-right-linear"
+        icon="solar:alt-arrow-right-bold"
         label={isFr ? "Fermer les onglets à droite" : "Close to the Right"}
         disabled={index >= tabCount - 1}
         onClick={runAction(onCloseToRight)}

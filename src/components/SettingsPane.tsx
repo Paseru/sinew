@@ -4513,7 +4513,7 @@ function ProviderCard({
             onClick={onCancel}
             disabled={busy}
           >
-            <Icon icon="solar:close-circle-linear" width={13} height={13} />
+            <Icon icon="solar:close-square-linear" width={13} height={13} />
             <span>Cancel</span>
           </button>
         ) : connected ? (
@@ -4533,7 +4533,7 @@ function ProviderCard({
                   minWidth: "auto",
                 }}
               >
-                <Icon icon="solar:add-circle-linear" width={16} height={16} />
+                <Icon icon="solar:add-square-linear" width={16} height={16} />
               </button>
             )}
             {showMinus && (
@@ -4552,7 +4552,7 @@ function ProviderCard({
                   color: "var(--text-error, #f87171)"
                 }}
               >
-                <Icon icon="solar:minus-circle-linear" width={16} height={16} />
+                <Icon icon="solar:minus-square-linear" width={16} height={16} />
               </button>
             )}
             <button
@@ -4585,7 +4585,7 @@ function ProviderCard({
                   color: "var(--text-error, #f87171)"
                 }}
               >
-                <Icon icon="solar:minus-circle-linear" width={16} height={16} />
+                <Icon icon="solar:minus-square-linear" width={16} height={16} />
               </button>
             )}
             <button
@@ -5063,7 +5063,7 @@ function OpenRouterProviderCard({
                   title="Remove API key"
                   aria-label="Remove API key"
                 >
-                  <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+                  <Icon icon="solar:trash-bin-minimalistic-linear" width={13} height={13} />
                 </button>
               )}
             </div>
@@ -5107,7 +5107,7 @@ function OpenRouterProviderCard({
                         onClick={() => void addModel(model)}
                         disabled={mutatingModelId === model.id}
                       >
-                        <Icon icon="solar:add-circle-linear" width={13} height={13} />
+                        <Icon icon="solar:add-square-linear" width={13} height={13} />
                         <span>{mutatingModelId === model.id ? "Adding…" : "Add"}</span>
                       </button>
                     )}
@@ -5133,7 +5133,7 @@ function OpenRouterProviderCard({
                     title="Remove model"
                     aria-label={`Remove ${label}`}
                   >
-                    <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+                    <Icon icon="solar:trash-bin-minimalistic-linear" width={13} height={13} />
                   </button>
                 </div>
               );
@@ -6075,7 +6075,7 @@ function ServerDetail({ workspacePath, server, probe, probing, knownToolCount, o
                     </code>
                   </span>
                   <Icon
-                    icon="solar:alt-arrow-down-linear"
+                    icon="solar:alt-arrow-down-bold"
                     width={12}
                     height={12}
                     className="settings-pane__tool-caret"
@@ -6207,7 +6207,7 @@ function SubAgentsSection({
               aria-label="New agent"
               title="New agent"
             >
-              <Icon icon="solar:add-circle-linear" width={13} height={13} />
+              <Icon icon="solar:add-square-linear" width={13} height={13} />
             </button>
           </div>
           <div className="settings-pane__nav-list-items">
@@ -6307,7 +6307,7 @@ function SettingsPicker({
           )}
           <span>{selected?.label ?? "—"}</span>
         </span>
-        <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
+        <Icon icon="solar:alt-arrow-down-bold" width={11} height={11} />
       </button>
       {open && (
         <div className="settings-pane__picker-pop" role="menu">
@@ -6434,7 +6434,7 @@ function SubAgentEditor({
             {confirmDelete ? (
               <span className="settings-pane__icon-btn-confirm">Delete?</span>
             ) : (
-              <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+              <Icon icon="solar:trash-bin-minimalistic-linear" width={13} height={13} />
             )}
           </button>
           <button
@@ -6581,7 +6581,7 @@ function SkillsSection({
             onClick={onCreate}
             disabled={loading || saving || deleting}
           >
-            <Icon icon="solar:add-circle-linear" width={13} height={13} />
+            <Icon icon="solar:add-square-linear" width={13} height={13} />
             <span>Add</span>
           </button>
           <button
@@ -6813,7 +6813,7 @@ function SkillPreview({
                   }}
                   disabled={saving || deleting}
                 >
-                  <Icon icon="solar:close-circle-linear" width={13} height={13} />
+                  <Icon icon="solar:close-square-linear" width={13} height={13} />
                   <span>Cancel</span>
                 </button>
                 <button
@@ -6876,7 +6876,7 @@ function SkillPreview({
                     icon={
                       deleting
                         ? "solar:refresh-linear"
-                        : "solar:trash-bin-trash-linear"
+                        : "solar:trash-bin-minimalistic-linear"
                     }
                     width={13}
                     height={13}
@@ -7797,7 +7797,7 @@ function DeepSeekProviderCard({
                   title="Remove API key"
                   aria-label="Remove API key"
                 >
-                  <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+                  <Icon icon="solar:trash-bin-minimalistic-linear" width={13} height={13} />
                 </button>
               )}
             </div>

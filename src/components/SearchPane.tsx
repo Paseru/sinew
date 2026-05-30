@@ -119,7 +119,7 @@ export function SearchPane({ workspacePath, refreshToken, onOpenFile }: Props) {
             title="Clear"
             onClick={() => setQuery("")}
           >
-            <Icon icon="solar:close-circle-linear" width={14} height={14} />
+            <Icon icon="solar:close-square-linear" width={14} height={14} />
           </button>
         )}
       </div>

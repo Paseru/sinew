@@ -765,7 +765,7 @@ export function GitPanel({
               <span className="git-panel__spinner git-panel__spinner--inline" />
             ) : (
               <Icon
-                icon="solar:square-alt-arrow-down-linear"
+                icon="solar:square-alt-arrow-down-bold"
                 width={13}
                 height={13}
               />
@@ -783,7 +783,7 @@ export function GitPanel({
               <span className="git-panel__spinner git-panel__spinner--inline" />
             ) : (
               <Icon
-                icon="solar:square-alt-arrow-up-linear"
+                icon="solar:square-alt-arrow-up-bold"
                 width={13}
                 height={13}
               />
@@ -815,7 +815,7 @@ export function GitPanel({
             onClick={dismissNotice}
             title="Dismiss"
           >
-            <Icon icon="solar:close-circle-linear" width={12} height={12} />
+            <Icon icon="solar:close-square-linear" width={12} height={12} />
           </button>
         </div>
       )}
@@ -1095,7 +1095,7 @@ export function GitPanel({
                   onClick={handleDismissPrResult}
                   title="Dismiss"
                 >
-                  <Icon icon="solar:close-circle-linear" width={13} height={13} />
+                  <Icon icon="solar:close-square-linear" width={13} height={13} />
                 </button>
               </div>
               <div className="git-panel__pr-url" title={prResult.url}>
@@ -1524,7 +1524,7 @@ function WorktreeRow({
                 <span className="git-panel__spinner git-panel__spinner--inline" />
               ) : (
                 <Icon
-                  icon="solar:alt-arrow-right-linear"
+                  icon="solar:alt-arrow-right-bold"
                   width={13}
                   height={13}
                 />

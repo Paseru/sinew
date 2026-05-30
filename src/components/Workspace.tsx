@@ -2210,7 +2210,7 @@ export function Workspace({
                 onClick={showTerminal}
                 title="Show terminal"
               >
-                <Icon icon="solar:square-alt-arrow-up-linear" width={14} height={14} />
+                <Icon icon="solar:square-alt-arrow-up-bold" width={14} height={14} />
               </button>
             </div>
           )}

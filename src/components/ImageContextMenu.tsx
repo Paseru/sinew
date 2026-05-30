@@ -104,7 +104,7 @@ export function ImageContextMenu({
     >
       <MenuItem icon="solar:copy-linear" label="Copy Image" onClick={copyImage} />
       <MenuItem
-        icon="solar:download-linear"
+        icon="solar:download-square-linear"
         label="Save Image As…"
         onClick={saveImageAs}
       />

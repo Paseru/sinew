@@ -1728,7 +1728,7 @@ function TreeContextMenu({
       )}
       {entry && entry.kind === "file" && (
         <MenuItem
-          icon="solar:play-linear"
+          icon="solar:play-circle-linear"
           label="Execute / Run"
           onClick={onExecute}
         />
@@ -1772,7 +1772,7 @@ function TreeContextMenu({
             onClick={onReveal}
           />
           <MenuItem
-            icon="solar:trash-bin-trash-linear"
+            icon="solar:trash-bin-minimalistic-linear"
             label="Delete"
             danger
             onClick={onDelete}
