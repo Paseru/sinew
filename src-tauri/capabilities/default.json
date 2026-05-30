@@ -11,6 +11,8 @@
     "core:window:allow-toggle-maximize",
     "core:webview:allow-set-webview-zoom",
     "dialog:default",
+    "dialog:allow-confirm",
+    "dialog:allow-ask",
     "updater:default"
   ]
 }
