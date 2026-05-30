@@ -48,6 +48,9 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     setSshError(null);
     try {
       const bootstrap = await api.mountSshWorkspace(target);
+      try {
+        localStorage.setItem(`ssh_mount_${bootstrap.workspace.path}`, target);
+      } catch (e) {}
       onPick(bootstrap.workspace.path);
     } catch (err) {
       setSshError(err instanceof Error ? err.message : String(err));
@@ -62,6 +65,9 @@ export function Welcome({ onPick, error, deriveName }: Props) {
     setSshError(null);
     try {
       const bootstrap = await api.mountSshWorkspace(host);
+      try {
+        localStorage.setItem(`ssh_mount_${bootstrap.workspace.path}`, host);
+      } catch (e) {}
       onPick(bootstrap.workspace.path);
     } catch (err) {
       setSshError(err instanceof Error ? err.message : String(err));

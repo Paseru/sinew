@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 04:01:40]
+- `src/components/Welcome.tsx` : Enregistrement de l'hôte SSH connecté dans le stockage local du navigateur (`localStorage`) pour pouvoir l'identifier plus tard.
+- `src/components/Workspace.tsx` : Ajout d'un encart de connexion SSH au bas de la colonne de gauche (barre latérale). Il affiche un indicateur vert avec le nom du serveur si connecté, ainsi qu'un bouton de déconnexion. Sinon, il propose un bouton "Se connecter" qui ouvre un petit formulaire intégré avec gestion des connexions rapides.
+- `src/styles.css` : Ajout des styles graphiques pour le nouvel encart de connexion SSH en bas à gauche de l'interface.
+
 ## [2026-05-30 03:57:31]
 - `src/lib/quotas.ts` : Correction du calcul du pourcentage DeepSeek — la barre incluait seulement le solde rechargé (`toppedUpBalance`) comme dénominateur, ce qui donnait toujours ≥100% tant que des crédits gratuits (`grantedBalance`) étaient disponibles. Le dénominateur devient `toppedUpBalance + grantedBalance` pour refléter le total réel.
 
