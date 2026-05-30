@@ -19,11 +19,6 @@
 â”œâ”€â”€ package.json
 â”œâ”€â”€ README.md
 â”œâ”€â”€ .sinew
-â”‚   â””â”€â”€ skills
-â”‚       â”œâ”€â”€ browser
-â”‚       â”‚   â””â”€â”€ SKILL.md
-â”‚       â””â”€â”€ computer_use
-â”‚           â””â”€â”€ SKILL.md
 â”œâ”€â”€ scripts
 â”‚   â”œâ”€â”€ check.ps1
 â”‚   â”œâ”€â”€ compil.ps1

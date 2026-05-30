@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 03:21:11]
+- `.sinew/skills/browser/` & `.sinew/skills/computer_use/` : Déplacement des compétences `browser` et `computer_use` du workspace vers le dossier global utilisateur `~/.agents/skills/`, afin qu'elles soient disponibles pour tous les workspaces et non uniquement pour celui de Sinew.
+
 ## [2026-05-30 03:13:06]
 - `src-tauri/src/workspace.rs` : Création de la commande `list_ssh_hosts` pour extraire automatiquement les serveurs/alias configurés dans le fichier `~/.ssh/config` de l'utilisateur.
 - `src-tauri/src/lib.rs` : Enregistrement de la commande `list_ssh_hosts` dans le gestionnaire Tauri.
