@@ -1078,6 +1078,7 @@ pub fn run() {
         .manage(updater::UpdaterState::new())
         .invoke_handler(tauri::generate_handler![
             workspace::open_workspace,
+            workspace::mount_super_ssh_workspace,
             workspace::mount_ssh_workspace,
             workspace::list_ssh_hosts,
             workspace::open_new_window,

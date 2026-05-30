@@ -209,6 +209,70 @@ where
             protocol::DaemonRequest::CancelTurn { conversation_id } => {
                 info!("Cancel turn requested for: {}", conversation_id);
             }
+            protocol::DaemonRequest::ListEntries { workspace_path, relative_path } => {
+                info!("ListEntries requested for: {} {:?}", workspace_path, relative_path);
+                let root = PathBuf::from(&workspace_path);
+                let entries = sinew_app::workspace::list_workspace_entries(&root, relative_path.as_deref()).unwrap_or_default();
+                let resp = protocol::DaemonResponse::EntriesList {
+                    entries: serde_json::to_value(&entries).unwrap_or(serde_json::Value::Null),
+                };
+                let mut resp_str = serde_json::to_string(&resp)?;
+                resp_str.push('\n');
+                writer.write_all(resp_str.as_bytes()).await?;
+            }
+            protocol::DaemonRequest::ListAllFiles { workspace_path } => {
+                info!("ListAllFiles requested for: {}", workspace_path);
+                let root = PathBuf::from(&workspace_path);
+                let entries = sinew_app::workspace::list_workspace_files(&root).unwrap_or_default();
+                let resp = protocol::DaemonResponse::EntriesList {
+                    entries: serde_json::to_value(&entries).unwrap_or(serde_json::Value::Null),
+                };
+                let mut resp_str = serde_json::to_string(&resp)?;
+                resp_str.push('\n');
+                writer.write_all(resp_str.as_bytes()).await?;
+            }
+            protocol::DaemonRequest::ReadFile { workspace_path, relative_path } => {
+                info!("ReadFile requested for: {}/{}", workspace_path, relative_path);
+                let root = PathBuf::from(&workspace_path);
+                match sinew_app::workspace::read_workspace_file(&root, &relative_path) {
+                    Ok(doc) => {
+                        let resp = protocol::DaemonResponse::FileContent {
+                            content: doc.content.unwrap_or_default(),
+                        };
+                        let mut resp_str = serde_json::to_string(&resp)?;
+                        resp_str.push('\n');
+                        writer.write_all(resp_str.as_bytes()).await?;
+                    }
+                    Err(e) => {
+                        let resp = protocol::DaemonResponse::Error {
+                            message: format!("Failed to read file: {}", e),
+                        };
+                        let mut resp_str = serde_json::to_string(&resp)?;
+                        resp_str.push('\n');
+                        writer.write_all(resp_str.as_bytes()).await?;
+                    }
+                }
+            }
+            protocol::DaemonRequest::WriteFile { workspace_path, relative_path, content } => {
+                info!("WriteFile requested for: {}/{}", workspace_path, relative_path);
+                let root = PathBuf::from(&workspace_path);
+                match sinew_app::workspace::write_workspace_file(&root, &relative_path, &content) {
+                    Ok(_) => {
+                        let resp = protocol::DaemonResponse::FileWritten;
+                        let mut resp_str = serde_json::to_string(&resp)?;
+                        resp_str.push('\n');
+                        writer.write_all(resp_str.as_bytes()).await?;
+                    }
+                    Err(e) => {
+                        let resp = protocol::DaemonResponse::Error {
+                            message: format!("Failed to write file: {}", e),
+                        };
+                        let mut resp_str = serde_json::to_string(&resp)?;
+                        resp_str.push('\n');
+                        writer.write_all(resp_str.as_bytes()).await?;
+                    }
+                }
+            }
             protocol::DaemonRequest::StartTurn {
                 conversation_id,
                 workspace_path,

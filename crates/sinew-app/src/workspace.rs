@@ -46,7 +46,7 @@ const IGNORED_DIRS: &[&str] = &[
     ".sinew",
 ];
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodebaseIndexStatus {
     pub files_indexed: usize,
@@ -55,7 +55,7 @@ pub struct CodebaseIndexStatus {
     pub semantic_enabled: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceInfo {
     pub path: String,
@@ -70,7 +70,7 @@ pub enum WorkspaceEntryKind {
     Directory,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceEntry {
     pub name: String,
@@ -80,7 +80,7 @@ pub struct WorkspaceEntry {
     pub has_children: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileDocument {
     pub name: String,
@@ -95,7 +95,7 @@ pub struct FileDocument {
     pub image_data: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceSearchResult {
     pub query: String,
@@ -104,7 +104,7 @@ pub struct WorkspaceSearchResult {
     pub files: Vec<WorkspaceSearchFile>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceSearchFile {
     pub name: String,
@@ -115,7 +115,7 @@ pub struct WorkspaceSearchFile {
     pub matches: Vec<WorkspaceSearchMatch>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceSearchMatch {
     pub line_number: usize,

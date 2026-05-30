@@ -21,6 +21,22 @@ pub enum DaemonRequest {
         conversation_id: String,
     },
     GetStatus,
+    ListEntries {
+        workspace_path: String,
+        relative_path: Option<String>,
+    },
+    ListAllFiles {
+        workspace_path: String,
+    },
+    ReadFile {
+        workspace_path: String,
+        relative_path: String,
+    },
+    WriteFile {
+        workspace_path: String,
+        relative_path: String,
+        content: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,4 +62,11 @@ pub enum DaemonResponse {
     Error {
         message: String,
     },
+    EntriesList {
+        entries: serde_json::Value,
+    },
+    FileContent {
+        content: String,
+    },
+    FileWritten,
 }
