@@ -3,3 +3,4 @@
         Info Looking up installed tauri packages to check mismatched versions...
      Running beforeBuildCommand `npm run prepare-sidecars && npm run prepare-agent-bridge && npm run build`
    Compiling Sinew v0.1.26 (C:\Dev\Sinew\src-tauri)
+failed to build app
