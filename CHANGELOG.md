@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:35:40]
+- `Rapport_Codex_Analyse.md` : Ajout des sections d'analyse sur le pilotage d'ordinateur (Computer Use) et la télécommande par téléphone (Remote Control).
+- Confirmé la présence native du rendu de diagrammes Mermaid dans Sinew.
+
 ## [2026-05-30 02:26:13]
 - `crates/sinew-cursor/src/agent/run_h2.rs` : Redirection du point de contact de l'agent NAL vers le serveur de production express de Cursor (`agent.api5.cursor.sh` au lieu de `api2.cursor.sh`).
 - `scripts/agent-bridge/run-stream.mjs` : Alignement de l'endpoint du pont Node pour utiliser le serveur express `agent.api5.cursor.sh`.

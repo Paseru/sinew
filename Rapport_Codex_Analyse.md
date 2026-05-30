@@ -88,3 +88,22 @@ Ce rapport présente l'analyse de l'application Codex décompilée (`C:\Users\ju
 * **Fonctionnement :** Le texte provenant de la console (ou de la pensée de l'IA) est placé dans une file d'attente d'affichage temporaire pour économiser les ressources de l'ordinateur et garder l'interface fluide.
 * **Intérêt pour Sinew :** Améliorer la fluidité du chat et de la console interactive de Sinew lors des sorties de texte massives ou rapides.
 
+---
+
+## 9. 🖥️ Le Pilotage Total de l'Ordinateur (Computer Use / OS Control)
+* **Analogie :** L'assistant dispose d'yeux (capture d'écran) et de mains virtuelles (clic et clavier) pour manipuler d'autres applications à votre place (comme ouvrir le Bloc-notes, naviguer sur Chrome ou compiler dans un IDE).
+* **Fonctionnement :** 
+  * Un panneau de contrôle permet d'autoriser l'assistant à piloter soit "N'importe quelle application", soit "Google Chrome uniquement".
+  * Il effectue des captures d'écran régulières et simule des événements physiques de souris et de touches pour exécuter les instructions de l'utilisateur de manière interactive.
+* **Intérêt pour Sinew :** Re-développer à notre façon (SOTA) une compétence de pilotage du système en utilisant des outils de capture d'écran légers et des déclencheurs de touches sécurisés, intégrés directement sous forme de bouton d'autorisation dans Sinew.
+
+---
+
+## 10. 📱 La Télécommande par Téléphone (Remote Control / Companion App)
+* **Analogie :** Un écran déporté sur votre smartphone pour surveiller, parler ou donner votre accord à l'assistant à distance, comme une télécommande de télévision intelligente.
+* **Fonctionnement :**
+  * Association sécurisée par QR code et connexion locale par ondes réseau (WebSockets).
+  * L'écran du téléphone affiche en temps réel l'état d'esprit de l'assistant (réfléchit, attend, en erreur).
+  * Il permet de valider les commandes sensibles (les "feux tricolores" de sécurité) ou de dicter des instructions au micro depuis le canapé.
+* **Intérêt pour Sinew :** Développer un compagnon mobile Web simple et sécurisé pour garder le contrôle de l'agent sans rester collé devant son écran d'ordinateur.
+
