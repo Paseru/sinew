@@ -58,13 +58,61 @@ import type {
   WorkspaceSearchResult,
 } from "../types";
 
-interface ActiveSettings {
+export interface ActiveSettings {
   gitAutomation: boolean;
   conciseAnswers: boolean;
   agentAutonomy: boolean;
   forceChangelog: boolean;
   gitFrenchMessages: boolean;
   autoMockups: boolean;
+  autoOptimizeEnabled: boolean;
+  autoOptimizeModelId: string | null;
+}
+
+export function readActiveSettings(): ActiveSettings {
+  let master = "enabled";
+  try {
+    master = localStorage.getItem("sinew.power-user-master") || "enabled";
+  } catch {}
+
+  let autoOptimizeEnabled = false;
+  let autoOptimizeModelId = null;
+  try {
+    autoOptimizeEnabled = localStorage.getItem("sinew.autoOptimizeEnabled") === "true";
+    autoOptimizeModelId = localStorage.getItem("sinew.autoOptimizeModelId");
+  } catch {}
+
+  if (master === "enabled") {
+    return {
+      gitAutomation: true,
+      conciseAnswers: true,
+      agentAutonomy: true,
+      forceChangelog: true,
+      gitFrenchMessages: true,
+      autoMockups: true,
+      autoOptimizeEnabled,
+      autoOptimizeModelId,
+    };
+  }
+
+  const readBool = (key: string) => {
+    try {
+      return localStorage.getItem(key) === "true";
+    } catch {
+      return false;
+    }
+  };
+
+  return {
+    gitAutomation: readBool("sinew.git-automation"),
+    conciseAnswers: readBool("sinew.concise-answers"),
+    agentAutonomy: readBool("sinew.agent-autonomy"),
+    forceChangelog: readBool("sinew.force-changelog"),
+    gitFrenchMessages: readBool("sinew.git-french-messages"),
+    autoMockups: readBool("sinew.auto-mockups"),
+    autoOptimizeEnabled,
+    autoOptimizeModelId,
+  };
 }
 
 function readActiveSettings(): ActiveSettings {

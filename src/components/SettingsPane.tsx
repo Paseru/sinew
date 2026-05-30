@@ -1686,6 +1686,7 @@ export function SettingsPane({ workspacePath }: Props) {
             onLocaleChange={setLocale}
             workspacePath={workspacePath}
             currentTab={section}
+            availableModels={availableModels}
           />
         ) : section === "about" ? (
           <AboutSection locale={locale} />
@@ -1855,11 +1856,13 @@ function OptionsSection({
   onLocaleChange,
   workspacePath,
   currentTab,
+  availableModels,
 }: {
   locale: AppLocale;
   onLocaleChange: (locale: AppLocale) => void;
   workspacePath: string;
   currentTab: string;
+  availableModels: readonly ModelEntry[];
 }) {
   const [powerUserMaster, setPowerUserMaster] = useState<"enabled" | "disabled" | "custom">(() => {
     try {
@@ -2015,6 +2018,36 @@ function OptionsSection({
       return true;
     }
   });
+
+  const [autoOptimizeEnabled, setAutoOptimizeEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("sinew.autoOptimizeEnabled") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const [autoOptimizeModelId, setAutoOptimizeModelId] = useState<string>(() => {
+    try {
+      return localStorage.getItem("sinew.autoOptimizeModelId") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const toggleAutoOptimizeEnabled = (enabled: boolean) => {
+    try {
+      localStorage.setItem("sinew.autoOptimizeEnabled", enabled ? "true" : "false");
+    } catch {}
+    setAutoOptimizeEnabled(enabled);
+  };
+
+  const changeAutoOptimizeModelId = (modelId: string) => {
+    try {
+      localStorage.setItem("sinew.autoOptimizeModelId", modelId);
+    } catch {}
+    setAutoOptimizeModelId(modelId);
+  };
 
   const [autoUpdateCheck, setAutoUpdateCheck] = useState<"blocking" | "notification" | "disabled">(() => {
     try {
@@ -3315,6 +3348,56 @@ function OptionsSection({
                   >
                     {locale === "fr" ? "Détaillé" : "Detailed"}
                   </button>
+                </div>
+              </div>
+
+              {/* Ligne 5 : Optimisation de Prompt Automatique */}
+              <div className="options-subcategory-row">
+                <div className="settings-pane__about-card">
+                  <div className="settings-pane__about-card-copy">
+                    <h2>{locale === "fr" ? "Optimisation Magique Auto" : "Auto Magic Optimization"}</h2>
+                    <p>
+                      {locale === "fr"
+                        ? "Si activé, le brouillon est automatiquement analysé, réécrit et aiguillé sur le bon mode avant d'être envoyé au modèle principal lors d'un simple 'Entrée'."
+                        : "If enabled, your raw prompt is automatically analyzed, rewritten and routed to the correct mode before being sent to the main model upon hitting 'Enter'."}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", alignSelf: "flex-end" }}>
+                    <select
+                      className="settings-pane__select"
+                      style={{ height: "30px", fontSize: "13px", padding: "0 8px" }}
+                      value={autoOptimizeModelId}
+                      onChange={(e) => changeAutoOptimizeModelId(e.target.value)}
+                      disabled={!autoOptimizeEnabled || availableModels.length === 0}
+                    >
+                      <option value="">{locale === "fr" ? "Choisir le modèle d'analyse" : "Choose optimizer model"}</option>
+                      {availableModels.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="settings-pane__locale-switch" role="radiogroup">
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={autoOptimizeEnabled}
+                        data-active={autoOptimizeEnabled ? "true" : "false"}
+                        onClick={() => toggleAutoOptimizeEnabled(true)}
+                      >
+                        {locale === "fr" ? "Activé" : "Enabled"}
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={!autoOptimizeEnabled}
+                        data-active={!autoOptimizeEnabled ? "true" : "false"}
+                        onClick={() => toggleAutoOptimizeEnabled(false)}
+                      >
+                        {locale === "fr" ? "Désactivé" : "Disabled"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

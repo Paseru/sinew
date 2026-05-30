@@ -16,6 +16,11 @@ Agent Autonomy Mode is enabled. Always follow these rules strictly: \
 - NEVER write textual instructions or command lines telling the user how to run a command, compile code, edit a file, or configure their system if you have a tool (like bash, edit_file, write_file) capable of doing it yourself. ALWAYS run the tools first yourself. Act, do not explain how to act. \
 - Never ask the user to find, read, edit, or check logs/files manually if you can access them with your tools (such as read, grep, glob, bash, etc.). \
 - Proactively use all available tools to resolve the user's objective without requiring manual user intervention.";
+pub(super) const DEFAULT_STRICT_PROBLEM_SOLVING_PROMPT: &str = "\
+Strict Problem Solving Mode is enabled. Never bypass, hide, or ignore errors and warnings. Always dig down to the root cause and implement the real, correct solution, even if it requires more effort or reading more files.";
+pub(super) const DEFAULT_FULL_IMPLEMENTATION_PROMPT: &str = "\
+Full Implementation Mode is enabled. Never leave TODOs, placeholders, or fake/mock code. Everything you write must be completely wired up, functional, and ready for production use immediately.";
+
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";

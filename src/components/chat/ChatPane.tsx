@@ -27,7 +27,7 @@ import {
 } from "./ToolCard";
 import { TodoStrip, type QueuedPromptStripItem } from "./TodoStrip";
 import { fileIcon } from "../../lib/fileIcon";
-import { api } from "../../lib/ipc";
+import { api, readActiveSettings } from "../../lib/ipc";
 import { fetchProviderQuota, deductLocalQuota, quotaColor, getCachedQuota, type QuotaInfo } from "../../lib/quotas";
 import { canonicalToolName, isToolName } from "../../lib/tools";
 import {
@@ -1781,10 +1781,27 @@ export function ChatPane({
   const handleSend = useCallback(async () => {
     if (!modelEntry) return;
     const currentAttachments = composerAttachments;
-    const value = text.trim() || attachmentOnlyMessage(currentAttachments);
+    let value = text.trim() || attachmentOnlyMessage(currentAttachments);
     if (!value && currentAttachments.length === 0) {
       return;
     }
+    
+    let finalMode = effectiveMode;
+    const settings = readActiveSettings();
+    if (settings.autoOptimizeEnabled && settings.autoOptimizeModelId && text.trim()) {
+      try {
+        setOptimizing(true);
+        const res = await api.optimizePrompt(text.trim(), modelRefFromId(settings.autoOptimizeModelId));
+        value = res.rewrittenPrompt || value;
+        finalMode = res.mode as AgentMode;
+        setMode(finalMode);
+      } catch (err) {
+        console.error("Auto optimize failed", err);
+      } finally {
+        setOptimizing(false);
+      }
+    }
+
     if (view.status === "streaming" || isStreaming) {
       const editing =
         editingQueuedPrompt?.conversationId === conversationId
@@ -1796,7 +1813,7 @@ export function ChatPane({
         attachments: currentAttachments,
         model: modelRefFromId(model),
         thinking,
-        mode: effectiveMode,
+        mode: finalMode,
         serviceTier,
         createdAtMs: editing?.createdAtMs,
       });
@@ -1842,7 +1859,7 @@ export function ChatPane({
         currentAttachments,
         modelRefFromId(model),
         thinking,
-        effectiveMode,
+        finalMode,
         serviceTier,
         rewriteFromHistoryIndex,
         undefined,

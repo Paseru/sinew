@@ -126,6 +126,8 @@ pub(super) async fn send_message(
             input.force_changelog,
             input.git_french_messages,
             input.auto_mockups,
+            input.strict_problem_solving,
+            input.full_implementation,
             input.client_formatted_date_time.as_deref(),
         )
         .map_err(error_to_string)?;
@@ -612,7 +614,7 @@ pub(super) async fn compact_conversation(
         normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
     let workspace_id = workspace_root.display().to_string();
     let effective_system_prompt =
-        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, None)
+        system_prompt_for_workspace(&workspace_root, &state.system_prompt, true, true, true, false, false, false, false, false, None)
             .map_err(error_to_string)?;
     if !wait_for_conversation_turn_slot(&state.active_turns, &input.conversation_id).await {
         return Err("a turn is already running for this conversation".into());
@@ -1742,6 +1744,8 @@ pub(super) fn system_prompt_for_workspace(
     force_changelog: bool,
     git_french_messages: bool,
     auto_mockups: bool,
+    strict_problem_solving: bool,
+    full_implementation: bool,
     client_formatted_date_time: Option<&str>,
 ) -> Result<String> {
     let mut sections = vec![format!("# Shell environment\n\n{}", shell_system_prompt())];
@@ -1795,6 +1799,14 @@ pub(super) fn system_prompt_for_workspace(
             "# Automatic Visual Mockups\n\n\
             IMPORTANT: Only generate a visual mockup or flowchart (e.g. Mermaid diagram) if the user explicitly asks for a visual layout/report, or if you determine that drawing a visual plan is necessary to clarify a complex layout change. Do not block or ask for validation every single time a frontend file is edited."
         ));
+    }
+
+    if strict_problem_solving {
+        sections.push(crate::state::DEFAULT_STRICT_PROBLEM_SOLVING_PROMPT.to_string());
+    }
+
+    if full_implementation {
+        sections.push(crate::state::DEFAULT_FULL_IMPLEMENTATION_PROMPT.to_string());
     }
 
     // Inject machine-wide global consolidated rules if present
