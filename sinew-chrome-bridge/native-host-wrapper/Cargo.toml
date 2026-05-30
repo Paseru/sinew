@@ -12,6 +12,9 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 futures-util = { workspace = true }
+directories = { workspace = true }
+uuid = { workspace = true }
+reqwest = { workspace = true }
 
 [lints]
 workspace = true

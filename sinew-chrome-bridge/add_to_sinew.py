@@ -35,8 +35,8 @@ if not (os.path.isabs(node_path) and os.path.exists(node_path)) and not shutil.w
 new_server = {
     "id": "sinew-chrome",
     "name": "Sinew Chrome",
-    "command": node_path,
-    "args": [str(script_dir / "mcp_server.js")],
+    "command": str(script_dir / "native-host-wrapper.exe"),
+    "args": ["--mcp"],
     "env": [
         {"key": "MCP_BROWSER_CDP_URL", "value": "http://127.0.0.1:29002"},
         {"key": "SINEW_CHROME_BRIDGE_DIR", "value": str(script_dir)},

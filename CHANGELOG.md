@@ -2,11 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-05-30 02:40:00]
-- `RAPPORT_DECOMPILE_CURSOR.md` : Enrichissement complet du rapport d'analyse de l'architecture de Cursor (Shadow Workspace, système d'indexation, automatisation de navigateur, boucle d'agent, génération de commits) avec des métaphores simples et des détails précis sur le fonctionnement interne de l'application décompilée.
+## [2026-05-30 02:43:27]
+- `COMPARAISON_ARCHITECTURE.md` : Création du document d'analyse comparative entre l'architecture de Cursor et les fonctionnalités actuelles de Sinew, évaluant le niveau d'opportunité d'intégration (Shadow Workspace, Indexation/Ignore, MCP Navigateur, Boucle d'agent, Commits).
+
+
+## [2026-05-30 02:36:45]
+- `RAPPORT_DECOMPILE_CURSOR.md` : Mise à jour et enrichissement en profondeur du rapport d'analyse de l'architecture de Cursor (gRPC, sockets locaux, indexation Merkle native, daemon autonome d'agent, plomberie Git temporaire, automatisation de navigateur par WebView injectée et réduction de contexte).
+
 
 ## [2026-05-30 02:33:05]
-- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout des dépendances tokio, tokio-tungstenite, serde, serde_json, anyhow et futures-util pour réécrire le pont Chrome natif en Rust.
+- `sinew-chrome-bridge/native-host-wrapper/Cargo.toml` : Ajout des dépendances tokio, tokio-tungstenite, serde, serde_json, anyhow, futures-util, directories, uuid et reqwest pour réécrire le pont Chrome natif en Rust.
+- `sinew-chrome-bridge/native-host-wrapper/src/main.rs` : Réécriture complète du pont Chrome et du serveur MCP en Rust (SOTA zero-install) permettant de supprimer la dépendance à Node.js.
+- `sinew-chrome-bridge/add_to_sinew.py` : Enregistrement du nouveau binaire natif Rust MCP dans la base de données SQLite de Sinew à la place de l'ancien script Node.js.
+
 
 ## [2026-05-30 02:39:37]
 - `mcp_settings` : Intégration du serveur MCP SOTA `slepp-ssh-mcp` dans la base SQLite locale pour donner aux agents un accès SSH complet aux machines distantes.
