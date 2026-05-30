@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 02:26:13]
+- `Rapport_Analyse_Composer_2.5.md` : Ajout du rapport d'analyse synthétique sur le support de Composer 2.5 standalone, les clés de sécurité et la migration vers la ligne express agent.api5.
+
 ## [2026-05-30 02:31:00]
 - `Rapport_Codex_Analyse.md` : Enrichissement du rapport avec les analyses d'interface utilisateur et de fonctionnalités frontend (Mini-apps MCP, planificateur d'automatisations RRule, auto-réparation des espaces temporaires Git et régulateur de débit d'affichage).
 
