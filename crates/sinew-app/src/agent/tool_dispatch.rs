@@ -94,12 +94,28 @@ pub(super) async fn run_tool(
         if mode == AgentMode::Plan {
             return ToolRunResult::err("edit_file is unavailable in Plan mode", Vec::new());
         }
-        edit_file.run(input, read_fingerprints).await
+        let mut result = edit_file.run(input, read_fingerprints).await;
+        if !result.is_error {
+            let lints = read_lints.run(serde_json::json!({})).await;
+            if !lints.is_error && !lints.content.trim().is_empty() && !lints.content.contains("No linter errors found") {
+                result.content.push_str("\n\n[Auto-Lint Diagnostics (Self-Healing)]:\n");
+                result.content.push_str(&lints.content);
+            }
+        }
+        result
     } else if canonical_name == tool_names::WRITE_FILE {
         if mode == AgentMode::Plan {
             return ToolRunResult::err("write_file is unavailable in Plan mode", Vec::new());
         }
-        write_file.run(input, read_fingerprints).await
+        let mut result = write_file.run(input, read_fingerprints).await;
+        if !result.is_error {
+            let lints = read_lints.run(serde_json::json!({})).await;
+            if !lints.is_error && !lints.content.trim().is_empty() && !lints.content.contains("No linter errors found") {
+                result.content.push_str("\n\n[Auto-Lint Diagnostics (Self-Healing)]:\n");
+                result.content.push_str(&lints.content);
+            }
+        }
+        result
     } else if canonical_name == tool_names::DELETE_FILE {
         if mode == AgentMode::Plan {
             return ToolRunResult::err("delete_file is unavailable in Plan mode", Vec::new());
