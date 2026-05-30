@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-05-30 21:09:49]
+- `src-tauri/src/state.rs` : Ajout du chemin de mémoire persistante `.sinew/memory.md` pour conserver un carnet de projet entre sessions.
+- `src-tauri/src/turns.rs` : Injection automatique de `.sinew/memory.md` dans le prompt système quand le fichier existe, afin que l'agent retrouve les décisions, l'état du projet et les pièges connus dès le début d'une session.
+- `.sinew/memory.md` : Création du carnet local initial avec les décisions sur le rôle réel du GPU, la recherche hybride et la mémoire persistante.
 ## [2026-05-30 21:05:00]
 - `src-tauri/src/tests.rs` : Ajout d'un test de latence réel (ignoré par défaut, `flash_optimizer_race`) qui met en course DeepSeek V4 Flash et Gemini 3.5 Flash sur la tâche d'optimisation de prompt et mesure le temps jusqu'au 1er mot et le temps de réponse complète. Résultat sur 4 runs : 1er mot quasi à égalité (DeepSeek légèrement devant), mais Gemini 3.5 Flash termine la réponse complète plus vite et de manière plus régulière — meilleur choix pour l'optimiseur.
 
@@ -586,14 +590,4 @@ Cette version a été optimisée en profondeur pour offrir une expérience utili
 * **Outils MCP de diagnostics Chrome avancés :** Intégration de nouveaux outils d'audit (`emulate_experience`, `lighthouse_audit`, `analyze_memory_leaks`) basés sur l'API CDP pour tester les performances, diagnostics Lighthouse et fuites mémoire en local.
 
 ---
-
-
-
-
-
-
-
-
-
-
 

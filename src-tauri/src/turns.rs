@@ -1931,6 +1931,17 @@ pub(super) fn system_prompt_for_workspace(
         ));
     }
 
+    if let Some(memory) = read_workspace_prompt_file(workspace_root, WORKSPACE_MEMORY_FILE)? {
+        sections.push(format!(
+            "# Project memory (persistent across sessions)\n\n\
+            IMPORTANT: This is YOUR working memory for this project, written by you in previous sessions. \
+            It records key decisions, the current state, what is done and what remains, and gotchas to avoid. \
+            Read it first so you do not re-discover the project from scratch. \
+            Keep it current: edit `.sinew/memory.md` (concise, dated bullet points) whenever you make a decision, \
+            complete a task, or learn something that future sessions must know.\n\n{memory}"
+        ));
+    }
+
     if let Some(design) = read_workspace_prompt_file(workspace_root, WORKSPACE_DESIGN_FILE)? {
         sections.push(format!(
             "# Workspace design context\n\nThe following design guidance comes from the current workspace and should guide product, UX, visual, and frontend decisions.\n\n{design}"

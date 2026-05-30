@@ -31,6 +31,8 @@ SSH Optimization Strategy: When you realize or are told that the current workspa
 
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
+/// Memoire de projet persistante entre sessions (ecrite par l'agent lui-meme).
+pub(super) const WORKSPACE_MEMORY_FILE: &str = ".sinew/memory.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";
 pub(super) const FILE_CHANGE_EVENT_NAME: &str = "workspace-file-changed";
 pub(super) const TERMINAL_DATA_EVENT_NAME: &str = "terminal-data";
