@@ -9,6 +9,7 @@ import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
+import { dropSlotToMoveIndex } from "../lib/editorTabs";
 import { languageForPath } from "../lib/language";
 import { fileIcon } from "../lib/fileIcon";
 import { Markdown } from "./chat/Markdown";
@@ -45,6 +46,7 @@ type Props = {
   tabs: EditorTab[];
   activeIndex: number;
   onActivate: (index: number) => void;
+  onReorderTabs: (fromIndex: number, toIndex: number) => void;
   onClose: (index: number) => void;
   onChange: (index: number, value: string) => void;
   onSave: (index: number) => void;
@@ -61,6 +63,7 @@ export function EditorPane({
   tabs,
   activeIndex,
   onActivate,
+  onReorderTabs,
   onClose,
   onChange,
   onSave,
@@ -89,6 +92,17 @@ export function EditorPane({
   const [imageMenu, setImageMenu] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const tabsStripRef = useRef<HTMLDivElement | null>(null);
+  const [tabReorderFrom, setTabReorderFrom] = useState<number | null>(null);
+  const [tabDropSlot, setTabDropSlot] = useState<number | null>(null);
+  const tabPointerRef = useRef<{
+    index: number;
+    pointerId: number;
+    startX: number;
+    dragging: boolean;
+  } | null>(null);
+
+  const TAB_DRAG_THRESHOLD_PX = 6;
   const activeTab: EditorTab | undefined = settingsActive ? undefined : tabs[activeIndex];
   // Close the image context menu whenever the user switches tabs or
   // toggles into the settings view, so it never lingers on the wrong file.
@@ -310,15 +324,119 @@ export function EditorPane({
     [activeTab, activeIndex, onChange],
   );
 
+  const clearTabReorder = useCallback(() => {
+    tabPointerRef.current = null;
+    setTabReorderFrom(null);
+    setTabDropSlot(null);
+  }, []);
+
+  // Pointer-driven reorder: HTML5 DnD is unreliable in Tauri/WebView2 because
+  // custom dataTransfer types are hidden until drop, so dragover never accepts.
+  const resolveDropSlotFromPoint = useCallback((clientX: number) => {
+    const strip = tabsStripRef.current;
+    if (!strip) return null;
+    const tabEls = strip.querySelectorAll<HTMLElement>('[data-editor-tab="true"]');
+    if (tabEls.length === 0) return 0;
+    for (let index = 0; index < tabEls.length; index += 1) {
+      const rect = tabEls[index].getBoundingClientRect();
+      if (clientX < rect.left) return index;
+      if (clientX <= rect.right) {
+        return clientX < rect.left + rect.width / 2 ? index : index + 1;
+      }
+    }
+    return tabEls.length;
+  }, []);
+
+  const handleTabPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>, index: number) => {
+      if (event.button !== 0) return;
+      if ((event.target as HTMLElement).closest(".tab__close")) return;
+      tabPointerRef.current = {
+        index,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        dragging: false,
+      };
+      setTabDropSlot(null);
+    },
+    [],
+  );
+
+  const handleTabsPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const pointer = tabPointerRef.current;
+      if (!pointer || pointer.pointerId !== event.pointerId) return;
+
+      if (!pointer.dragging) {
+        if (Math.abs(event.clientX - pointer.startX) < TAB_DRAG_THRESHOLD_PX) {
+          return;
+        }
+        pointer.dragging = true;
+        setTabReorderFrom(pointer.index);
+        tabsStripRef.current?.setPointerCapture(event.pointerId);
+      }
+
+      const slot = resolveDropSlotFromPoint(event.clientX);
+      if (slot !== null) setTabDropSlot(slot);
+    },
+    [resolveDropSlotFromPoint],
+  );
+
+  const finishTabPointer = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const pointer = tabPointerRef.current;
+      if (!pointer || pointer.pointerId !== event.pointerId) return;
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+
+      if (!pointer.dragging) {
+        onActivate(pointer.index);
+        clearTabReorder();
+        return;
+      }
+
+      const from = tabReorderFrom ?? pointer.index;
+      const slot =
+        tabDropSlot ?? resolveDropSlotFromPoint(event.clientX) ?? from;
+      const to = dropSlotToMoveIndex(from, slot, tabs.length);
+      if (from !== to) {
+        onReorderTabs(from, to);
+      }
+      clearTabReorder();
+    },
+    [
+      clearTabReorder,
+      onActivate,
+      onReorderTabs,
+      resolveDropSlotFromPoint,
+      tabDropSlot,
+      tabReorderFrom,
+      tabs.length,
+    ],
+  );
+
   return (
     <div className="editor-col">
-      <div className="tabs">
+      <div
+        ref={tabsStripRef}
+        className="tabs"
+        data-tab-dragging={tabReorderFrom !== null ? "true" : "false"}
+        onPointerMove={handleTabsPointerMove}
+        onPointerUp={finishTabPointer}
+        onPointerCancel={finishTabPointer}
+      >
         {tabs.map((tab, index) => (
           <div
             key={tab.relativePath}
             className="tab"
+            data-editor-tab="true"
             data-active={!settingsActive && index === activeIndex ? "true" : "false"}
-            onClick={() => onActivate(index)}
+            data-dragging={tabReorderFrom === index ? "true" : "false"}
+            data-drop-before={tabDropSlot === index ? "true" : "false"}
+            data-drop-after={tabDropSlot === index + 1 ? "true" : "false"}
+            onPointerDown={(event) => handleTabPointerDown(event, index)}
             title={tab.relativePath}
           >
             <span className="tab__icon">

@@ -9,6 +9,7 @@ import {
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "@iconify/react";
+import { moveArrayItem, remapIndexAfterMove } from "../lib/editorTabs";
 import { api } from "../lib/ipc";
 import { modelRefWithThinking, thinkingFromRef } from "../lib/models";
 import { recordRecent } from "../lib/recents";
@@ -509,6 +510,13 @@ export function Workspace({
   const activateFileTab = useCallback((index: number) => {
     setActiveTabIndex(index);
     setSettingsActive(false);
+  }, []);
+
+  const reorderTabs = useCallback((fromIndex: number, toIndex: number) => {
+    setTabs((prev) => moveArrayItem(prev, fromIndex, toIndex));
+    setActiveTabIndex((active) =>
+      remapIndexAfterMove(active, fromIndex, toIndex),
+    );
   }, []);
 
   const openSettings = useCallback((section?: "providers") => {
@@ -1999,6 +2007,7 @@ export function Workspace({
               tabs={tabs}
               activeIndex={activeTabIndex}
               onActivate={activateFileTab}
+              onReorderTabs={reorderTabs}
               onClose={closeTab}
               onChange={updateBuffer}
               onSave={saveTab}

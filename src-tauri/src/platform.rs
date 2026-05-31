@@ -1,5 +1,6 @@
 use crate::*;
 
+#[cfg(not(target_os = "windows"))]
 use tauri::{
     menu::{AboutMetadata, Menu, MenuItemBuilder, PredefinedMenuItem, Submenu, SubmenuBuilder},
     Runtime,
@@ -289,16 +290,29 @@ pub(super) fn emit_workspace_file_change(
     );
 }
 
+/// Strip Win32 `\\?\` / `\\?\UNC\` prefixes so shell tools receive normal paths.
+fn path_for_shell(path: &Path) -> PathBuf {
+    let raw = path.to_string_lossy();
+    if let Some(rest) = raw.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{rest}"));
+    }
+    if let Some(rest) = raw.strip_prefix(r"\\?\") {
+        return PathBuf::from(rest);
+    }
+    path.to_path_buf()
+}
+
 pub(super) fn reveal_path(path: &Path) -> Result<()> {
     if !path.exists() {
         anyhow::bail!("path does not exist");
     }
+    let shell_path = path_for_shell(path);
 
     #[cfg(target_os = "macos")]
     {
         let status = Command::new("open")
             .arg("-R")
-            .arg(path)
+            .arg(&shell_path)
             .status()
             .context("unable to reveal item in Finder")?;
         if !status.success() {
@@ -309,22 +323,20 @@ pub(super) fn reveal_path(path: &Path) -> Result<()> {
 
     #[cfg(target_os = "windows")]
     {
-        let status = Command::new("explorer")
-            .arg(format!("/select,{}", path.display()))
-            .status()
+        // explorer.exe often returns exit code 1 even when reveal succeeds.
+        Command::new("explorer")
+            .arg(format!("/select,{}", shell_path.display()))
+            .spawn()
             .context("unable to reveal item in Explorer")?;
-        if !status.success() {
-            anyhow::bail!("Explorer reveal failed");
-        }
         return Ok(());
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        let target = if path.is_dir() {
-            path
+        let target = if shell_path.is_dir() {
+            &shell_path
         } else {
-            path.parent().unwrap_or(path)
+            shell_path.parent().unwrap_or(&shell_path)
         };
         let status = Command::new("xdg-open")
             .arg(target)

@@ -36,8 +36,8 @@ pub use mcp::{probe_mcp_servers, McpServerProbe, McpSettings, McpToolRegistry};
 pub use question::QuestionTool;
 pub use read::{ReadFingerprint, ReadTool};
 pub use skill::{
-    create_installed_skill, list_installed_skills, InstalledSkill, SkillConfig, SkillSettings,
-    SkillSource, SkillTool,
+    create_installed_skill, import_skills_from_provider, list_installed_skills, ImportSkillsResult,
+    InstalledSkill, SkillConfig, SkillSettings, SkillSource, SkillTool, SkippedSkillImport,
 };
 pub use store::{
     tool_settings_view, AppStore, ConversationSummary, GoalWorkflowState, ModeModelSettings,
@@ -46,7 +46,9 @@ pub use store::{
     WorkspaceBootstrap, DEFAULT_PLAN_MODE_PROMPT,
 };
 pub use subagent::{
-    is_subagent_tool_name, subagent_system_prompt, SubAgentConfig, SubAgentSettings, SubAgentTool,
+    import_sub_agents_from_provider, is_subagent_tool_name, subagent_system_prompt,
+    ImportSubAgentsResult, SkippedSubAgentImport, SubAgentConfig, SubAgentSettings, SubAgentSource,
+    SubAgentTool,
 };
 pub use team::{is_team_tool_name, TeamRuntime, TeamTool};
 pub use todo::{
