@@ -414,6 +414,68 @@ pub(super) struct CreateSkillOutput {
     pub(super) skills: Vec<InstalledSkill>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ImportSkillsCommandInput {
+    pub(super) workspace_path: String,
+    pub(super) provider: String,
+}
+
+#[tauri::command]
+pub(super) async fn import_skills_command(
+    app: AppHandle,
+    input: ImportSkillsCommandInput,
+) -> std::result::Result<ImportSkillsResult, String> {
+    let workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let result =
+        import_skills_from_provider(&workspace_root, &input.provider).map_err(error_to_string)?;
+    for name in &result.imported {
+        let relative = format!(".agents/skills/{name}/SKILL.md");
+        emit_workspace_file_change(&app, &workspace_root, &relative);
+    }
+    Ok(result)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ImportSubAgentsCommandInput {
+    pub(super) workspace_path: String,
+    pub(super) provider: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ImportSubAgentsOutput {
+    pub(super) settings: SubAgentSettings,
+    pub(super) result: ImportSubAgentsResult,
+}
+
+#[tauri::command]
+pub(super) async fn import_sub_agents_command(
+    state: State<'_, DesktopState>,
+    input: ImportSubAgentsCommandInput,
+) -> std::result::Result<ImportSubAgentsOutput, String> {
+    let workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let current = state.store.load_sub_agent_settings().map_err(error_to_string)?;
+    let (merged, result) = import_sub_agents_from_provider(
+        &workspace_root,
+        &input.provider,
+        &current,
+        &state.default_model,
+    )
+    .map_err(error_to_string)?;
+    let saved = state
+        .store
+        .save_sub_agent_settings(&merged)
+        .map_err(error_to_string)?;
+    Ok(ImportSubAgentsOutput {
+        settings: saved,
+        result,
+    })
+}
+
 #[tauri::command]
 pub(super) async fn create_skill_command(
     state: State<'_, DesktopState>,
