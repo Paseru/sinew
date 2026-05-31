@@ -386,6 +386,10 @@ export type ExternalDropFeed = {
   subscribeDrag(handler: (active: boolean) => void): () => void;
 };
 
+/** Composer auto-grow bounds; manual drag (top handle) can exceed AUTO_MAX. */
+const COMPOSER_AUTO_MIN_PX = 36;
+const COMPOSER_AUTO_MAX_PX = 280;
+
 export function ChatPane({
   workspacePath,
   conversationId,
@@ -496,7 +500,10 @@ export function ChatPane({
         const state = composerResizeStateRef.current;
         if (!state) return;
         const delta = state.startY - ev.clientY; // drag up = grow
-        const next = Math.max(36, Math.min(800, state.startHeight + delta));
+        const next = Math.max(
+          COMPOSER_AUTO_MIN_PX,
+          Math.min(800, state.startHeight + delta),
+        );
         setComposerHeight(next);
       };
       const handleUp = () => {
@@ -511,9 +518,24 @@ export function ChatPane({
     },
     [composerHeight],
   );
+  const syncComposerAutoHeight = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "0px";
+    const contentHeight = ta.scrollHeight;
+    const next = Math.max(
+      COMPOSER_AUTO_MIN_PX,
+      Math.min(COMPOSER_AUTO_MAX_PX, contentHeight),
+    );
+    ta.style.height = `${next}px`;
+    ta.style.overflowY =
+      contentHeight > COMPOSER_AUTO_MAX_PX ? "auto" : "hidden";
+  }, []);
+
   const handleComposerResizeDoubleClick = useCallback(() => {
     setComposerHeight(null);
-  }, []);
+    requestAnimationFrame(() => syncComposerAutoHeight());
+  }, [syncComposerAutoHeight]);
   const compactInstructionInputRef = useRef<HTMLInputElement | null>(null);
   const compactPopoverRef = useRef<HTMLDivElement | null>(null);
   const pendingCaretRef = useRef<number | null>(null);
@@ -924,6 +946,25 @@ export function ChatPane({
 
   useLayoutEffect(() => {
     const ta = textareaRef.current;
+    if (!ta) return;
+    if (composerHeight !== null) {
+      ta.style.height = "";
+      ta.style.overflowY = "";
+      return;
+    }
+    syncComposerAutoHeight();
+  }, [text, composerHeight, syncComposerAutoHeight]);
+
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta || composerHeight !== null) return;
+    const observer = new ResizeObserver(() => syncComposerAutoHeight());
+    observer.observe(ta);
+    return () => observer.disconnect();
+  }, [composerHeight, syncComposerAutoHeight]);
+
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
     const overlay = overlayRef.current;
     if (!ta || !overlay) return;
     syncOverlayScroll();
@@ -932,7 +973,7 @@ export function ChatPane({
     // the final value and the caret ends up above the visible text.
     const raf = requestAnimationFrame(() => syncOverlayScroll());
     return () => cancelAnimationFrame(raf);
-  }, [text, inlineMentions]);
+  }, [text, inlineMentions, composerHeight, syncComposerAutoHeight]);
 
   const ensureMentionFiles = useCallback(async () => {
     if (mentionFiles !== null || mentionLoadingRef.current) return;

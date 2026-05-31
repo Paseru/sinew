@@ -274,6 +274,7 @@ Code map:
     │       ├── dotmatrix-hooks.ts
     │       └── stream.ts
     ├── lib
+    │   ├── editorTabs.ts
     │   ├── fileIcon.ts
     │   ├── ipc.ts
     │   ├── language.ts
