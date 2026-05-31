@@ -42,6 +42,54 @@ import type {
   WebSearchProvider,
 } from "../types";
 
+function settingsStatusTone(status: string): "ok" | "error" {
+  const lower = status.toLowerCase();
+  if (
+    status === "Saved" ||
+    status === "Created" ||
+    status === "Deleted" ||
+    lower.startsWith("imported") ||
+    lower.startsWith("nothing imported") ||
+    lower.includes("already present") ||
+    lower.includes("no skills found")
+  ) {
+    return "ok";
+  }
+  return "error";
+}
+
+function formatSkillDisplayPath(skill: InstalledSkill): string {
+  const normalized = skill.absolutePath.replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  const folder = parts.at(-2) ?? skill.name;
+  return `${skill.rootLabel}/${folder}/SKILL.md`;
+}
+
+function formatSubAgentDisplayPath(agent: SubAgentConfig): string {
+  if (!agent.sourcePath) return "Configured in Sinew";
+  const normalized = agent.sourcePath.replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  const file = parts.at(-1) ?? "agent.md";
+  const agentsIdx = parts.lastIndexOf("agents");
+  if (agentsIdx >= 0) {
+    const prefix =
+      agent.source === "workspace"
+        ? ".claude/agents"
+        : "~/.claude/agents";
+    const rel = parts.slice(agentsIdx + 1, -1);
+    return rel.length > 0 ? `${prefix}/${rel.join("/")}/${file}` : `${prefix}/${file}`;
+  }
+  return normalized;
+}
+
+function revealInFileManagerLabel(): string {
+  const platform =
+    typeof navigator !== "undefined" ? navigator.platform.toLowerCase() : "";
+  if (platform.includes("mac")) return "Reveal in Finder";
+  if (platform.includes("win")) return "Show in Explorer";
+  return "Show in File Manager";
+}
+
 const EMPTY_SETTINGS: McpSettings = { servers: [] };
 const FALLBACK_TOOL_SETTINGS: ToolSettings = {
   tools: [],
@@ -98,7 +146,9 @@ export function SettingsPane({ workspacePath }: Props) {
   const [subAgentsLoading, setSubAgentsLoading] = useState(false);
   const [subAgentsSaving, setSubAgentsSaving] = useState(false);
   const [subAgentsStatus, setSubAgentsStatus] = useState<string | null>(null);
+  const [subAgentsError, setSubAgentsError] = useState<string | null>(null);
   const [selectedSubAgentId, setSelectedSubAgentId] = useState<string | null>(null);
+  const [subAgentFilter, setSubAgentFilter] = useState("");
 
   const [toolSettings, setToolSettings] = useState<ToolSettings | null>(null);
   const [savedToolSettingsJson, setSavedToolSettingsJson] = useState("");
@@ -922,6 +972,56 @@ export function SettingsPane({ workspacePath }: Props) {
     [skills, skillsDirty, workspacePath],
   );
 
+  const importSkills = useCallback(
+    async (provider: "claude" | "codex") => {
+      setSkillsLoading(true);
+      setSkillsError(null);
+      setSkillsStatus(null);
+      try {
+        const result = await api.importSkills(workspacePath, provider);
+        const list = await api.listInstalledSkills(workspacePath);
+        setSkills(list);
+        setSavedSkillsJson(skillsFingerprint(list));
+        if (result.imported.length > 0) {
+          setSelectedSkillName((current) => {
+            if (current && list.some((item) => item.name === current)) {
+              return current;
+            }
+            const folder = result.imported[0];
+            const match = list.find(
+              (item) =>
+                item.name === folder ||
+                item.absolutePath.includes(`/.agents/skills/${folder}/`),
+            );
+            return match?.name ?? list[0]?.name ?? null;
+          });
+        }
+        if (result.imported.length === 0 && result.skipped.length === 0) {
+          setSkillsStatus("No skills found at source paths");
+        } else if (result.imported.length === 0) {
+          setSkillsStatus(
+            `Nothing imported (${result.skipped.length} already present)`,
+          );
+        } else {
+          const suffix =
+            result.skipped.length > 0
+              ? ` · ${result.skipped.length} skipped`
+              : "";
+          setSkillsStatus(
+            `Imported ${result.imported.length} skill${result.imported.length === 1 ? "" : "s"}${suffix}`,
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setSkillsError(message);
+        setSkillsStatus(message);
+      } finally {
+        setSkillsLoading(false);
+      }
+    },
+    [workspacePath],
+  );
+
   const createSkill = useCallback(async () => {
     setSkillsSaving(true);
     setSkillsError(null);
@@ -984,6 +1084,18 @@ export function SettingsPane({ workspacePath }: Props) {
     [skills, workspacePath],
   );
 
+  const filteredSubAgents = useMemo(() => {
+    const needle = subAgentFilter.trim().toLowerCase();
+    if (!needle) return subAgentSettings.agents;
+    return subAgentSettings.agents.filter((agent) => {
+      if (agent.name.toLowerCase().includes(needle)) return true;
+      if (agent.description.toLowerCase().includes(needle)) return true;
+      if (agent.id.toLowerCase().includes(needle)) return true;
+      if (agent.prompt.toLowerCase().includes(needle)) return true;
+      return false;
+    });
+  }, [subAgentFilter, subAgentSettings.agents]);
+
   const selectedSubAgent =
     subAgentSettings.agents.find((agent) => agent.id === selectedSubAgentId) ??
     null;
@@ -1034,6 +1146,7 @@ export function SettingsPane({ workspacePath }: Props) {
   }, [availableModels, subAgentSettings.agents.length]);
 
   const deleteSubAgent = useCallback((id: string) => {
+    setSubAgentsStatus(null);
     setSubAgentSettings((current) => {
       const agents = current.agents.filter((agent) => agent.id !== id);
       setSelectedSubAgentId((selected) => {
@@ -1042,6 +1155,64 @@ export function SettingsPane({ workspacePath }: Props) {
       });
       return { agents };
     });
+    setSubAgentsStatus("Deleted");
+  }, []);
+
+  const importSubAgents = useCallback(async () => {
+    setSubAgentsLoading(true);
+    setSubAgentsError(null);
+    setSubAgentsStatus(null);
+    try {
+      const output = await api.importSubAgents(workspacePath, "claude");
+      const saved = normalizeSubAgentSettings(output.settings);
+      setSubAgentSettings(saved);
+      setSavedSubAgentJson(subAgentSettingsFingerprint(saved));
+      if (output.result.imported.length > 0) {
+        setSelectedSubAgentId((current) => {
+          if (current && saved.agents.some((agent) => agent.id === current)) {
+            return current;
+          }
+          const first = output.result.imported[0];
+          const match = saved.agents.find(
+            (agent) => agent.name === first || agent.id === first,
+          );
+          return match?.id ?? saved.agents[0]?.id ?? null;
+        });
+      }
+      if (output.result.imported.length === 0 && output.result.skipped.length === 0) {
+        setSubAgentsStatus("No sub-agents found at source paths");
+      } else if (output.result.imported.length === 0) {
+        setSubAgentsStatus(
+          `Nothing imported (${output.result.skipped.length} already present)`,
+        );
+      } else {
+        const suffix =
+          output.result.skipped.length > 0
+            ? ` · ${output.result.skipped.length} skipped`
+            : "";
+        setSubAgentsStatus(
+          `Imported ${output.result.imported.length} agent${output.result.imported.length === 1 ? "" : "s"}${suffix}`,
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSubAgentsError(message);
+      setSubAgentsStatus(message);
+    } finally {
+      setSubAgentsLoading(false);
+    }
+  }, [workspacePath]);
+
+  const revealSubAgent = useCallback(async (agent: SubAgentConfig) => {
+    if (!agent.sourcePath) return;
+    setSubAgentsError(null);
+    try {
+      await api.revealAbsolutePath(agent.sourcePath);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSubAgentsError(message);
+      setSubAgentsStatus(message);
+    }
   }, []);
 
   const handleEditorMount: OnMount = useCallback((editor, monaco) => {
@@ -1251,6 +1422,7 @@ export function SettingsPane({ workspacePath }: Props) {
             onRefresh={() => void loadSkills()}
             onSave={() => void saveSkills()}
             onCreate={() => void createSkill()}
+            onImport={(provider) => void importSkills(provider)}
             onToggleSkill={toggleSkillEnabled}
             onRevealSkill={(skill) => void revealSkill(skill)}
             onDeleteSkill={(skill) => void deleteSkill(skill)}
@@ -1258,18 +1430,25 @@ export function SettingsPane({ workspacePath }: Props) {
           />
         ) : (
           <SubAgentsSection
-            settings={subAgentSettings}
+            agents={filteredSubAgents}
+            allAgents={subAgentSettings.agents}
             selectedAgent={selectedSubAgent}
             loading={subAgentsLoading}
             saving={subAgentsSaving}
             dirty={subAgentsDirty}
+            error={subAgentsError}
             status={subAgentsStatus}
+            filter={subAgentFilter}
+            onFilterChange={setSubAgentFilter}
             availableModels={availableModels}
             onSelect={setSelectedSubAgentId}
             onAdd={addSubAgent}
             onDelete={deleteSubAgent}
             onSave={() => void saveSubAgents()}
             onUpdate={updateSubAgent}
+            onImport={() => void importSubAgents()}
+            onRescan={() => void importSubAgents()}
+            onReveal={(agent) => void revealSubAgent(agent)}
           />
         )}
       </section>
@@ -2704,36 +2883,133 @@ function ServerDetail({ server, probe, probing, knownToolCount }: ServerDetailPr
 
 // ---- Sub-agent section -------------------------------------------------
 
+const SUB_AGENT_IMPORT_SOURCES = [
+  {
+    id: "claude" as const,
+    label: "Claude Code",
+    hint: "~/.claude/agents · .claude/agents",
+    icon: PROVIDERS.find((p) => p.value === "anthropic")?.icon ?? "simple-icons:anthropic",
+  },
+];
+
+function SubAgentImportPicker({
+  disabled,
+  onImport,
+}: {
+  disabled: boolean;
+  onImport: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (
+        ref.current &&
+        event.target instanceof Node &&
+        !ref.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div className="composer__picker settings-pane__skill-import" ref={ref}>
+      <button
+        type="button"
+        className="composer__picker-btn"
+        data-open={open ? "true" : "false"}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((value) => !value);
+        }}
+        title="Import sub-agents from Claude Code"
+      >
+        <span className="composer__picker-label">Import from</span>
+        <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
+      </button>
+      {open && !disabled && (
+        <div
+          className="composer__popover settings-pane__skill-import-pop"
+          role="menu"
+          aria-label="Import sub-agents from"
+        >
+          {SUB_AGENT_IMPORT_SOURCES.map((source) => (
+            <button
+              key={source.id}
+              type="button"
+              className="composer__popover-row composer__popover-row--stacked"
+              onClick={() => {
+                setOpen(false);
+                onImport();
+              }}
+            >
+              <span className="composer__popover-label">
+                <Icon icon={source.icon} width={14} height={14} />
+                <span className="composer__popover-label-text">
+                  <span>{source.label}</span>
+                  <span className="composer__popover-hint">{source.hint}</span>
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type SubAgentsSectionProps = {
-  settings: SubAgentSettings;
+  agents: SubAgentConfig[];
+  allAgents: SubAgentConfig[];
   selectedAgent: SubAgentConfig | null;
   loading: boolean;
   saving: boolean;
   dirty: boolean;
+  error: string | null;
   status: string | null;
+  filter: string;
+  onFilterChange: (value: string) => void;
   availableModels: readonly ModelEntry[];
   onSelect: (id: string) => void;
   onAdd: () => void;
   onDelete: (id: string) => void;
   onSave: () => void;
   onUpdate: (id: string, patch: Partial<SubAgentConfig>) => void;
+  onImport: () => void;
+  onRescan: () => void;
+  onReveal: (agent: SubAgentConfig) => void;
 };
 
 function SubAgentsSection({
-  settings,
+  agents,
+  allAgents,
   selectedAgent,
   loading,
   saving,
   dirty,
+  error,
   status,
+  filter,
+  onFilterChange,
   availableModels,
   onSelect,
   onAdd,
   onDelete,
   onSave,
   onUpdate,
+  onImport,
+  onRescan,
+  onReveal,
 }: SubAgentsSectionProps) {
-  const enabledCount = settings.agents.filter((agent) => agent.enabled).length;
+  const total = allAgents.length;
+  const visible = agents.length;
+  const enabled = allAgents.filter((agent) => agent.enabled).length;
 
   return (
     <>
@@ -2741,24 +3017,42 @@ function SubAgentsSection({
         <div className="settings-pane__header-text">
           <h1 className="settings-pane__title">Sub-agents</h1>
           <p className="settings-pane__subtitle">
-            {settings.agents.length === 0
-              ? "Create focused agents the main agent can call as tools."
-              : `${enabledCount}/${settings.agents.length} available to the main agent`}
+            {loading
+              ? "Loading…"
+              : total === 0
+                ? "Add agents or import from .claude/agents."
+                : `${enabled}/${total} available to the main agent`}
           </p>
         </div>
         <div className="settings-pane__actions">
           {status && (
             <span
               className="settings-pane__status"
-              data-tone={
-                status === "Saved" || status === "Created" || status === "Deleted"
-                  ? "ok"
-                  : "error"
-              }
+              data-tone={settingsStatusTone(status)}
             >
               {status}
             </span>
           )}
+          <SubAgentImportPicker disabled={loading || saving} onImport={onImport} />
+          <button
+            type="button"
+            className="settings-pane__btn"
+            onClick={onAdd}
+            disabled={loading || saving}
+          >
+            <Icon icon="solar:add-circle-linear" width={13} height={13} />
+            <span>Add</span>
+          </button>
+          <button
+            type="button"
+            className="settings-pane__btn"
+            onClick={onRescan}
+            disabled={loading || saving}
+            title="Import new definitions from Claude Code paths"
+          >
+            <Icon icon="solar:refresh-linear" width={13} height={13} />
+            <span>Rescan</span>
+          </button>
           <button
             type="button"
             className="settings-pane__btn"
@@ -2777,68 +3071,117 @@ function SubAgentsSection({
       </header>
 
       <div className="settings-pane__body settings-pane__body--subagents">
-        <aside className="settings-pane__nav-list">
-          <div className="settings-pane__nav-list-head">
-            <span>Agents</span>
-            <button
-              type="button"
-              className="settings-pane__nav-list-add"
-              onClick={onAdd}
-              aria-label="New agent"
-              title="New agent"
-            >
-              <Icon icon="solar:add-circle-linear" width={13} height={13} />
-            </button>
+        <aside className="settings-pane__skill-list">
+          <div className="settings-pane__search">
+            <Icon icon="solar:magnifer-linear" width={13} height={13} />
+            <input
+              type="search"
+              value={filter}
+              onChange={(event) => onFilterChange(event.target.value)}
+              placeholder={total ? `Search ${total} agents` : "Search agents"}
+            />
           </div>
-          <div className="settings-pane__nav-list-items">
-            {settings.agents.map((agent) => (
-              <button
-                type="button"
+
+          {error && (
+            <div className="settings-pane__editor-error">
+              <Icon icon="solar:danger-triangle-linear" width={13} height={13} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="settings-pane__skill-scroll">
+            {agents.map((agent) => (
+              <div
                 key={agent.id}
-                className="settings-pane__nav-list-item"
+                className="settings-pane__skill-item"
                 data-active={selectedAgent?.id === agent.id ? "true" : "false"}
-                data-on={agent.enabled ? "true" : "false"}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelect(agent.id)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  onSelect(agent.id);
+                }}
               >
-                <span
-                  className="settings-pane__nav-list-item-dot"
-                  data-tone={agent.enabled ? "ok" : "off"}
-                  aria-hidden
-                />
-                <span className="settings-pane__nav-list-item-name">
-                  {agent.name || "Untitled"}
-                </span>
-              </button>
+                <div className="settings-pane__skill-row">
+                  <div className="settings-pane__subagent-list-head">
+                    <span className="settings-pane__skill-name">
+                      {agent.name || "Untitled"}
+                    </span>
+                    {agent.source && (
+                      <span
+                        className="settings-pane__skill-source"
+                        data-source={agent.source}
+                      >
+                        {agent.source === "workspace" ? "workspace" : "global"}
+                      </span>
+                    )}
+                    <span
+                      className="settings-pane__skill-state"
+                      data-enabled={agent.enabled ? "true" : "false"}
+                    >
+                      {agent.enabled ? "enabled" : "off"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="settings-pane__switch"
+                    role="switch"
+                    aria-checked={agent.enabled}
+                    aria-label={`${agent.enabled ? "Disable" : "Enable"} ${agent.name}`}
+                    data-on={agent.enabled ? "true" : "false"}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onUpdate(agent.id, { enabled: !agent.enabled });
+                    }}
+                  >
+                    <span className="settings-pane__switch-thumb" />
+                  </button>
+                </div>
+                {agent.description && (
+                  <span className="settings-pane__skill-desc">{agent.description}</span>
+                )}
+              </div>
             ))}
-            {!loading && settings.agents.length === 0 && (
-              <div className="settings-pane__nav-list-empty">
-                No sub-agents yet — click + to start.
+            {!loading && visible === 0 && total > 0 && (
+              <div className="settings-pane__muted settings-pane__muted--center">
+                No agents match.
+              </div>
+            )}
+            {!loading && total === 0 && (
+              <div className="settings-pane__empty">
+                <Icon icon="solar:branching-paths-down-linear" width={22} height={22} />
+                <span className="settings-pane__empty-title">No sub-agents yet</span>
+                <span className="settings-pane__empty-sub">
+                  Add one here or import <code>.md</code> files from{" "}
+                  <code>.claude/agents/</code>.
+                </span>
               </div>
             )}
           </div>
         </aside>
 
-        <main className="settings-pane__detail-pane">
+        <div className="settings-pane__skill-preview">
           {selectedAgent ? (
-            <SubAgentEditor
+            <SubAgentPreview
               agent={selectedAgent}
+              saving={saving}
               availableModels={availableModels}
               onUpdate={(patch) => onUpdate(selectedAgent.id, patch)}
               onDelete={() => onDelete(selectedAgent.id)}
+              onReveal={() => onReveal(selectedAgent)}
             />
           ) : (
             <div className="settings-pane__empty settings-pane__empty--main">
-              <Icon
-                icon="solar:branching-paths-down-linear"
-                width={22}
-                height={22}
-              />
+              <Icon icon="solar:branching-paths-down-linear" width={22} height={22} />
               <span className="settings-pane__empty-title">
-                Select or create an agent
+                {total === 0 ? "Nothing to preview" : "Select an agent"}
               </span>
             </div>
           )}
-        </main>
+        </div>
       </div>
     </>
   );
@@ -2934,16 +3277,20 @@ function settingsThinkingLabel(
   return level.label;
 }
 
-function SubAgentEditor({
+function SubAgentPreview({
   agent,
+  saving,
   availableModels,
   onUpdate,
   onDelete,
+  onReveal,
 }: {
   agent: SubAgentConfig;
+  saving: boolean;
   availableModels: readonly ModelEntry[];
   onUpdate: (patch: Partial<SubAgentConfig>) => void;
   onDelete: () => void;
+  onReveal: () => void;
 }) {
   const rawModelId = modelIdFromRef(agent.model);
   const thinking = thinkingFromRef(agent.model);
@@ -2977,6 +3324,7 @@ function SubAgentEditor({
   };
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState(false);
   useEffect(() => {
     if (!confirmDelete) return;
     const id = window.setTimeout(() => setConfirmDelete(false), 3000);
@@ -2984,63 +3332,84 @@ function SubAgentEditor({
   }, [confirmDelete]);
   useEffect(() => {
     setConfirmDelete(false);
+    setEditingPrompt(false);
   }, [agent.id]);
 
   return (
-    <div className="settings-pane__subagent-editor">
-      <div className="settings-pane__detail-head">
-        <input
-          className="settings-pane__detail-title-input"
-          value={agent.name}
-          onChange={(event) => onUpdate({ name: event.target.value })}
-          placeholder="Untitled agent"
-          aria-label="Agent name"
-        />
-        <div className="settings-pane__detail-head-actions">
-          <button
-            type="button"
-            className="settings-pane__icon-btn"
-            data-confirm={confirmDelete ? "true" : "false"}
-            onClick={() => {
-              if (confirmDelete) {
-                onDelete();
-              } else {
-                setConfirmDelete(true);
-              }
-            }}
-            title={confirmDelete ? "Click again to confirm" : "Delete agent"}
-            aria-label={confirmDelete ? "Confirm delete" : "Delete agent"}
-          >
-            {confirmDelete ? (
-              <span className="settings-pane__icon-btn-confirm">Delete?</span>
-            ) : (
-              <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+    <article className="settings-pane__skill-doc">
+      <header className="settings-pane__skill-doc-head">
+        <div className="settings-pane__skill-doc-top">
+          <div className="settings-pane__skill-doc-title">
+            <input
+              className="settings-pane__skill-doc-title-input"
+              value={agent.name}
+              onChange={(event) => onUpdate({ name: event.target.value })}
+              placeholder="agent-name"
+              spellCheck={false}
+            />
+            {agent.source && (
+              <span
+                className="settings-pane__skill-source"
+                data-source={agent.source}
+              >
+                {agent.source === "workspace" ? "workspace" : "global"}
+              </span>
             )}
-          </button>
-          <button
-            type="button"
-            className="settings-pane__switch"
-            role="switch"
-            aria-checked={agent.enabled}
-            aria-label={`${agent.enabled ? "Disable" : "Enable"} ${agent.name}`}
-            data-on={agent.enabled ? "true" : "false"}
-            onClick={() => onUpdate({ enabled: !agent.enabled })}
-          >
-            <span className="settings-pane__switch-thumb" />
-          </button>
+          </div>
+          <div className="settings-pane__skill-doc-actions">
+            <button
+              type="button"
+              className="settings-pane__skill-doc-action"
+              onClick={() => setEditingPrompt((value) => !value)}
+              disabled={saving}
+              title={editingPrompt ? "Show preview" : "Edit prompt"}
+            >
+              <Icon icon="solar:code-square-linear" width={13} height={13} />
+              <span>{editingPrompt ? "Preview" : "Edit"}</span>
+            </button>
+            {agent.sourcePath && (
+              <button
+                type="button"
+                className="settings-pane__skill-doc-action"
+                onClick={onReveal}
+                disabled={saving}
+                title={revealInFileManagerLabel()}
+              >
+                <Icon icon="solar:folder-open-linear" width={13} height={13} />
+                <span>{revealInFileManagerLabel()}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="settings-pane__skill-doc-action"
+              data-danger="true"
+              data-confirm={confirmDelete ? "true" : "false"}
+              disabled={saving}
+              title={confirmDelete ? "Click again to confirm" : "Delete agent"}
+              onClick={() => {
+                if (confirmDelete) onDelete();
+                else setConfirmDelete(true);
+              }}
+            >
+              <Icon icon="solar:trash-bin-trash-linear" width={13} height={13} />
+              <span>{confirmDelete ? "Confirm delete" : "Delete"}</span>
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div className="settings-pane__subagent-form">
-        <label className="settings-pane__field settings-pane__field--grow">
-          <span>Description seen by the main agent</span>
-          <textarea
-            value={agent.description}
-            onChange={(event) => onUpdate({ description: event.target.value })}
-          />
-        </label>
-
-        <div className="settings-pane__subagent-row">
+        <code
+          className="settings-pane__skill-path"
+          title={agent.sourcePath ?? undefined}
+        >
+          {formatSubAgentDisplayPath(agent)}
+        </code>
+        <input
+          className="settings-pane__skill-doc-desc-input"
+          value={agent.description}
+          onChange={(event) => onUpdate({ description: event.target.value })}
+          placeholder="When should the main agent delegate to this sub-agent?"
+          spellCheck={false}
+        />
+        <div className="settings-pane__subagent-row settings-pane__subagent-row--inline">
           <label className="settings-pane__field">
             <span>Model</span>
             <SettingsPicker
@@ -3065,20 +3434,120 @@ function SubAgentEditor({
             />
           </label>
         </div>
-
-        <label className="settings-pane__field settings-pane__field--grow settings-pane__field--code">
-          <span>Internal prompt</span>
-          <textarea
-            value={agent.prompt}
-            onChange={(event) => onUpdate({ prompt: event.target.value })}
-          />
-        </label>
-      </div>
-    </div>
+      </header>
+      {editingPrompt ? (
+        <div className="settings-pane__skill-doc-editor">
+          <div className="settings-pane__skill-doc-editor-host">
+            <textarea
+              className="settings-pane__subagent-prompt-input"
+              value={agent.prompt}
+              onChange={(event) => onUpdate({ prompt: event.target.value })}
+              placeholder="System prompt for this sub-agent…"
+              spellCheck={false}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="settings-pane__skill-doc-body">
+          {agent.prompt.trim() ? (
+            <Markdown text={agent.prompt} onOpenFile={() => {}} />
+          ) : (
+            <p className="settings-pane__muted">No internal prompt yet.</p>
+          )}
+        </div>
+      )}
+    </article>
   );
 }
 
 // ---- Skills section ----------------------------------------------------
+
+const SKILL_IMPORT_SOURCES = [
+  {
+    id: "claude" as const,
+    label: "Claude / Claude Code",
+    hint: "~/.claude/skills · .claude/skills",
+    icon: PROVIDERS.find((p) => p.value === "anthropic")?.icon ?? "simple-icons:anthropic",
+  },
+  {
+    id: "codex" as const,
+    label: "ChatGPT / Codex",
+    hint: "~/.agents/skills · ~/.codex/skills (same layout as Sinew)",
+    icon: PROVIDERS.find((p) => p.value === "openai")?.icon ?? "simple-icons:openai",
+  },
+];
+
+function SkillImportPicker({
+  disabled,
+  onImport,
+}: {
+  disabled: boolean;
+  onImport: (provider: "claude" | "codex") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (
+        ref.current &&
+        event.target instanceof Node &&
+        !ref.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div className="composer__picker settings-pane__skill-import" ref={ref}>
+      <button
+        type="button"
+        className="composer__picker-btn"
+        data-open={open ? "true" : "false"}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((value) => !value);
+        }}
+        title="Import skills from another agent"
+      >
+        <span className="composer__picker-label">Import from</span>
+        <Icon icon="solar:alt-arrow-down-linear" width={11} height={11} />
+      </button>
+      {open && !disabled && (
+        <div
+          className="composer__popover settings-pane__skill-import-pop"
+          role="menu"
+          aria-label="Import skills from"
+        >
+          {SKILL_IMPORT_SOURCES.map((source) => (
+            <button
+              key={source.id}
+              type="button"
+              className="composer__popover-row composer__popover-row--stacked"
+              onClick={() => {
+                setOpen(false);
+                onImport(source.id);
+              }}
+            >
+              <span className="composer__popover-label">
+                <Icon icon={source.icon} width={14} height={14} />
+                <span className="composer__popover-label-text">
+                  <span>{source.label}</span>
+                  <span className="composer__popover-hint">{source.hint}</span>
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type SkillsSectionProps = {
   skills: InstalledSkill[];
@@ -3096,6 +3565,7 @@ type SkillsSectionProps = {
   onRefresh: () => void;
   onSave: () => void;
   onCreate: () => void;
+  onImport: (provider: "claude" | "codex") => void;
   onToggleSkill: (name: string) => void;
   onRevealSkill: (skill: InstalledSkill) => void;
   onDeleteSkill: (skill: InstalledSkill) => void;
@@ -3118,6 +3588,7 @@ function SkillsSection({
   onRefresh,
   onSave,
   onCreate,
+  onImport,
   onToggleSkill,
   onRevealSkill,
   onDeleteSkill,
@@ -3144,15 +3615,15 @@ function SkillsSection({
           {status && (
             <span
               className="settings-pane__status"
-              data-tone={
-                status === "Saved" || status === "Created" || status === "Deleted"
-                  ? "ok"
-                  : "error"
-              }
+              data-tone={settingsStatusTone(status)}
             >
               {status}
             </span>
           )}
+          <SkillImportPicker
+            disabled={loading || saving || deleting}
+            onImport={onImport}
+          />
           <button
             type="button"
             className="settings-pane__btn"
@@ -3428,11 +3899,11 @@ function SkillPreview({
                   className="settings-pane__skill-doc-action"
                   onClick={onReveal}
                   disabled={saving || deleting}
-                  title="Reveal in Finder"
-                  aria-label={`Reveal ${skill.name} in Finder`}
+                  title={revealInFileManagerLabel()}
+                  aria-label={`${revealInFileManagerLabel()} — ${skill.name}`}
                 >
                   <Icon icon="solar:folder-open-linear" width={13} height={13} />
-                  <span>Reveal in Finder</span>
+                  <span>{revealInFileManagerLabel()}</span>
                 </button>
                 <button
                   type="button"
@@ -3471,7 +3942,9 @@ function SkillPreview({
             )}
           </div>
         </div>
-        <code className="settings-pane__skill-path">{skill.absolutePath}</code>
+        <code className="settings-pane__skill-path" title={skill.absolutePath}>
+          {formatSkillDisplayPath(skill)}
+        </code>
         {editing ? (
           <input
             className="settings-pane__skill-doc-desc-input"
@@ -3654,6 +4127,8 @@ function normalizeSubAgentSettings(settings: SubAgentSettings): SubAgentSettings
         agent.model ??
         modelRefWithThinking(modelRefFromId(MODELS[0].value), MODELS[0].defaultThinking),
       enabled: agent.enabled !== false,
+      source: agent.source ?? null,
+      sourcePath: agent.sourcePath ?? null,
     })),
   };
 }

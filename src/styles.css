@@ -2859,8 +2859,38 @@ textarea {
   white-space: nowrap;
   flex: 0 0 auto;
   max-width: 260px;
-  transition: color 150ms ease, background 150ms ease;
+  transition: color 150ms ease, background 150ms ease, opacity 120ms ease;
   position: relative;
+}
+.tabs[data-tab-dragging="true"] .tab {
+  cursor: grabbing;
+}
+.tab[data-dragging="true"] {
+  opacity: 0.45;
+}
+.tab[data-drop-before="true"]::before,
+.tab[data-drop-after="true"]::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent, #3b82f6);
+  pointer-events: none;
+  z-index: 1;
+}
+.tab[data-drop-before="true"]::before {
+  left: 0;
+}
+.tab[data-drop-after="true"]::after {
+  right: 0;
+}
+.tabs[data-tab-dragging="true"] {
+  user-select: none;
+}
+.tabs[data-tab-dragging="true"] .tab-action {
+  pointer-events: none;
 }
 .tab:hover {
   color: var(--hover-shift);
@@ -2898,6 +2928,7 @@ textarea {
   line-height: 1;
   color: var(--text-3);
   border-radius: var(--r-med);
+  cursor: pointer;
   transition: background 150ms ease, color 150ms ease;
 }
 .tab__close:hover {
@@ -3165,6 +3196,8 @@ textarea {
   display: flex;
   flex-direction: column;
   background: var(--bg-0);
+  container-type: inline-size;
+  container-name: settings-main;
 }
 
 .settings-pane__header {
@@ -3201,8 +3234,11 @@ textarea {
 .settings-pane__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .settings-pane__btn {
@@ -3255,7 +3291,7 @@ textarea {
 }
 
 .settings-pane__status[data-tone="ok"] {
-  color: var(--text-2);
+  color: var(--ok);
 }
 
 .settings-pane__status[data-tone="pending"] {
@@ -3287,14 +3323,85 @@ textarea {
   align-content: start;
 }
 
-.settings-pane__body--skills {
-  grid-template-columns: minmax(240px, 320px) 1fr;
+.settings-pane__body--skills,
+.settings-pane__body--subagents {
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  container-type: inline-size;
+  container-name: settings-body;
 }
 
-.settings-pane__body--subagents {
-  grid-template-columns: minmax(240px, 320px) 1fr;
-  grid-template-rows: minmax(0, 1fr);
+@container settings-main (max-width: 560px) {
+  .settings-pane__header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .settings-pane__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .settings-pane__status {
+    flex: 1 1 100%;
+    padding-left: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Stack list + preview when the section body is narrow (e.g. chat open). */
+@container settings-body (max-width: 680px) {
+  .settings-pane__body--skills,
+  .settings-pane__body--subagents {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, min(220px, 38vh)) minmax(0, 1fr);
+  }
+}
+
+@container settings-body (max-width: 520px) {
+  .settings-pane__skill-doc-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-pane__skill-doc-title {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .settings-pane__skill-doc-title-input {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .settings-pane__skill-doc-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .settings-pane__subagent-row--inline {
+    grid-template-columns: 1fr;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .settings-pane__skill-source,
+  .settings-pane__skill-state {
+    display: none;
+  }
+}
+
+@container settings-body (max-width: 400px) {
+  .settings-pane__skill-doc-action span {
+    display: none;
+  }
+
+  .settings-pane__skill-doc-action {
+    padding: 0 8px;
+  }
 }
 
 .settings-pane__body--providers {
@@ -4672,6 +4779,7 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   min-width: 0;
 }
@@ -4684,12 +4792,14 @@ textarea {
 }
 
 .settings-pane__skill-doc-actions {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .settings-pane__skill-doc-action {
@@ -4871,6 +4981,30 @@ textarea {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   align-items: end;
+}
+
+.settings-pane__subagent-row--inline {
+  padding: 0 12px 6px;
+}
+
+.settings-pane__subagent-prompt-input {
+  width: 100%;
+  min-height: 280px;
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--r-med);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+}
+
+.settings-pane__subagent-prompt-input:focus {
+  background: var(--bg-3);
 }
 
 .settings-pane__field {
@@ -7598,8 +7732,8 @@ textarea {
   display: block;
   width: 100%;
   margin: 0;
-  min-height: 60px;
-  max-height: 200px;
+  min-height: 36px;
+  max-height: 280px;
   padding: 9px 11px 2px;
   background: transparent;
   border: 0 solid transparent;
@@ -8398,6 +8532,31 @@ textarea {
 .composer__popover-check {
   color: var(--text-0);
   flex: 0 0 auto;
+}
+
+.settings-pane__skill-import .composer__popover.settings-pane__skill-import-pop {
+  bottom: auto;
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  min-width: 260px;
+}
+.composer__popover-row--stacked {
+  align-items: flex-start;
+  white-space: normal;
+}
+.composer__popover-label-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.composer__popover-hint {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-3);
+  font-weight: 400;
+  white-space: normal;
 }
 
 /* Composer box itself lights up when dragging over */
