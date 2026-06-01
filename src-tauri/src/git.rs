@@ -2,6 +2,8 @@ use crate::*;
 use std::ffi::OsStr;
 #[cfg(target_os = "windows")]
 use std::ffi::OsString;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::path::Component;
 use std::process::Stdio;
 #[cfg(test)]
@@ -810,7 +812,9 @@ fn executable_works(path: &Path) -> bool {
     if !path.exists() {
         return false;
     }
-    Command::new(path)
+    let mut command = Command::new(path);
+    hide_windows_console(&mut command);
+    command
         .arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -1373,6 +1377,7 @@ fn run_output_with_program(
     args: &[String],
 ) -> Result<GitCommandOutput> {
     let mut command = Command::new(program_path);
+    hide_windows_console(&mut command);
     if let Some(cwd) = cwd {
         if program_label == "git" {
             command.arg("-C").arg(cwd);
@@ -1393,6 +1398,15 @@ fn run_output_with_program(
         success: output.status.success(),
     })
 }
+
+#[cfg(target_os = "windows")]
+fn hide_windows_console(command: &mut Command) {
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn hide_windows_console(_command: &mut Command) {}
 
 fn format_command_error(program: &str, args: &[String], output: &GitCommandOutput) -> String {
     let detail = join_output(&output.stderr, &output.stdout);
