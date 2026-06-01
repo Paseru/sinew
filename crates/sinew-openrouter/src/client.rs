@@ -164,12 +164,7 @@ fn build_chat_request<'a>(
         cache_control: top_level_cache_control(cache_mode),
         messages: to_wire_messages(request, caps.supports_images, cache_mode)?,
         tools: request.tools.iter().map(to_wire_tool).collect(),
-        max_tokens: Some(
-            request
-                .max_output_tokens
-                .unwrap_or(caps.max_output_tokens)
-                .min(caps.max_output_tokens),
-        ),
+        max_tokens: Some(request.output_token_budget(caps)),
         temperature: request.temperature,
         reasoning: reasoning_config(caps.supports_thinking, request.effective_effort()),
         stream: true,
@@ -894,6 +889,27 @@ mod tests {
 
     fn caps(model: &str) -> ModelCapabilities {
         model_info::capabilities_from_parts(model, 128_000, 8_192, false, false, true)
+    }
+
+    #[test]
+    fn default_max_tokens_uses_safe_budget_for_large_output_models() {
+        let caps = model_info::capabilities_from_parts(
+            "minimax/minimax-m3",
+            1_048_576,
+            512_000,
+            false,
+            true,
+            true,
+        );
+        let request = ProviderRequest::new(
+            ModelRef::new(model_info::PROVIDER_ID, "minimax/minimax-m3"),
+            vec![ChatMessage::user_text("hello")],
+        );
+
+        let body = build_chat_request(&request, &caps).unwrap();
+        let value = serde_json::to_value(&body).unwrap();
+
+        assert_eq!(value["max_tokens"], json!(32_000));
     }
 
     #[test]

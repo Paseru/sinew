@@ -14,6 +14,13 @@ pub enum ServiceTier {
     Flex,
 }
 
+/// Default response budget used when the caller did not request one explicitly.
+///
+/// Several providers count requested output tokens against the model context window.
+/// Using the advertised maximum output by default can make otherwise-small prompts
+/// overflow on large-output models, so the implicit budget stays conservative.
+pub const DEFAULT_MAX_OUTPUT_TOKENS: u32 = 32_000;
+
 #[derive(Debug, Clone)]
 pub struct ProviderRequest {
     pub model: ModelRef,
@@ -85,6 +92,16 @@ impl ProviderRequest {
 
     pub fn effective_effort(&self) -> Option<Effort> {
         self.effort.or(self.model.effort)
+    }
+
+    pub fn output_token_budget(&self, caps: &ModelCapabilities) -> u32 {
+        let requested = self
+            .max_output_tokens
+            .unwrap_or(DEFAULT_MAX_OUTPUT_TOKENS)
+            .max(1);
+        requested
+            .min(caps.max_output_tokens.max(1))
+            .min(caps.context_window.max(1))
     }
 }
 

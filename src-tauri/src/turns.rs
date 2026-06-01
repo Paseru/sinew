@@ -1,4 +1,5 @@
 use crate::*;
+use sinew_app::read::detect_image_media_type;
 
 #[tauri::command]
 pub(super) async fn send_message(
@@ -1567,6 +1568,7 @@ pub(super) fn prepare_attachment(path: &Path, label: &str) -> PreparedAttachment
     let intro = format!("<attachment path=\"{}\">", path.display());
     match fs::read(path) {
         Ok(bytes) => {
+            let media_type = detect_image_media_type(&bytes).unwrap_or(media_type);
             if bytes.len() > MAX_IMAGE_BYTES {
                 return PreparedAttachment::Context(format!(
                     "{intro}\n[Image too large to send visually: {label}]\n</attachment>"

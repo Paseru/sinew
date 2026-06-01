@@ -148,12 +148,7 @@ impl Provider for KimiProvider {
             model: &request.model.name,
             messages: to_wire_messages(&request)?,
             tools: request.tools.iter().map(to_wire_tool).collect(),
-            max_tokens: Some(
-                request
-                    .max_output_tokens
-                    .unwrap_or(caps.max_output_tokens)
-                    .min(caps.max_output_tokens),
-            ),
+            max_tokens: Some(request.output_token_budget(&caps)),
             temperature: request.temperature,
             prompt_cache_key: request.cache_key.as_deref(),
             reasoning_effort,

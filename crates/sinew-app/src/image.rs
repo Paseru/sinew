@@ -19,6 +19,7 @@ use sinew_core::ToolDescriptor;
 use sinew_openai::{Credential, MODEL_ID as OPENAI_RESPONSES_IMAGE_MODEL};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
+use crate::read::detect_image_media_type;
 use crate::store::ImageProvider;
 use crate::tool_names;
 use crate::tool_run::{FileChange, FileChangeKind, ToolRunImage, ToolRunResult};
@@ -280,7 +281,8 @@ impl CreateImageTool {
                     anyhow::anyhow!("image {} did not include base64 data", idx + 1)
                 })?;
                 let bytes = decode_image(data, idx + 1)?;
-                let relative_path = self.save_image(&bytes, extension_for(output_format), idx)?;
+                let image_format = image_format_for_bytes_or_output_format(&bytes, output_format);
+                let relative_path = self.save_image(&bytes, image_format.extension, idx)?;
                 file_changes.push(FileChange {
                     relative_path: relative_path.clone(),
                     kind: FileChangeKind::Added,
@@ -292,7 +294,7 @@ impl CreateImageTool {
                     lines: Vec::new(),
                 });
                 Ok(ToolRunImage {
-                    media_type: media_type_for(output_format).to_string(),
+                    media_type: image_format.media_type.to_string(),
                     data: String::new(),
                     path: Some(
                         self.workspace_root
@@ -388,7 +390,8 @@ impl CreateImageTool {
             .enumerate()
             .map(|(idx, item)| {
                 let bytes = decode_image(&item.b64_json, idx + 1)?;
-                let relative_path = self.save_image(&bytes, extension_for(output_format), idx)?;
+                let image_format = image_format_for_bytes_or_output_format(&bytes, output_format);
+                let relative_path = self.save_image(&bytes, image_format.extension, idx)?;
                 file_changes.push(FileChange {
                     relative_path: relative_path.clone(),
                     kind: FileChangeKind::Added,
@@ -400,7 +403,7 @@ impl CreateImageTool {
                     lines: Vec::new(),
                 });
                 Ok(ToolRunImage {
-                    media_type: media_type_for(output_format).to_string(),
+                    media_type: image_format.media_type.to_string(),
                     data: String::new(),
                     path: Some(
                         self.workspace_root
@@ -614,9 +617,8 @@ impl CreateImageTool {
             .enumerate()
             .map(|(idx, item)| {
                 let bytes = decode_image(&item.data, idx + 1)?;
-                let media_type = normalize_media_type(&item.mime_type);
-                let relative_path =
-                    self.save_image(&bytes, extension_for_media_type(media_type), idx)?;
+                let image_format = image_format_for_bytes_or_media_type(&bytes, &item.mime_type);
+                let relative_path = self.save_image(&bytes, image_format.extension, idx)?;
                 file_changes.push(FileChange {
                     relative_path: relative_path.clone(),
                     kind: FileChangeKind::Added,
@@ -628,7 +630,7 @@ impl CreateImageTool {
                     lines: Vec::new(),
                 });
                 Ok(ToolRunImage {
-                    media_type: media_type.to_string(),
+                    media_type: image_format.media_type.to_string(),
                     data: String::new(),
                     path: Some(
                         self.workspace_root
@@ -912,20 +914,68 @@ fn normalize_image_size(raw: Option<&str>) -> Result<&'static str> {
     }
 }
 
-fn media_type_for(output_format: &str) -> &'static str {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ImageFormat {
+    media_type: &'static str,
+    extension: &'static str,
+}
+
+fn image_format_for_output_format(output_format: &str) -> ImageFormat {
     match output_format {
-        "jpeg" => "image/jpeg",
-        "webp" => "image/webp",
-        _ => "image/png",
+        "jpeg" => ImageFormat {
+            media_type: "image/jpeg",
+            extension: "jpg",
+        },
+        "webp" => ImageFormat {
+            media_type: "image/webp",
+            extension: "webp",
+        },
+        _ => ImageFormat {
+            media_type: "image/png",
+            extension: "png",
+        },
     }
 }
 
-fn normalize_media_type(raw: &str) -> &'static str {
-    match raw.trim().to_ascii_lowercase().as_str() {
-        "image/jpeg" | "image/jpg" => "image/jpeg",
-        "image/webp" => "image/webp",
-        _ => "image/png",
+fn image_format_for_media_type(raw: &str) -> ImageFormat {
+    match raw
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "image/jpeg" | "image/jpg" => ImageFormat {
+            media_type: "image/jpeg",
+            extension: "jpg",
+        },
+        "image/gif" => ImageFormat {
+            media_type: "image/gif",
+            extension: "gif",
+        },
+        "image/webp" => ImageFormat {
+            media_type: "image/webp",
+            extension: "webp",
+        },
+        _ => ImageFormat {
+            media_type: "image/png",
+            extension: "png",
+        },
     }
+}
+
+fn image_format_for_bytes_or_output_format(bytes: &[u8], output_format: &str) -> ImageFormat {
+    image_format_from_bytes(bytes).unwrap_or_else(|| image_format_for_output_format(output_format))
+}
+
+fn image_format_for_bytes_or_media_type(bytes: &[u8], media_type: &str) -> ImageFormat {
+    image_format_from_bytes(bytes).unwrap_or_else(|| image_format_for_media_type(media_type))
+}
+
+fn image_format_from_bytes(bytes: &[u8]) -> Option<ImageFormat> {
+    let media_type = detect_image_media_type(bytes)?;
+    Some(image_format_for_media_type(media_type))
 }
 
 fn decode_image(data: &str, idx: usize) -> Result<Vec<u8>> {
@@ -1056,27 +1106,48 @@ async fn collect_subscription_image_calls(response: reqwest::Response) -> Result
     Ok(calls)
 }
 
-fn extension_for(output_format: &str) -> &'static str {
-    match output_format {
-        "jpeg" => "jpg",
-        "webp" => "webp",
-        _ => "png",
-    }
-}
-
-fn extension_for_media_type(media_type: &str) -> &'static str {
-    match media_type {
-        "image/jpeg" => "jpg",
-        "image/webp" => "webp",
-        _ => "png",
-    }
-}
-
 fn now_ms() -> u128 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_millis())
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_image_format_prefers_detected_png_over_requested_webp() {
+        let format = image_format_for_bytes_or_output_format(b"\x89PNG\r\n\x1a\nrest", "webp");
+
+        assert_eq!(format.media_type, "image/png");
+        assert_eq!(format.extension, "png");
+    }
+
+    #[test]
+    fn generated_image_format_prefers_detected_png_over_advertised_webp() {
+        let format = image_format_for_bytes_or_media_type(b"\x89PNG\r\n\x1a\nrest", "image/webp");
+
+        assert_eq!(format.media_type, "image/png");
+        assert_eq!(format.extension, "png");
+    }
+
+    #[test]
+    fn generated_image_format_prefers_detected_gif_over_requested_png() {
+        let format = image_format_for_bytes_or_output_format(b"GIF89arest", "png");
+
+        assert_eq!(format.media_type, "image/gif");
+        assert_eq!(format.extension, "gif");
+    }
+
+    #[test]
+    fn generated_image_format_falls_back_to_requested_format_when_unknown() {
+        let format = image_format_for_bytes_or_output_format(b"not an image signature", "webp");
+
+        assert_eq!(format.media_type, "image/webp");
+        assert_eq!(format.extension, "webp");
+    }
 }
 
 fn format_openai_error(status: StatusCode, request_id: Option<&str>, body: &str) -> String {

@@ -9,6 +9,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 
+use crate::read::detect_image_media_type;
 use crate::text::{decode_text, encode_text, TextEncoding};
 
 const MAX_EDITABLE_BYTES: u64 = 1024 * 1024;
@@ -583,7 +584,9 @@ pub fn read_external_file(path: &Path) -> Result<FileDocument> {
 
     let bytes =
         fs::read(path).with_context(|| format!("unable to read file {}", path.display()))?;
-    let image_media_type = preview_image_media_type(path).map(str::to_string);
+    let image_media_type = detect_image_media_type(&bytes)
+        .or_else(|| preview_image_media_type(path))
+        .map(str::to_string);
     let image_data = if image_media_type.is_some() && size <= MAX_PREVIEW_IMAGE_BYTES {
         Some(BASE64_STANDARD.encode(&bytes))
     } else {
@@ -1273,7 +1276,9 @@ fn read_document(root: &Path, path: &Path) -> Result<FileDocument> {
 
     let bytes =
         fs::read(path).with_context(|| format!("unable to read file {}", path.display()))?;
-    let image_media_type = preview_image_media_type(path).map(str::to_string);
+    let image_media_type = detect_image_media_type(&bytes)
+        .or_else(|| preview_image_media_type(path))
+        .map(str::to_string);
     let image_data = if image_media_type.is_some() && size <= MAX_PREVIEW_IMAGE_BYTES {
         Some(BASE64_STANDARD.encode(&bytes))
     } else {

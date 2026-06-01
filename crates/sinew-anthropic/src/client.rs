@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde::Serialize;
 use sinew_core::{
     AppError, ChatMessage, Effort, ModelCapabilities, ModelRef, Part, Provider, ProviderRequest,
@@ -235,10 +236,7 @@ impl Provider for AnthropicProvider {
             cache_message_indices(&request.transcript[..stable_message_count], cache_budget);
         let body = wire::MessagesRequest {
             model: &request.model.name,
-            max_tokens: request
-                .max_output_tokens
-                .unwrap_or(caps.max_output_tokens)
-                .min(caps.max_output_tokens),
+            max_tokens: request.output_token_budget(&caps),
             system: build_system_blocks(is_oauth, request.system_prompt.as_deref(), cache_system),
             messages: request
                 .transcript
@@ -419,7 +417,7 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
             } => {
                 if image_base64_fits_anthropic(data) {
                     content.push(wire::WirePart::Image {
-                        source: wire::ImageSource::Base64 { media_type, data },
+                        source: image_source(media_type, data),
                         cache_control,
                     });
                 } else {
@@ -477,10 +475,7 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
                     }
                     blocks.extend(inline_images.into_iter().map(|image| {
                         wire::ToolResultBlock::Image {
-                            source: wire::ImageSource::Base64 {
-                                media_type: &image.media_type,
-                                data: &image.data,
-                            },
+                            source: image_source(&image.media_type, &image.data),
                         }
                     }));
                     if skipped_oversized_image {
@@ -501,6 +496,30 @@ fn to_wire_message(message: &ChatMessage, cache: bool) -> Result<Option<wire::Wi
     }
 
     Ok((!content.is_empty()).then_some(wire::WireMessage { role, content }))
+}
+
+fn data_media_type(data: &str) -> Option<&'static str> {
+    let bytes = BASE64_STANDARD.decode(data).ok()?;
+    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        return Some("image/png");
+    }
+    if bytes.len() >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff {
+        return Some("image/jpeg");
+    }
+    if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        return Some("image/gif");
+    }
+    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("image/webp");
+    }
+    None
+}
+
+fn image_source<'a>(media_type: &'a str, data: &'a str) -> wire::ImageSource<'a> {
+    wire::ImageSource::Base64 {
+        media_type: data_media_type(data).unwrap_or(media_type),
+        data,
+    }
 }
 
 fn image_base64_fits_anthropic(data: &str) -> bool {
@@ -645,6 +664,44 @@ mod tests {
         assert!(blocks
             .iter()
             .all(|block| !matches!(block, wire::ToolResultBlock::Image { .. })));
+    }
+
+    #[test]
+    fn tool_result_image_media_type_is_corrected_from_base64_bytes() {
+        let data = BASE64_STANDARD.encode(b"\x89PNG\r\n\x1a\nrest");
+        let message = ChatMessage {
+            role: Role::User,
+            parts: vec![Part::ToolResult {
+                tool_call_id: "call_1".into(),
+                content: "path: image.webp".into(),
+                images: vec![ToolResultImage {
+                    media_type: "image/webp".into(),
+                    data,
+                    path: None,
+                }],
+                is_error: false,
+                meta: None,
+            }],
+        };
+
+        let wire_message = to_wire_message(&message, false)
+            .expect("tool result should convert")
+            .expect("message should not be empty");
+
+        let [wire::WirePart::ToolResult { content, .. }] = wire_message.content.as_slice() else {
+            panic!("expected a single tool result part");
+        };
+        let wire::ToolResultContent::Blocks(blocks) = content else {
+            panic!("expected block tool result content");
+        };
+        let wire::ToolResultBlock::Image {
+            source: wire::ImageSource::Base64 { media_type, .. },
+        } = &blocks[1]
+        else {
+            panic!("expected image block");
+        };
+
+        assert_eq!(*media_type, "image/png");
     }
 
     #[test]

@@ -1,5 +1,6 @@
 use std::{
     fs,
+    io::Read as _,
     path::{Component, Path, PathBuf},
     time::UNIX_EPOCH,
 };
@@ -98,13 +99,12 @@ impl ReadTool {
         if !metadata.is_file() {
             bail!("path is not a file");
         }
-        let image_media_type = supported_image_media_type(&path);
-        let max_bytes = if image_media_type.is_some() {
-            MAX_IMAGE_BYTES
-        } else {
-            MAX_TEXT_READ_BYTES
-        };
-        if metadata.len() > max_bytes {
+        let image_media_type =
+            detect_file_image_media_type(&path)?.or_else(|| supported_image_media_type(&path));
+        if image_media_type.is_some() && metadata.len() > MAX_IMAGE_BYTES {
+            bail!("file is too large to read safely");
+        }
+        if image_media_type.is_none() && metadata.len() > MAX_TEXT_READ_BYTES {
             bail!("file is too large to read safely");
         }
 
@@ -157,6 +157,22 @@ struct ReadInput {
     limit: Option<usize>,
 }
 
+pub fn detect_image_media_type(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        return Some("image/png");
+    }
+    if bytes.len() >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff {
+        return Some("image/jpeg");
+    }
+    if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        return Some("image/gif");
+    }
+    if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("image/webp");
+    }
+    None
+}
+
 fn split_lines(content: &str) -> Vec<&str> {
     if content.is_empty() {
         Vec::new()
@@ -186,6 +202,16 @@ fn supported_image_media_type(path: &Path) -> Option<&'static str> {
         "webp" => Some("image/webp"),
         _ => None,
     }
+}
+
+fn detect_file_image_media_type(path: &Path) -> Result<Option<&'static str>> {
+    let mut file =
+        fs::File::open(path).with_context(|| format!("unable to read file {}", path.display()))?;
+    let mut header = [0_u8; 12];
+    let len = file
+        .read(&mut header)
+        .with_context(|| format!("unable to read file {}", path.display()))?;
+    Ok(detect_image_media_type(&header[..len]))
 }
 
 fn resolve_read_path(root: &Path, raw: &str) -> Result<PathBuf> {
@@ -298,6 +324,28 @@ mod tests {
         assert_eq!(result.images.len(), 1);
         assert_eq!(result.images[0].media_type, "image/gif");
         assert_eq!(result.images[0].data, BASE64_STANDARD.encode(image_bytes));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn read_uses_image_bytes_to_correct_mislabeled_extension() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        let root = root.canonicalize().expect("canonical temp workspace");
+        let image_bytes = b"\x89PNG\r\n\x1a\nrest";
+        fs::write(root.join("pixel.webp"), image_bytes).expect("write mislabeled png");
+
+        let tool = ReadTool::new(&root);
+        let result = tool
+            .read(json!({ "path": "pixel.webp", "limit": 1 }))
+            .expect("image should read");
+
+        assert!(!result.is_error);
+        assert_eq!(result.images.len(), 1);
+        assert_eq!(result.images[0].media_type, "image/png");
+        assert_eq!(result.images[0].data, BASE64_STANDARD.encode(image_bytes));
+        assert!(result.content.contains("type: image/png"));
 
         fs::remove_dir_all(root).ok();
     }

@@ -323,12 +323,7 @@ fn build_responses_request<'a>(
         prompt_cache_key: (!is_oauth)
             .then_some(request.cache_key.as_deref())
             .flatten(),
-        max_output_tokens: (!is_oauth).then_some(
-            request
-                .max_output_tokens
-                .unwrap_or(caps.max_output_tokens)
-                .min(caps.max_output_tokens),
-        ),
+        max_output_tokens: (!is_oauth).then_some(request.output_token_budget(&caps)),
         reasoning: effort_to_reasoning(request.effective_effort()),
         temperature: request.temperature,
         store,
