@@ -34,7 +34,7 @@ use super::{
     tool_summary::{display_mcp_server_name, pretty_json, should_stream_tool_args, summarize_tool},
 };
 
-use crate::{system_prompt_with_todo, tool_names, ReadFingerprint, ToolRunResult};
+use crate::{system_prompt_with_todo, tool_names, ReadFingerprint, TodoListState, ToolRunResult};
 
 const SAFE_STREAM_MAX_RETRIES: usize = 5;
 
@@ -88,6 +88,7 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
     let mut current_turn_tool_result_ids = BTreeSet::new();
     let mut eager_tool_results = BTreeMap::<String, JoinHandle<ToolRunResult>>::new();
     let mut read_fingerprints = successful_read_fingerprints(&history, &read);
+    let mut todo_final_answer_guard_attempted = false;
     todo_list.normalize();
 
     'conversation: loop {
@@ -528,6 +529,21 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             stop_reason = StopReason::ToolUse;
         }
         if !matches!(stop_reason, StopReason::ToolUse) {
+            let todo_guard_tool_available =
+                todo_list_tool.is_some() && tool_settings.is_enabled(tool_names::TODO_LIST);
+            if should_trigger_todo_final_answer_guard(
+                &todo_list,
+                todo_guard_tool_available,
+                stop_reason,
+                &assistant,
+                todo_final_answer_guard_attempted,
+                loops,
+                max_tool_rounds,
+            ) {
+                todo_final_answer_guard_attempted = true;
+                history.push(todo_final_answer_guard_message(&todo_list));
+                continue 'conversation;
+            }
             break;
         }
 
@@ -766,6 +782,72 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         interrupted: cancelled,
         compacted,
     }
+}
+
+pub(super) fn should_trigger_todo_final_answer_guard(
+    state: &TodoListState,
+    todo_tool_available: bool,
+    stop_reason: StopReason,
+    assistant: &ChatMessage,
+    already_attempted: bool,
+    tool_loops_used: usize,
+    max_tool_rounds: usize,
+) -> bool {
+    !already_attempted
+        && todo_tool_available
+        && tool_loops_used < max_tool_rounds
+        && matches!(stop_reason, StopReason::EndTurn)
+        && todo_list_needs_final_answer_update(state)
+        && assistant_has_visible_final_text(assistant)
+        && !assistant_has_tool_call(assistant)
+}
+
+pub(super) fn todo_final_answer_guard_message(state: &TodoListState) -> ChatMessage {
+    ChatMessage {
+        role: Role::User,
+        parts: vec![Part::Text {
+            text: todo_final_answer_guard_prompt(state),
+            meta: Some(json!({
+                "system_reminder": true,
+                "todo_final_answer_guard": true,
+            })),
+        }],
+    }
+}
+
+fn todo_final_answer_guard_prompt(state: &TodoListState) -> String {
+    let snapshot = state.render_tool_output("Current todo_list before final-answer guard:");
+    format!(
+        "<todo_final_answer_guard>\n\
+You just produced a final answer while todo_list is still active. Before ending, call todo_list now.\n\
+\n\
+Rules:\n\
+- If the work described in your previous answer is complete, mark any remaining tasks done and close the list in the same todo_list call.\n\
+- If work is not complete, update task statuses truthfully and leave the list active.\n\
+- Do not call unrelated tools for this guard.\n\
+- Do not repeat the previous final answer; after the todo_list result, keep any follow-up minimal.\n\
+\n\
+{snapshot}\n\
+</todo_final_answer_guard>"
+    )
+}
+
+fn todo_list_needs_final_answer_update(state: &TodoListState) -> bool {
+    state.active && !state.tasks.is_empty()
+}
+
+fn assistant_has_visible_final_text(message: &ChatMessage) -> bool {
+    message
+        .parts
+        .iter()
+        .any(|part| matches!(part, Part::Text { text, .. } if !text.trim().is_empty()))
+}
+
+fn assistant_has_tool_call(message: &ChatMessage) -> bool {
+    message
+        .parts
+        .iter()
+        .any(|part| matches!(part, Part::ToolCall { .. }))
 }
 
 pub(super) fn retain_cancelled_eager_parts(

@@ -2,7 +2,9 @@ use std::collections::BTreeSet;
 
 use serde_json::json;
 
-use sinew_core::{ChatMessage, Part, Role};
+use sinew_core::{ChatMessage, Part, Role, StopReason};
+
+use crate::{TodoListState, TodoStatus, TodoTask};
 
 use super::{
     clean_context::{run_clean_context, tool_result_cleaned, CLEAN_CONTEXT_RESULT_PLACEHOLDER},
@@ -10,7 +12,10 @@ use super::{
         history_with_current_tool_result_ids, normalize_tool_call_inputs,
         strip_all_visible_tool_result_ids, tool_result_content_with_id, tool_result_exposes_id,
     },
-    turn::retain_cancelled_visible_parts,
+    turn::{
+        retain_cancelled_visible_parts, should_trigger_todo_final_answer_guard,
+        todo_final_answer_guard_message,
+    },
 };
 
 #[test]
@@ -44,6 +49,108 @@ fn cancelled_visible_parts_keep_partial_text_only() {
     assert_eq!(message.parts.len(), 2);
     assert!(matches!(&message.parts[0], Part::Text { text, .. } if text == "partial answer"));
     assert!(matches!(&message.parts[1], Part::Thinking { text, .. } if text == "partial thought"));
+}
+
+#[test]
+fn todo_final_answer_guard_triggers_for_active_list_and_final_text() {
+    let state = active_todo_state();
+    let assistant = ChatMessage::assistant_text("C'est termine ✅");
+
+    assert!(should_trigger_todo_final_answer_guard(
+        &state,
+        true,
+        StopReason::EndTurn,
+        &assistant,
+        false,
+        0,
+        8,
+    ));
+}
+
+#[test]
+fn todo_final_answer_guard_does_not_trigger_when_unavailable_or_already_attempted() {
+    let state = active_todo_state();
+    let assistant = ChatMessage::assistant_text("C'est termine ✅");
+
+    assert!(!should_trigger_todo_final_answer_guard(
+        &state,
+        false,
+        StopReason::EndTurn,
+        &assistant,
+        false,
+        0,
+        8,
+    ));
+    assert!(!should_trigger_todo_final_answer_guard(
+        &state,
+        true,
+        StopReason::EndTurn,
+        &assistant,
+        true,
+        0,
+        8,
+    ));
+}
+
+#[test]
+fn todo_final_answer_guard_does_not_trigger_for_tool_use_or_closed_list() {
+    let assistant = ChatMessage::assistant_text("Je vais mettre a jour la liste.");
+
+    assert!(!should_trigger_todo_final_answer_guard(
+        &active_todo_state(),
+        true,
+        StopReason::ToolUse,
+        &assistant,
+        false,
+        0,
+        8,
+    ));
+    assert!(!should_trigger_todo_final_answer_guard(
+        &TodoListState::default(),
+        true,
+        StopReason::EndTurn,
+        &assistant,
+        false,
+        0,
+        8,
+    ));
+}
+
+#[test]
+fn todo_final_answer_guard_message_is_hidden_system_reminder() {
+    let message = todo_final_answer_guard_message(&active_todo_state());
+    assert_eq!(message.role, Role::User);
+    let [Part::Text { text, meta }] = message.parts.as_slice() else {
+        panic!("expected a single text part");
+    };
+
+    assert!(text.contains("<todo_final_answer_guard>"));
+    assert!(text.contains("call todo_list now"));
+    assert!(text.contains("1. [in_progress] Build + deploy"));
+    assert_eq!(
+        meta.as_ref()
+            .and_then(|value| value.get("system_reminder"))
+            .and_then(|value| value.as_bool()),
+        Some(true)
+    );
+    assert_eq!(
+        meta.as_ref()
+            .and_then(|value| value.get("todo_final_answer_guard"))
+            .and_then(|value| value.as_bool()),
+        Some(true)
+    );
+}
+
+fn active_todo_state() -> TodoListState {
+    TodoListState {
+        active: true,
+        tasks: vec![TodoTask {
+            id: "1".to_string(),
+            text: "Build + deploy".to_string(),
+            status: TodoStatus::InProgress,
+        }],
+        next_id: 2,
+    }
 }
 
 #[test]
