@@ -202,7 +202,6 @@ impl CreateImageTool {
             bail!("prompt is required");
         }
 
-        let api_key = load_openai_api_key(self.openai_api_key.as_deref())?;
         let size = normalize_size(parsed.size.as_deref())?;
         let quality = "high";
         let n = parsed.n.unwrap_or(1);
@@ -226,6 +225,8 @@ impl CreateImageTool {
                 )
                 .await;
         }
+
+        let api_key = load_openai_api_key(self.openai_api_key.as_deref())?;
 
         let mut body = Map::new();
         body.insert("model".into(), json!(GPT_IMAGE_MODEL));
