@@ -448,10 +448,41 @@ pub fn checkpoint_from_snapshots(before: &TurnSnapshot, after: &TurnSnapshot) ->
     TurnCheckpoint { files }
 }
 
+pub fn validate_turn_checkpoints_restorable(
+    root: &Path,
+    checkpoints: &[TurnCheckpoint],
+) -> Result<()> {
+    let plan = build_turn_restore_plan(checkpoints)?;
+    validate_turn_restore_plan(root, &plan)
+}
+
 pub fn restore_turn_checkpoints(
     root: &Path,
     checkpoints: &[TurnCheckpoint],
 ) -> Result<Vec<String>> {
+    let plan = build_turn_restore_plan(checkpoints)?;
+    validate_turn_restore_plan(root, &plan)?;
+
+    let mut restored = Vec::new();
+    for relative_path in plan.ordered_paths {
+        let (state, _) = plan
+            .states
+            .get(&relative_path)
+            .ok_or_else(|| anyhow!("missing restore state"))?;
+        restore_file_state(root, &relative_path, state)?;
+        restored.push(relative_path);
+    }
+
+    Ok(restored)
+}
+
+struct TurnRestorePlan {
+    states: HashMap<String, (TurnFileState, Option<TurnFileState>)>,
+    ordered_paths: Vec<String>,
+    expected_after_by_path: BTreeMap<String, TurnFileState>,
+}
+
+fn build_turn_restore_plan(checkpoints: &[TurnCheckpoint]) -> Result<TurnRestorePlan> {
     let mut states = HashMap::<String, (TurnFileState, Option<TurnFileState>)>::new();
     let mut ordered_paths = Vec::<String>::new();
     let mut expected_after_by_path = BTreeMap::<String, TurnFileState>::new();
@@ -496,12 +527,19 @@ pub fn restore_turn_checkpoints(
         }
     });
 
-    let mut restored = Vec::new();
-    for relative_path in &ordered_paths {
-        let Some((before, _)) = states.get(relative_path) else {
+    Ok(TurnRestorePlan {
+        states,
+        ordered_paths,
+        expected_after_by_path,
+    })
+}
+
+fn validate_turn_restore_plan(root: &Path, plan: &TurnRestorePlan) -> Result<()> {
+    for relative_path in &plan.ordered_paths {
+        let Some((before, _)) = plan.states.get(relative_path) else {
             continue;
         };
-        let Some(expected) = expected_after_by_path.get(relative_path) else {
+        let Some(expected) = plan.expected_after_by_path.get(relative_path) else {
             continue;
         };
         ensure_current_file_state(
@@ -509,19 +547,10 @@ pub fn restore_turn_checkpoints(
             relative_path,
             before,
             expected,
-            &expected_after_by_path,
+            &plan.expected_after_by_path,
         )?;
     }
-
-    for relative_path in ordered_paths {
-        let (state, _) = states
-            .get(&relative_path)
-            .ok_or_else(|| anyhow!("missing restore state"))?;
-        restore_file_state(root, &relative_path, state)?;
-        restored.push(relative_path);
-    }
-
-    Ok(restored)
+    Ok(())
 }
 
 fn path_depth(path: &str) -> usize {

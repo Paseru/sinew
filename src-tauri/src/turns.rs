@@ -2,6 +2,57 @@ use crate::*;
 use sinew_app::read::detect_image_media_type;
 
 #[tauri::command]
+pub(super) async fn check_rewrite_workspace_restore(
+    state: State<'_, DesktopState>,
+    input: CheckRewriteWorkspaceRestoreInput,
+) -> std::result::Result<RewriteWorkspaceRestoreCheck, String> {
+    let workspace_root =
+        normalize_workspace_root(&input.workspace_path).map_err(error_to_string)?;
+    let workspace_id = workspace_root.display().to_string();
+    let conversation = state
+        .store
+        .load_conversation(&workspace_id, &input.conversation_id)
+        .map_err(error_to_string)?
+        .ok_or_else(|| "conversation not found".to_string())?;
+
+    if input.history_index >= conversation.history.len() {
+        return Err("rewrite index out of bounds".into());
+    }
+    if !is_rewritable_user_message(&conversation.history[input.history_index]) {
+        return Err("rewrite index must point to a rewritable user message".into());
+    }
+
+    let checkpoint_records = state
+        .store
+        .load_turn_checkpoints_from(&input.conversation_id, input.history_index)
+        .map_err(error_to_string)?;
+    if checkpoint_records.is_empty() {
+        return Ok(RewriteWorkspaceRestoreCheck {
+            has_checkpoints: false,
+            restorable: false,
+            reason: None,
+        });
+    }
+
+    let checkpoints = checkpoint_records
+        .into_iter()
+        .map(|record| record.checkpoint)
+        .collect::<Vec<_>>();
+    match validate_turn_checkpoints_restorable(&workspace_root, &checkpoints) {
+        Ok(()) => Ok(RewriteWorkspaceRestoreCheck {
+            has_checkpoints: true,
+            restorable: true,
+            reason: None,
+        }),
+        Err(err) => Ok(RewriteWorkspaceRestoreCheck {
+            has_checkpoints: true,
+            restorable: false,
+            reason: Some(err.to_string()),
+        }),
+    }
+}
+
+#[tauri::command]
 pub(super) async fn send_message(
     app: AppHandle,
     state: State<'_, DesktopState>,

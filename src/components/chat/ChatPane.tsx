@@ -12,6 +12,7 @@ import {
 } from "react";
 import { Icon } from "@iconify/react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { AIThinkingBlock } from "./AIThinkingBlock";
 import { FileChangeBlock } from "./FileChangeBlock";
@@ -63,6 +64,7 @@ import type {
   StreamTokenUsage,
   ThinkingLevel,
   WorkspaceEntry,
+  WorkspaceFileChangedPayload,
 } from "../../types";
 import {
   applyEvent,
@@ -86,6 +88,12 @@ type RewriteState = {
   originalText: string;
   originalAttachments: Attachment[];
   revertWorkspaceChanges: boolean;
+};
+
+type RewriteRestoreCheckState = {
+  key: string;
+  status: "checking" | "ready";
+  restorable: boolean;
 };
 
 type QueuedPrompt = QueuedPromptStripItem & {
@@ -447,6 +455,8 @@ export function ChatPane({
         : "act",
   );
   const [rewriteState, setRewriteState] = useState<RewriteState | null>(null);
+  const [rewriteRestoreCheck, setRewriteRestoreCheck] =
+    useState<RewriteRestoreCheckState | null>(null);
   const [compactInstructionOpen, setCompactInstructionOpen] = useState(false);
   const [compactInstruction, setCompactInstruction] = useState("");
   const rewindFileChanges = useMemo(
@@ -518,6 +528,12 @@ export function ChatPane({
   const compactPopoverRef = useRef<HTMLDivElement | null>(null);
   const pendingCaretRef = useRef<number | null>(null);
   const mentionLoadingRef = useRef(false);
+  const mentionFilesRef = useRef<WorkspaceEntry[] | null>(null);
+  const mentionRef = useRef<MentionState | null>(null);
+  const inlineMentionsRef = useRef<InlineMention[]>([]);
+  const mentionWorkspacePathRef = useRef(workspacePath);
+  const mentionRequestSeqRef = useRef(0);
+  const mentionRefreshTimerRef = useRef<number | null>(null);
   const [mentionFiles, setMentionFiles] = useState<WorkspaceEntry[] | null>(
     null,
   );
@@ -892,9 +908,37 @@ export function ChatPane({
   }, [text]);
 
   useEffect(() => {
+    mentionRef.current = mention;
+  }, [mention]);
+
+  useEffect(() => {
+    inlineMentionsRef.current = inlineMentions;
+  }, [inlineMentions]);
+
+  useEffect(() => {
+    mentionFilesRef.current = mentionFiles;
+  }, [mentionFiles]);
+
+  useEffect(() => {
+    mentionWorkspacePathRef.current = workspacePath;
+    mentionRequestSeqRef.current += 1;
+    mentionFilesRef.current = null;
     setMentionFiles(null);
     mentionLoadingRef.current = false;
+    if (mentionRefreshTimerRef.current !== null) {
+      window.clearTimeout(mentionRefreshTimerRef.current);
+      mentionRefreshTimerRef.current = null;
+    }
   }, [workspacePath]);
+
+  useEffect(() => {
+    return () => {
+      if (mentionRefreshTimerRef.current !== null) {
+        window.clearTimeout(mentionRefreshTimerRef.current);
+        mentionRefreshTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const target = pendingCaretRef.current;
@@ -934,19 +978,121 @@ export function ChatPane({
     return () => cancelAnimationFrame(raf);
   }, [text, inlineMentions]);
 
-  const ensureMentionFiles = useCallback(async () => {
-    if (mentionFiles !== null || mentionLoadingRef.current) return;
-    mentionLoadingRef.current = true;
-    try {
-      const files = await api.listAllFiles(workspacePath);
-      setMentionFiles(files);
-    } catch (err) {
-      console.error(err);
-      setMentionFiles([]);
-    } finally {
-      mentionLoadingRef.current = false;
+  const refreshMentionFiles = useCallback(
+    async ({ force = false }: { force?: boolean } = {}) => {
+      if (!force && mentionFilesRef.current !== null) return;
+      if (!force && mentionLoadingRef.current) return;
+
+      const requestWorkspacePath = workspacePath;
+      const requestId = ++mentionRequestSeqRef.current;
+      mentionLoadingRef.current = true;
+
+      try {
+        const files = await api.listAllFiles(requestWorkspacePath);
+        if (
+          mentionWorkspacePathRef.current !== requestWorkspacePath ||
+          requestId !== mentionRequestSeqRef.current
+        ) {
+          return;
+        }
+
+        mentionFilesRef.current = files;
+        setMentionFiles(files);
+
+        const availablePaths = new Set(files.map((file) => file.relativePath));
+        setInlineMentions((prev) => {
+          if (prev.length === 0) return prev;
+          const next = prev.filter((m) => availablePaths.has(m.path));
+          return next.length === prev.length ? prev : next;
+        });
+      } catch (err) {
+        if (
+          mentionWorkspacePathRef.current !== requestWorkspacePath ||
+          requestId !== mentionRequestSeqRef.current
+        ) {
+          return;
+        }
+        console.error(err);
+        mentionFilesRef.current = [];
+        setMentionFiles([]);
+      } finally {
+        if (requestId === mentionRequestSeqRef.current) {
+          mentionLoadingRef.current = false;
+        }
+      }
+    },
+    [workspacePath],
+  );
+
+  const scheduleMentionFilesRefresh = useCallback(() => {
+    if (mentionRefreshTimerRef.current !== null) {
+      window.clearTimeout(mentionRefreshTimerRef.current);
     }
-  }, [workspacePath, mentionFiles]);
+    mentionRefreshTimerRef.current = window.setTimeout(() => {
+      mentionRefreshTimerRef.current = null;
+      void refreshMentionFiles({ force: true });
+    }, 120);
+  }, [refreshMentionFiles]);
+
+  const invalidateMentionFiles = useCallback(
+    (reloadIfMentionActive = false) => {
+      mentionRequestSeqRef.current += 1;
+      mentionLoadingRef.current = false;
+      mentionFilesRef.current = null;
+      setMentionFiles(null);
+      if (reloadIfMentionActive) scheduleMentionFilesRefresh();
+    },
+    [scheduleMentionFilesRefresh],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: UnlistenFn | null = null;
+
+    (async () => {
+      try {
+        const nextUnlisten = await listen<WorkspaceFileChangedPayload>(
+          "workspace-file-changed",
+          (event) => {
+            const payload = event.payload;
+            if (payload.workspacePath !== workspacePath) return;
+            invalidateMentionFiles(
+              mentionRef.current !== null || inlineMentionsRef.current.length > 0,
+            );
+          },
+        );
+        if (cancelled) {
+          nextUnlisten();
+        } else {
+          unlisten = nextUnlisten;
+        }
+      } catch (err) {
+        if (!cancelled) console.warn("workspace mention watcher unavailable", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+    };
+  }, [invalidateMentionFiles, workspacePath]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      invalidateMentionFiles(
+        mentionRef.current !== null || inlineMentionsRef.current.length > 0,
+      );
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshIfVisible();
+    };
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [invalidateMentionFiles]);
 
   const detectMention = useCallback(
     (value: string, caret: number) => {
@@ -963,7 +1109,7 @@ export function ChatPane({
                   ? prev
                   : { tokenStart: i, query, index: 0 },
               );
-              void ensureMentionFiles();
+              void refreshMentionFiles();
               return;
             }
           }
@@ -974,7 +1120,7 @@ export function ChatPane({
       }
       setMention(null);
     },
-    [ensureMentionFiles],
+    [refreshMentionFiles],
   );
 
   const matches = useMemo<WorkspaceEntry[]>(() => {
@@ -1015,6 +1161,13 @@ export function ChatPane({
   const selectMention = useCallback(
     (file: WorkspaceEntry) => {
       if (!mention) return;
+      const currentMentionFiles = mentionFilesRef.current;
+      if (
+        currentMentionFiles === null ||
+        !currentMentionFiles.some((entry) => entry.relativePath === file.relativePath)
+      ) {
+        return;
+      }
       const ta = textareaRef.current;
       const tokenEnd = ta ? ta.selectionStart : mention.tokenStart + 1 + mention.query.length;
       const insertion = `@${file.relativePath} `;
@@ -1037,6 +1190,34 @@ export function ChatPane({
     },
     [mention, text],
   );
+
+  useEffect(() => {
+    if (!rewriteState) {
+      setRewriteRestoreCheck(null);
+      return;
+    }
+
+    const historyIndex = rewriteState.historyIndex;
+    const key = `${conversationId}:${historyIndex}`;
+    let cancelled = false;
+    setRewriteRestoreCheck({ key, status: "checking", restorable: false });
+    void api
+      .checkRewriteWorkspaceRestore(workspacePath, conversationId, historyIndex)
+      .then((check) => {
+        if (cancelled) return;
+        const restorable = check.hasCheckpoints && check.restorable;
+        setRewriteRestoreCheck({ key, status: "ready", restorable });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn("rewrite restore check failed", err);
+        setRewriteRestoreCheck({ key, status: "ready", restorable: false });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId, rewriteState?.historyIndex, workspacePath]);
 
   useEffect(() => {
     if (!rewriteState) return;
@@ -1480,7 +1661,17 @@ export function ChatPane({
       return;
     }
     const rewriteFromHistoryIndex = rewriteState?.historyIndex;
-    const revertWorkspaceChanges = rewriteState?.revertWorkspaceChanges ?? true;
+    const rewriteRestoreCheckKey =
+      rewriteFromHistoryIndex === undefined
+        ? null
+        : `${conversationId}:${rewriteFromHistoryIndex}`;
+    const canRevertWorkspaceChanges =
+      rewriteRestoreCheckKey !== null &&
+      rewriteRestoreCheck?.key === rewriteRestoreCheckKey &&
+      rewriteRestoreCheck.status === "ready" &&
+      rewriteRestoreCheck.restorable;
+    const revertWorkspaceChanges =
+      rewriteState?.revertWorkspaceChanges === true && canRevertWorkspaceChanges;
     const nextHistoryIndex = rewriteFromHistoryIndex ?? history.length;
     setView((prev) => {
       const base =
@@ -1534,6 +1725,7 @@ export function ChatPane({
     history,
     onSend,
     rewriteState,
+    rewriteRestoreCheck,
     model,
     modelEntry,
     thinking,
@@ -2638,6 +2830,13 @@ export function ChatPane({
     activeSubAgentId !== null ? subAgentViews.get(activeSubAgentId) ?? null : null;
   const viewingSubAgent = activeSubAgent !== null;
   const displayView = activeSubAgent?.view ?? view;
+  const showRewindChangesPreview =
+    !!rewriteState &&
+    rewindFileChanges.length > 0 &&
+    rewriteRestoreCheck?.key === `${conversationId}:${rewriteState.historyIndex}` &&
+    rewriteRestoreCheck.status === "ready" &&
+    rewriteRestoreCheck.restorable;
+
   const showPlanningNextMove = shouldShowPlanningNextMove(displayView);
   const teamAgentRoster = useMemo(
     () => buildTeamAgentRoster(view.blocks, subAgentViews),
@@ -2934,7 +3133,7 @@ export function ChatPane({
             className={`composer${selectorLocked ? " composer--selector-locked" : ""}`}
             ref={composerRef}
           >
-            {rewriteState && rewindFileChanges.length > 0 && (
+            {showRewindChangesPreview && rewriteState && (
               <RewindChangesPreview
                 changes={rewindFileChanges}
                 revertWorkspaceChanges={rewriteState.revertWorkspaceChanges}
@@ -3806,12 +4005,6 @@ function shouldShowPlanningNextMove(view: ChatViewState): boolean {
   );
 }
 
-type TeamTaskCompletionSnapshot = {
-  status: string;
-  updatedAtMs?: number;
-  sourceOrder: number;
-};
-
 const REWIND_DIFF_LINE_LIMIT = 220;
 
 function RewindChangesPreview({
@@ -3954,6 +4147,12 @@ function isFileChange(value: unknown): value is FileChange {
     Array.isArray(record.lines)
   );
 }
+
+type TeamTaskCompletionSnapshot = {
+  status: string;
+  updatedAtMs?: number;
+  sourceOrder: number;
+};
 
 function buildTeamCompletionByTeam(blocks: ChatBlock[]): Record<string, boolean> {
   const byTeam = new Map<string, Map<string, TeamTaskCompletionSnapshot>>();

@@ -9,6 +9,7 @@ import type {
   ClipboardImageAttachment,
   ContextEstimate,
   ConversationSummary,
+  RewriteWorkspaceRestoreCheck,
   FileDocument,
   GitCreateWorktreeOutput,
   GitOperationResult,
@@ -465,6 +466,15 @@ export const api = {
   saveSkillSettings(workspacePath: string, settings: SkillSettings) {
     return invoke<InstalledSkill[]>("save_skill_settings", {
       input: { workspacePath, settings },
+    });
+  },
+  checkRewriteWorkspaceRestore(
+    workspacePath: string,
+    conversationId: string,
+    historyIndex: number,
+  ) {
+    return invoke<RewriteWorkspaceRestoreCheck>("check_rewrite_workspace_restore", {
+      input: { workspacePath, conversationId, historyIndex },
     });
   },
   sendMessage(

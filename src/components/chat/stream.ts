@@ -374,6 +374,25 @@ function blocksFromHistory(history: ChatMessage[]): ChatBlock[] {
               continue;
             }
           }
+          if (result) {
+            const visibleBashInput = visibleBashInputInfo(tc.name, tc.input);
+            if (visibleBashInput) {
+              const targetIndex = findBashSessionBlockIndex(
+                blocks,
+                visibleBashInput.sessionId,
+              );
+              if (targetIndex >= 0) {
+                const target = blocks[targetIndex];
+                if (target.kind === "tool") {
+                  blocks[targetIndex] = mergeBashPollResult(
+                    target,
+                    result,
+                    visibleBashInput.sessionId,
+                  );
+                }
+              }
+            }
+          }
           const fileChanges = (result?.meta as { file_changes?: FileChange[] } | null)
             ?.file_changes;
           blocks.push({
@@ -451,6 +470,13 @@ function silentBashPollInfo(name: string, input: unknown): BashInputInfo | null 
   return info;
 }
 
+function visibleBashInputInfo(name: string, input: unknown): BashInputInfo | null {
+  if (name !== "bash_input") return null;
+  const info = bashInputInfo(input);
+  if (!info || (!info.kill && !info.input.trim())) return null;
+  return info;
+}
+
 function bashInputShouldStayHidden(input: unknown, fallback: boolean): boolean {
   const info = bashInputInfo(input);
   if (!info) return fallback;
@@ -496,6 +522,13 @@ function findBashSessionBlockIndex(
   sessionId: number,
   ignoreId?: string,
 ): number {
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    const block = blocks[index];
+    if (block.kind !== "tool" || block.hidden || block.id === ignoreId) continue;
+    if (block.name !== "bash" && block.name !== "bash_input") continue;
+    if (block.status !== "running") continue;
+    if (bashSessionIdFromToolBlock(block) === sessionId) return index;
+  }
   for (let index = blocks.length - 1; index >= 0; index -= 1) {
     const block = blocks[index];
     if (block.kind !== "tool" || block.hidden || block.id === ignoreId) continue;
@@ -1419,7 +1452,43 @@ export function applyEvent(
         cleanupBlock && !event.is_error
           ? cleanContextIdsFromArgs(cleanupBlock.argsPretty)
           : new Set<string>();
-      const next = state.blocks.map((block) => {
+      const visibleBashInput =
+        finishedBlock && (finishedBlock.argsPretty || finishedBlock.argsRaw)
+          ? visibleBashInputInfo(
+              finishedBlock.name,
+              parsePrettyJson(finishedBlock.argsPretty ?? finishedBlock.argsRaw ?? ""),
+            )
+          : null;
+      const visibleBashInputResult: ToolResultPart | null = visibleBashInput
+        ? {
+            type: "tool_result",
+            tool_call_id: event.id,
+            content: event.output,
+            images: event.images,
+            is_error: event.is_error,
+            meta: event.meta,
+          }
+        : null;
+      const visibleBashInputTargetIndex = visibleBashInput
+        ? findBashSessionBlockIndex(
+            state.blocks,
+            visibleBashInput.sessionId,
+            event.id,
+          )
+        : -1;
+      const next = state.blocks.map((block, index) => {
+        if (
+          visibleBashInput &&
+          visibleBashInputResult &&
+          index === visibleBashInputTargetIndex &&
+          block.kind === "tool"
+        ) {
+          return mergeBashPollResult(
+            block,
+            visibleBashInputResult,
+            visibleBashInput.sessionId,
+          );
+        }
         if (
           block.kind === "tool" &&
           cleanedIds.has(block.id) &&

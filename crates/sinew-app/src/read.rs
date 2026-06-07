@@ -56,7 +56,7 @@ impl ReadTool {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": MAX_LIMIT,
-                        "description": "Required number of lines to read. Hard-capped at 500."
+                        "description": "Required number of lines for text files. Ignored for supported images. Hard-capped at 500."
                     }
                 },
                 "required": ["path", "limit"],
@@ -83,15 +83,6 @@ impl ReadTool {
         if parsed.path.trim().is_empty() {
             bail!("path is required");
         }
-
-        let offset = parsed.offset.unwrap_or_default();
-        let requested_limit = parsed
-            .limit
-            .ok_or_else(|| anyhow::anyhow!("limit is required"))?;
-        if requested_limit == 0 {
-            bail!("limit must be greater than 0");
-        }
-        let limit = requested_limit.min(MAX_LIMIT);
 
         let path = resolve_read_path(&self.workspace_root, &parsed.path)?;
         let metadata = fs::metadata(&path)
@@ -125,6 +116,15 @@ impl ReadTool {
                 Vec::new(),
             ));
         }
+
+        let offset = parsed.offset.unwrap_or_default();
+        let requested_limit = parsed
+            .limit
+            .ok_or_else(|| anyhow::anyhow!("limit is required"))?;
+        if requested_limit == 0 {
+            bail!("limit must be greater than 0");
+        }
+        let limit = requested_limit.min(MAX_LIMIT);
 
         let content = decode_text(&bytes)
             .map(|decoded| decoded.content)
@@ -316,8 +316,30 @@ mod tests {
 
         let tool = ReadTool::new(&root);
         let result = tool
-            .read(json!({ "path": "pixel.gif", "limit": 1 }))
-            .expect("image should read");
+            .read(json!({ "path": "pixel.gif" }))
+            .expect("image should read without limit");
+
+        assert!(!result.is_error);
+        assert!(result.content.contains("[Image attached visually.]"));
+        assert_eq!(result.images.len(), 1);
+        assert_eq!(result.images[0].media_type, "image/gif");
+        assert_eq!(result.images[0].data, BASE64_STANDARD.encode(image_bytes));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn read_supported_image_ignores_limit_and_offset() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        let root = root.canonicalize().expect("canonical temp workspace");
+        let image_bytes = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;";
+        fs::write(root.join("pixel.gif"), image_bytes).expect("write image");
+
+        let tool = ReadTool::new(&root);
+        let result = tool
+            .read(json!({ "path": "pixel.gif", "offset": 99, "limit": 0 }))
+            .expect("image should ignore text-only offset and limit");
 
         assert!(!result.is_error);
         assert!(result.content.contains("[Image attached visually.]"));

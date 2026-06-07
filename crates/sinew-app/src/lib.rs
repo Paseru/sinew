@@ -56,7 +56,8 @@ pub use todo::{
 pub use tool_names::{canonical_tool_name, is_tool_name};
 pub use tool_run::{
     checkpoint_from_snapshots, restore_turn_checkpoints, snapshot_workspace_for_checkpoint,
-    DiffLine, DiffLineKind, FileChange, FileChangeKind, ToolRunResult, TurnCheckpoint,
+    validate_turn_checkpoints_restorable, DiffLine, DiffLineKind, FileChange, FileChangeKind,
+    ToolRunResult, TurnCheckpoint,
 };
 pub use web::{WebFetchTool, WebSearchTool};
 pub use workspace::{

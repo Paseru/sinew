@@ -680,6 +680,12 @@ export type TerminalExitPayload = {
   signal?: string | null;
 };
 
+export type RewriteWorkspaceRestoreCheck = {
+  hasCheckpoints: boolean;
+  restorable: boolean;
+  reason?: string | null;
+};
+
 export type ContextEstimate = {
   usedTokens: number;
   contextWindow: number;
