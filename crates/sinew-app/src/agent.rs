@@ -9,6 +9,7 @@ mod mode;
 #[cfg(test)]
 mod tests;
 mod tool_dispatch;
+mod tool_preflight;
 mod tool_summary;
 mod turn;
 

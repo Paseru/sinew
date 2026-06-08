@@ -91,30 +91,7 @@ impl WriteFileTool {
         let target = resolve_workspace_file_target(&self.workspace_root, &parsed.path)?;
         let _write_permit = self.acquire_write_permit().await?;
 
-        let existed = target.absolute_path.exists();
-        if existed {
-            let metadata = fs::metadata(&target.absolute_path).with_context(|| {
-                format!("unable to read file metadata {}", target.relative_path)
-            })?;
-            if !metadata.is_file() {
-                bail!("path is not a file: {}", target.relative_path);
-            }
-            let expected = read_fingerprints
-                .get(&target.relative_path)
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "write_file requires a successful read of {} before overwriting it",
-                        target.relative_path
-                    )
-                })?;
-            let current = fingerprint_path(&self.workspace_root, &target.absolute_path)?;
-            if !fingerprints_match(expected, &current) {
-                bail!(
-                    "{} changed since the last successful read; run read on this file before write_file",
-                    target.relative_path
-                );
-            }
-        }
+        let existed = validate_write_target(&self.workspace_root, &target, read_fingerprints)?;
 
         let before = snapshot_workspace_paths(&self.workspace_root, [&target.relative_path]);
         write_text_file(&target.absolute_path, &parsed.content)
@@ -142,6 +119,19 @@ impl WriteFileTool {
         ))
     }
 
+    pub fn preflight_path(
+        &self,
+        raw_path: &str,
+        read_fingerprints: &HashMap<String, ReadFingerprint>,
+    ) -> Result<()> {
+        if raw_path.trim().is_empty() {
+            bail!("path is required");
+        }
+        let target = resolve_workspace_file_target(&self.workspace_root, raw_path)?;
+        validate_write_target(&self.workspace_root, &target, read_fingerprints)?;
+        Ok(())
+    }
+
     async fn acquire_write_permit(&self) -> Result<Option<OwnedSemaphorePermit>> {
         let Some(write_lock) = &self.write_lock else {
             return Ok(None);
@@ -165,6 +155,37 @@ struct WriteFileInput {
 struct ResolvedWriteTarget {
     relative_path: String,
     absolute_path: PathBuf,
+}
+
+fn validate_write_target(
+    root: &Path,
+    target: &ResolvedWriteTarget,
+    read_fingerprints: &HashMap<String, ReadFingerprint>,
+) -> Result<bool> {
+    let existed = target.absolute_path.exists();
+    if existed {
+        let metadata = fs::metadata(&target.absolute_path)
+            .with_context(|| format!("unable to read file metadata {}", target.relative_path))?;
+        if !metadata.is_file() {
+            bail!("path is not a file: {}", target.relative_path);
+        }
+        let expected = read_fingerprints
+            .get(&target.relative_path)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "write_file requires a successful read of {} before overwriting it",
+                    target.relative_path
+                )
+            })?;
+        let current = fingerprint_path(root, &target.absolute_path)?;
+        if !fingerprints_match(expected, &current) {
+            bail!(
+                "{} changed since the last successful read; run read on this file before write_file",
+                target.relative_path
+            );
+        }
+    }
+    Ok(existed)
 }
 
 fn resolve_workspace_file_target(root: &Path, raw: &str) -> Result<ResolvedWriteTarget> {
@@ -418,6 +439,22 @@ mod tests {
             fs::read_to_string(root.join("notes.txt")).unwrap(),
             "changed\n"
         );
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn preflight_refuses_existing_file_without_read() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        fs::write(root.join("notes.txt"), "old\n").expect("write file");
+        let tool = WriteFileTool::new(&root);
+
+        let error = tool
+            .preflight_path("notes.txt", &HashMap::new())
+            .expect_err("existing file should require read during preflight");
+
+        assert!(error.to_string().contains("requires a successful read"));
+        assert_eq!(fs::read_to_string(root.join("notes.txt")).unwrap(), "old\n");
         fs::remove_dir_all(root).ok();
     }
 
