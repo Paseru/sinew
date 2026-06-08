@@ -20,7 +20,7 @@ use crate::{
 const MAX_WRITE_FILE_BYTES: usize = 2 * 1024 * 1024;
 
 const WRITE_FILE_DESCRIPTION: &str =
-    r#"Use this tool to write files. Put the path before the content"#;
+    r#"Use this tool to write files. ALWAYS put the "path" before the "content" in the schema"#;
 
 #[derive(Debug, Clone)]
 pub struct WriteFileTool {

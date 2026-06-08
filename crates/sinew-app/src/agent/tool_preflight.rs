@@ -4,9 +4,6 @@ use crate::{tool_names, ReadFingerprint, ToolRunResult, WriteFileTool};
 
 use std::collections::HashMap;
 
-pub(super) const WRITE_FILE_PATH_ORDER_ERROR: &str =
-    "write_file requires `path` before `content` so Sinew can validate overwrite safety before streaming file content. Retry with `path` first.";
-
 #[derive(Debug, Default)]
 pub(super) struct WriteFileStreamPreflight {
     scanner: TopLevelJsonKeyScanner,
@@ -26,21 +23,13 @@ impl WriteFileStreamPreflight {
         }
 
         for event in self.scanner.push(chunk) {
-            match event {
-                TopLevelJsonEvent::ContentBeforePath => {
-                    let result = ToolRunResult::err(WRITE_FILE_PATH_ORDER_ERROR, Vec::new());
+            let TopLevelJsonEvent::Path { value } = event;
+            if !self.path_checked {
+                self.path_checked = true;
+                if let Err(err) = write_file.preflight_path(&value, read_fingerprints) {
+                    let result = ToolRunResult::err(err.to_string(), Vec::new());
                     self.failed = Some(result.clone());
                     return Some(result);
-                }
-                TopLevelJsonEvent::Path { value } => {
-                    if !self.path_checked {
-                        self.path_checked = true;
-                        if let Err(err) = write_file.preflight_path(&value, read_fingerprints) {
-                            let result = ToolRunResult::err(err.to_string(), Vec::new());
-                            self.failed = Some(result.clone());
-                            return Some(result);
-                        }
-                    }
                 }
             }
         }
@@ -55,7 +44,6 @@ impl WriteFileStreamPreflight {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum TopLevelJsonEvent {
-    ContentBeforePath,
     Path { value: String },
 }
 
@@ -63,7 +51,6 @@ enum TopLevelJsonEvent {
 struct TopLevelJsonKeyScanner {
     buffer: String,
     processed_key_count: usize,
-    path_seen: bool,
 }
 
 impl TopLevelJsonKeyScanner {
@@ -73,17 +60,10 @@ impl TopLevelJsonKeyScanner {
         let mut events = Vec::new();
 
         for entry in entries.into_iter().skip(self.processed_key_count) {
-            if entry.key == "content" && !self.path_seen {
-                self.processed_key_count += 1;
-                events.push(TopLevelJsonEvent::ContentBeforePath);
-                break;
-            }
-
             if entry.key == "path" {
                 let Some(value) = entry.value else {
                     break;
                 };
-                self.path_seen = true;
                 self.processed_key_count += 1;
                 events.push(TopLevelJsonEvent::Path { value });
                 continue;
@@ -241,7 +221,7 @@ mod tests {
     use uuid::Uuid;
 
     #[test]
-    fn detects_content_before_path_across_chunks() {
+    fn allows_content_before_path_across_chunks() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         let tool = WriteFileTool::new(&root);
@@ -250,16 +230,13 @@ mod tests {
         assert!(preflight
             .push_chunk("{\"con", &tool, &HashMap::new())
             .is_none());
-        let result = preflight
-            .push_chunk(
-                "tent\":\"hello\",\"path\":\"new.txt\"}",
-                &tool,
-                &HashMap::new(),
-            )
-            .expect("content before path should fail");
+        let result = preflight.push_chunk(
+            "tent\":\"hello\",\"path\":\"new.txt\"}",
+            &tool,
+            &HashMap::new(),
+        );
 
-        assert!(result.is_error);
-        assert_eq!(result.content, WRITE_FILE_PATH_ORDER_ERROR);
+        assert!(result.is_none());
         fs::remove_dir_all(root).ok();
     }
 
@@ -334,14 +311,14 @@ mod tests {
         let part = Part::ToolCall {
             id: "call-1".to_string(),
             name: tool_names::WRITE_FILE.to_string(),
-            input: serde_json::json!({ "value": "{\"content\":" }),
-            meta: Some(serde_json::json!({ "preflight_error": WRITE_FILE_PATH_ORDER_ERROR })),
+            input: serde_json::json!({ "value": "{\"path\":" }),
+            meta: Some(serde_json::json!({ "preflight_error": "preflight failed" })),
         };
 
         let result = preflight_error_result(&part).expect("preflight error result");
 
         assert!(result.is_error);
-        assert_eq!(result.content, WRITE_FILE_PATH_ORDER_ERROR);
+        assert_eq!(result.content, "preflight failed");
     }
 
     fn unique_temp_dir() -> std::path::PathBuf {
