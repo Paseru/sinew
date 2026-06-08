@@ -132,6 +132,7 @@ impl EditFileTool {
         let mut summaries = Vec::new();
         let mut no_change_summaries = Vec::new();
         let mut writes = Vec::new();
+        let mut partial_failure = None;
 
         for group in grouped.values_mut() {
             let expected = read_fingerprints.get(&group.relative_path).ok_or_else(|| {
@@ -151,17 +152,41 @@ impl EditFileTool {
             let original = fs::read_to_string(&group.absolute_path)
                 .with_context(|| format!("unable to read file {}", group.relative_path))?;
             let normalized_original = normalize_file_text(&original);
-            let plan = plan_file_edits(
+            let outcome = match plan_file_edits(
                 &group.relative_path,
                 &normalized_original.content,
                 &group.edits,
-            )?;
+            ) {
+                Ok(outcome) => outcome,
+                Err(err) => {
+                    if summaries.is_empty() && no_change_summaries.is_empty() {
+                        return Err(err);
+                    }
+                    partial_failure = Some(PartialEditFailure {
+                        relative_path: group.relative_path.clone(),
+                        failed_edit_index: 0,
+                        total_edit_count: group.edits.len(),
+                        error: err.to_string(),
+                    });
+                    break;
+                }
+            };
+            let plan = match outcome {
+                FileEditPlanOutcome::Complete(plan) => plan,
+                FileEditPlanOutcome::Partial { plan, failure } => {
+                    partial_failure = Some(failure);
+                    plan
+                }
+            };
             if plan.updated_content == normalized_original.content {
                 no_change_summaries.push(NoChangeFileEditSummary {
                     relative_path: group.relative_path.clone(),
                     replacement_count: plan.replacement_count,
                     skipped_noop_indices: plan.skipped_noop_indices.clone(),
                 });
+                if partial_failure.is_some() {
+                    break;
+                }
                 continue;
             }
 
@@ -176,9 +201,17 @@ impl EditFileTool {
                 group.absolute_path.clone(),
                 updated_content,
             ));
+            if partial_failure.is_some() {
+                break;
+            }
         }
 
         if writes.is_empty() {
+            if let Some(failure) = &partial_failure {
+                let content =
+                    format_partial_edit_failure(failure, &summaries, &no_change_summaries);
+                return Ok(ToolRunResult::err(content, Vec::new()));
+            }
             bail!("{}", format_no_changes_error(&no_change_summaries));
         }
 
@@ -196,6 +229,11 @@ impl EditFileTool {
         }
         let after = snapshot_workspace_paths(&self.workspace_root, &affected_paths);
         let file_changes = diff_snapshots(before, after);
+        if let Some(failure) = &partial_failure {
+            let content = format_partial_edit_failure(failure, &summaries, &no_change_summaries);
+            return Ok(ToolRunResult::err(content, file_changes));
+        }
+
         let updated_fingerprints = writes
             .iter()
             .map(|(_, absolute_path, _)| fingerprint_path(&self.workspace_root, absolute_path))
@@ -368,6 +406,23 @@ struct PlannedFileEdit {
     skipped_noop_indices: Vec<usize>,
 }
 
+#[derive(Debug)]
+enum FileEditPlanOutcome {
+    Complete(PlannedFileEdit),
+    Partial {
+        plan: PlannedFileEdit,
+        failure: PartialEditFailure,
+    },
+}
+
+#[derive(Debug)]
+struct PartialEditFailure {
+    relative_path: String,
+    failed_edit_index: usize,
+    total_edit_count: usize,
+    error: String,
+}
+
 struct FileEditSummary {
     relative_path: String,
     replacement_count: usize,
@@ -429,63 +484,104 @@ fn plan_file_edits(
     relative_path: &str,
     original: &str,
     edits: &[ReplacementInput],
-) -> Result<PlannedFileEdit> {
+) -> Result<FileEditPlanOutcome> {
     let multiple = edits.len() > 1;
     let mut updated_content = original.to_string();
     let mut replacement_count = 0usize;
     let mut skipped_noop_indices = Vec::new();
 
     for (index, edit) in edits.iter().enumerate() {
-        let old_content = normalize_line_endings(&edit.old_content);
-        let new_content = normalize_line_endings(&edit.new_content);
-
-        if old_content.is_empty() {
-            bail!(
-                "{} must not be empty in {relative_path}.",
-                old_content_label(index, multiple)
-            );
+        match plan_single_edit(relative_path, &updated_content, edit, index, multiple) {
+            Ok(SingleEditPlan::NoOp) => {
+                skipped_noop_indices.push(index);
+            }
+            Ok(SingleEditPlan::Replace(replacements)) => {
+                replacement_count += replacements.len();
+                updated_content = apply_replacements(&updated_content, &replacements);
+            }
+            Err(err) => {
+                let plan = PlannedFileEdit {
+                    updated_content,
+                    replacement_count,
+                    skipped_noop_indices,
+                };
+                if plan.replacement_count > 0 || !plan.skipped_noop_indices.is_empty() {
+                    return Ok(FileEditPlanOutcome::Partial {
+                        plan,
+                        failure: PartialEditFailure {
+                            relative_path: relative_path.to_string(),
+                            failed_edit_index: index,
+                            total_edit_count: edits.len(),
+                            error: err.to_string(),
+                        },
+                    });
+                }
+                return Err(err);
+            }
         }
+    }
 
-        if old_content == new_content {
-            skipped_noop_indices.push(index);
-            continue;
-        }
+    Ok(FileEditPlanOutcome::Complete(PlannedFileEdit {
+        updated_content,
+        replacement_count,
+        skipped_noop_indices,
+    }))
+}
 
-        let matched = if edit.replace_all {
-            find_all_replacement_matches(
-                relative_path,
-                &updated_content,
-                &old_content,
-                index,
-                multiple,
-            )?
-        } else {
-            vec![find_unique_replacement_match(
-                relative_path,
-                &updated_content,
-                &old_content,
-                index,
-                multiple,
-            )?]
-        };
+enum SingleEditPlan {
+    NoOp,
+    Replace(Vec<PlannedReplacement>),
+}
 
-        let replacements = matched
+fn plan_single_edit(
+    relative_path: &str,
+    updated_content: &str,
+    edit: &ReplacementInput,
+    index: usize,
+    multiple: bool,
+) -> Result<SingleEditPlan> {
+    let old_content = normalize_line_endings(&edit.old_content);
+    let new_content = normalize_line_endings(&edit.new_content);
+
+    if old_content.is_empty() {
+        bail!(
+            "{} must not be empty in {relative_path}.",
+            old_content_label(index, multiple)
+        );
+    }
+
+    if old_content == new_content {
+        return Ok(SingleEditPlan::NoOp);
+    }
+
+    let matched = if edit.replace_all {
+        find_all_replacement_matches(
+            relative_path,
+            updated_content,
+            &old_content,
+            index,
+            multiple,
+        )?
+    } else {
+        vec![find_unique_replacement_match(
+            relative_path,
+            updated_content,
+            &old_content,
+            index,
+            multiple,
+        )?]
+    };
+
+    Ok(SingleEditPlan::Replace(
+        matched
             .into_iter()
             .map(|matched| PlannedReplacement {
                 start: matched.start,
                 old_len: matched.len,
                 new_content: new_content.clone(),
             })
-            .collect::<Vec<_>>();
-        replacement_count += replacements.len();
-        updated_content = apply_replacements(&updated_content, &replacements);
-    }
-
-    Ok(PlannedFileEdit {
-        updated_content,
-        replacement_count,
-        skipped_noop_indices,
-    })
+            .collect(),
+    ))
 }
 
 fn old_content_label(index: usize, multiple: bool) -> String {
@@ -1177,6 +1273,71 @@ fn format_partial_write_error(
     output
 }
 
+fn format_partial_edit_failure(
+    failure: &PartialEditFailure,
+    summaries: &[FileEditSummary],
+    no_change_summaries: &[NoChangeFileEditSummary],
+) -> String {
+    let failed_ordinal = failure.failed_edit_index + 1;
+    let mut output = format!(
+        "edit_file partially applied: stopped at {} edits[{}] (edit {failed_ordinal}/{}). Error: {}",
+        failure.relative_path, failure.failed_edit_index, failure.total_edit_count, failure.error
+    );
+    output.push_str("\n");
+    output.push_str(&failed_edit_continuation_text(
+        failure.failed_edit_index,
+        failure.total_edit_count,
+    ));
+
+    if summaries.is_empty() {
+        output.push_str("\nNo file changes were written before the failure.");
+    } else {
+        output.push_str("\nChanges written before failure:");
+        for summary in summaries {
+            output.push_str(&format!("\n- {}", file_edit_summary_text(summary)));
+        }
+    }
+
+    if !no_change_summaries.is_empty() {
+        output.push_str("\nFiles processed before failure with no written changes:");
+        for summary in no_change_summaries {
+            output.push_str(&format!("\n- {}", no_change_file_summary_text(summary)));
+        }
+    }
+
+    output
+}
+
+fn failed_edit_continuation_text(failed_edit_index: usize, total_edit_count: usize) -> String {
+    if failed_edit_index + 1 < total_edit_count {
+        format!(
+            "edits[{failed_edit_index}] failed; edits[{}] through edits[{}] were not attempted.",
+            failed_edit_index + 1,
+            total_edit_count - 1
+        )
+    } else {
+        format!("edits[{failed_edit_index}] failed.")
+    }
+}
+
+fn file_edit_summary_text(summary: &FileEditSummary) -> String {
+    format!(
+        "{} ({}{})",
+        summary.relative_path,
+        replacement_count_text(summary.replacement_count),
+        skipped_noop_suffix(&summary.skipped_noop_indices)
+    )
+}
+
+fn no_change_file_summary_text(summary: &NoChangeFileEditSummary) -> String {
+    format!(
+        "{} (no written changes; {}{})",
+        summary.relative_path,
+        replacement_count_text(summary.replacement_count),
+        skipped_noop_suffix(&summary.skipped_noop_indices)
+    )
+}
+
 fn format_no_changes_error(summaries: &[NoChangeFileEditSummary]) -> String {
     if summaries.is_empty() {
         return "No changes made.".to_string();
@@ -1186,7 +1347,7 @@ fn format_no_changes_error(summaries: &[NoChangeFileEditSummary]) -> String {
         let summary = &summaries[0];
         if summary.replacement_count == 0 && !summary.skipped_noop_indices.is_empty() {
             return format!(
-                "No changes made to {}. All requested edits were no-ops: {}.",
+                "No changes made to {}. All requested edits had identical oldContent and newContent: {}.",
                 summary.relative_path,
                 edit_indices_text(&summary.skipped_noop_indices)
             );
@@ -1198,14 +1359,14 @@ fn format_no_changes_error(summaries: &[NoChangeFileEditSummary]) -> String {
             );
         }
         return format!(
-            "No changes made to {}. The requested edits produced identical content; no-op edits: {}.",
+            "No changes made to {}. The requested edits produced identical content; edits with identical oldContent and newContent: {}.",
             summary.relative_path,
             edit_indices_text(&summary.skipped_noop_indices)
         );
     }
 
     let mut output =
-        "No changes made. All requested file edits were no-ops or produced identical content."
+        "No changes made. All requested file edits had identical oldContent and newContent or produced identical content."
             .to_string();
     output.push_str("\nFiles with no changes:");
     for summary in summaries {
@@ -1213,7 +1374,7 @@ fn format_no_changes_error(summaries: &[NoChangeFileEditSummary]) -> String {
             output.push_str(&format!("\n- {}", summary.relative_path));
         } else {
             output.push_str(&format!(
-                "\n- {} (no-op edits: {})",
+                "\n- {} (edits with identical oldContent and newContent: {})",
                 summary.relative_path,
                 edit_indices_text(&summary.skipped_noop_indices)
             ));
@@ -1224,23 +1385,12 @@ fn format_no_changes_error(summaries: &[NoChangeFileEditSummary]) -> String {
 
 fn format_edit_output(summaries: &[FileEditSummary]) -> String {
     if summaries.len() == 1 {
-        let summary = &summaries[0];
-        return format!(
-            "Edited {} ({}{}).",
-            summary.relative_path,
-            replacement_count_text(summary.replacement_count),
-            skipped_noop_suffix(&summary.skipped_noop_indices)
-        );
+        return format!("Edited {}.", file_edit_summary_text(&summaries[0]));
     }
 
     let mut output = format!("Edited {} files:", summaries.len());
     for summary in summaries {
-        output.push_str(&format!(
-            "\n- {} ({}{})",
-            summary.relative_path,
-            replacement_count_text(summary.replacement_count),
-            skipped_noop_suffix(&summary.skipped_noop_indices)
-        ));
+        output.push_str(&format!("\n- {}", file_edit_summary_text(summary)));
     }
     output
 }
@@ -1254,7 +1404,7 @@ fn skipped_noop_suffix(indices: &[usize]) -> String {
         String::new()
     } else {
         format!(
-            "; skipped {} no-op edit{}: {}",
+            "; skipped {} edit{} because oldContent and newContent are identical: {}",
             indices.len(),
             if indices.len() == 1 { "" } else { "s" },
             edit_indices_text(indices)
@@ -1638,33 +1788,36 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rejects_empty_old_content_for_multiple_edits() {
+    async fn partially_applies_previous_edits_when_later_old_content_is_empty() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         fs::write(root.join("app.rs"), "a\nb\n").expect("write file");
         let tool = EditFileTool::new(&root);
         let fingerprints = fingerprints(&root, &["app.rs"]);
 
-        let error = tool
+        let result = tool
             .edit(
                 json!({
                     "files": [{
                         "path": "app.rs",
                         "edits": [
                             {"oldContent": "a", "newContent": "A"},
-                            {"oldContent": "", "newContent": "B"}
+                            {"oldContent": "", "newContent": "B"},
+                            {"oldContent": "b", "newContent": "B"}
                         ]
                     }]
                 }),
                 &fingerprints,
             )
             .await
-            .expect_err("empty old content should fail");
+            .expect("partial edit failure should be reported as a tool result");
 
+        assert!(result.is_error);
         assert_eq!(
-            error.to_string(),
-            "edits[1].oldContent must not be empty in app.rs."
+            result.content,
+            "edit_file partially applied: stopped at app.rs edits[1] (edit 2/3). Error: edits[1].oldContent must not be empty in app.rs.\nedits[1] failed; edits[2] through edits[2] were not attempted.\nChanges written before failure:\n- app.rs (1 replacement)"
         );
+        assert_eq!(fs::read_to_string(root.join("app.rs")).unwrap(), "A\nb\n");
         fs::remove_dir_all(root).ok();
     }
 
@@ -1697,34 +1850,37 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rejects_missing_old_content_for_multiple_edits_without_writing() {
+    async fn partially_applies_previous_edits_when_later_old_content_is_missing() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         fs::write(root.join("app.rs"), "a\nb\n").expect("write file");
         let tool = EditFileTool::new(&root);
         let fingerprints = fingerprints(&root, &["app.rs"]);
 
-        let error = tool
+        let result = tool
             .edit(
                 json!({
                     "files": [{
                         "path": "app.rs",
                         "edits": [
                             {"oldContent": "a", "newContent": "A"},
-                            {"oldContent": "missing", "newContent": "B"}
+                            {"oldContent": "missing", "newContent": "B"},
+                            {"oldContent": "b", "newContent": "B"}
                         ]
                     }]
                 }),
                 &fingerprints,
             )
             .await
-            .expect_err("missing old content should fail");
+            .expect("partial edit failure should be reported as a tool result");
 
+        assert!(result.is_error);
         assert_eq!(
-            error.to_string(),
-            "Could not find edits[1] in app.rs after applying previous edits. No exact, fuzzy, or whitespace-tolerant match was found for oldContent."
+            result.content,
+            "edit_file partially applied: stopped at app.rs edits[1] (edit 2/3). Error: Could not find edits[1] in app.rs after applying previous edits. No exact, fuzzy, or whitespace-tolerant match was found for oldContent.\nedits[1] failed; edits[2] through edits[2] were not attempted.\nChanges written before failure:\n- app.rs (1 replacement)"
         );
-        assert_eq!(fs::read_to_string(root.join("app.rs")).unwrap(), "a\nb\n");
+        assert_eq!(fs::read_to_string(root.join("app.rs")).unwrap(), "A\nb\n");
+        assert_eq!(result.file_changes.len(), 1);
         fs::remove_dir_all(root).ok();
     }
 
@@ -1757,32 +1913,40 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rejects_non_unique_old_content_for_multiple_edits() {
+    async fn partially_applies_previous_edits_when_later_old_content_is_non_unique() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         fs::write(root.join("app.rs"), "first\nsame\nsame\n").expect("write file");
         let tool = EditFileTool::new(&root);
         let fingerprints = fingerprints(&root, &["app.rs"]);
 
-        let error = tool
+        let result = tool
             .edit(
                 json!({
                     "files": [{
                         "path": "app.rs",
                         "edits": [
                             {"oldContent": "first", "newContent": "changed"},
-                            {"oldContent": "same", "newContent": "other"}
+                            {"oldContent": "same", "newContent": "other"},
+                            {"oldContent": "changed", "newContent": "done"}
                         ]
                     }]
                 }),
                 &fingerprints,
             )
             .await
-            .expect_err("non unique old content should fail");
+            .expect("partial edit failure should be reported as a tool result");
 
+        assert!(result.is_error);
+        assert!(result.content.contains(
+            "edit_file partially applied: stopped at app.rs edits[1] (edit 2/3). Error: Found 2 occurrences of edits[1] in app.rs. Each oldContent must be unique. Please provide more context to make it unique."
+        ));
+        assert!(result
+            .content
+            .contains("edits[1] failed; edits[2] through edits[2] were not attempted."));
         assert_eq!(
-            error.to_string(),
-            "Found 2 occurrences of edits[1] in app.rs. Each oldContent must be unique. Please provide more context to make it unique."
+            fs::read_to_string(root.join("app.rs")).unwrap(),
+            "changed\nsame\nsame\n"
         );
         fs::remove_dir_all(root).ok();
     }
@@ -1842,7 +2006,7 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            "No changes made to app.rs. All requested edits were no-ops: edits[0]."
+            "No changes made to app.rs. All requested edits had identical oldContent and newContent: edits[0]."
         );
         assert_eq!(fs::read_to_string(root.join("app.rs")).unwrap(), "a\n");
         fs::remove_dir_all(root).ok();
@@ -1879,7 +2043,7 @@ mod tests {
         );
         assert_eq!(
             result.content,
-            "Edited app.rs (2 replacements; skipped 1 no-op edit: edits[1])."
+            "Edited app.rs (2 replacements; skipped 1 edit because oldContent and newContent are identical: edits[1])."
         );
         assert_eq!(result.file_changes.len(), 1);
         fs::remove_dir_all(root).ok();

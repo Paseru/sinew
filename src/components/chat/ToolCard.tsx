@@ -1082,20 +1082,23 @@ export function ToolCard({
 
   const renderedFileChanges = fileChanges ?? (liveFileChange ? [liveFileChange] : undefined);
   const isLiveFileChange = !fileChanges && !!liveFileChange;
-
-  if (
+  const showBareFileChanges =
     (isEditFile || isWriteFile) &&
-    !isError &&
-    renderedFileChanges &&
-    renderedFileChanges.length > 0
-  ) {
+    !!renderedFileChanges &&
+    renderedFileChanges.length > 0;
+  const renderFileChanges = (bare = false) => {
+    if (!renderedFileChanges || renderedFileChanges.length === 0) return null;
     return (
-      <div className="tool-card__changes" data-bare="true">
+      <div className="tool-card__changes" data-bare={bare ? "true" : undefined}>
         {renderedFileChanges.map((change, idx) => (
           <FileChangeBlock key={idx} change={change} live={isLiveFileChange} />
         ))}
       </div>
     );
+  };
+
+  if (showBareFileChanges && !isError) {
+    return renderFileChanges(true);
   }
 
   const searchTitle = isGrep
@@ -1126,10 +1129,13 @@ export function ToolCard({
       ? summary
       : canonicalName;
   const hasChanges = !!renderedFileChanges && renderedFileChanges.length > 0;
+  const showChangesInBody = hasChanges && !showBareFileChanges;
+  const forceShowErrorBody = showBareFileChanges && !!isError;
   const canExpand =
     !(isContextCompaction && status === "running") &&
     !(isEditFile && status === "running");
-  const showBody = canExpand && open && (!isTeamRunSpawn || !teamRunActive);
+  const showBody =
+    canExpand && (open || forceShowErrorBody) && (!isTeamRunSpawn || !teamRunActive);
   const showTeamStop =
     isTeamRunSpawn &&
     !!teamRunActive &&
@@ -1157,7 +1163,7 @@ export function ToolCard({
     }
   };
 
-  return (
+  const card = (
     <div className="tool-card">
       <div
         className="tool-card__head"
@@ -1312,15 +1318,20 @@ export function ToolCard({
               ))}
             </div>
           )}
-          {hasChanges && (
-            <div className="tool-card__changes">
-              {renderedFileChanges!.map((change, idx) => (
-                <FileChangeBlock key={idx} change={change} live={isLiveFileChange} />
-              ))}
-            </div>
-          )}
+          {showChangesInBody && renderFileChanges(false)}
         </div>
       )}
     </div>
   );
+
+  if (showBareFileChanges && isError) {
+    return (
+      <>
+        {renderFileChanges(true)}
+        {card}
+      </>
+    );
+  }
+
+  return card;
 }
