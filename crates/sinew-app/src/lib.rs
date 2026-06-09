@@ -6,6 +6,8 @@ pub mod glob;
 pub mod grep;
 pub mod image;
 pub mod mcp;
+#[cfg(windows)]
+mod powershell;
 pub mod question;
 pub mod read;
 mod ripgrep;
@@ -33,6 +35,8 @@ pub use glob::GlobTool;
 pub use grep::GrepTool;
 pub use image::CreateImageTool;
 pub use mcp::{probe_mcp_servers, McpServerProbe, McpSettings, McpToolRegistry};
+#[cfg(windows)]
+pub use powershell::{ensure_powershell_7_executable, find_powershell_7_executable};
 pub use question::QuestionTool;
 pub use read::{ReadFingerprint, ReadTool};
 pub use skill::{

@@ -67,6 +67,7 @@ Code map:
 │   │       ├── image.rs
 │   │       ├── lib.rs
 │   │       ├── mcp.rs
+│   │       ├── powershell.rs
 │   │       ├── question.rs
 │   │       ├── read.rs
 │   │       ├── skill.rs

@@ -68,7 +68,7 @@ impl ShellKind {
             #[cfg(not(windows))]
             Self::Bash => "Bash",
             #[cfg(windows)]
-            Self::PowerShell => "PowerShell",
+            Self::PowerShell => "PowerShell 7+",
         }
     }
 
@@ -77,7 +77,7 @@ impl ShellKind {
             #[cfg(not(windows))]
             Self::Bash => "Run a Bash command.",
             #[cfg(windows)]
-            Self::PowerShell => "Run a Windows PowerShell command.",
+            Self::PowerShell => "Run a PowerShell 7+ command.",
         }
     }
 
@@ -93,7 +93,7 @@ impl ShellKind {
             #[cfg(not(windows))]
             Self::Bash => "bash",
             #[cfg(windows)]
-            Self::PowerShell => "PowerShell",
+            Self::PowerShell => "PowerShell 7+",
         }
     }
 }
@@ -105,7 +105,7 @@ pub fn active_shell_display_name() -> &'static str {
 pub fn shell_system_prompt() -> &'static str {
     #[cfg(windows)]
     {
-        "Shell environment: Windows. The `bash` tool is backed by Windows PowerShell, not Bash. Use PowerShell commands and syntax (`Get-ChildItem`, `Select-String`, `Get-Content`, `$env:VAR`, `;`, PowerShell pipelines). Do not use POSIX-only syntax such as `ls -la`, `grep`, `sed`, `awk`, `cat file | head`, or `/bin/bash` unless you explicitly know a compatibility layer is installed."
+        "Shell environment: Windows. The `bash` tool is backed by PowerShell 7+, not Bash or Windows PowerShell 5.1. Use PowerShell commands and syntax (`Get-ChildItem`, `Select-String`, `Get-Content`, `$env:VAR`, `;`, PowerShell pipelines). Do not use POSIX-only syntax such as `ls -la`, `grep`, `sed`, `awk`, `cat file | head`, or `/bin/bash` unless you explicitly know a compatibility layer is installed."
     }
     #[cfg(not(windows))]
     {
@@ -200,7 +200,10 @@ impl BashTool {
             .min(max_lifetime);
 
         let before = snapshot_workspace(&self.workspace_root);
-        let mut session = match self.spawn_session(parsed.command, cwd, max_lifetime, before) {
+        let mut session = match self
+            .spawn_session(parsed.command, cwd, max_lifetime, before)
+            .await
+        {
             Ok(session) => session,
             Err(err) => return ToolRunResult::err(err.to_string(), Vec::new()),
         };
@@ -304,7 +307,7 @@ impl BashTool {
         }
     }
 
-    fn spawn_session(
+    async fn spawn_session(
         &self,
         command: String,
         cwd: PathBuf,
@@ -313,9 +316,15 @@ impl BashTool {
     ) -> Result<BashSession> {
         #[cfg(windows)]
         {
-            return spawn_windows_piped_session(command, cwd, max_lifetime, before, || {
-                self.next_session_id.fetch_add(1, Ordering::Relaxed)
-            });
+            let shell_program = crate::powershell::ensure_powershell_7_executable().await?;
+            return spawn_windows_piped_session(
+                shell_program,
+                command,
+                cwd,
+                max_lifetime,
+                before,
+                || self.next_session_id.fetch_add(1, Ordering::Relaxed),
+            );
         }
 
         #[cfg(not(windows))]
@@ -515,6 +524,7 @@ fn encode_powershell_command(command: &str) -> String {
 
 #[cfg(windows)]
 fn spawn_windows_piped_session(
+    shell_program: PathBuf,
     command: String,
     cwd: PathBuf,
     max_lifetime: Duration,
@@ -522,7 +532,7 @@ fn spawn_windows_piped_session(
     next_id: impl FnOnce() -> u64,
 ) -> Result<BashSession> {
     let script = powershell_script(&command);
-    let mut cmd = Command::new(windows_powershell_program());
+    let mut cmd = Command::new(&shell_program);
     cmd.arg("-NoLogo")
         .arg("-NoProfile")
         .arg("-ExecutionPolicy")
@@ -535,6 +545,7 @@ fn spawn_windows_piped_session(
         .env("PAGER", "cat")
         .env("GIT_PAGER", "cat")
         .env("GH_PAGER", "cat")
+        .env("POWERSHELL_TELEMETRY_OPTOUT", "1")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -592,20 +603,6 @@ fn spawn_windows_piped_session(
         started_at: Instant::now(),
         max_lifetime,
     })
-}
-
-#[cfg(windows)]
-fn windows_powershell_program() -> PathBuf {
-    std::env::var_os("SystemRoot")
-        .map(PathBuf::from)
-        .map(|root| {
-            root.join("System32")
-                .join("WindowsPowerShell")
-                .join("v1.0")
-                .join("powershell.exe")
-        })
-        .filter(|path| path.is_file())
-        .unwrap_or_else(|| PathBuf::from("powershell.exe"))
 }
 
 #[cfg(windows)]

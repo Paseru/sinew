@@ -50,7 +50,7 @@ pub(super) async fn spawn_terminal(
         ))
         .map_err(error_to_string)?;
 
-    let mut command = default_terminal_command();
+    let mut command = default_terminal_command().await.map_err(error_to_string)?;
     command.cwd(workspace_root.as_os_str());
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
@@ -91,19 +91,21 @@ pub(super) async fn spawn_terminal(
     Ok(TerminalSpawnOutput { session_id })
 }
 
-fn default_terminal_command() -> CommandBuilder {
+async fn default_terminal_command() -> Result<CommandBuilder> {
     #[cfg(windows)]
     {
-        let mut command = CommandBuilder::new("powershell.exe");
+        let shell = sinew_app::ensure_powershell_7_executable().await?;
+        let mut command = CommandBuilder::new(shell.as_os_str());
         command.arg("-NoLogo");
         command.arg("-NoProfile");
         command.arg("-ExecutionPolicy");
         command.arg("Bypass");
-        command
+        command.env("POWERSHELL_TELEMETRY_OPTOUT", "1");
+        Ok(command)
     }
     #[cfg(not(windows))]
     {
-        CommandBuilder::new_default_prog()
+        Ok(CommandBuilder::new_default_prog())
     }
 }
 

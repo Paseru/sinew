@@ -15,7 +15,7 @@ use tokio::{
 };
 
 use crate::{
-    ripgrep::ripgrep_executable,
+    ripgrep::ensure_ripgrep_executable,
     tool_names,
     tool_run::ToolRunResult,
     workspace::{normalize_workspace_relative_path, resolve_workspace_path},
@@ -93,9 +93,10 @@ impl GlobTool {
 
         let limit = requested_limit.min(MAX_LIMIT);
         let target = self.resolve_target(parsed.path.as_deref())?;
+        let rg_path = ensure_ripgrep_executable().await?;
         let result = timeout(
             self.timeout,
-            self.run_ripgrep_files(pattern, &target.arg, limit),
+            self.run_ripgrep_files(&rg_path, pattern, &target.arg, limit),
         )
         .await
         .map_err(|_| {
@@ -151,11 +152,12 @@ impl GlobTool {
 
     async fn run_ripgrep_files(
         &self,
+        rg_path: &Path,
         pattern: &str,
         target: &str,
         limit: usize,
     ) -> Result<GlobSearchResult> {
-        let mut command = Command::new(ripgrep_executable());
+        let mut command = Command::new(rg_path);
         command
             .arg("--files")
             .arg("--hidden")
@@ -492,7 +494,7 @@ mod tests {
     }
 
     fn ripgrep_available() -> bool {
-        StdCommand::new(ripgrep_executable())
+        StdCommand::new(crate::ripgrep::ripgrep_executable())
             .arg("--version")
             .output()
             .map(|output| output.status.success())

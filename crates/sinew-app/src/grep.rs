@@ -19,7 +19,7 @@ use tokio::{
 };
 
 use crate::{
-    ripgrep::ripgrep_executable,
+    ripgrep::ensure_ripgrep_executable,
     tool_names,
     tool_run::ToolRunResult,
     workspace::{normalize_workspace_relative_path, resolve_workspace_path},
@@ -83,7 +83,7 @@ impl GrepTool {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": MAX_LIMIT,
-                        "description": "Required maximum number of matches to show. Hard-capped at 500."
+                        "description": "Required output limit. In context mode this caps displayed result lines (like head -n); in matches/files/count modes this caps output items. Hard-capped at 500."
                     },
                     "offset": {
                         "type": "integer",
@@ -229,7 +229,8 @@ impl GrepTool {
         let output_mode = config.output_mode;
         let limit = config.limit;
         let offset = config.offset;
-        let result = timeout(self.timeout, self.run_ripgrep(config))
+        let rg_path = ensure_ripgrep_executable().await?;
+        let result = timeout(self.timeout, self.run_ripgrep(&rg_path, config))
             .await
             .map_err(|_| anyhow::anyhow!("grep timed out after {}s", self.timeout.as_secs()))??;
 
@@ -292,8 +293,8 @@ impl GrepTool {
         })
     }
 
-    async fn run_ripgrep(&self, config: GrepRunConfig) -> Result<GrepSearchResult> {
-        let mut command = Command::new(ripgrep_executable());
+    async fn run_ripgrep(&self, rg_path: &Path, config: GrepRunConfig) -> Result<GrepSearchResult> {
+        let mut command = Command::new(rg_path);
         command
             .arg("--json")
             .arg("--line-number")
@@ -353,6 +354,8 @@ impl GrepTool {
 
         let mut reader = TokioBufReader::new(stdout).lines();
         let mut context_matches = Vec::new();
+        let mut context_output_lines = 0usize;
+        let mut context_page_full = false;
         let mut match_texts = Vec::new();
         let mut seen_match_texts = (config.output_mode == GrepOutputMode::Matches && config.unique)
             .then(HashSet::<String>::new);
@@ -403,15 +406,32 @@ impl GrepTool {
             match config.output_mode {
                 GrepOutputMode::Context => {
                     let item_index = total_line_matches - 1;
-                    if in_window(item_index, config.offset, config.limit) {
+                    if item_index >= config.offset && !context_page_full {
                         if config.context.has_surrounding_lines() {
                             entry.attach_context(&self.workspace_root, config.context)?;
                         }
-                        context_matches.push(entry);
-                    }
-                    if should_stop_early(&config, total_line_matches) {
-                        stopped_early = true;
-                        break;
+                        let output_line_count = entry.output_line_count();
+                        let fits_in_page = context_matches.is_empty()
+                            || context_output_lines.saturating_add(output_line_count)
+                                <= config.limit;
+                        if fits_in_page {
+                            context_output_lines =
+                                context_output_lines.saturating_add(output_line_count);
+                            context_matches.push(entry);
+                            if context_output_lines >= config.limit {
+                                context_page_full = true;
+                                if !config.exhaustive {
+                                    stopped_early = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            context_page_full = true;
+                            if !config.exhaustive {
+                                stopped_early = true;
+                                break;
+                            }
+                        }
                     }
                 }
                 GrepOutputMode::Matches => {
@@ -479,6 +499,7 @@ impl GrepTool {
 
         Ok(GrepSearchResult {
             context_matches,
+            context_output_lines,
             match_texts,
             files,
             counts,
@@ -636,6 +657,7 @@ struct GrepTargets {
 #[derive(Debug)]
 struct GrepSearchResult {
     context_matches: Vec<GrepMatch>,
+    context_output_lines: usize,
     match_texts: Vec<String>,
     files: Vec<String>,
     counts: Vec<GrepFileCount>,
@@ -669,6 +691,13 @@ struct GrepContextLine {
 impl GrepMatch {
     fn match_count(&self) -> usize {
         self.matched_texts.len().max(1)
+    }
+
+    fn output_line_count(&self) -> usize {
+        self.before_lines
+            .len()
+            .saturating_add(1)
+            .saturating_add(self.after_lines.len())
     }
 
     fn attach_context(&mut self, root: &Path, context: GrepContext) -> Result<()> {
@@ -856,6 +885,15 @@ fn format_output(
     }
     if offset > 0 || shown < total_items {
         output.push_str(&format!("shown: {shown}\n"));
+    }
+    if output_mode == GrepOutputMode::Context && shown > 0 {
+        if result.context_output_lines != shown {
+            output.push_str(&format!("shown_lines: {}\n", result.context_output_lines));
+        }
+        let next_offset = offset.saturating_add(shown);
+        if result.partial || next_offset < total_items {
+            output.push_str(&format!("next_offset: {next_offset}\n"));
+        }
     }
 
     if total_items == 0 {
@@ -1475,6 +1513,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn grep_context_limit_caps_displayed_lines_not_matches() {
+        if !ripgrep_available() {
+            return;
+        }
+
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        let root = root.canonicalize().expect("canonical temp workspace");
+        fs::write(
+            root.join("items.txt"),
+            "pre 1\nneedle 1\npost 1\npre 2\nneedle 2\npost 2\npre 3\nneedle 3\npost 3\n",
+        )
+        .expect("write file");
+
+        let tool = GrepTool::new(&root);
+        let result = tool
+            .search(json!({
+                "pattern": "needle",
+                "before": 1,
+                "after": 1,
+                "limit": 3
+            }))
+            .await
+            .expect("grep should cap context output lines");
+
+        assert!(result.contains("matches: 3"));
+        assert!(result.contains("shown: 1"));
+        assert!(result.contains("shown_lines: 3"));
+        assert!(result.contains("next_offset: 1"));
+        assert!(payload(&result).contains("pre 1"));
+        assert!(payload(&result).contains("needle 1"));
+        assert!(payload(&result).contains("post 1"));
+        assert!(!payload(&result).contains("needle 2"));
+        assert!(!payload(&result).contains("needle 3"));
+
+        let next = tool
+            .search(json!({
+                "pattern": "needle",
+                "before": 1,
+                "after": 1,
+                "limit": 3,
+                "offset": 1
+            }))
+            .await
+            .expect("grep should paginate by match offset");
+
+        assert!(next.contains("offset: 1"));
+        assert!(next.contains("shown: 1"));
+        assert!(next.contains("shown_lines: 3"));
+        assert!(next.contains("next_offset: 2"));
+        assert!(!payload(&next).contains("needle 1"));
+        assert!(payload(&next).contains("needle 2"));
+        assert!(!payload(&next).contains("needle 3"));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
     async fn grep_supports_multiline_patterns() {
         if !ripgrep_available() {
             return;
@@ -1583,7 +1679,7 @@ mod tests {
     }
 
     fn ripgrep_available() -> bool {
-        StdCommand::new(ripgrep_executable())
+        StdCommand::new(crate::ripgrep::ripgrep_executable())
             .arg("--version")
             .output()
             .map(|output| output.status.success())

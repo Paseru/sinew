@@ -3931,9 +3931,11 @@ name = "sinew-app"
 version = "0.1.34"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.22.1",
  "directories",
  "eventsource-stream",
+ "flate2",
  "futures-util",
  "kuchikiki",
  "portable-pty",
@@ -3947,10 +3949,12 @@ dependencies = [
  "similar",
  "sinew-core",
  "sinew-openai",
+ "tar",
  "tokio",
  "tracing",
  "uuid",
  "walkdir",
+ "zip",
 ]
 
 [[package]]
@@ -6393,6 +6397,7 @@ checksum = "caa8cd6af31c3b31c6631b8f483848b91589021b28fffe50adada48d4f4d2ed1"
 dependencies = [
  "arbitrary",
  "crc32fast",
+ "flate2",
  "indexmap 2.14.0",
  "memchr",
 ]
