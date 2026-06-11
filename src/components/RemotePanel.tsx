@@ -56,183 +56,203 @@ export function RemotePanel({ initialStatus = null, onStatusChange }: Props) {
     };
   }, [applyStatus]);
 
-  const setEnabled = useCallback(async (enabled: boolean) => {
-    setBusy(true);
-    try {
-      applyStatus(await api.remoteSetEnabled(enabled));
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setBusy(false);
-    }
-  }, [applyStatus]);
+  const runAction = useCallback(
+    async (action: () => Promise<RemoteStatus>) => {
+      setBusy(true);
+      try {
+        applyStatus(await action());
+        setError(null);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [applyStatus],
+  );
 
-  const startPairing = useCallback(async () => {
-    setBusy(true);
-    try {
-      applyStatus(await api.remoteStartPairing());
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setBusy(false);
-    }
-  }, [applyStatus]);
+  const setEnabled = useCallback(
+    (enabled: boolean) => runAction(() => api.remoteSetEnabled(enabled)),
+    [runAction],
+  );
+  const startPairing = useCallback(
+    () => runAction(() => api.remoteStartPairing()),
+    [runAction],
+  );
+  const stopPairing = useCallback(
+    () => runAction(() => api.remoteStopPairing()),
+    [runAction],
+  );
 
-  const stopPairing = useCallback(async () => {
-    setBusy(true);
-    try {
-      applyStatus(await api.remoteStopPairing());
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setBusy(false);
-    }
-  }, [applyStatus]);
+  const revokeDevice = useCallback(
+    (device: RemoteDevice) => {
+      if (
+        !window.confirm(
+          `Revoke ${device.name}? It loses access immediately and must pair again.`,
+        )
+      ) {
+        return;
+      }
+      void runAction(() => api.remoteRevokeDevice(device.id));
+    },
+    [runAction],
+  );
 
-  const revokeDevice = useCallback(async (device: RemoteDevice) => {
-    if (!window.confirm(`Revoke ${device.name}? This device will lose access immediately.`)) {
-      return;
-    }
-    setBusy(true);
-    try {
-      applyStatus(await api.remoteRevokeDevice(device.id));
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setBusy(false);
-    }
-  }, [applyStatus]);
-
+  const enabled = status?.enabled ?? false;
   const pairing = status?.pairing ?? null;
-  const activeDevices = status?.devices.filter((device) => !device.revokedAtMs) ?? [];
-  const revokedDevices = status?.devices.filter((device) => device.revokedAtMs) ?? [];
+  const devices = status?.devices ?? [];
+  const activeDevices = devices.filter((device) => !device.revokedAtMs);
+  const revokedDevices = devices.filter((device) => device.revokedAtMs);
+  const onlineCount = activeDevices.filter((device) => device.connected).length;
 
   return (
     <div className="remote-panel">
-      <section className="remote-panel__hero">
-        <div>
-          <p className="remote-panel__eyebrow">Remote</p>
-          <h1>Control Sinew from your phone</h1>
-          <p>
-            The phone PWA connects through remote.sinew-ide.com while content stays
-            end-to-end encrypted between this PC and paired devices.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="settings-pane__switch remote-panel__main-switch"
-          role="switch"
-          aria-checked={status?.enabled ?? false}
-          data-on={status?.enabled ? "true" : "false"}
-          disabled={busy || !status}
-          onClick={() => setEnabled(!(status?.enabled ?? false))}
-          title={status?.enabled ? "Disable Remote" : "Enable Remote"}
-        >
-          <span className="settings-pane__switch-thumb" />
-        </button>
-      </section>
-
-      <section className="remote-panel__grid">
-        <InfoCard
-          icon="solar:cloud-check-linear"
-          label="Relay"
-          value={status?.relayConnected ? "Connected" : "Offline"}
-          tone={status?.relayConnected ? "ok" : "muted"}
-        />
-        <InfoCard
-          icon="solar:smartphone-2-linear"
-          label="Devices online"
-          value={`${activeDevices.filter((device) => device.connected).length}/${activeDevices.length}`}
-          tone={activeDevices.some((device) => device.connected) ? "ok" : "muted"}
-        />
-        <InfoCard
-          icon="solar:shield-keyhole-linear"
-          label="PC identity"
-          value={status?.pcId ?? "—"}
-          tone="muted"
-        />
-      </section>
-
-      <section className="remote-panel__section">
-        <div className="remote-panel__section-head">
-          <div>
-            <h2>Pairing</h2>
-            <p>The 6-digit code is accepted only while this screen is open.</p>
+      <div className="remote-panel__inner">
+        <header className="remote-panel__head">
+          <div className="remote-panel__head-text">
+            <h1>Remote</h1>
+            <p>
+              Drive Sinew chat from a paired phone over remote.sinew-ide.com.
+              Messages stay end-to-end encrypted between this PC and your devices.
+            </p>
           </div>
           <button
             type="button"
-            className="settings-pane__btn"
-            data-primary={!pairing ? "true" : "false"}
-            disabled={busy || !status?.enabled}
-            onClick={pairing ? stopPairing : startPairing}
+            className="remote-panel__switch"
+            role="switch"
+            aria-checked={enabled}
+            data-on={enabled ? "true" : "false"}
+            disabled={busy || !status}
+            onClick={() => setEnabled(!enabled)}
+            title={enabled ? "Disable Remote" : "Enable Remote"}
           >
-            {pairing ? "Close pairing" : "Open pairing"}
+            <span className="remote-panel__switch-thumb" />
           </button>
+        </header>
+
+        <div className="remote-panel__status" role="list">
+          <StatusChip
+            icon="solar:cloud-linear"
+            label="Relay"
+            value={status?.relayConnected ? "Connected" : "Offline"}
+            tone={status?.relayConnected ? "ok" : "off"}
+          />
+          <StatusChip
+            icon="solar:smartphone-linear"
+            label="Devices"
+            value={
+              activeDevices.length === 0
+                ? "None paired"
+                : `${onlineCount}/${activeDevices.length} online`
+            }
+            tone={onlineCount > 0 ? "ok" : "off"}
+          />
+          <StatusChip
+            icon="solar:shield-check-linear"
+            label="Reachable"
+            value={status?.reachable ? "Yes" : "No"}
+            tone={status?.reachable ? "ok" : "off"}
+          />
         </div>
-        {pairing ? (
-          <div className="remote-panel__pairing">
-            <div className="remote-panel__code" aria-label="Pairing code">
-              {pairing.code.split("").map((digit, index) => (
-                <span key={`${digit}-${index}`}>{digit}</span>
+
+        <section className="remote-panel__block">
+          <div className="remote-panel__block-head">
+            <div>
+              <h2>Pairing</h2>
+              <p>The 6-digit code is accepted only while this screen is open.</p>
+            </div>
+            <button
+              type="button"
+              className="settings-pane__btn"
+              data-primary={enabled && !pairing ? "true" : "false"}
+              disabled={busy || !enabled}
+              onClick={pairing ? stopPairing : startPairing}
+            >
+              {pairing ? "Close" : "Open pairing"}
+            </button>
+          </div>
+
+          {pairing ? (
+            <div className="remote-panel__pairing">
+              <div className="remote-panel__code" aria-label="Pairing code">
+                {pairing.code.split("").map((digit, index) => (
+                  <span key={`${digit}-${index}`}>{digit}</span>
+                ))}
+              </div>
+              <QrCode value={pairing.qrUrl} />
+              <div className="remote-panel__pairing-copy">
+                <span>Scan the code, or open this link on the phone:</span>
+                <a href={pairing.qrUrl}>{pairing.qrUrl}</a>
+                <small>
+                  {pairing.attemptsRemaining} attempt
+                  {pairing.attemptsRemaining === 1 ? "" : "s"} left before lockout.
+                </small>
+              </div>
+            </div>
+          ) : (
+            <p className="remote-panel__hint">
+              {enabled
+                ? "Open pairing to reveal a fresh code and QR for a new phone."
+                : "Enable Remote first, then open pairing to add a device."}
+            </p>
+          )}
+        </section>
+
+        <section className="remote-panel__block">
+          <div className="remote-panel__block-head">
+            <div>
+              <h2>Paired devices</h2>
+              <p>Revoke instantly if a phone is lost, sold, or replaced.</p>
+            </div>
+          </div>
+
+          {activeDevices.length === 0 ? (
+            <p className="remote-panel__hint">No devices are paired yet.</p>
+          ) : (
+            <div className="remote-panel__devices">
+              {activeDevices.map((device) => (
+                <DeviceRow
+                  key={device.id}
+                  device={device}
+                  busy={busy}
+                  onRevoke={() => revokeDevice(device)}
+                />
               ))}
             </div>
-            <QrCode value={pairing.qrUrl} />
-            <div className="remote-panel__pairing-copy">
-              <span>Scan the QR or open:</span>
-              <a href={pairing.qrUrl}>{pairing.qrUrl}</a>
-              <small>{pairing.attemptsRemaining} attempts remaining</small>
-            </div>
-          </div>
-        ) : (
-          <div className="remote-panel__empty">Pairing is closed.</div>
-        )}
-      </section>
-
-      <section className="remote-panel__section">
-        <div className="remote-panel__section-head">
-          <div>
-            <h2>Paired devices</h2>
-            <p>Revoke a device immediately if a phone is lost or replaced.</p>
-          </div>
-        </div>
-        <div className="remote-panel__devices">
-          {activeDevices.length === 0 ? (
-            <div className="remote-panel__empty">No paired devices yet.</div>
-          ) : (
-            activeDevices.map((device) => (
-              <DeviceRow
-                key={device.id}
-                device={device}
-                busy={busy}
-                onRevoke={() => revokeDevice(device)}
-              />
-            ))
           )}
-        </div>
-        {revokedDevices.length > 0 && (
-          <details className="remote-panel__revoked">
-            <summary>{revokedDevices.length} revoked</summary>
-            {revokedDevices.map((device) => (
-              <DeviceRow key={device.id} device={device} busy={true} revoked />
-            ))}
-          </details>
-        )}
-      </section>
 
-      {error && (
-        <button type="button" className="remote-panel__error" onClick={() => setError(null)}>
-          {error}
-        </button>
-      )}
+          {revokedDevices.length > 0 && (
+            <details className="remote-panel__revoked">
+              <summary>
+                {revokedDevices.length} revoked device
+                {revokedDevices.length === 1 ? "" : "s"}
+              </summary>
+              <div className="remote-panel__devices">
+                {revokedDevices.map((device) => (
+                  <DeviceRow key={device.id} device={device} busy revoked />
+                ))}
+              </div>
+            </details>
+          )}
+        </section>
+
+        {error && (
+          <button
+            type="button"
+            className="remote-panel__error"
+            onClick={() => setError(null)}
+            title="Dismiss"
+          >
+            <Icon icon="solar:danger-triangle-linear" width={14} height={14} />
+            <span>{error}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-function InfoCard({
+function StatusChip({
   icon,
   label,
   value,
@@ -241,13 +261,13 @@ function InfoCard({
   icon: string;
   label: string;
   value: string;
-  tone: "ok" | "muted";
+  tone: "ok" | "off";
 }) {
   return (
-    <div className="remote-panel__info" data-tone={tone}>
-      <Icon icon={icon} width={17} height={17} />
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="remote-panel__chip" data-tone={tone} role="listitem">
+      <Icon icon={icon} width={15} height={15} />
+      <span className="remote-panel__chip-label">{label}</span>
+      <span className="remote-panel__chip-value">{value}</span>
     </div>
   );
 }
@@ -263,38 +283,42 @@ function DeviceRow({
   revoked?: boolean;
   onRevoke?: () => void;
 }) {
+  const connected = !revoked && device.connected;
   return (
     <div
       className="remote-panel__device"
       data-revoked={revoked ? "true" : "false"}
-      data-connected={!revoked && device.connected ? "true" : "false"}
+      data-connected={connected ? "true" : "false"}
     >
-      <div className="remote-panel__device-main">
-        <span className="remote-panel__device-icon">
-          <Icon icon="solar:smartphone-2-linear" width={16} height={16} />
+      <span className="remote-panel__device-icon">
+        <Icon icon="solar:smartphone-linear" width={16} height={16} />
+      </span>
+      <div className="remote-panel__device-text">
+        <strong>{device.name}</strong>
+        <span>
+          {revoked
+            ? "Revoked"
+            : connected
+              ? "Connected now"
+              : device.lastSeenAtMs
+                ? `Last seen ${formatDate(device.lastSeenAtMs)}`
+                : `Paired ${formatDate(device.pairedAtMs)}`}
         </span>
-        <div className="remote-panel__device-text">
-          <strong>{device.name}</strong>
-          <span className="remote-panel__device-status">
-            {revoked
-              ? "Revoked"
-              : device.connected
-                ? "Connected now"
-                : device.lastSeenAtMs
-                  ? `Last seen ${formatDate(device.lastSeenAtMs)}`
-                  : "Not seen yet"}
-          </span>
-        </div>
       </div>
       <div className="remote-panel__device-actions">
         {device.pushEnabled && !revoked && (
-          <span className="remote-panel__device-push">
+          <span className="remote-panel__device-push" title="Push notifications enabled">
             <Icon icon="solar:bell-linear" width={12} height={12} />
             Push
           </span>
         )}
         {!revoked && (
-          <button type="button" className="settings-pane__btn" disabled={busy} onClick={onRevoke}>
+          <button
+            type="button"
+            className="settings-pane__btn"
+            disabled={busy}
+            onClick={onRevoke}
+          >
             Revoke
           </button>
         )}
@@ -304,8 +328,12 @@ function DeviceRow({
 }
 
 function QrCode({ value }: { value: string }) {
-  const src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(value)}`;
-  return <img className="remote-panel__qr" src={src} alt="Remote pairing QR code" />;
+  const src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=0&data=${encodeURIComponent(value)}`;
+  return (
+    <div className="remote-panel__qr">
+      <img src={src} alt="Pairing QR code" width={112} height={112} />
+    </div>
+  );
 }
 
 function formatDate(ms: number) {

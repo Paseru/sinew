@@ -305,6 +305,7 @@ export function Workspace({
   const [activeTabIndex, setActiveTabIndex] = useState<number>(-1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [remoteOpen, setRemoteOpen] = useState(false);
+  const [remoteActive, setRemoteActive] = useState(false);
   const [settingsActive, setSettingsActive] = useState(false);
   const [remoteStatus, setRemoteStatus] = useState<RemoteStatus | null>(null);
   const [fileTreeRefreshToken, setFileTreeRefreshToken] = useState(0);
@@ -477,7 +478,7 @@ export function Workspace({
       if (existing >= 0) {
         setActiveTabIndex(existing);
         setSettingsActive(false);
-        setRemoteOpen(false);
+        setRemoteActive(false);
         queueReveal();
         return;
       }
@@ -496,13 +497,13 @@ export function Workspace({
           if (existingIndex >= 0) {
             setActiveTabIndex(existingIndex);
             setSettingsActive(false);
-            setRemoteOpen(false);
+            setRemoteActive(false);
             return prev;
           }
           const next = [...prev, newTab];
           setActiveTabIndex(next.length - 1);
           setSettingsActive(false);
-          setRemoteOpen(false);
+          setRemoteActive(false);
           return next;
         });
         queueReveal();
@@ -516,11 +517,11 @@ export function Workspace({
   const activateFileTab = useCallback((index: number) => {
     setActiveTabIndex(index);
     setSettingsActive(false);
-    setRemoteOpen(false);
+    setRemoteActive(false);
   }, []);
 
   const openSettings = useCallback((section?: "providers") => {
-    setRemoteOpen(false);
+    setRemoteActive(false);
     setSettingsOpen(true);
     setSettingsActive(true);
     // Pickup hook for SettingsPane: when the caller wants to land on a
@@ -579,7 +580,7 @@ export function Workspace({
       if (existing >= 0) {
         setActiveTabIndex(existing);
         setSettingsActive(false);
-        setRemoteOpen(false);
+        setRemoteActive(false);
         queueReveal();
         return;
       }
@@ -599,13 +600,13 @@ export function Workspace({
           if (existingIndex >= 0) {
             setActiveTabIndex(existingIndex);
             setSettingsActive(false);
-            setRemoteOpen(false);
+            setRemoteActive(false);
             return prev;
           }
           const next = [...prev, newTab];
           setActiveTabIndex(next.length - 1);
           setSettingsActive(false);
-          setRemoteOpen(false);
+          setRemoteActive(false);
           return next;
         });
         queueReveal();
@@ -690,9 +691,14 @@ export function Workspace({
     });
   }, []);
 
+  const closeRemote = useCallback(() => {
+    setRemoteOpen(false);
+    setRemoteActive(false);
+  }, []);
+
   const closeActiveEditorTab = useCallback(() => {
-    if (remoteOpen) {
-      setRemoteOpen(false);
+    if (remoteActive) {
+      closeRemote();
       return;
     }
     if (settingsActive) {
@@ -700,7 +706,7 @@ export function Workspace({
       return;
     }
     if (activeTabIndex >= 0) closeTab(activeTabIndex);
-  }, [activeTabIndex, closeSettings, closeTab, remoteOpen, settingsActive]);
+  }, [activeTabIndex, closeRemote, closeSettings, closeTab, remoteActive, settingsActive]);
 
   const handleTreeEntryRenamed = useCallback(
     (oldRelativePath: string, entry: WorkspaceEntry) => {
@@ -1642,6 +1648,7 @@ export function Workspace({
       setSettingsOpen(false);
       setSettingsActive(false);
       setRemoteOpen(false);
+      setRemoteActive(false);
       setFileSearchOpen(false);
       setPendingRootCreate(null);
       setEditorRevealTarget(null);
@@ -1755,7 +1762,7 @@ export function Workspace({
   );
 
   const activeFilePath =
-    !settingsActive && !remoteOpen && activeTabIndex >= 0 && tabs[activeTabIndex]
+    !settingsActive && !remoteActive && activeTabIndex >= 0 && tabs[activeTabIndex]
       ? tabs[activeTabIndex].relativePath
       : null;
   const terminalVisible = terminalAvailable && terminalOpen;
@@ -1781,18 +1788,19 @@ export function Workspace({
         >
           <button
             className="titlebar__btn titlebar__btn--remote"
-            data-on={remoteOpen || remoteStatus?.enabled ? "true" : "false"}
-            data-connected={remoteStatus?.devices.some((device) => device.connected) ? "true" : "false"}
+            data-on={remoteActive || remoteStatus?.enabled ? "true" : "false"}
             onClick={() => {
               setRemoteOpen(true);
+              setRemoteActive(true);
               setSettingsActive(false);
-              setSettingsOpen(false);
-              setActiveTabIndex(-1);
             }}
             title="Remote access"
           >
             <Icon icon="solar:smartphone-2-linear" width={12} height={12} />
             Remote
+            {remoteStatus?.devices.some((device) => device.connected) && (
+              <span className="titlebar__btn-dot" aria-hidden />
+            )}
           </button>
           <button
             className="titlebar__btn"
@@ -2025,7 +2033,7 @@ export function Workspace({
         <div className="workbench-center">
           <div
             className="editor-shell"
-            data-hidden={(terminalVisible && terminalFullHeight) || remoteOpen ? "true" : "false"}
+            data-hidden={terminalVisible && terminalFullHeight ? "true" : "false"}
           >
             <EditorPane
               tabs={tabs}
@@ -2038,23 +2046,28 @@ export function Workspace({
               settingsOpen={settingsOpen}
               settingsActive={settingsActive}
               settingsView={<SettingsPane workspacePath={workspacePath} />}
+              remoteOpen={remoteOpen}
+              remoteActive={remoteActive}
+              remoteView={
+                <RemotePanel
+                  initialStatus={remoteStatus}
+                  onStatusChange={setRemoteStatus}
+                />
+              }
+              onRemoteActivate={() => {
+                setRemoteActive(true);
+                setSettingsActive(false);
+              }}
+              onRemoteClose={closeRemote}
               revealTarget={editorRevealTarget}
               onSettingsActivate={() => {
-                setRemoteOpen(false);
+                setRemoteActive(false);
                 setSettingsActive(true);
               }}
               onSettingsClose={closeSettings}
             />
           </div>
-          {remoteOpen && (
-            <div className="remote-shell">
-              <RemotePanel
-                initialStatus={remoteStatus}
-                onStatusChange={setRemoteStatus}
-              />
-            </div>
-          )}
-          {terminalVisible && !terminalFullHeight && !remoteOpen && (
+          {terminalVisible && !terminalFullHeight && (
             <Splitter
               orientation="horizontal"
               onDelta={(delta) =>
@@ -2066,13 +2079,13 @@ export function Workspace({
             className="terminal-shell"
             data-full-height={terminalFullHeight ? "true" : "false"}
             style={{
-              display: terminalVisible && !remoteOpen ? "block" : "none",
-              height: terminalVisible && !remoteOpen
+              display: terminalVisible ? "block" : "none",
+              height: terminalVisible
                 ? terminalFullHeight
                   ? "auto"
                   : terminalHeight
                 : 0,
-              flex: terminalVisible && !remoteOpen
+              flex: terminalVisible
                 ? terminalFullHeight
                   ? "1 1 0"
                   : `0 0 ${terminalHeight}px`
@@ -2092,7 +2105,7 @@ export function Workspace({
               />
             )}
           </div>
-          {terminalAvailable && !terminalOpen && !remoteOpen && (
+          {terminalAvailable && !terminalOpen && (
             <div className="terminal-restore">
               <button
                 type="button"

@@ -15,6 +15,18 @@ Code map:
 ├── package-lock.json
 ├── package.json
 ├── README.md
+├── remote
+│   ├── README.md
+│   ├── server.mjs
+│   ├── package.json
+│   └── public
+│       ├── app.js
+│       ├── index.html
+│       ├── manifest.webmanifest
+│       ├── styles.css
+│       ├── sw.js
+│       └── icons
+│           └── icon.svg
 ├── test-stop.md
 ├── scripts
 │   └── prepare-sidecars.mjs
@@ -231,6 +243,7 @@ Code map:
 │       ├── models.rs
 │       ├── platform.rs
 │       ├── providers.rs
+│       ├── remote.rs
 │       ├── state.rs
 │       ├── swarm.rs
 │       ├── terminal.rs
@@ -250,6 +263,7 @@ Code map:
     │   ├── EditorPane.tsx
     │   ├── FileTree.tsx
     │   ├── GitPanel.tsx
+    │   ├── RemotePanel.tsx
     │   ├── SearchPane.tsx
     │   ├── SettingsPane.tsx
     │   ├── SinewMark.tsx

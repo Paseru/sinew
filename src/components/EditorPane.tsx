@@ -52,6 +52,11 @@ type Props = {
   settingsOpen?: boolean;
   settingsActive?: boolean;
   settingsView?: ReactNode;
+  remoteOpen?: boolean;
+  remoteActive?: boolean;
+  remoteView?: ReactNode;
+  onRemoteActivate?: () => void;
+  onRemoteClose?: () => void;
   revealTarget?: EditorRevealTarget | null;
   onSettingsActivate?: () => void;
   onSettingsClose?: () => void;
@@ -68,6 +73,11 @@ export function EditorPane({
   settingsOpen = false,
   settingsActive = false,
   settingsView,
+  remoteOpen = false,
+  remoteActive = false,
+  remoteView,
+  onRemoteActivate,
+  onRemoteClose,
   revealTarget,
   onSettingsActivate,
   onSettingsClose,
@@ -89,12 +99,14 @@ export function EditorPane({
   const [imageMenu, setImageMenu] = useState<{ x: number; y: number } | null>(
     null,
   );
-  const activeTab: EditorTab | undefined = settingsActive ? undefined : tabs[activeIndex];
+  const activeTab: EditorTab | undefined =
+    settingsActive || remoteActive ? undefined : tabs[activeIndex];
   // Close the image context menu whenever the user switches tabs or
-  // toggles into the settings view, so it never lingers on the wrong file.
+  // toggles into the settings / remote view, so it never lingers on the
+  // wrong file.
   useEffect(() => {
     setImageMenu(null);
-  }, [activeIndex, settingsActive]);
+  }, [activeIndex, settingsActive, remoteActive]);
 
   const activeIsMarkdown = activeTab
     ? isMarkdownPath(activeTab.relativePath)
@@ -317,7 +329,7 @@ export function EditorPane({
           <div
             key={tab.relativePath}
             className="tab"
-            data-active={!settingsActive && index === activeIndex ? "true" : "false"}
+            data-active={!settingsActive && !remoteActive && index === activeIndex ? "true" : "false"}
             onClick={() => onActivate(index)}
             title={tab.relativePath}
           >
@@ -361,6 +373,29 @@ export function EditorPane({
             </button>
           </div>
         )}
+        {remoteOpen && (
+          <div
+            className="tab"
+            data-active={remoteActive ? "true" : "false"}
+            onClick={onRemoteActivate}
+            title="Remote"
+          >
+            <span className="tab__icon">
+              <Icon icon="solar:smartphone-2-linear" width={14} height={14} />
+            </span>
+            <span className="tab__name">Remote</span>
+            <button
+              className="tab__close"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRemoteClose?.();
+              }}
+              title="Close tab"
+            >
+              <Icon icon="solar:close-circle-linear" width={13} height={13} />
+            </button>
+          </div>
+        )}
         <div className="tabs__spacer" />
         {activeIsMarkdown && (
           <button
@@ -397,7 +432,15 @@ export function EditorPane({
             {settingsView}
           </div>
         )}
-        {!settingsActive &&
+        {remoteOpen && (
+          <div
+            className="editor-settings-layer"
+            data-active={remoteActive ? "true" : "false"}
+          >
+            {remoteView}
+          </div>
+        )}
+        {!settingsActive && !remoteActive &&
           (!activeTab ? (
             <div className="editor-empty">
               <span className="editor-empty__mark">

@@ -300,6 +300,11 @@ class RemoteClient {
     this.connect();
   }
 
+  announce() {
+    if (!this.session) return false;
+    return this.send({ kind: "phone_hello", pcId: this.session.pcId, deviceId: this.session.deviceId, protocolVersion: REMOTE_PROTOCOL_VERSION });
+  }
+
   connect() {
     if (this.closed) return;
     this.onStatus({ relay: "connecting" });
@@ -307,9 +312,7 @@ class RemoteClient {
     this.ws = ws;
     ws.onopen = () => {
       this.onStatus({ relay: "connected" });
-      if (this.session) {
-        this.send({ kind: "phone_hello", pcId: this.session.pcId, deviceId: this.session.deviceId, protocolVersion: REMOTE_PROTOCOL_VERSION });
-      }
+      if (this.session) this.announce();
     };
     ws.onmessage = (event) => void this.handleFrame(JSON.parse(event.data));
     ws.onclose = () => {
@@ -329,7 +332,9 @@ class RemoteClient {
     const keyPair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
     const publicRaw = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
     this.pairing = { keyPair, publicRaw, code };
-    this.send({ kind: "phone_pair_request", code, deviceName, phonePublicKey: bytesToBase64(publicRaw) });
+    if (!this.send({ kind: "phone_pair_request", code, deviceName, phonePublicKey: bytesToBase64(publicRaw) })) {
+      throw new Error("Relay offline");
+    }
   }
 
   async handleFrame(frame) {
@@ -365,7 +370,7 @@ class RemoteClient {
       saveSession(this.session);
       this.key = await importAesKey(this.session.deviceSecret);
       this.onPairingResponse({ ok: true });
-      this.send({ kind: "phone_hello", pcId: this.session.pcId, deviceId: this.session.deviceId, protocolVersion: REMOTE_PROTOCOL_VERSION });
+      this.announce();
       return;
     }
     if (frame.kind === "pc_cipher") {
@@ -377,6 +382,7 @@ class RemoteClient {
           this.pending.delete(payload.request_id);
           payload.ok ? pending.resolve(payload.data) : pending.reject(new Error(payload.error || "Remote command failed"));
         }
+        return;
       } else {
         this.onPayload(payload);
       }
@@ -387,8 +393,6 @@ class RemoteClient {
     if (!this.session || !this.key) throw new Error("Not paired");
     const id = requestId();
     const envelope = await encryptJson(this.key, { requestId: id, token: this.session.deviceToken, command });
-    const sent = this.send({ kind: "phone_cipher", deviceId: this.session.deviceId, envelope });
-    if (!sent) throw new Error("Relay offline");
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
@@ -404,6 +408,12 @@ class RemoteClient {
           reject(err);
         },
       });
+      const sent = this.send({ kind: "phone_cipher", deviceId: this.session.deviceId, envelope });
+      if (!sent) {
+        clearTimeout(timeout);
+        this.pending.delete(id);
+        reject(new Error("Relay offline"));
+      }
     });
   }
 }
@@ -561,8 +571,7 @@ function App() {
         if (payload.type === "device_revoked") {
           clearSession();
           setSession(null);
-          setBootstrap(null);
-          setActiveConv(null);
+          clearLocalConversationState();
         }
       },
     });
@@ -584,6 +593,14 @@ function App() {
   const canReachPc = Boolean(status.pcReachable);
   const showInstallHint = Boolean(session && !installHintDismissed && !isStandaloneDisplay());
 
+  function clearLocalConversationState() {
+    setBootstrap(null);
+    setConversations([]);
+    setActiveConv(null);
+    setLiveEventsByConversation(new Map());
+    setActiveTurns([]);
+  }
+
   async function doPair(event) {
     event.preventDefault();
     setPairing(true);
@@ -597,6 +614,7 @@ function App() {
   }
 
   async function openConversationById(id) {
+    if (!canReachPc) return;
     try {
       const conversation = await clientRef.current.command({ type: "load_conversation", conversation_id: id });
       setActiveConv(conversation);
@@ -621,6 +639,7 @@ function App() {
   }
 
   async function createConversation() {
+    if (!canReachPc) return;
     try {
       const next = await clientRef.current.command({ type: "create_conversation" });
       setConversations(next.conversations || []);
@@ -632,6 +651,7 @@ function App() {
   }
 
   async function deleteConversation(id) {
+    if (!canReachPc) return;
     if (!confirm("Delete this conversation?")) return;
     try {
       const next = await clientRef.current.command({ type: "delete_conversation", conversation_id: id });
@@ -647,21 +667,13 @@ function App() {
     event.preventDefault();
     if (!prompt.trim() || !activeConv || sendPending || !canReachPc) return;
     const files = attachments;
-    setAttachments([]);
     const encoded = [];
+    const text = prompt;
     setSendPending(true);
     try {
       for (const file of files) {
         encoded.push({ name: file.name, mediaType: file.type || "application/octet-stream", data: await fileToBase64(file) });
       }
-      const text = prompt;
-      setPrompt("");
-      setLiveEventsByConversation((current) => {
-        const next = new Map(current);
-        next.set(activeConv.id, [{ type: "turn_started" }]);
-        return next;
-      });
-      setActiveConv((current) => current ? { ...current, history: [...current.history, { role: "user", parts: [{ type: "text", text }] }] } : current);
       await clientRef.current.command({
         type: "send_message",
         conversation_id: activeConv.id,
@@ -671,9 +683,16 @@ function App() {
         model: activeConv.modeModelSettings?.[mode] || activeConv.model,
         thinking: thinkingFromModel(activeConv.modeModelSettings?.[mode] || activeConv.model),
       });
+      setPrompt("");
+      setAttachments([]);
+      setLiveEventsByConversation((current) => {
+        const next = new Map(current);
+        if (!next.has(activeConv.id)) next.set(activeConv.id, [{ type: "turn_started" }]);
+        return next;
+      });
+      setActiveConv((current) => current ? { ...current, history: [...current.history, { role: "user", parts: [{ type: "text", text }] }] } : current);
       await refresh();
     } catch (err) {
-      setAttachments(files);
       setError(String(err.message || err));
     } finally {
       setSendPending(false);
@@ -682,7 +701,7 @@ function App() {
 
   async function setConversationMode(nextMode) {
     setMode(nextMode);
-    if (!activeConv) return;
+    if (!activeConv || !canReachPc) return;
     try {
       const updated = await clientRef.current.command({ type: "set_conversation_mode", conversation_id: activeConv.id, mode: nextMode });
       setActiveConv(updated);
@@ -733,7 +752,7 @@ function App() {
   }
 
   async function enablePush() {
-    if (!clientRef.current?.session || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!clientRef.current?.session || !canReachPc || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
     try {
       setPushState("requesting");
       const registration = await navigator.serviceWorker.ready;
@@ -749,11 +768,26 @@ function App() {
     }
   }
 
+  function dismissInstallHint() {
+    localStorage.setItem(INSTALL_HINT_KEY, "true");
+    setInstallHintDismissed(true);
+  }
+
+  function retryConnection() {
+    setError(null);
+    const client = clientRef.current;
+    if (!client) return;
+    const announced = client.announce();
+    if (!announced && client.ws?.readyState !== WebSocket.CONNECTING) {
+      client.connect();
+    }
+    if (statusRef.current.pcReachable) void refresh();
+  }
+
   function logout() {
     clearSession();
     setSession(null);
-    setBootstrap(null);
-    setActiveConv(null);
+    clearLocalConversationState();
   }
 
   if (!session) {
@@ -777,48 +811,75 @@ function App() {
   return (
     React.createElement("main", { className: "remote-app" },
       React.createElement("header", { className: "topbar" },
-        React.createElement("div", null,
+        React.createElement("div", { className: "topbar__title" },
           React.createElement("strong", null, bootstrap?.workspace?.name || "Sinew"),
-          React.createElement("span", { className: status.pcReachable ? "online" : "offline" }, status.pcReachable ? "PC reachable" : "PC unreachable")
+          React.createElement("span", { className: canReachPc ? "online" : "offline" }, canReachPc ? "PC reachable" : `PC unreachable · relay ${status.relay}`)
         ),
-        React.createElement("button", { onClick: logout, className: "ghost" }, "Forget")
+        React.createElement("div", { className: "topbar__actions" },
+          React.createElement("button", { onClick: enablePush, className: pushState === "enabled" ? "pill ok" : "pill", disabled: !canReachPc || pushState === "requesting" }, pushState === "enabled" ? "Push on" : pushState === "requesting" ? "Enabling…" : "Enable push"),
+          React.createElement("button", { onClick: logout, className: "ghost" }, "Forget")
+        )
       ),
       error && React.createElement("button", { className: "toast", onClick: () => setError(null) }, error),
-      !status.pcReachable && React.createElement("section", { className: "offline-panel" }, React.createElement("h2", null, "PC unreachable"), React.createElement("p", null, "Keep Sinew open on your PC with Remote enabled."), React.createElement("button", { onClick: refresh }, "Retry")),
+      showInstallHint && React.createElement("section", { className: "install-card" },
+        React.createElement("div", null,
+          React.createElement("h2", null, "Install Sinew Remote"),
+          React.createElement("p", null, isIosDevice()
+            ? "For notifications on iPhone, add this app to your Home Screen first, then enable push from here."
+            : "Install the PWA for a full-screen chat and reliable response-ready notifications."),
+          React.createElement("small", null, "Notification text stays generic; conversation details are decrypted only when you open the app.")
+        ),
+        React.createElement("button", { type: "button", className: "ghost", onClick: dismissInstallHint }, "Got it")
+      ),
+      !canReachPc && React.createElement("section", { className: "offline-panel" },
+        React.createElement("h2", null, "PC unreachable"),
+        React.createElement("p", null, "Keep Sinew open on your PC with Remote enabled. Messages stay on this phone until the PC confirms the request."),
+        React.createElement("button", { onClick: retryConnection }, "Retry connection")
+      ),
       React.createElement("div", { className: "mobile-layout" },
         React.createElement("aside", { className: "conversation-rail" },
           React.createElement("div", { className: "rail-actions" },
-            React.createElement("button", { onClick: createConversation }, "+ New"),
-            React.createElement("button", { onClick: enablePush, disabled: pushState === "requesting" }, pushState === "enabled" ? "Push on" : "Enable push")
+            React.createElement("button", { onClick: createConversation, disabled: !canReachPc }, "+ New"),
+            React.createElement("button", { onClick: refresh, disabled: !canReachPc }, "Refresh")
           ),
-          conversations.map((conversation) => React.createElement("button", { key: conversation.id, className: conversation.id === activeConv?.id ? "conv active" : "conv", onClick: () => openConversationById(conversation.id) },
+          conversations.length === 0 && React.createElement("p", { className: "rail-empty" }, canReachPc ? "No conversations yet." : "Conversations will load when the PC is reachable."),
+          conversations.map((conversation) => React.createElement("button", { key: conversation.id, disabled: !canReachPc, className: conversation.id === activeConv?.id ? "conv active" : "conv", onClick: () => openConversationById(conversation.id) },
             React.createElement("span", null, conversation.title || "New conversation"),
-            React.createElement("small", null, activeTurns.some((turn) => turn.conversationId === conversation.id) ? "Streaming" : ""),
-            React.createElement("i", { onClick: (event) => { event.stopPropagation(); void deleteConversation(conversation.id); } }, "×")
+            React.createElement("small", null, activeTurns.some((turn) => turn.conversationId === conversation.id) ? "Streaming" : new Date(conversation.updatedAtMs || Date.now()).toLocaleDateString()),
+            React.createElement("i", { role: "button", "aria-label": "Delete conversation", onClick: (event) => { event.stopPropagation(); void deleteConversation(conversation.id); } }, "×")
           ))
         ),
         React.createElement("section", { className: "chat-shell" },
           activeConv ? React.createElement(React.Fragment, null,
             React.createElement("div", { className: "chat-head" },
-              React.createElement("div", null, React.createElement("h2", null, activeConv.title || "Conversation"), isStreaming && React.createElement("span", { className: "streaming" }, "Streaming")),
-              React.createElement("div", { className: "modes" }, MODES.map((m) => React.createElement("button", { key: m, className: mode === m ? "selected" : "", onClick: () => setConversationMode(m) }, modeLabels[m]))),
-              React.createElement("button", { className: "ghost", onClick: compact }, "Compact")
+              React.createElement("div", null,
+                React.createElement("h2", null, activeConv.title || "Conversation"),
+                React.createElement("span", { className: isStreaming ? "streaming" : "chat-head__meta" }, isStreaming ? "Streaming live" : sendPending ? "Waiting for PC confirmation" : "Encrypted remote chat")
+              ),
+              React.createElement("button", { className: "ghost", disabled: !canReachPc || sendPending, onClick: compact }, "Compact"),
+              React.createElement("div", { className: "modes" }, MODES.map((m) => React.createElement("button", { key: m, disabled: !canReachPc, className: mode === m ? "selected" : "", onClick: () => setConversationMode(m) }, modeLabels[m])))
             ),
             React.createElement("div", { className: "messages" },
+              blocks.length === 0 && React.createElement("div", { className: "empty-message" }, "Start the conversation from your phone."),
               blocks.map((block, index) => {
                 if (block.kind === "user") return React.createElement("article", { key: index, className: "bubble user" }, block.text);
                 if (block.kind === "assistant") return React.createElement("article", { key: index, className: "bubble assistant", dangerouslySetInnerHTML: htmlFromMarkdown(block.text) });
                 if (block.kind === "thinking") return React.createElement("details", { key: index, className: "thinking" }, React.createElement("summary", null, "Thinking"), React.createElement("pre", null, block.text));
                 if (block.kind === "tool") {
                   const questions = block.name === "question" ? parseQuestionArgs(block.argsPretty || block.args) : [];
+                  const canAnswer = questions.length > 0 && block.status !== "done" && block.status !== "error";
                   return React.createElement("article", { key: index, className: `tool ${block.status}` },
                     React.createElement("strong", null, block.summary || block.name || "Tool"),
                     block.output && React.createElement("pre", null, block.output),
-                    questions.length > 0 && React.createElement("div", { className: "questions" },
-                      questions.map((q, i) => React.createElement("p", { key: i }, q.question)),
-                      React.createElement("button", { onClick: () => answerQuestion(block, questions, false) }, "Answer"),
-                      mode === "plan" && React.createElement("button", { onClick: () => answerQuestion(block, questions, true) }, "Answer & stop questions")
-                    )
+                    canAnswer && React.createElement(QuestionToolPanel, {
+                      block,
+                      questions,
+                      disabled: !canReachPc,
+                      pending: questionPendingId === block.id,
+                      allowStopQuestions: mode === "plan",
+                      onSubmit: answerQuestion,
+                      onReject: rejectQuestion,
+                    })
                   );
                 }
                 if (block.kind === "error") return React.createElement("article", { key: index, className: "bubble error" }, block.text);
@@ -827,11 +888,14 @@ function App() {
             ),
             React.createElement("form", { className: "composer", onSubmit: sendPrompt },
               attachments.length > 0 && React.createElement("div", { className: "attachments" }, attachments.map((file, index) => React.createElement("span", { key: `${file.name}-${index}` }, file.name))),
-              React.createElement("textarea", { rows: 3, value: prompt, onChange: (e) => setPrompt(e.target.value), placeholder: status.pcReachable ? "Message Sinew…" : "PC unreachable" }),
-              React.createElement("label", { className: "attach" }, "Attach", React.createElement("input", { type: "file", multiple: true, onChange: (e) => setAttachments(Array.from(e.target.files || [])) })),
-              React.createElement("button", { disabled: !prompt.trim() || !status.pcReachable }, "Send")
+              sendPending && React.createElement("div", { className: "composer__pending" }, "Waiting for the PC to accept this message…"),
+              React.createElement("textarea", { rows: 3, value: prompt, disabled: !canReachPc || sendPending, onChange: (e) => setPrompt(e.target.value), placeholder: canReachPc ? "Message Sinew…" : "PC unreachable" }),
+              React.createElement("label", { className: "attach", "data-disabled": !canReachPc || sendPending ? "true" : "false" }, "Attach", React.createElement("input", { type: "file", multiple: true, disabled: !canReachPc || sendPending, onChange: (e) => setAttachments(Array.from(e.target.files || [])) })),
+              React.createElement("button", { disabled: !prompt.trim() || !canReachPc || sendPending }, sendPending ? "Sending…" : "Send")
             )
-          ) : React.createElement("div", { className: "empty" }, React.createElement("button", { onClick: refresh }, "Load conversations"))
+          ) : React.createElement("div", { className: "empty" },
+            React.createElement("button", { onClick: refresh, disabled: !canReachPc }, canReachPc ? "Load conversations" : "Waiting for PC")
+          )
         )
       )
     )

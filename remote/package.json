@@ -1,0 +1,17 @@
+{
+  "name": "sinew-remote-relay",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Sinew Remote relay: routes opaque E2E frames between a paired phone and its PC, and serves the mobile PWA.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "web-push": "3.6.7",
+    "ws": "8.21.0"
+  }
+}
