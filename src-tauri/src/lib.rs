@@ -232,6 +232,15 @@ pub fn run() {
             start_remote_if_enabled(app.handle());
             Ok(())
         })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::Destroyed => {
+                remove_window_workspace(&window.app_handle(), window.label().to_string());
+            }
+            tauri::WindowEvent::Focused(true) => {
+                focus_window_workspace(&window.app_handle(), window.label().to_string());
+            }
+            _ => {}
+        })
         .on_menu_event(|app, event| {
             if event.id() == CLOSE_ACTIVE_TAB_MENU_ID {
                 let windows = app.webview_windows();

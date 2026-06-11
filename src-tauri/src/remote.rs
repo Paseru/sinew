@@ -15,6 +15,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 const REMOTE_SETTINGS_KEY: &str = "remote_settings_v1";
 pub(super) const REMOTE_STATUS_EVENT_NAME: &str = "remote-status-changed";
+pub(super) const CONVERSATIONS_CHANGED_EVENT_NAME: &str = "conversations-changed";
 const DEFAULT_RELAY_WS_URL: &str = "wss://remote.sinew-ide.com/ws";
 const PAIRING_CODE_TTL_MS: i64 = 5 * 60 * 1000;
 const PAIRING_MAX_ATTEMPTS: u32 = 5;
@@ -93,6 +94,7 @@ struct RemoteRuntimeInner {
     seen_request_ids: HashSet<String>,
     pairing: Option<PairingWindow>,
     current_workspace: Option<String>,
+    open_workspaces: HashMap<String, String>,
     connect_generation: u64,
 }
 
@@ -112,6 +114,7 @@ impl RemoteRuntime {
                 seen_request_ids: HashSet::new(),
                 pairing: None,
                 current_workspace: None,
+                open_workspaces: HashMap::new(),
                 connect_generation: 0,
             })),
             relay_tx: Arc::new(Mutex::new(None)),
@@ -638,10 +641,27 @@ impl RemoteRuntime {
         envelope: RemotePhoneEnvelope,
     ) -> Result<Value> {
         let state = app.state::<DesktopState>();
-        let workspace_path = self
-            .current_workspace()
-            .await
-            .ok_or_else(|| anyhow::anyhow!("no workspace is open on this PC"))?;
+        let (current_workspace, mut open_workspaces) = self.workspace_view().await;
+        let workspace_path = match envelope.workspace.as_deref() {
+            Some(requested) if !requested.is_empty() => {
+                if open_workspaces.iter().any(|id| id == requested)
+                    || current_workspace.as_deref() == Some(requested)
+                {
+                    requested.to_string()
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "this workspace is no longer open on the PC"
+                    ));
+                }
+            }
+            _ => current_workspace
+                .clone()
+                .or_else(|| open_workspaces.first().cloned())
+                .ok_or_else(|| anyhow::anyhow!("no workspace is open on this PC"))?,
+        };
+        if open_workspaces.is_empty() {
+            open_workspaces.push(workspace_path.clone());
+        }
 
         match envelope.command {
             RemotePhoneCommand::Bootstrap => {
@@ -649,8 +669,18 @@ impl RemoteRuntime {
                 let active_turns = turns::list_active_turns(state)
                     .await
                     .map_err(|err| anyhow::anyhow!(err))?;
+                let workspaces: Vec<Value> = open_workspaces
+                    .iter()
+                    .map(|id| {
+                        json!({
+                            "path": id,
+                            "name": workspace_display_name(id),
+                        })
+                    })
+                    .collect();
                 Ok(json!({
                     "workspacePath": workspace_path,
+                    "workspaces": workspaces,
                     "bootstrap": bootstrap,
                     "activeTurns": active_turns,
                 }))
@@ -675,6 +705,7 @@ impl RemoteRuntime {
                 )
                 .await
                 .map_err(|err| anyhow::anyhow!(err))?;
+                emit_conversations_changed(app, &workspace_path);
                 Ok(serde_json::to_value(bootstrap)?)
             }
             RemotePhoneCommand::LoadConversation { conversation_id } => {
@@ -699,6 +730,7 @@ impl RemoteRuntime {
                 )
                 .await
                 .map_err(|err| anyhow::anyhow!(err))?;
+                emit_conversations_changed(app, &workspace_path);
                 Ok(serde_json::to_value(bootstrap)?)
             }
             RemotePhoneCommand::SetConversationMode {
@@ -838,10 +870,6 @@ impl RemoteRuntime {
         }
     }
 
-    async fn current_workspace(&self) -> Option<String> {
-        let inner = self.inner.lock().await;
-        inner.current_workspace.clone()
-    }
 
     async fn save_push_subscription(
         &self,
@@ -1011,9 +1039,39 @@ impl RemoteRuntime {
         let _ = app.emit(REMOTE_STATUS_EVENT_NAME, status);
     }
 
-    pub(super) async fn set_current_workspace(&self, workspace_id: String) {
+    pub(super) async fn set_window_workspace(&self, window_label: String, workspace_id: String) {
         let mut inner = self.inner.lock().await;
+        inner
+            .open_workspaces
+            .insert(window_label, workspace_id.clone());
         inner.current_workspace = Some(workspace_id);
+    }
+
+    pub(super) async fn remove_window_workspace(&self, window_label: &str) {
+        let mut inner = self.inner.lock().await;
+        inner.open_workspaces.remove(window_label);
+        let current_still_open = inner
+            .current_workspace
+            .as_ref()
+            .is_some_and(|current| inner.open_workspaces.values().any(|id| id == current));
+        if !current_still_open {
+            inner.current_workspace = inner.open_workspaces.values().next().cloned();
+        }
+    }
+
+    pub(super) async fn focus_window_workspace(&self, window_label: &str) {
+        let mut inner = self.inner.lock().await;
+        if let Some(workspace) = inner.open_workspaces.get(window_label).cloned() {
+            inner.current_workspace = Some(workspace);
+        }
+    }
+
+    async fn workspace_view(&self) -> (Option<String>, Vec<String>) {
+        let inner = self.inner.lock().await;
+        let mut list: Vec<String> = inner.open_workspaces.values().cloned().collect();
+        list.sort();
+        list.dedup();
+        (inner.current_workspace.clone(), list)
     }
 }
 
@@ -1145,14 +1203,52 @@ pub(super) fn start_remote_if_enabled(app: &AppHandle) {
     });
 }
 
-pub(super) fn update_current_workspace(app: &AppHandle, workspace_id: String) {
+pub(super) fn update_current_workspace(
+    app: &AppHandle,
+    window_label: String,
+    workspace_id: String,
+) {
     let Some(state) = app.try_state::<DesktopState>() else {
         return;
     };
     let runtime = state.remote.clone();
     tauri::async_runtime::spawn(async move {
-        runtime.set_current_workspace(workspace_id).await;
+        runtime.set_window_workspace(window_label, workspace_id).await;
     });
+}
+
+pub(super) fn remove_window_workspace(app: &AppHandle, window_label: String) {
+    let Some(state) = app.try_state::<DesktopState>() else {
+        return;
+    };
+    let runtime = state.remote.clone();
+    tauri::async_runtime::spawn(async move {
+        runtime.remove_window_workspace(&window_label).await;
+    });
+}
+
+pub(super) fn focus_window_workspace(app: &AppHandle, window_label: String) {
+    let Some(state) = app.try_state::<DesktopState>() else {
+        return;
+    };
+    let runtime = state.remote.clone();
+    tauri::async_runtime::spawn(async move {
+        runtime.focus_window_workspace(&window_label).await;
+    });
+}
+
+fn emit_conversations_changed(app: &AppHandle, workspace_id: &str) {
+    let _ = app.emit(
+        CONVERSATIONS_CHANGED_EVENT_NAME,
+        json!({ "workspaceId": workspace_id }),
+    );
+}
+
+fn workspace_display_name(workspace_id: &str) -> String {
+    Path::new(workspace_id)
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| workspace_id.to_string())
 }
 
 pub(super) fn forward_agent_event(
@@ -1327,6 +1423,8 @@ struct RemotePushPayload {
 struct RemotePhoneEnvelope {
     request_id: String,
     token: String,
+    #[serde(default)]
+    workspace: Option<String>,
     command: RemotePhoneCommand,
 }
 

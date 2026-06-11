@@ -30,7 +30,11 @@ pub(super) async fn open_workspace(
         }
     }
     apply_window_title(&window, &bootstrap.workspace.name);
-    update_current_workspace(&window.app_handle(), workspace_id);
+    update_current_workspace(
+        &window.app_handle(),
+        window.label().to_string(),
+        workspace_id,
+    );
     Ok(bootstrap)
 }
 
@@ -44,6 +48,7 @@ pub(super) async fn reset_window_title(
     window: tauri::WebviewWindow,
 ) -> std::result::Result<(), String> {
     apply_window_title(&window, "");
+    remove_window_workspace(&window.app_handle(), window.label().to_string());
     Ok(())
 }
 

@@ -966,6 +966,53 @@ export function Workspace({
     };
   }, []);
 
+  // Phone-driven changes (Sinew Remote): the backend emits
+  // "conversations-changed" whenever a paired device creates or deletes a
+  // conversation in this workspace. Mirror it here live so the desktop
+  // never needs a workspace reopen to catch up.
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: UnlistenFn | null = null;
+    (async () => {
+      const u = await listen<{ workspaceId: string }>(
+        "conversations-changed",
+        (event) => {
+          if (event.payload.workspaceId !== workspacePathRef.current) return;
+          void (async () => {
+            try {
+              const workspaceAtRequest = workspacePathRef.current;
+              const summaries =
+                await api.listConversations(workspaceAtRequest);
+              if (workspacePathRef.current !== workspaceAtRequest) return;
+              setConversations(summaries);
+              const activeId = activeConvIdRef.current;
+              if (summaries.some((summary) => summary.id === activeId)) {
+                return;
+              }
+              // The conversation we were viewing was deleted remotely.
+              if (summaries.length > 0) {
+                await selectConversation(summaries[0].id);
+              } else {
+                await createConversation();
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          })();
+        },
+      );
+      if (cancelled) {
+        u();
+      } else {
+        unlisten = u;
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+    };
+  }, [selectConversation, createConversation]);
+
   const subscribeEvents = useCallback(
     (
       handler: (

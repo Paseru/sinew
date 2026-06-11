@@ -466,10 +466,10 @@ class RemoteClient {
     }
   }
 
-  async command(command) {
+  async command(command, workspace) {
     if (!this.session || !this.key) throw new Error("Not paired");
     const id = requestId();
-    const envelope = await encryptJson(this.key, { requestId: id, token: this.session.deviceToken, command });
+    const envelope = await encryptJson(this.key, { requestId: id, token: this.session.deviceToken, workspace: workspace || undefined, command });
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
@@ -639,6 +639,9 @@ function App() {
   const [pairing, setPairing] = useState(false);
 
   const [workspace, setWorkspace] = useState(null);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [workspacePath, setWorkspacePath] = useState(null);
+  const [wsMenuOpen, setWsMenuOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [conv, setConv] = useState(null);
   const [view, setView] = useState("list");
@@ -660,6 +663,7 @@ function App() {
   const convRef = useRef(conv);
   const statusRef = useRef(status);
   const activeTurnsRef = useRef(activeTurns);
+  const workspacePathRef = useRef(null);
   const syncedRef = useRef(false);
   const bodyRef = useRef(null);
   const inputRef = useRef(null);
@@ -668,6 +672,13 @@ function App() {
   useEffect(() => { convRef.current = conv; }, [conv]);
   useEffect(() => { statusRef.current = status; }, [status]);
   useEffect(() => { activeTurnsRef.current = activeTurns; }, [activeTurns]);
+  useEffect(() => { workspacePathRef.current = workspacePath; }, [workspacePath]);
+
+  const cmd = useCallback((command, workspaceOverride) => {
+    const client = clientRef.current;
+    if (!client) return Promise.reject(new Error("Not connected"));
+    return client.command(command, workspaceOverride || workspacePathRef.current || undefined);
+  }, []);
 
   const canReachPc = Boolean(status.pcReachable);
 
@@ -676,15 +687,15 @@ function App() {
   const syncList = useCallback(async () => {
     const client = clientRef.current;
     if (!client?.session) return;
-    const list = await client.command({ type: "list_conversations" });
+    const list = await cmd({ type: "list_conversations" });
     setConversations(Array.isArray(list) ? list : []);
-  }, []);
+  }, [cmd]);
 
-  const handleTurnFinished = useCallback(async (conversationId) => {
+  const handleTurnFinished = useCallback(async (conversationId, workspaceId) => {
     const client = clientRef.current;
     if (!client?.session) return;
     try {
-      const fresh = await client.command({ type: "load_conversation", conversation_id: conversationId });
+      const fresh = await cmd({ type: "load_conversation", conversation_id: conversationId }, workspaceId);
       setConv((current) => (current && current.id === conversationId ? fresh : current));
       setLiveEvents((current) => {
         const next = new Map(current);
@@ -694,8 +705,10 @@ function App() {
     } catch {
       // keep live events visible if reload fails
     }
-    syncList().catch(() => undefined);
-  }, [syncList]);
+    if (!workspaceId || workspaceId === workspacePathRef.current) {
+      syncList().catch(() => undefined);
+    }
+  }, [cmd, syncList]);
 
   const initialSync = useCallback(async () => {
     const client = clientRef.current;
@@ -703,6 +716,10 @@ function App() {
     try {
       const data = await client.command({ type: "bootstrap" });
       const bootstrap = data.bootstrap || data;
+      const resolvedPath = data.workspacePath || bootstrap.workspace?.path || null;
+      workspacePathRef.current = resolvedPath;
+      setWorkspacePath(resolvedPath);
+      setWorkspaces(Array.isArray(data.workspaces) ? data.workspaces : []);
       setWorkspace(bootstrap.workspace || null);
       setConversations(bootstrap.conversations || []);
       if (Array.isArray(data.activeTurns)) setActiveTurns(data.activeTurns);
@@ -738,12 +755,14 @@ function App() {
             next.set(payload.conversation_id, [...events, payload.event]);
             return next;
           });
-          if (payload.event?.type === "turn_finished") void handleTurnFinished(payload.conversation_id);
+          if (payload.event?.type === "turn_finished") void handleTurnFinished(payload.conversation_id, payload.workspace_id);
         }
         if (payload.type === "active_turns_changed") setActiveTurns(payload.active_turns || []);
         if (payload.type === "device_revoked") {
           setSession(null);
           setWorkspace(null);
+          setWorkspaces([]);
+          setWorkspacePath(null);
           setConversations([]);
           setConv(null);
           setLiveEvents(new Map());
@@ -810,10 +829,30 @@ function App() {
     }
   }
 
+  async function switchWorkspace(path) {
+    setWsMenuOpen(false);
+    if (!path || path === workspacePathRef.current || !statusRef.current.pcReachable) return;
+    try {
+      const data = await clientRef.current.command({ type: "bootstrap" }, path);
+      const bootstrap = data.bootstrap || data;
+      const resolvedPath = data.workspacePath || path;
+      workspacePathRef.current = resolvedPath;
+      setWorkspacePath(resolvedPath);
+      setWorkspaces(Array.isArray(data.workspaces) ? data.workspaces : []);
+      setWorkspace(bootstrap.workspace || null);
+      setConversations(bootstrap.conversations || []);
+      if (Array.isArray(data.activeTurns)) setActiveTurns(data.activeTurns);
+      setConv(null);
+      setView("list");
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
   async function openConversationById(id) {
     if (!statusRef.current.pcReachable) return;
     try {
-      const conversation = await clientRef.current.command({ type: "load_conversation", conversation_id: id });
+      const conversation = await cmd({ type: "load_conversation", conversation_id: id });
       setConv(conversation);
       setMode(modeFromConversation(conversation));
       setView("chat");
@@ -821,7 +860,7 @@ function App() {
       const turnActive = activeTurnsRef.current.some((item) => item.conversationId === id);
       if (turnActive) {
         try {
-          const replay = await clientRef.current.command({ type: "replay_active_turn_events", conversation_id: id, after_sequence: 0 });
+          const replay = await cmd({ type: "replay_active_turn_events", conversation_id: id, after_sequence: 0 });
           setLiveEvents((current) => {
             const next = new Map(current);
             next.set(id, (replay.events || []).map((entry) => entry.event));
@@ -846,7 +885,7 @@ function App() {
   async function createConversation() {
     if (!canReachPc) return;
     try {
-      const bootstrap = await clientRef.current.command({ type: "create_conversation" });
+      const bootstrap = await cmd({ type: "create_conversation" });
       setConversations(bootstrap.conversations || []);
       const active = bootstrap.activeConversation;
       if (active) {
@@ -868,7 +907,7 @@ function App() {
     }
     setDeleteArmed(null);
     try {
-      await clientRef.current.command({ type: "delete_conversation", conversation_id: id });
+      await cmd({ type: "delete_conversation", conversation_id: id });
       await syncList();
       setConv((current) => (current && current.id === id ? null : current));
       if (convRef.current?.id === id) setView("list");
@@ -889,7 +928,7 @@ function App() {
         encoded.push({ name: file.name, mediaType: file.type || "application/octet-stream", data: await fileToBase64(file) });
       }
       const model = conv.modeModelSettings?.[mode] || conv.model;
-      await clientRef.current.command({
+      await cmd({
         type: "send_message",
         conversation_id: conv.id,
         text,
@@ -916,7 +955,7 @@ function App() {
     setMode(nextMode);
     if (!conv || !canReachPc || isStreaming) return;
     try {
-      const updated = await clientRef.current.command({ type: "set_conversation_mode", conversation_id: conv.id, mode: nextMode });
+      const updated = await cmd({ type: "set_conversation_mode", conversation_id: conv.id, mode: nextMode });
       setConv((current) => (current && current.id === updated.id ? updated : current));
     } catch (err) {
       setError(String(err.message || err));
@@ -926,7 +965,7 @@ function App() {
   async function compact() {
     if (!conv || !canReachPc || isStreaming) return;
     try {
-      await clientRef.current.command({
+      await cmd({
         type: "compact_conversation",
         conversation_id: conv.id,
         model: conv.model,
@@ -942,7 +981,7 @@ function App() {
     if (!conv || !canReachPc) return;
     setQuestionPendingId(block.id);
     try {
-      await clientRef.current.command({
+      await cmd({
         type: "answer_question",
         conversation_id: conv.id,
         tool_call_id: block.id,
@@ -960,7 +999,7 @@ function App() {
     if (!conv || !canReachPc) return;
     setQuestionPendingId(block.id);
     try {
-      await clientRef.current.command({ type: "reject_question", conversation_id: conv.id, tool_call_id: block.id });
+      await cmd({ type: "reject_question", conversation_id: conv.id, tool_call_id: block.id });
     } catch (err) {
       setError(String(err.message || err));
     } finally {
@@ -977,7 +1016,7 @@ function App() {
       const vapid = await fetch("/vapid-public-key", { cache: "no-store" }).then((r) => r.json());
       if (!vapid.publicKey) throw new Error("Push is not configured on the relay.");
       const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(vapid.publicKey) });
-      await clientRef.current.command({ type: "subscribe_push", subscription: subscription.toJSON() });
+      await cmd({ type: "subscribe_push", subscription: subscription.toJSON() });
       setPushState("enabled");
     } catch (err) {
       setPushState("idle");
@@ -997,6 +1036,8 @@ function App() {
     clearSession();
     setSession(null);
     setWorkspace(null);
+    setWorkspaces([]);
+    setWorkspacePath(null);
     setConversations([]);
     setConv(null);
     setLiveEvents(new Map());
@@ -1045,9 +1086,16 @@ function App() {
   const listView = h("section", { className: "pane pane--list", "data-active": view === "list" ? "true" : "false" },
     h("header", { className: "pane__head" },
       h("div", { className: "pane__head-main" },
-        h("div", { className: "pane__title" },
+        h("button", {
+          className: "ws-switch",
+          onClick: () => setWsMenuOpen((value) => !value),
+          disabled: workspaces.length === 0,
+          "aria-haspopup": "menu",
+          "aria-expanded": wsMenuOpen ? "true" : "false",
+        },
           h(StatusDot, { on: canReachPc }),
-          h("span", null, workspace?.name || "Sinew"),
+          h("span", { className: "ws-switch__name" }, workspace?.name || "Sinew"),
+          workspaces.length > 0 && h("span", { className: "ws-switch__caret", "data-open": wsMenuOpen ? "true" : "false" }, "›"),
         ),
         h("div", { className: "pane__sub" }, canReachPc ? "PC connected" : status.relay === "connected" ? "PC unreachable" : `Relay ${status.relay}`),
       ),
@@ -1060,6 +1108,22 @@ function App() {
           onClick: togglePush,
         }, pushState === "enabled" ? "Push on" : pushState === "requesting" ? "…" : "Push"),
         h("button", { className: "icon-btn", onClick: logout, title: "Forget this PC" }, "Forget"),
+      ),
+    ),
+    wsMenuOpen && h(React.Fragment, null,
+      h("div", { className: "ws-overlay", onClick: () => setWsMenuOpen(false) }),
+      h("div", { className: "ws-menu", role: "menu" },
+        h("div", { className: "ws-menu__kicker" }, "Open workspaces"),
+        workspaces.map((item) => h("button", {
+          key: item.path,
+          className: "ws-menu__item",
+          "data-active": item.path === workspacePath ? "true" : "false",
+          disabled: !canReachPc,
+          onClick: () => void switchWorkspace(item.path),
+        },
+          h("span", { className: "ws-menu__name" }, item.name || item.path),
+          h("span", { className: "ws-menu__path" }, item.path),
+        )),
       ),
     ),
     showInstallHint && h("div", { className: "hint" },
