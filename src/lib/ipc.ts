@@ -17,6 +17,8 @@ import type {
   GitPullRequestOutput,
   GitRepositorySnapshot,
   GoogleProviderStatus,
+  ImportSkillsResult,
+  ImportSubAgentsOutput,
   InstalledSkill,
   KimiProviderStatus,
   MessageVisibility,
@@ -244,6 +246,11 @@ export const api = {
       { input: { workspacePath } },
     );
   },
+  importSkills(workspacePath: string, provider: "claude" | "codex") {
+    return invoke<ImportSkillsResult>("import_skills_command", {
+      input: { workspacePath, provider },
+    });
+  },
   updateSkillContent(workspacePath: string, path: string, content: string) {
     return invoke<{ name: string; skills: InstalledSkill[] }>(
       "update_skill_content_command",
@@ -374,6 +381,11 @@ export const api = {
   saveSubAgentSettings(settings: SubAgentSettings) {
     return invoke<SubAgentSettings>("save_sub_agent_settings", {
       input: { settings },
+    });
+  },
+  importSubAgents(workspacePath: string, provider: "claude") {
+    return invoke<ImportSubAgentsOutput>("import_sub_agents_command", {
+      input: { workspacePath, provider },
     });
   },
   listConfiguredModelProviders() {

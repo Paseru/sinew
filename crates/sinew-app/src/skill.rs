@@ -323,7 +323,7 @@ pub fn list_installed_skills(
                 description,
                 source,
                 root_label: root_label.clone(),
-                absolute_path: skill_path.display().to_string(),
+                absolute_path: display_path_string(&skill_path),
                 content,
                 enabled,
             });
@@ -394,6 +394,17 @@ fn default_skill_template(name: &str) -> String {
     )
 }
 
+fn display_path_string(path: &Path) -> String {
+    let raw = path.display().to_string();
+    if let Some(rest) = raw.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{rest}");
+    }
+    if let Some(rest) = raw.strip_prefix(r"\\?\") {
+        return rest.to_string();
+    }
+    raw
+}
+
 fn format_root_label(root: &Path, workspace_root: &Path, home_dir: Option<&Path>) -> String {
     if let Ok(rel) = root.strip_prefix(workspace_root) {
         return rel.display().to_string();
@@ -420,6 +431,154 @@ fn clean_yaml_string(value: &str) -> &str {
 
 fn default_enabled() -> bool {
     true
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkippedSkillImport {
+    pub name: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSkillsResult {
+    pub imported: Vec<String>,
+    pub skipped: Vec<SkippedSkillImport>,
+}
+
+/// Copy skills from Claude Code or Codex/ChatGPT install locations into
+/// `<workspace>/.agents/skills/`, which Sinew scans as workspace skills.
+pub fn import_skills_from_provider(
+    workspace_root: impl AsRef<Path>,
+    provider: &str,
+) -> Result<ImportSkillsResult> {
+    let workspace_root = workspace_root.as_ref();
+    let dest_base = workspace_root.join(".agents/skills");
+    fs::create_dir_all(&dest_base)
+        .with_context(|| format!("unable to create {}", dest_base.display()))?;
+
+    let home = BaseDirs::new()
+        .map(|base| base.home_dir().to_path_buf())
+        .context("unable to locate home directory")?;
+
+    let sources = provider_import_roots(provider, workspace_root, &home)?;
+    let dest_canon = canonicalize_lossy(&dest_base);
+
+    let mut imported = Vec::new();
+    let mut skipped = Vec::new();
+    let mut seen_dirs = HashSet::new();
+
+    for source_root in sources {
+        if !source_root.is_dir() {
+            continue;
+        }
+        if canonicalize_lossy(&source_root) == dest_canon {
+            continue;
+        }
+
+        for entry in scan_skill_root(&source_root) {
+            let Some(skill_dir) = entry.path.parent() else {
+                continue;
+            };
+            let dir_key = canonicalize_lossy(skill_dir);
+            if !seen_dirs.insert(dir_key) {
+                continue;
+            }
+
+            let folder_name = skill_dir
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or(entry.name.as_str());
+            if folder_name.starts_with('.') {
+                continue;
+            }
+
+            let dest_dir = dest_base.join(folder_name);
+            if dest_dir.exists() {
+                skipped.push(SkippedSkillImport {
+                    name: entry.name,
+                    reason: format!(
+                        "folder already exists at {}",
+                        dest_dir.strip_prefix(workspace_root)
+                            .unwrap_or(&dest_dir)
+                            .display()
+                    ),
+                });
+                continue;
+            }
+
+            match copy_dir_recursive(skill_dir, &dest_dir) {
+                Ok(()) => imported.push(folder_name.to_string()),
+                Err(err) => skipped.push(SkippedSkillImport {
+                    name: entry.name,
+                    reason: err.to_string(),
+                }),
+            }
+        }
+    }
+
+    imported.sort_unstable();
+    Ok(ImportSkillsResult { imported, skipped })
+}
+
+fn provider_import_roots(
+    provider: &str,
+    workspace_root: &Path,
+    home: &Path,
+) -> Result<Vec<PathBuf>> {
+    let mut roots = Vec::new();
+    match provider.trim().to_ascii_lowercase().as_str() {
+        "claude" => {
+            push_existing_dir(&mut roots, home.join(".claude/skills"));
+            push_existing_dir(&mut roots, workspace_root.join(".claude/skills"));
+        }
+        "codex" | "chatgpt" | "openai" => {
+            push_existing_dir(&mut roots, home.join(".agents/skills"));
+            if let Ok(codex_home) = std::env::var("CODEX_HOME") {
+                let trimmed = codex_home.trim();
+                if !trimmed.is_empty() {
+                    push_existing_dir(&mut roots, PathBuf::from(trimmed).join("skills"));
+                }
+            }
+            push_existing_dir(&mut roots, home.join(".codex/skills"));
+            // workspace `.agents/skills` is the import destination — skip as source
+            push_existing_dir(&mut roots, workspace_root.join(".codex/skills"));
+        }
+        other => bail!("unknown skill import provider `{other}` (expected claude or codex)"),
+    }
+    Ok(roots)
+}
+
+fn push_existing_dir(roots: &mut Vec<PathBuf>, path: PathBuf) {
+    if path.is_dir() {
+        roots.push(path);
+    }
+}
+
+fn canonicalize_lossy(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    if !src.is_dir() {
+        bail!("{} is not a directory", src.display());
+    }
+    fs::create_dir_all(dst)
+        .with_context(|| format!("unable to create {}", dst.display()))?;
+    for entry in fs::read_dir(src).with_context(|| format!("unable to read {}", src.display()))? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&from, &to)?;
+        } else {
+            fs::copy(&from, &to)
+                .with_context(|| format!("unable to copy {} to {}", from.display(), to.display()))?;
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]

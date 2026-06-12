@@ -230,6 +230,8 @@ pub(super) fn team_agent_system_prompt_for_estimate(
         prompt: String::new(),
         model: model.clone(),
         enabled: true,
+        source: None,
+        source_path: None,
     };
     let base = subagent_system_prompt(base, &config_agent);
     format!(

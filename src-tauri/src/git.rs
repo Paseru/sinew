@@ -6,8 +6,30 @@ use std::ffi::OsString;
 use std::os::windows::process::CommandExt;
 use std::path::Component;
 use std::process::Stdio;
+use std::sync::OnceLock;
 #[cfg(test)]
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+static RESOLVED_GIT: OnceLock<Option<PathBuf>> = OnceLock::new();
+static RESOLVED_GH: OnceLock<Option<PathBuf>> = OnceLock::new();
+
+/// On Windows, console-subsystem binaries (`git.exe`, `gh.exe`, …) spawn a
+/// visible console unless we pass `CREATE_NO_WINDOW`. The Git panel probes
+/// PATH heavily on each refresh; without this flag, clicking the tab can
+/// flash dozens of console windows and re-trigger focus handlers in a loop.
+#[cfg(windows)]
+fn hide_subprocess_console(command: &mut Command) {
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn hide_subprocess_console(_command: &mut Command) {}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -671,6 +693,20 @@ fn command_available(program: &str) -> bool {
 }
 
 fn resolve_executable(program: &str) -> Option<PathBuf> {
+    if program.eq_ignore_ascii_case("git") {
+        return RESOLVED_GIT
+            .get_or_init(|| resolve_executable_uncached("git"))
+            .clone();
+    }
+    if program.eq_ignore_ascii_case("gh") {
+        return RESOLVED_GH
+            .get_or_init(|| resolve_executable_uncached("gh"))
+            .clone();
+    }
+    resolve_executable_uncached(program)
+}
+
+fn resolve_executable_uncached(program: &str) -> Option<PathBuf> {
     let direct = PathBuf::from(program);
     if direct.components().count() > 1 {
         if let Some(candidate) = find_working_executable(&direct) {
@@ -813,12 +849,13 @@ fn executable_works(path: &Path) -> bool {
         return false;
     }
     let mut command = Command::new(path);
-    hide_windows_console(&mut command);
     command
         .arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    hide_subprocess_console(&mut command);
+    command
         .status()
         .map(|status| status.success())
         .unwrap_or(false)
@@ -1389,6 +1426,7 @@ fn run_output_with_program(
         command.arg(OsStr::new(arg));
     }
     command.stdin(Stdio::null());
+    hide_subprocess_console(&mut command);
     let output = command
         .output()
         .with_context(|| format!("unable to launch {program_label}"))?;
