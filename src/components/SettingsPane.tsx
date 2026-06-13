@@ -1463,7 +1463,7 @@ function ProvidersSection({
         <ProviderCard
           name="Kimi"
           icon="local:kimi"
-          description="Use OAuth to connect your Kimi account for Kimi 2.6."
+          description="Use OAuth to connect your Kimi account for Kimi K2.7 Code."
           status={kimiStatus}
           connectedMeta={["Kimi OAuth"]}
           loading={loading}

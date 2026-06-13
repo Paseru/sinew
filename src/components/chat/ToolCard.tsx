@@ -216,17 +216,65 @@ function SkillGlyph() {
   );
 }
 
-function readArgs(argsPretty?: string): { path?: string; offset?: number; limit?: number } {
+type ReadRangeArg = { offset?: number; limit?: number };
+
+type ReadArgs = {
+  path?: string;
+  ranges?: ReadRangeArg[];
+  offset?: number;
+  limit?: number;
+};
+
+function readArgs(argsPretty?: string): ReadArgs {
   if (!argsPretty) return {};
   try {
-    return JSON.parse(argsPretty) as {
-      path?: string;
-      offset?: number;
-      limit?: number;
+    const parsed = JSON.parse(argsPretty) as {
+      path?: unknown;
+      ranges?: unknown;
+      offset?: unknown;
+      limit?: unknown;
+    };
+    const ranges = Array.isArray(parsed.ranges)
+      ? parsed.ranges
+          .filter(
+            (range): range is Record<string, unknown> =>
+              !!range && typeof range === "object" && !Array.isArray(range),
+          )
+          .map((range) => ({
+            offset: typeof range.offset === "number" ? range.offset : undefined,
+            limit: typeof range.limit === "number" ? range.limit : undefined,
+          }))
+      : undefined;
+    return {
+      path: typeof parsed.path === "string" ? parsed.path : undefined,
+      ranges,
+      offset: typeof parsed.offset === "number" ? parsed.offset : undefined,
+      limit: typeof parsed.limit === "number" ? parsed.limit : undefined,
     };
   } catch {
     return {};
   }
+}
+
+function requestedReadRangeLabel(range: ReadRangeArg): string {
+  const offset =
+    typeof range.offset === "number" && range.offset > 0 ? range.offset : 0;
+  if (typeof range.limit !== "number" || range.limit <= 0) {
+    return offset > 0 ? `from ${offset + 1}` : "reading";
+  }
+  return `${offset + 1}-${offset + range.limit}`;
+}
+
+// Range labels requested in the tool args (new `ranges[]` or legacy offset/limit).
+// Used while the tool is still running, before any output is available.
+function readRequestedRanges(args: ReadArgs): string[] {
+  if (args.ranges && args.ranges.length > 0) {
+    return args.ranges.map(requestedReadRangeLabel);
+  }
+  if (typeof args.limit === "number") {
+    return [requestedReadRangeLabel({ offset: args.offset, limit: args.limit })];
+  }
+  return [];
 }
 
 function grepArgs(argsPretty?: string): { path?: string | string[]; include?: string } {
@@ -452,21 +500,43 @@ function toolImageSrc(image: ToolResultImage): string {
   return `data:${image.media_type};base64,${image.data}`;
 }
 
-function parseReadOutput(output?: string) {
+function normalizeReadRangeHeader(value: string): string {
+  const trimmed = value.trim();
+  if (/^empty\b/i.test(trimmed)) return "empty";
+  return trimmed;
+}
+
+// Parses the read tool output into a path + the line ranges it returned.
+// Multi-range outputs emit `range N: first-last` headers; single/legacy outputs
+// only emit numbered `N | ...` lines, collapsed into a single range label.
+function parseReadOutput(output?: string): {
+  path?: string;
+  total?: string;
+  ranges: string[];
+  multi: boolean;
+} | null {
   if (!output) return null;
 
   const path = output.match(/^path:\s*(.+)$/m)?.[1]?.trim();
   const total = output.match(/^total:\s*(\d+)$/m)?.[1]?.trim();
-  let range: string | null = null;
-  const matches = [...output.matchAll(/^\s*(\d+)\s\|/gm)];
-  const first = matches[0]?.[1];
-  const last = matches[matches.length - 1]?.[1];
-  if (first && last) range = `${first}-${last}`;
-  if (!range && total) {
-    range = `${total} lines`;
+
+  const headers = [...output.matchAll(/^range\s+\d+:\s*(.+)$/gm)];
+  if (headers.length > 0) {
+    return {
+      path,
+      total,
+      ranges: headers.map((match) => normalizeReadRangeHeader(match[1])),
+      multi: headers.length > 1,
+    };
   }
 
-  return { path, total, range };
+  const numbered = [...output.matchAll(/^\s*(\d+)\s\|/gm)];
+  const first = numbered[0]?.[1];
+  const last = numbered[numbered.length - 1]?.[1];
+  let range: string | null = null;
+  if (first && last) range = `${first}-${last}`;
+  if (!range && total) range = `${total} lines`;
+  return { path, total, ranges: range ? [range] : [], multi: false };
 }
 
 function grepTitleParts(argsPretty?: string, output?: string, isError?: boolean) {
@@ -798,28 +868,41 @@ function genericMcpLabel(value: string): string {
   return words.join(" ") || "Tool";
 }
 
-function ReadToolInline({
+// Decides whether a read call should render one row per range. Multiple rows are
+// shown when several ranges are requested (while running) or returned (when done).
+function readMultiRanges(
+  status: ToolCardProps["status"],
+  args: ReadArgs,
+  parsed: ReturnType<typeof parseReadOutput>,
+  isError?: boolean,
+): string[] | null {
+  if (isError) return null;
+  if (status === "running") {
+    const requested = readRequestedRanges(args);
+    return requested.length > 1 ? requested : null;
+  }
+  if (parsed?.multi && parsed.ranges.length > 1) {
+    return parsed.ranges;
+  }
+  return null;
+}
+
+function ReadInlineRow({
   status,
-  argsPretty,
-  output,
   isError,
   cleaned,
+  openPath,
+  range,
   onOpenFile,
-}: Pick<
-  ToolCardProps,
-  "status" | "argsPretty" | "output" | "isError" | "cleaned" | "onOpenFile"
->) {
-  const args = readArgs(argsPretty);
-  const parsed = parseReadOutput(output);
-  const openPath = parsed?.path ?? args.path ?? null;
+}: {
+  status: ToolCardProps["status"];
+  isError?: boolean;
+  cleaned?: boolean;
+  openPath: string | null;
+  range?: string;
+  onOpenFile: ToolCardProps["onOpenFile"];
+}) {
   const path = openPath ?? "file";
-  const range =
-    status === "running"
-      ? "reading"
-      : isError
-        ? "failed"
-        : parsed?.range;
-
   return (
     <div
       className="tool-read-inline"
@@ -854,6 +937,59 @@ function ReadToolInline({
       )}
       {range && <span className="tool-read-inline__range">{range}</span>}
     </div>
+  );
+}
+
+function ReadToolInline({
+  status,
+  argsPretty,
+  output,
+  isError,
+  cleaned,
+  onOpenFile,
+}: Pick<
+  ToolCardProps,
+  "status" | "argsPretty" | "output" | "isError" | "cleaned" | "onOpenFile"
+>) {
+  const args = readArgs(argsPretty);
+  const parsed = parseReadOutput(output);
+  const openPath = parsed?.path ?? args.path ?? null;
+
+  const multiRanges = readMultiRanges(status, args, parsed, isError);
+  if (multiRanges) {
+    return (
+      <div className="tool-read-inline-group">
+        {multiRanges.map((range, index) => (
+          <ReadInlineRow
+            key={index}
+            status={status}
+            isError={isError}
+            cleaned={cleaned}
+            openPath={openPath}
+            range={range}
+            onOpenFile={onOpenFile}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const range =
+    status === "running"
+      ? "reading"
+      : isError
+        ? "failed"
+        : parsed?.ranges[0];
+
+  return (
+    <ReadInlineRow
+      status={status}
+      isError={isError}
+      cleaned={cleaned}
+      openPath={openPath}
+      range={range}
+      onOpenFile={onOpenFile}
+    />
   );
 }
 

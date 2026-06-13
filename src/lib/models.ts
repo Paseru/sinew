@@ -175,9 +175,16 @@ export const MODELS: ModelEntry[] = [
     defaultThinking: "high",
   },
   {
+    value: "kimi:kimi-k2.7-code",
+    provider: "kimi",
+    label: "Kimi K2.7 Code",
+    thinking: ["high"],
+    defaultThinking: "high",
+  },
+  {
     value: "kimi:kimi-for-coding",
     provider: "kimi",
-    label: "Kimi 2.6",
+    label: "Kimi K2.6",
     thinking: ["off", "high"],
     defaultThinking: "high",
   },
@@ -259,6 +266,7 @@ export function thinkingFromRef(
     return "high";
   }
   if (model?.provider === "kimi") {
+    if (model.name === "kimi-k2.7-code") return "high";
     if (model.effort === "none") return "off";
     return "high";
   }
@@ -313,6 +321,9 @@ export function modelRefWithThinking(
     }
     if (thinking === "xhigh" || thinking === "max") return { ...model, name, effort: "high" };
     return { ...model, name, effort: thinking };
+  }
+  if (model.provider === "kimi" && model.name === "kimi-k2.7-code") {
+    return { ...model, effort: "high" };
   }
   if (
     model.provider === "openai" &&

@@ -6778,6 +6778,13 @@ textarea {
   background: var(--danger);
   flex: 0 0 6px;
 }
+.tool-read-inline-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
 
 .tool-card--questionnaire[data-error="true"] {
   background: rgba(245, 115, 127, 0.06);
