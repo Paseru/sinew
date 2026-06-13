@@ -12,6 +12,72 @@ const MODES = ["act", "goal", "plan"];
 const MODE_LABELS = { act: "Act", goal: "Goal", plan: "Plan" };
 const INSTALL_HINT_KEY = "sinew.remote.installHintDismissed.v1";
 
+const THINKING_LABELS = { off: "Off", low: "Low", medium: "Medium", high: "High", xhigh: "XHigh", max: "Max" };
+
+// Static catalog mirrored from the desktop (src/lib/models.ts). "minimal" is
+// desktop-only; the remote protocol clamps it to "low".
+const MODEL_CATALOG = [
+  { value: "anthropic:claude-fable-5", provider: "anthropic", label: "Fable 5", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
+  { value: "anthropic:claude-opus-4-8", provider: "anthropic", label: "Opus 4.8", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
+  { value: "anthropic:claude-opus-4-7", provider: "anthropic", label: "Opus 4.7", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
+  { value: "anthropic:claude-opus-4-6", provider: "anthropic", label: "Opus 4.6", thinking: ["off", "low", "medium", "high", "max"], defaultThinking: "medium" },
+  { value: "anthropic:claude-sonnet-4-6", provider: "anthropic", label: "Sonnet 4.6", thinking: ["off", "low", "medium", "high", "max"], defaultThinking: "medium" },
+  { value: "anthropic:claude-haiku-4-5", provider: "anthropic", label: "Haiku 4.5", thinking: ["off", "low", "medium", "high"], defaultThinking: "medium" },
+  { value: "openai:gpt-5.5", provider: "openai", label: "GPT-5.5", thinking: ["off", "low", "medium", "high", "xhigh"], defaultThinking: "medium" },
+  { value: "openai:gpt-5.4", provider: "openai", label: "GPT-5.4", thinking: ["off", "low", "medium", "high", "xhigh"], defaultThinking: "medium" },
+  { value: "openai:gpt-5.4-mini", provider: "openai", label: "GPT-5.4 Mini", thinking: ["off", "low", "medium", "high", "xhigh"], defaultThinking: "medium" },
+  { value: "openai:gpt-5.3-codex", provider: "openai", label: "GPT-5.3 Codex", thinking: ["off", "low", "medium", "high", "xhigh"], defaultThinking: "medium" },
+  { value: "openai:gpt-5.3-codex-spark", provider: "openai", label: "GPT-5.3 Codex Spark", thinking: ["low", "medium", "high", "xhigh"], defaultThinking: "low" },
+  { value: "openai:gpt-5.2", provider: "openai", label: "GPT-5.2", thinking: ["off", "low", "medium", "high", "xhigh"], defaultThinking: "medium" },
+  { value: "google:gemini-3.1-pro", provider: "google", label: "Gemini 3.1 Pro", thinking: ["low", "medium", "high"], defaultThinking: "high" },
+  { value: "google:gemini-3-flash", provider: "google", label: "Gemini 3 Flash", thinking: ["low", "medium", "high"], defaultThinking: "high" },
+  { value: "google:gemini-3.5-flash", provider: "google", label: "Gemini 3.5 Flash", thinking: ["low", "medium", "high"], defaultThinking: "high" },
+  { value: "kimi:kimi-for-coding", provider: "kimi", label: "Kimi 2.6", thinking: ["off", "high"], defaultThinking: "high" },
+];
+
+function sanitizeOpenRouterName(name) {
+  const raw = String(name || "").trim();
+  if (!raw) return "";
+  const colon = raw.indexOf(":");
+  if (colon <= 0) return raw;
+  return raw.slice(colon + 1).trim() || raw;
+}
+
+function buildModelEntries(providers = [], openrouterModels = []) {
+  const configured = new Set(providers);
+  const entries = MODEL_CATALOG.filter((entry) => configured.has(entry.provider));
+  if (configured.has("openrouter")) {
+    for (const model of openrouterModels) {
+      entries.push({
+        value: `openrouter:${model.id}`,
+        provider: "openrouter",
+        label: sanitizeOpenRouterName(model.name) || model.id,
+        thinking: model.supportsThinking ? ["off", "low", "medium", "high", "xhigh"] : ["off"],
+        defaultThinking: model.supportsThinking ? "medium" : "off",
+      });
+    }
+  }
+  return entries;
+}
+
+function normalizeModelName(provider, name = "") {
+  if (provider === "google") return name.replace(/-(low|medium|high)$/, "");
+  return name;
+}
+
+function modelEntryFor(entries, model) {
+  if (!model) return null;
+  const key = `${model.provider}:${normalizeModelName(model.provider, model.name)}`;
+  return entries.find((entry) => entry.value === key) || null;
+}
+
+function modelLabel(model) {
+  if (!model) return "Model";
+  const entry = modelEntryFor(MODEL_CATALOG, model);
+  if (entry) return entry.label;
+  return normalizeModelName(model.provider, model.name) || "Model";
+}
+
 marked.setOptions({ gfm: true, breaks: true });
 
 /* ── Utilities ─────────────────────────────────────────────────────────── */
@@ -657,6 +723,9 @@ function App() {
   const [error, setError] = useState(null);
   const [pushState, setPushState] = useState("idle");
   const [deleteArmed, setDeleteArmed] = useState(null);
+  const [modelSheetOpen, setModelSheetOpen] = useState(false);
+  const [modelOptions, setModelOptions] = useState(null);
+  const [modelPending, setModelPending] = useState(false);
   const [installHintDismissed, setInstallHintDismissed] = useState(() => localStorage.getItem(INSTALL_HINT_KEY) === "true");
 
   const clientRef = useRef(null);
@@ -794,6 +863,12 @@ function App() {
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => setError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   /* — derived — */
 
   const events = conv ? liveEvents.get(conv.id) || [] : [];
@@ -803,6 +878,13 @@ function App() {
   }, [conv, events]);
   const isStreaming = Boolean(conv && activeTurns.some((turn) => turn.conversationId === conv.id));
   const showInstallHint = Boolean(session && !installHintDismissed && !isStandaloneDisplay());
+  const currentModel = conv ? conv.modeModelSettings?.[mode] || conv.model : null;
+  const modelEntries = useMemo(
+    () => buildModelEntries(modelOptions?.providers || [], modelOptions?.openrouterModels || []),
+    [modelOptions],
+  );
+  const currentEntry = modelEntryFor(modelEntries.length > 0 ? modelEntries : MODEL_CATALOG, currentModel);
+  const currentThinking = thinkingFromModel(currentModel);
 
   useEffect(() => {
     const body = bodyRef.current;
@@ -948,6 +1030,49 @@ function App() {
       setError(String(err.message || err));
     } finally {
       setSendPending(false);
+    }
+  }
+
+  async function openModelSheet() {
+    setModelSheetOpen(true);
+    if (modelOptions || !statusRef.current.pcReachable) return;
+    try {
+      const data = await cmd({ type: "list_models" });
+      setModelOptions({
+        providers: Array.isArray(data.providers) ? data.providers : [],
+        openrouterModels: Array.isArray(data.openrouterModels) ? data.openrouterModels : [],
+      });
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  async function applyModel(entry, thinkingLevel) {
+    if (!conv || !canReachPc || modelPending) return;
+    const separator = entry.value.indexOf(":");
+    const provider = entry.value.slice(0, separator);
+    const name = entry.value.slice(separator + 1);
+    const level = thinkingLevel && entry.thinking.includes(thinkingLevel)
+      ? thinkingLevel
+      : entry.thinking.includes(currentThinking)
+        ? currentThinking
+        : entry.defaultThinking;
+    setModelPending(true);
+    try {
+      const settings = await cmd({
+        type: "set_conversation_model",
+        conversation_id: conv.id,
+        mode,
+        model: { provider, name },
+        thinking: level,
+      });
+      setConv((current) => (current && current.id === conv.id
+        ? { ...current, modeModelSettings: settings, model: settings?.[mode] || current.model }
+        : current));
+    } catch (err) {
+      setError(String(err.message || err));
+    } finally {
+      setModelPending(false);
     }
   }
 
@@ -1256,6 +1381,15 @@ function App() {
                 onChange: (e) => { setAttachments((current) => [...current, ...Array.from(e.target.files || [])]); e.target.value = ""; },
               }),
             ),
+            h("button", {
+              type: "button",
+              className: "composer__model",
+              disabled: !canReachPc,
+              onClick: () => void openModelSheet(),
+            },
+              h("span", { className: "composer__model-label" }, modelLabel(currentModel)),
+              h("span", { className: "composer__model-caret" }, "›"),
+            ),
             h("div", { className: "composer__modes" },
               MODES.map((value) => h("button", {
                 key: value,
@@ -1273,13 +1407,54 @@ function App() {
           ),
         ),
       ),
+      modelSheetOpen && h(React.Fragment, null,
+        h("div", { className: "sheet-overlay", onClick: () => setModelSheetOpen(false) }),
+        h("div", { className: "sheet", role: "dialog", "aria-label": "Model" },
+          h("div", { className: "sheet__grab" }),
+          h("div", { className: "sheet__head" },
+            h("span", { className: "sheet__kicker" }, "Model"),
+            isStreaming && h("span", { className: "sheet__note" }, "locked while streaming"),
+          ),
+          !modelOptions && h("div", { className: "sheet__loading" }, canReachPc ? "Loading…" : "PC unreachable"),
+          modelOptions && h("div", { className: "sheet__list" },
+            modelEntries.map((entry) => h("button", {
+              key: entry.value,
+              type: "button",
+              className: "sheet__item",
+              "data-selected": currentEntry?.value === entry.value ? "true" : "false",
+              disabled: modelPending || isStreaming || !canReachPc,
+              onClick: () => void applyModel(entry),
+            },
+              h("span", { className: "sheet__item-label" }, entry.label),
+              h("span", { className: "sheet__item-meta" }, entry.provider),
+            )),
+            modelEntries.length === 0 && h("div", { className: "sheet__loading" }, "No providers configured on the PC."),
+          ),
+          modelOptions && currentEntry && h(React.Fragment, null,
+            h("div", { className: "sheet__head" }, h("span", { className: "sheet__kicker" }, "Thinking")),
+            h("div", { className: "sheet__pills" },
+              currentEntry.thinking.map((level) => h("button", {
+                key: level,
+                type: "button",
+                className: "sheet__pill",
+                "data-selected": currentThinking === level ? "true" : "false",
+                disabled: modelPending || isStreaming || !canReachPc,
+                onClick: () => void applyModel(currentEntry, level),
+              }, THINKING_LABELS[level] || level)),
+            ),
+          ),
+        ),
+      ),
     ) : h("div", { className: "chat-none" },
       h("span", null, "Select a conversation"),
     ),
   );
 
   return h("main", { className: "app" },
-    error && h("button", { className: "toast", onClick: () => setError(null) }, error),
+    error && h("div", { className: "toast", role: "alert" },
+      h("span", { className: "toast__text" }, error),
+      h("button", { type: "button", className: "toast__close", onClick: () => setError(null), "aria-label": "Dismiss" }, "×"),
+    ),
     listView,
     chatView,
   );

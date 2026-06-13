@@ -150,6 +150,7 @@ export type SubAgentConfig = {
   description: string;
   prompt: string;
   model: ModelRef;
+  hideForSameModel: boolean;
   enabled: boolean;
 };
 

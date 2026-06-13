@@ -69,6 +69,7 @@ pub(super) async fn estimate_context(
         workspace_root.clone(),
         effective_system_prompt.clone(),
         provider_registry_snapshot(&state)?,
+        conversation.model.clone(),
         sub_agent_settings,
         mcp_settings,
         tool_settings.clone(),
@@ -229,6 +230,7 @@ pub(super) fn team_agent_system_prompt_for_estimate(
         description: String::new(),
         prompt: String::new(),
         model: model.clone(),
+        hide_for_same_model: false,
         enabled: true,
     };
     let base = subagent_system_prompt(base, &config_agent);

@@ -12,7 +12,7 @@ pub(super) const CLEAN_CONTEXT_RESULT_PLACEHOLDER: &str =
 pub fn clean_context_descriptor() -> ToolDescriptor {
     ToolDescriptor {
         name: "clean_context".into(),
-        description: "Prune useless tool results from your own context. MANDATORY whenever your turn included tool calls AND at least one produced noise (example : irrelevant Glob/Grep paths you never opened, a Read of an unrelated file, a failed exploration you retried elsewhere, etc.) — in that case you MUST call this before finishing. Keep anything you quoted, referenced, edited from, or based a decision on. If unsure, keep it. Current-turn tool results start with a tool_call_id line; use those exact ids.".into(),
+        description: "Prune useless or voluminous tool results from your context to keep it clean and fast. Highly recommended (often mandatory) before finishing your turn if you ran tool calls that produced significant noise (e.g. large irrelevant Glob/Grep outputs, reading a wrong/unrelated file, or failed attempts). Keep anything you quoted, referenced, edited, or based decisions on. If unsure, keep it. You can ONLY clean results from your current turn (which start with a visible 'tool_call_id' line); you cannot clean them retroactively in future turns.".into(),
         input_schema: json!({
             "type": "object",
             "properties": {

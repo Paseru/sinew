@@ -19,6 +19,7 @@ use crate::{
 };
 
 const MAX_LIMIT: usize = 500;
+const MAX_RANGES: usize = 20;
 const MAX_TEXT_READ_BYTES: u64 = 4 * 1024 * 1024;
 const MAX_IMAGE_BYTES: u64 = 10 * 1024 * 1024;
 
@@ -46,20 +47,34 @@ impl ReadTool {
     pub fn descriptor(&self) -> ToolDescriptor {
         ToolDescriptor {
             name: "read".into(),
-            description: "Read text files or attach supported image files visually.".into(),
+            description: "Read text files by line ranges or attach supported image files visually."
+                .into(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
                     "path": { "type": "string", "description": "File path to read. Relative paths are resolved from the workspace root; absolute paths are allowed." },
-                    "offset": { "type": "integer", "minimum": 0, "description": "Optional zero-based line offset. Defaults to 0." },
-                    "limit": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": MAX_LIMIT,
-                        "description": "Required number of lines for text files. Ignored for supported images. Hard-capped at 500."
+                    "ranges": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": MAX_RANGES,
+                        "description": "Line ranges to read from text files. Each range uses a zero-based optional offset and a required limit. Ignored for supported images.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "offset": { "type": "integer", "minimum": 0, "default": 0, "description": "Optional zero-based line offset. Defaults to 0." },
+                                "limit": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": MAX_LIMIT,
+                                    "description": "Required number of lines for this range. Hard-capped at 500."
+                                }
+                            },
+                            "required": ["limit"],
+                            "additionalProperties": false
+                        }
                     }
                 },
-                "required": ["path", "limit"],
+                "required": ["path", "ranges"],
                 "additionalProperties": false
             }),
         }
@@ -117,28 +132,14 @@ impl ReadTool {
             ));
         }
 
-        let offset = parsed.offset.unwrap_or_default();
-        let requested_limit = parsed
-            .limit
-            .ok_or_else(|| anyhow::anyhow!("limit is required"))?;
-        if requested_limit == 0 {
-            bail!("limit must be greater than 0");
-        }
-        let limit = requested_limit.min(MAX_LIMIT);
-
         let content = decode_text(&bytes)
             .map(|decoded| decoded.content)
             .context("file is binary")?;
 
+        let ranges = parsed.text_ranges()?;
         let lines = split_lines(&content);
         let total_lines = lines.len();
-        let selected_lines = lines
-            .iter()
-            .skip(offset)
-            .take(limit)
-            .copied()
-            .collect::<Vec<_>>();
-        let numbered = number_lines(&selected_lines, offset, total_lines);
+        let numbered = render_ranges(&lines, &ranges, total_lines);
 
         Ok(ToolRunResult::ok_with_meta(
             format!("path: {display_path}\ntotal: {total_lines}\n\n{numbered}"),
@@ -152,9 +153,70 @@ impl ReadTool {
 struct ReadInput {
     path: String,
     #[serde(default)]
+    ranges: Option<Vec<ReadRangeInput>>,
+    #[serde(default)]
     offset: Option<usize>,
     #[serde(default)]
     limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReadRangeInput {
+    #[serde(default)]
+    offset: Option<usize>,
+    #[serde(default)]
+    limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ReadRange {
+    offset: usize,
+    limit: usize,
+}
+
+impl ReadInput {
+    fn text_ranges(&self) -> Result<Vec<ReadRange>> {
+        if let Some(ranges) = &self.ranges {
+            if ranges.is_empty() {
+                bail!("ranges must contain at least one range");
+            }
+            if ranges.len() > MAX_RANGES {
+                bail!("ranges cannot contain more than {MAX_RANGES} ranges");
+            }
+            return ranges
+                .iter()
+                .enumerate()
+                .map(|(index, range)| {
+                    let requested_limit = range
+                        .limit
+                        .ok_or_else(|| anyhow::anyhow!("ranges[{index}].limit is required"))?;
+                    validate_limit(requested_limit, &format!("ranges[{index}].limit")).map(
+                        |limit| ReadRange {
+                            offset: range.offset.unwrap_or_default(),
+                            limit,
+                        },
+                    )
+                })
+                .collect();
+        }
+
+        let requested_limit = self
+            .limit
+            .ok_or_else(|| anyhow::anyhow!("limit is required"))?;
+        validate_limit(requested_limit, "limit").map(|limit| {
+            vec![ReadRange {
+                offset: self.offset.unwrap_or_default(),
+                limit,
+            }]
+        })
+    }
+}
+
+fn validate_limit(requested_limit: usize, label: &str) -> Result<usize> {
+    if requested_limit == 0 {
+        bail!("{label} must be greater than 0");
+    }
+    Ok(requested_limit.min(MAX_LIMIT))
 }
 
 pub fn detect_image_media_type(bytes: &[u8]) -> Option<&'static str> {
@@ -191,6 +253,53 @@ fn number_lines(lines: &[&str], offset: usize, total_lines: usize) -> String {
     }
 
     output
+}
+
+fn render_ranges(lines: &[&str], ranges: &[ReadRange], total_lines: usize) -> String {
+    if ranges.len() == 1 {
+        let range = ranges[0];
+        let selected_lines = select_lines(lines, range);
+        return number_lines(&selected_lines, range.offset, total_lines);
+    }
+
+    let mut output = String::new();
+    for (index, range) in ranges.iter().copied().enumerate() {
+        if !output.is_empty() {
+            ensure_trailing_newline(&mut output);
+            output.push('\n');
+        }
+
+        let selected_lines = select_lines(lines, range);
+        output.push_str(&range_header(index, range, selected_lines.len()));
+        output.push('\n');
+        output.push_str(&number_lines(&selected_lines, range.offset, total_lines));
+    }
+    output
+}
+
+fn select_lines<'a>(lines: &[&'a str], range: ReadRange) -> Vec<&'a str> {
+    lines
+        .iter()
+        .skip(range.offset)
+        .take(range.limit)
+        .copied()
+        .collect()
+}
+
+fn range_header(index: usize, range: ReadRange, selected_count: usize) -> String {
+    if selected_count == 0 {
+        return format!("range {}: empty (offset {})", index + 1, range.offset);
+    }
+
+    let first = range.offset + 1;
+    let last = range.offset + selected_count;
+    format!("range {}: {first}-{last}", index + 1)
+}
+
+fn ensure_trailing_newline(output: &mut String) {
+    if !output.ends_with('\n') {
+        output.push('\n');
+    }
 }
 
 fn supported_image_media_type(path: &Path) -> Option<&'static str> {
@@ -329,7 +438,7 @@ mod tests {
     }
 
     #[test]
-    fn read_supported_image_ignores_limit_and_offset() {
+    fn read_supported_image_ignores_ranges() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         let root = root.canonicalize().expect("canonical temp workspace");
@@ -338,8 +447,8 @@ mod tests {
 
         let tool = ReadTool::new(&root);
         let result = tool
-            .read(json!({ "path": "pixel.gif", "offset": 99, "limit": 0 }))
-            .expect("image should ignore text-only offset and limit");
+            .read(json!({ "path": "pixel.gif", "ranges": [{ "offset": 99, "limit": 1 }] }))
+            .expect("image should ignore text-only ranges");
 
         assert!(!result.is_error);
         assert!(result.content.contains("[Image attached visually.]"));
@@ -360,7 +469,7 @@ mod tests {
 
         let tool = ReadTool::new(&root);
         let result = tool
-            .read(json!({ "path": "pixel.webp", "limit": 1 }))
+            .read(json!({ "path": "pixel.webp", "ranges": [{ "limit": 1 }] }))
             .expect("image should read");
 
         assert!(!result.is_error);
@@ -373,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn read_requires_limit() {
+    fn read_requires_limit_without_ranges() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         let root = root.canonicalize().expect("canonical temp workspace");
@@ -390,6 +499,56 @@ mod tests {
     }
 
     #[test]
+    fn read_requires_limit_in_each_range() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        let root = root.canonicalize().expect("canonical temp workspace");
+        fs::write(root.join("app.rs"), "fn main() {}\n").expect("write file");
+
+        let tool = ReadTool::new(&root);
+        let error = tool
+            .read(json!({ "path": "app.rs", "ranges": [{ "offset": 0 }] }))
+            .expect_err("missing range limit should fail");
+
+        assert!(error.to_string().contains("ranges[0].limit is required"));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn read_multiple_ranges_from_one_file() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        let root = root.canonicalize().expect("canonical temp workspace");
+        let content = (1..=10)
+            .map(|line| format!("line {line}\n"))
+            .collect::<String>();
+        fs::write(root.join("many.txt"), content).expect("write file");
+
+        let tool = ReadTool::new(&root);
+        let result = tool
+            .read(json!({
+                "path": "many.txt",
+                "ranges": [
+                    { "offset": 1, "limit": 2 },
+                    { "offset": 7, "limit": 3 }
+                ]
+            }))
+            .expect("read should support multiple ranges");
+
+        assert!(result.content.contains("total: 10"));
+        assert!(result.content.contains("range 1: 2-3"));
+        assert!(result.content.contains(" 2 | line 2"));
+        assert!(result.content.contains(" 3 | line 3"));
+        assert!(!result.content.contains(" 4 | line 4"));
+        assert!(result.content.contains("range 2: 8-10"));
+        assert!(result.content.contains(" 8 | line 8"));
+        assert!(result.content.contains("10 | line 10"));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
     fn read_caps_limit_at_max() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
@@ -401,7 +560,7 @@ mod tests {
 
         let tool = ReadTool::new(&root);
         let result = tool
-            .read(json!({ "path": "many.txt", "limit": 9999 }))
+            .read(json!({ "path": "many.txt", "ranges": [{ "limit": 9999 }] }))
             .expect("read should cap requested limit");
 
         assert!(result.content.contains("total: 600"));
@@ -427,7 +586,9 @@ mod tests {
 
         let tool = ReadTool::new(&workspace);
         let result = tool
-            .read(json!({ "path": external_file.display().to_string(), "limit": 10 }))
+            .read(
+                json!({ "path": external_file.display().to_string(), "ranges": [{ "limit": 10 }] }),
+            )
             .expect("read should accept absolute paths outside the workspace");
 
         assert!(!result.is_error);

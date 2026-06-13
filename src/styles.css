@@ -4868,9 +4868,66 @@ textarea {
 
 .settings-pane__subagent-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 12px;
   align-items: end;
+}
+
+.settings-pane__field--toggle {
+  justify-items: start;
+}
+
+.settings-pane__inline-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 26px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: var(--r-med);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease;
+}
+.settings-pane__inline-toggle:hover {
+  color: var(--text-0);
+}
+.settings-pane__inline-toggle[data-on="true"] {
+  color: var(--text-0);
+}
+.settings-pane__inline-toggle:focus-visible {
+  outline: none;
+}
+.settings-pane__inline-toggle-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--bg-3);
+  transition: background 120ms ease;
+}
+.settings-pane__inline-toggle[data-on="true"] .settings-pane__inline-toggle-track {
+  background: var(--text-2);
+}
+.settings-pane__inline-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transition: transform 140ms ease, background 120ms ease;
+}
+.settings-pane__inline-toggle[data-on="true"] .settings-pane__inline-toggle-thumb {
+  transform: translateX(12px);
+  background: var(--bg-0);
 }
 
 .settings-pane__field {

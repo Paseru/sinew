@@ -7,6 +7,7 @@ pub(super) fn team_agent_system_prompt(base: &str, team_name: &str, agent: &Team
         description: agent.description.clone(),
         prompt: agent.prompt.clone(),
         model: agent.model.clone(),
+        hide_for_same_model: false,
         enabled: true,
     };
     let base = subagent_system_prompt(base, &config_agent);

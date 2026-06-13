@@ -3064,6 +3064,26 @@ function SubAgentEditor({
               onSelect={(value) => updateThinking(value as ThinkingLevel)}
             />
           </label>
+          <div className="settings-pane__field settings-pane__field--toggle">
+            <span>Visibility</span>
+            <button
+              type="button"
+              className="settings-pane__inline-toggle"
+              role="switch"
+              aria-checked={agent.hideForSameModel}
+              aria-label="Hide this sub-agent from the main agent when it uses the same model"
+              title="Hide this sub-agent from the main agent when it uses the same model"
+              data-on={agent.hideForSameModel ? "true" : "false"}
+              onClick={() => onUpdate({ hideForSameModel: !agent.hideForSameModel })}
+            >
+              <span className="settings-pane__inline-toggle-text">
+                Hide for same model
+              </span>
+              <span className="settings-pane__inline-toggle-track" aria-hidden="true">
+                <span className="settings-pane__inline-toggle-thumb" />
+              </span>
+            </button>
+          </div>
         </div>
 
         <label className="settings-pane__field settings-pane__field--grow settings-pane__field--code">
@@ -3639,6 +3659,7 @@ function createSubAgent(
     description: "Use this agent for focused research or implementation tasks.",
     prompt: "",
     model: modelRefWithThinking(modelRefFromId(model.value), model.defaultThinking),
+    hideForSameModel: false,
     enabled: true,
   };
 }
@@ -3653,6 +3674,7 @@ function normalizeSubAgentSettings(settings: SubAgentSettings): SubAgentSettings
       model:
         agent.model ??
         modelRefWithThinking(modelRefFromId(MODELS[0].value), MODELS[0].defaultThinking),
+      hideForSameModel: agent.hideForSameModel === true,
       enabled: agent.enabled !== false,
     })),
   };

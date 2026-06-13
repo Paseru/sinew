@@ -370,6 +370,7 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
             workspace_root.clone(),
             turn_system_prompt.clone(),
             providers.clone(),
+            conversation.model.clone(),
             sub_agent_settings.clone(),
             mcp_settings.clone(),
             tool_settings.clone(),

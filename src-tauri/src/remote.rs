@@ -1,13 +1,10 @@
 use crate::*;
 
-use base64::{
-    engine::general_purpose::{STANDARD as B64, URL_SAFE_NO_PAD},
-};
+use base64::engine::general_purpose::{STANDARD as B64, URL_SAFE_NO_PAD};
 use futures_util::{SinkExt, StreamExt};
 use ring::{
     aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM},
-    agreement,
-    digest,
+    agreement, digest,
     rand::{SecureRandom, SystemRandom},
 };
 use serde::de::DeserializeOwned;
@@ -222,11 +219,7 @@ impl RemoteRuntime {
 
         if let Ok(key) = B64.decode(secret) {
             let _ = self
-                .send_encrypted_to_device_with_key(
-                    device_id,
-                    &key,
-                    &RemotePcPayload::DeviceRevoked,
-                )
+                .send_encrypted_to_device_with_key(device_id, &key, &RemotePcPayload::DeviceRevoked)
                 .await;
         }
         let _ = self
@@ -323,13 +316,17 @@ impl RemoteRuntime {
                             Some(Ok(Message::Text(text))) => {
                                 match serde_json::from_str::<RelayServerFrame>(&text) {
                                     Ok(frame) => self.handle_relay_frame(&app, frame).await,
-                                    Err(err) => tracing::warn!(error = %err, "bad remote relay frame"),
+                                    Err(err) => {
+                                        tracing::warn!(error = %err, "bad remote relay frame")
+                                    }
                                 }
                             }
                             Some(Ok(Message::Binary(bytes))) => {
                                 match serde_json::from_slice::<RelayServerFrame>(&bytes) {
                                     Ok(frame) => self.handle_relay_frame(&app, frame).await,
-                                    Err(err) => tracing::warn!(error = %err, "bad binary remote relay frame"),
+                                    Err(err) => {
+                                        tracing::warn!(error = %err, "bad binary remote relay frame")
+                                    }
                                 }
                             }
                             Some(Ok(Message::Ping(_))) | Some(Ok(Message::Pong(_))) => {}
@@ -396,7 +393,10 @@ impl RemoteRuntime {
                     tracing::warn!(error = %err, "remote pairing request failed");
                 }
             }
-            RelayServerFrame::PhoneCipher { device_id, envelope } => {
+            RelayServerFrame::PhoneCipher {
+                device_id,
+                envelope,
+            } => {
                 if let Err(err) = self.handle_phone_cipher(app, &device_id, envelope).await {
                     tracing::warn!(error = %err, device_id = %device_id, "remote command failed");
                     let _ = self
@@ -460,7 +460,9 @@ impl RemoteRuntime {
                 }
                 drop(inner);
                 self.emit_status(app).await;
-                return self.reject_pairing(phone_conn_id, "invalid pairing code").await;
+                return self
+                    .reject_pairing(phone_conn_id, "invalid pairing code")
+                    .await;
             }
             inner.settings.pc_id.clone()
         };
@@ -475,7 +477,8 @@ impl RemoteRuntime {
             .compute_public_key()
             .map_err(|_| anyhow::anyhow!("unable to compute pairing public key"))?;
         let pc_public_key_bytes = pc_public_key.as_ref().to_vec();
-        let peer = agreement::UnparsedPublicKey::new(&agreement::ECDH_P256, phone_public_key.as_slice());
+        let peer =
+            agreement::UnparsedPublicKey::new(&agreement::ECDH_P256, phone_public_key.as_slice());
         let pairing_key = agreement::agree_ephemeral(pc_private, &peer, |shared| {
             derive_pairing_key(shared, &pc_public_key_bytes, &phone_public_key, &code)
         })
@@ -501,7 +504,10 @@ impl RemoteRuntime {
         {
             let app_state = app.state::<DesktopState>();
             let mut inner = self.inner.lock().await;
-            inner.settings.devices.retain(|device| device.id != device_id);
+            inner
+                .settings
+                .devices
+                .retain(|device| device.id != device_id);
             inner.settings.devices.push(RemoteDeviceRecord {
                 id: device_id,
                 name,
@@ -749,6 +755,40 @@ impl RemoteRuntime {
                 .map_err(|err| anyhow::anyhow!(err))?;
                 Ok(serde_json::to_value(conversation)?)
             }
+            RemotePhoneCommand::ListModels => {
+                let providers = providers::list_configured_model_providers(state)
+                    .map_err(|err| anyhow::anyhow!(err))?;
+                let openrouter_models = if providers.iter().any(|p| p == "openrouter") {
+                    providers::list_openrouter_models(app.state::<DesktopState>())
+                        .map_err(|err| anyhow::anyhow!(err))?
+                } else {
+                    Vec::new()
+                };
+                Ok(json!({
+                    "providers": providers,
+                    "openrouterModels": openrouter_models,
+                }))
+            }
+            RemotePhoneCommand::SetConversationModel {
+                conversation_id,
+                mode,
+                model,
+                thinking,
+            } => {
+                let settings = conversations::set_conversation_model_preference(
+                    state,
+                    ConversationModelPreferenceInput {
+                        workspace_path: workspace_path.clone(),
+                        conversation_id,
+                        mode,
+                        model,
+                        thinking,
+                    },
+                )
+                .await
+                .map_err(|err| anyhow::anyhow!(err))?;
+                Ok(serde_json::to_value(settings)?)
+            }
             RemotePhoneCommand::SendMessage {
                 conversation_id,
                 text,
@@ -859,17 +899,18 @@ impl RemoteRuntime {
                 Ok(serde_json::to_value(replay)?)
             }
             RemotePhoneCommand::SubscribePush { subscription } => {
-                self.save_push_subscription(app, device_id, subscription).await?;
+                self.save_push_subscription(app, device_id, subscription)
+                    .await?;
                 Ok(json!({ "subscribed": true }))
             }
             RemotePhoneCommand::UnsubscribePush { endpoint } => {
-                self.remove_push_subscription(app, device_id, &endpoint).await?;
+                self.remove_push_subscription(app, device_id, &endpoint)
+                    .await?;
                 Ok(json!({ "subscribed": false }))
             }
             RemotePhoneCommand::Ping => Ok(json!({ "pong": true, "nowMs": now_ms() })),
         }
     }
-
 
     async fn save_push_subscription(
         &self,
@@ -959,9 +1000,14 @@ impl RemoteRuntime {
         .await
     }
 
-    async fn send_encrypted_to_device<T: Serialize>(&self, device_id: &str, payload: &T) -> Result<()> {
+    async fn send_encrypted_to_device<T: Serialize>(
+        &self,
+        device_id: &str,
+        payload: &T,
+    ) -> Result<()> {
         let (_device, key) = self.device_for_command(device_id).await?;
-        self.send_encrypted_to_device_with_key(device_id, &key, payload).await
+        self.send_encrypted_to_device_with_key(device_id, &key, payload)
+            .await
     }
 
     async fn send_encrypted_to_device_with_key<T: Serialize>(
@@ -1213,7 +1259,9 @@ pub(super) fn update_current_workspace(
     };
     let runtime = state.remote.clone();
     tauri::async_runtime::spawn(async move {
-        runtime.set_window_workspace(window_label, workspace_id).await;
+        runtime
+            .set_window_workspace(window_label, workspace_id)
+            .await;
     });
 }
 
@@ -1376,7 +1424,9 @@ enum RelayClientFrame {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum RelayServerFrame {
-    PcRegistered { pc_id: String },
+    PcRegistered {
+        pc_id: String,
+    },
     PairingRequest {
         phone_conn_id: String,
         code: String,
@@ -1387,9 +1437,15 @@ enum RelayServerFrame {
         device_id: String,
         envelope: CipherEnvelope,
     },
-    PhoneConnected { device_id: String },
-    PhoneDisconnected { device_id: String },
-    Error { message: String },
+    PhoneConnected {
+        device_id: String,
+    },
+    PhoneDisconnected {
+        device_id: String,
+    },
+    Error {
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1434,11 +1490,22 @@ enum RemotePhoneCommand {
     Bootstrap,
     ListConversations,
     CreateConversation,
-    LoadConversation { conversation_id: String },
-    DeleteConversation { conversation_id: String },
+    LoadConversation {
+        conversation_id: String,
+    },
+    DeleteConversation {
+        conversation_id: String,
+    },
     SetConversationMode {
         conversation_id: String,
         mode: AgentModeInput,
+    },
+    ListModels,
+    SetConversationModel {
+        conversation_id: String,
+        mode: AgentModeInput,
+        model: Option<ModelInput>,
+        thinking: Option<ThinkingLevelInput>,
     },
     SendMessage {
         conversation_id: String,
@@ -1475,8 +1542,12 @@ enum RemotePhoneCommand {
         conversation_id: String,
         after_sequence: Option<u64>,
     },
-    SubscribePush { subscription: RemotePushSubscription },
-    UnsubscribePush { endpoint: String },
+    SubscribePush {
+        subscription: RemotePushSubscription,
+    },
+    UnsubscribePush {
+        endpoint: String,
+    },
     Ping,
 }
 
@@ -1512,9 +1583,11 @@ enum RemotePcPayload {
 
 fn remote_bootstrap(state: &DesktopState, workspace_path: &str) -> Result<WorkspaceBootstrap> {
     let workspace_root = normalize_workspace_root(workspace_path)?;
-    let mut bootstrap = state
-        .store
-        .bootstrap_workspace(&workspace_root, &state.default_model, &state.system_prompt)?;
+    let mut bootstrap = state.store.bootstrap_workspace(
+        &workspace_root,
+        &state.default_model,
+        &state.system_prompt,
+    )?;
     let workspace_id = workspace_root.display().to_string();
     let active_conversation_id = state.active_turn_details.lock().ok().and_then(|active| {
         active
@@ -1524,7 +1597,10 @@ fn remote_bootstrap(state: &DesktopState, workspace_path: &str) -> Result<Worksp
             .map(|record| record.conversation_id.clone())
     });
     if let Some(conversation_id) = active_conversation_id {
-        if let Some(active_conversation) = state.store.load_conversation(&workspace_id, &conversation_id)? {
+        if let Some(active_conversation) = state
+            .store
+            .load_conversation(&workspace_id, &conversation_id)?
+        {
             bootstrap.active_conversation = active_conversation;
         }
     }
@@ -1536,7 +1612,11 @@ async fn materialize_remote_attachments(
 ) -> Result<Vec<AttachmentInput>> {
     let mut out = Vec::new();
     for attachment in attachments.iter().take(8) {
-        if let Some(path) = attachment.path.as_ref().filter(|path| !path.trim().is_empty()) {
+        if let Some(path) = attachment
+            .path
+            .as_ref()
+            .filter(|path| !path.trim().is_empty())
+        {
             out.push(AttachmentInput {
                 path: path.clone(),
                 name: attachment.name.clone(),
@@ -1558,7 +1638,8 @@ async fn materialize_remote_attachments(
         if bytes.len() > REMOTE_ATTACHMENT_MAX_BYTES {
             return Err(anyhow::anyhow!("attachment is too large"));
         }
-        let name = remote_attachment_name(attachment.name.as_deref(), attachment.media_type.as_deref());
+        let name =
+            remote_attachment_name(attachment.name.as_deref(), attachment.media_type.as_deref());
         let path = write_remote_attachment(&name, &bytes).await?;
         out.push(AttachmentInput {
             path: path.display().to_string(),
@@ -1657,7 +1738,12 @@ fn decrypt_json<T: DeserializeOwned>(key_bytes: &[u8], envelope: CipherEnvelope)
     Ok(serde_json::from_slice(plaintext)?)
 }
 
-fn derive_pairing_key(shared: &[u8], pc_public_key: &[u8], phone_public_key: &[u8], code: &str) -> [u8; 32] {
+fn derive_pairing_key(
+    shared: &[u8],
+    pc_public_key: &[u8],
+    phone_public_key: &[u8],
+    code: &str,
+) -> [u8; 32] {
     let mut ctx = digest::Context::new(&digest::SHA256);
     ctx.update(b"sinew-remote-pairing-v1");
     ctx.update(shared);
