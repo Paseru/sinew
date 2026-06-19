@@ -3,6 +3,7 @@ use crate::*;
 pub(super) const DEFAULT_SYSTEM_PROMPT: &str = "You are Sinew, a coding assistant. You build context by examining the codebase first without making assumptions or jumping to conclusions. ALWAYS check for a dedicated tool that fits the task before falling back to the shell/bash tool. You keep your responses concise without repeating yourself.";
 pub(super) const WORKSPACE_INSTRUCTIONS_FILE: &str = "AGENTS.md";
 pub(super) const WORKSPACE_DESIGN_FILE: &str = "DESIGN.md";
+pub(super) const WORKSPACE_MEMORY_FILE: &str = ".sinew/memory.md";
 pub(super) const AGENT_EVENT_NAME: &str = "agent-event";
 pub(super) const FILE_CHANGE_EVENT_NAME: &str = "workspace-file-changed";
 pub(super) const TERMINAL_DATA_EVENT_NAME: &str = "terminal-data";
@@ -44,6 +45,7 @@ pub(super) struct DesktopState {
     pub(super) team_runtime: Arc<RwLock<TeamRuntime>>,
     pub(super) remote: RemoteRuntime,
     pub(super) file_watchers: Arc<Mutex<HashMap<String, RecommendedWatcher>>>,
+    pub(super) browser_sessions: sinew_browser::BrowserSessions,
     pub(super) terminal_sessions: Arc<Mutex<HashMap<String, TerminalProcess>>>,
     pub(super) openai_login: Arc<Mutex<Option<OpenAiLoginAttempt>>>,
     pub(super) anthropic_login: Arc<Mutex<Option<AnthropicLoginAttempt>>>,

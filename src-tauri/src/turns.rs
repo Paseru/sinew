@@ -228,6 +228,13 @@ pub(super) async fn send_message(
             tool_settings.linkup_api_key(),
         )),
         web_fetch: Arc::new(WebFetchTool::new()),
+        browser: Arc::new(BrowserTools::new(
+            workspace_id.clone(),
+            state.browser_sessions.clone(),
+        )),
+        workspace_memory: Arc::new(WorkspaceMemoryTool::new(workspace_root.clone())),
+        semantic_search: Arc::new(SemanticSearchTool::new(workspace_root.clone())),
+        doc_tool: Arc::new(DocTool::new(workspace_root.clone())),
         skill: Arc::new(SkillTool::with_settings(
             workspace_root.clone(),
             skill_settings.clone(),
@@ -1558,6 +1565,12 @@ pub(super) fn system_prompt_for_workspace(workspace_root: &Path, base: &str) -> 
     if let Some(design) = read_workspace_prompt_file(workspace_root, WORKSPACE_DESIGN_FILE)? {
         sections.push(format!(
             "# Workspace design context\n\nThe following design guidance comes from the current workspace and should guide product, UX, visual, and frontend decisions.\n\n{design}"
+        ));
+    }
+
+    if let Some(memory) = read_workspace_prompt_file(workspace_root, WORKSPACE_MEMORY_FILE)? {
+        sections.push(format!(
+            "# Workspace memory\n\nThe following is persistent memory about this workspace, accumulated across sessions. Use it as background context.\n\n{memory}"
         ));
     }
 

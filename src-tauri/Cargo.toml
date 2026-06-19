@@ -17,6 +17,7 @@ tauri-build = { workspace = true }
 [dependencies]
 sinew-anthropic = { workspace = true }
 sinew-app = { workspace = true }
+sinew-browser = { workspace = true }
 sinew-core = { workspace = true }
 sinew-google = { workspace = true }
 sinew-kimi = { workspace = true }

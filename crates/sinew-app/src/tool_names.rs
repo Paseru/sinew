@@ -21,6 +21,37 @@ pub const SKILL: &str = "skill";
 pub const UPDATE_GOAL: &str = "update_goal";
 pub const CONTEXT_COMPACTION: &str = "context_compaction";
 
+pub const BROWSER_OPEN: &str = "browser_open";
+pub const BROWSER_SCREENSHOT: &str = "browser_screenshot";
+pub const BROWSER_DOM: &str = "browser_dom";
+pub const BROWSER_CLICK: &str = "browser_click";
+pub const BROWSER_TYPE: &str = "browser_type";
+pub const BROWSER_EVAL: &str = "browser_eval";
+pub const BROWSER_CONSOLE: &str = "browser_console";
+pub const BROWSER_NETWORK: &str = "browser_network";
+pub const BROWSER_WAIT: &str = "browser_wait";
+pub const BROWSER_SCROLL: &str = "browser_scroll";
+pub const BROWSER_SELECT: &str = "browser_select";
+pub const BROWSER_HOVER: &str = "browser_hover";
+pub const BROWSER_CLOSE: &str = "browser_close";
+pub const BROWSER_RECORD_START: &str = "browser_record_start";
+pub const BROWSER_RECORD_STOP: &str = "browser_record_stop";
+pub const BROWSER_RESIZE: &str = "browser_resize";
+pub const BROWSER_BACK: &str = "browser_back";
+pub const BROWSER_FORWARD: &str = "browser_forward";
+pub const BROWSER_FIND: &str = "browser_find";
+pub const BROWSER_PDF: &str = "browser_pdf";
+pub const BROWSER_UPLOAD: &str = "browser_upload";
+pub const BROWSER_COOKIES: &str = "browser_cookies";
+pub const BROWSER_KEYS: &str = "browser_keys";
+pub const BROWSER_IFRAME: &str = "browser_iframe";
+
+pub const WORKSPACE_MEMORY: &str = "workspace_memory";
+pub const INDEX_WORKSPACE: &str = "index_workspace";
+pub const SEMANTIC_SEARCH: &str = "semantic_search";
+pub const DOC_READ: &str = "doc_read";
+pub const DOC_EDIT: &str = "doc_edit";
+
 pub const TEAM_RUN: &str = "team_run";
 pub const TEAM_CREATE: &str = "team_create";
 pub const AGENT: &str = "agent";

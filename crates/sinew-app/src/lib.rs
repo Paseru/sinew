@@ -1,5 +1,7 @@
 pub mod agent;
 pub mod bash;
+pub mod doc_tool;
+pub mod browser;
 pub mod compact;
 pub mod edit;
 pub mod glob;
@@ -21,6 +23,8 @@ pub mod tool_names;
 pub mod tool_run;
 pub mod web;
 pub mod workspace;
+pub mod semantic_search;
+pub mod workspace_memory;
 pub mod write;
 
 pub use agent::{
@@ -29,6 +33,8 @@ pub use agent::{
     ConversationEvent, EngineCommand, QuestionReply, TurnCancel, TurnContext,
 };
 pub use bash::{active_shell_display_name, shell_system_prompt, BashTool};
+pub use doc_tool::DocTool;
+pub use browser::BrowserTools;
 pub use compact::{compact_conversation_history, CompactConversationOutput};
 pub use edit::EditFileTool;
 pub use glob::GlobTool;
@@ -76,4 +82,6 @@ pub use workspace::{
     WorkspaceEntryKind, WorkspaceFileChangeEvent, WorkspaceInfo, WorkspaceSearchFile,
     WorkspaceSearchMatch, WorkspaceSearchResult,
 };
+pub use semantic_search::SemanticSearchTool;
+pub use workspace_memory::WorkspaceMemoryTool;
 pub use write::WriteFileTool;

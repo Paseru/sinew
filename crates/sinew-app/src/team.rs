@@ -15,10 +15,10 @@ use uuid::Uuid;
 use crate::tool_run::{DiffLineKind, FileChange, FileChangeKind, ToolRunImage};
 use crate::{
     run_turn, subagent_system_prompt, tool_names, AgentEvent, AgentEventScope, AgentMode, BashTool,
-    CreateImageTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool, McpSettings,
-    McpToolRegistry, ReadTool, SkillSettings, SkillTool, SubAgentConfig, SubAgentSettings,
-    TodoListState, ToolRunResult, ToolSettings, TurnCancel, TurnContext, WebFetchTool,
-    WebSearchTool, WriteFileTool,
+    BrowserTools, CreateImageTool, EditFileTool, GlobTool, GoalWorkflowState, GrepTool, McpSettings,
+    DocTool, McpToolRegistry, ReadTool, SemanticSearchTool, SkillSettings, SkillTool,
+    SubAgentConfig, SubAgentSettings, TodoListState, ToolRunResult, ToolSettings, TurnCancel,
+    TurnContext, WebFetchTool, WebSearchTool, WorkspaceMemoryTool, WriteFileTool,
 };
 
 const TEAM_RUN_TOOL: &str = tool_names::TEAM_RUN;

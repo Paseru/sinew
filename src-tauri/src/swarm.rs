@@ -366,6 +366,13 @@ pub(super) async fn wake_main_agent_for_swarm_notice(
             skill_settings.clone(),
         )),
         mcp: Arc::new(McpToolRegistry::new(mcp_settings.clone())),
+        browser: Arc::new(BrowserTools::new(
+            workspace_root.to_string_lossy().to_string(),
+            state.browser_sessions.clone(),
+        )),
+        workspace_memory: Arc::new(WorkspaceMemoryTool::new(workspace_root.clone())),
+        semantic_search: Arc::new(SemanticSearchTool::new(workspace_root.clone())),
+        doc_tool: Arc::new(DocTool::new(workspace_root.clone())),
         subagents: Some(Arc::new(SubAgentTool::new(
             workspace_root.clone(),
             turn_system_prompt.clone(),

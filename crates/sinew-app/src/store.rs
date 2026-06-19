@@ -214,7 +214,11 @@ pub struct ToolSettings {
     pub web_search_provider: WebSearchProvider,
     #[serde(default)]
     pub linkup_api_key: String,
+    #[serde(default = "default_true")]
+    pub browser_enabled: bool,
 }
+
+fn default_true() -> bool { true }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImageProvider {

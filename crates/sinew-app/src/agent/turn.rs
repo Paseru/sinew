@@ -64,6 +64,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
         question,
         web_search,
         web_fetch,
+        browser,
+        workspace_memory,
+        semantic_search,
+        doc_tool,
         skill,
         mcp,
         subagents,
@@ -115,6 +119,12 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
             web_search.descriptor(),
             web_fetch.descriptor(),
         ];
+        if tool_settings.browser_enabled {
+            tool_descriptors.extend(browser.all_descriptors());
+        }
+        tool_descriptors.push(workspace_memory.descriptor());
+        tool_descriptors.extend(semantic_search.descriptors());
+        tool_descriptors.extend(doc_tool.descriptors());
         if let Some(question) = &question {
             tool_descriptors.insert(6, question.descriptor());
         }
@@ -629,6 +639,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                         question.as_deref(),
                         &web_search,
                         &web_fetch,
+                        &browser,
+                        &workspace_memory,
+                        &semantic_search,
+                        &doc_tool,
                         &skill,
                         &mcp,
                         subagents.as_deref(),
@@ -673,6 +687,10 @@ pub async fn run_turn(ctx: TurnContext) -> TurnOutput {
                             question.as_deref(),
                             &web_search,
                             &web_fetch,
+                            &browser,
+                            &workspace_memory,
+                            &semantic_search,
+                            &doc_tool,
                             &skill,
                             &mcp,
                             subagents.as_deref(),

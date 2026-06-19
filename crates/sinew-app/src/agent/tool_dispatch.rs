@@ -4,9 +4,10 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::{
-    tool_names, BashTool, CreateImageTool, EditFileTool, GlobTool, GrepTool, McpToolRegistry,
-    QuestionTool, ReadFingerprint, ReadTool, SkillTool, SubAgentTool, TeamTool, ToDoListTool,
-    TodoListState, ToolRunResult, ToolSettings, WebFetchTool, WebSearchTool, WriteFileTool,
+    tool_names, BashTool, BrowserTools, CreateImageTool, DocTool, EditFileTool, GlobTool, GrepTool,
+    McpToolRegistry, QuestionTool, ReadFingerprint, ReadTool, SemanticSearchTool, SkillTool,
+    SubAgentTool, TeamTool, ToDoListTool, TodoListState, ToolRunResult, ToolSettings, WebFetchTool,
+    WebSearchTool, WorkspaceMemoryTool, WriteFileTool,
 };
 
 use super::{cancel::TurnCancel, context::AgentMode, events::AgentEvent};
@@ -37,6 +38,10 @@ pub(super) async fn run_tool(
     question: Option<&QuestionTool>,
     web_search: &WebSearchTool,
     web_fetch: &WebFetchTool,
+    browser: &BrowserTools,
+    workspace_memory: &WorkspaceMemoryTool,
+    semantic_search: &SemanticSearchTool,
+    doc_tool: &DocTool,
     skill: &SkillTool,
     mcp: &McpToolRegistry,
     subagents: Option<&SubAgentTool>,
@@ -97,6 +102,18 @@ pub(super) async fn run_tool(
         web_search.run(input).await
     } else if canonical_name == tool_names::WEB_FETCH {
         web_fetch.run(input).await
+    } else if name.starts_with("browser_") {
+        browser.run(name, input).await
+    } else if canonical_name == tool_names::WORKSPACE_MEMORY {
+        workspace_memory.run(input).await
+    } else if canonical_name == tool_names::INDEX_WORKSPACE {
+        semantic_search.run_index(input).await
+    } else if canonical_name == tool_names::SEMANTIC_SEARCH {
+        semantic_search.run_search(input).await
+    } else if canonical_name == tool_names::DOC_READ {
+        doc_tool.run_read(input).await
+    } else if canonical_name == tool_names::DOC_EDIT {
+        doc_tool.run_edit(input).await
     } else if canonical_name == tool_names::SKILL {
         skill.run(input).await
     } else if name.starts_with("subagent_") {

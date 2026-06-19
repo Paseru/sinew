@@ -125,6 +125,20 @@ impl ToolRunResult {
             meta: None,
         }
     }
+
+    pub fn err_with_images(
+        content: impl Into<String>,
+        images: Vec<ToolRunImage>,
+        file_changes: Vec<FileChange>,
+    ) -> Self {
+        Self {
+            content: content.into(),
+            is_error: true,
+            file_changes,
+            images,
+            meta: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
