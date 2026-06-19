@@ -153,10 +153,17 @@ async function download(url, destination) {
 }
 
 async function extractArchive(archivePath, extractDir, archiveExt) {
-  const args = archiveExt === "zip"
-    ? ["-xf", archivePath, "-C", extractDir]
-    : ["-xzf", archivePath, "-C", extractDir];
-  await execFile("tar", args);
+  if (archiveExt === "zip" && process.platform === "win32") {
+    await execFile("powershell", [
+      "-NoProfile", "-NonInteractive", "-Command",
+      `Expand-Archive -LiteralPath '${archivePath}' -DestinationPath '${extractDir}' -Force`,
+    ]);
+  } else {
+    const args = archiveExt === "zip"
+      ? ["-xf", archivePath, "-C", extractDir]
+      : ["-xzf", archivePath, "-C", extractDir];
+    await execFile("tar", args);
+  }
 }
 
 async function fileExists(filePath) {
