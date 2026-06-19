@@ -1,0 +1,23 @@
+[package]
+name = "sinew-browser"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Browser automation via CDP for sinew"
+
+[dependencies]
+anyhow = { workspace = true }
+base64 = { workspace = true }
+chromiumoxide = { workspace = true }
+color_quant = { workspace = true }
+futures = { workspace = true }
+gif = { workspace = true }
+image = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true
