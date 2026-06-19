@@ -6525,6 +6525,23 @@ textarea {
   font-size: var(--fs-mono-sm);
   white-space: nowrap;
 }
+.tool-card__title-meta--url {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tool-card__thumb {
+  height: 28px;
+  width: auto;
+  max-width: 64px;
+  border-radius: 3px;
+  object-fit: cover;
+  opacity: 0.85;
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 4px;
+}
 .tool-card__head[data-cleaned="true"] {
   opacity: 0.4;
 }

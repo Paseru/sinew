@@ -455,6 +455,7 @@ export function TodoStrip({
   showTeamTasks = true,
   teamAgentColors = {},
   teamMessageRecipient,
+  isStreaming = false,
   onOpenFile,
   onQueuedPromptSend,
   onQueuedPromptEdit,
@@ -467,6 +468,7 @@ export function TodoStrip({
   showTeamTasks?: boolean;
   teamAgentColors?: Record<string, string>;
   teamMessageRecipient?: string;
+  isStreaming?: boolean;
   onOpenFile: (path: string) => void;
   onQueuedPromptSend?: (id: string) => void;
   onQueuedPromptEdit?: (id: string) => void;
@@ -758,7 +760,7 @@ export function TodoStrip({
               data-panel={active}
               data-status={task.status}
             >
-              <TaskStatusMark status={task.status} />
+              <TaskStatusMark status={task.status} isStreaming={isStreaming} />
               <span className="todo-strip__text">
                 {task.text}
                 {active === "team" && (
@@ -969,13 +971,15 @@ function cssPx(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function TaskStatusMark({ status }: { status: TodoStatus | TeamTaskStatus }) {
+function TaskStatusMark({ status, isStreaming }: { status: TodoStatus | TeamTaskStatus; isStreaming?: boolean }) {
   return (
     <span className="todo-strip__mark">
       {status === "done" || status === "completed" ? (
         <Icon icon="solar:check-circle-linear" width={14} height={14} />
-      ) : status === "in_progress" ? (
+      ) : status === "in_progress" && isStreaming ? (
         <span className="todo-strip__loader" />
+      ) : status === "in_progress" ? (
+        <span className="todo-strip__square" data-paused="true" />
       ) : status === "blocked" ? (
         <Icon icon="solar:danger-triangle-linear" width={14} height={14} />
       ) : (

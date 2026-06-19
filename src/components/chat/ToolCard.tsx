@@ -197,6 +197,27 @@ function McpGlyph() {
   );
 }
 
+function BrowserGlyph() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="1.5" y="2.5" width="11" height="9" rx="1.5" />
+      <path d="M1.5 5.5h11" />
+      <circle cx="3.5" cy="4" r="0.5" fill="currentColor" stroke="none" />
+      <circle cx="5.2" cy="4" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function SkillGlyph() {
   return (
     <svg
@@ -776,6 +797,90 @@ function fallbackSwarmAgentColor(name: string): string {
   return TEAM_AGENT_COLORS[hash % TEAM_AGENT_COLORS.length];
 }
 
+function browserActionLabel(canonicalName: string): string {
+  const map: Record<string, string> = {
+    browser_open: "Open",
+    browser_screenshot: "Screenshot",
+    browser_dom: "DOM",
+    browser_click: "Click",
+    browser_type: "Type",
+    browser_eval: "Eval",
+    browser_console: "Console",
+    browser_network: "Network",
+    browser_wait: "Wait",
+    browser_scroll: "Scroll",
+    browser_select: "Select",
+    browser_hover: "Hover",
+    browser_close: "Close",
+    browser_record_start: "Record",
+    browser_record_stop: "Stop recording",
+    browser_resize: "Resize",
+    browser_back: "Back",
+    browser_forward: "Forward",
+    browser_find: "Find",
+    browser_pdf: "PDF",
+    browser_upload: "Upload",
+    browser_cookies: "Cookies",
+    browser_keys: "Keys",
+    browser_iframe: "iFrame",
+  };
+  return map[canonicalName] ?? canonicalName.replace("browser_", "");
+}
+
+function browserTitleParts(
+  canonicalName: string,
+  argsPretty?: string,
+  isError?: boolean,
+): { main: string; meta: string | null } {
+  const input = parseToolInput(argsPretty);
+  const action = browserActionLabel(canonicalName);
+  let meta: string | null = null;
+
+  if (canonicalName === "browser_open" && typeof input.url === "string") {
+    meta = input.url;
+  } else if (
+    (canonicalName === "browser_click" ||
+      canonicalName === "browser_hover" ||
+      canonicalName === "browser_wait" ||
+      canonicalName === "browser_select") &&
+    typeof input.selector === "string"
+  ) {
+    meta = input.selector;
+  } else if (canonicalName === "browser_type") {
+    if (typeof input.selector === "string") meta = input.selector;
+    if (typeof input.text === "string") {
+      const preview = input.text.length > 24 ? input.text.slice(0, 24) + "…" : input.text;
+      meta = meta ? `${meta} · "${preview}"` : `"${preview}"`;
+    }
+  } else if (
+    canonicalName === "browser_resize" &&
+    typeof input.width === "number" &&
+    typeof input.height === "number"
+  ) {
+    meta = `${input.width}×${input.height}`;
+  } else if (canonicalName === "browser_scroll") {
+    if (typeof input.selector === "string") meta = input.selector;
+    else if (typeof input.x === "number" && typeof input.y === "number") meta = `${input.x}, ${input.y}`;
+  } else if (canonicalName === "browser_record_start" && typeof input.fps === "number") {
+    meta = `${input.fps} fps`;
+  } else if (canonicalName === "browser_find" && typeof input.text === "string") {
+    meta = `"${input.text}"`;
+  } else if (canonicalName === "browser_upload" && typeof input.path === "string") {
+    meta = input.path.split(/[\\/]/).pop() ?? input.path;
+  } else if (canonicalName === "browser_keys" && typeof input.key === "string") {
+    meta = input.key;
+  } else if (canonicalName === "browser_cookies" && typeof input.action === "string") {
+    meta = input.action + (input.name ? ` · ${input.name}` : "");
+  } else if (canonicalName === "browser_iframe" && typeof input.iframe_selector === "string") {
+    meta = input.iframe_selector;
+  }
+
+  return {
+    main: `Browser · ${action}`,
+    meta: isError ? "failed" : meta,
+  };
+}
+
 function mcpServerLabel(value: string, generated = false): string {
   const trimmed = value.trim();
   const stripped = trimmed
@@ -1000,6 +1105,7 @@ export function ToolCard({
   }
 
   const isBash = canonicalName === "bash" || canonicalName === "bash_input";
+  const isBrowser = canonicalName.startsWith("browser_");
   const isGlob = canonicalName === "glob";
   const isGrep = canonicalName === "grep";
   const isEditFile = canonicalName === "edit_file";
@@ -1106,6 +1212,7 @@ export function ToolCard({
     : isGlob
       ? globTitleParts(argsPretty, output, isError)
       : null;
+  const browserTitle = isBrowser ? browserTitleParts(canonicalName, argsPretty, isError) : null;
   const mcpTitle = isMcp ? mcpTitleParts(name, summary) : null;
   const bashTitle = isBash && command ? command : null;
   const editingTitle = showEditingTitle
@@ -1209,6 +1316,8 @@ export function ToolCard({
               <AsteriskGlyph />
             ) : isEditFile || isWriteFile ? (
               <Icon icon="solar:pen-new-square-linear" width={12} height={12} />
+            ) : isBrowser ? (
+              <BrowserGlyph />
             ) : isWebSearch ? (
               <Icon icon="solar:magnifer-linear" width={12} height={12} />
             ) : isWebFetch ? (
@@ -1231,6 +1340,15 @@ export function ToolCard({
             </span>
             {searchTitle.meta && (
               <span className="tool-card__title-meta">{searchTitle.meta}</span>
+            )}
+          </span>
+        ) : browserTitle ? (
+          <span className="tool-card__title tool-card__title--search">
+            <span className="tool-card__title-main">{browserTitle.main}</span>
+            {browserTitle.meta && (
+              <span className="tool-card__title-meta tool-card__title-meta--url" title={browserTitle.meta}>
+                {browserTitle.meta}
+              </span>
             )}
           </span>
         ) : mcpTitle ? (
@@ -1265,6 +1383,13 @@ export function ToolCard({
               {teamStopState === "stopping" ? "Stopping" : "Stop"}
             </span>
           </button>
+        )}
+        {isBrowser && hasImages && !showBody && status !== "running" && (
+          <img
+            className="tool-card__thumb"
+            src={toolImageSrc(images![0])}
+            alt=""
+          />
         )}
         {canExpand || isSubAgent ? (
           <span

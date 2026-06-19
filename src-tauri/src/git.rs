@@ -11,9 +11,6 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(windows)]
-use std::os::windows::process::CommandExt;
-
-#[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 static RESOLVED_GIT: OnceLock<Option<PathBuf>> = OnceLock::new();

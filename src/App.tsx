@@ -47,23 +47,25 @@ export default function App() {
     let cancelled = false;
 
     (async () => {
-      // 1. Updater gate.
-      try {
-        const info = await Promise.race<UpdateInfo | null>([
-          api.checkForUpdate(),
-          new Promise<null>((resolve) =>
-            window.setTimeout(() => resolve(null), BOOT_CHECK_TIMEOUT_MS),
-          ),
-        ]);
-        if (cancelled) return;
-        if (info && info.available && info.version) {
-          setState({ kind: "update_required", info, autoInstall: false });
-          return;
+      // 1. Updater gate (skipped in dev mode).
+      if (!import.meta.env.DEV) {
+        try {
+          const info = await Promise.race<UpdateInfo | null>([
+            api.checkForUpdate(),
+            new Promise<null>((resolve) =>
+              window.setTimeout(() => resolve(null), BOOT_CHECK_TIMEOUT_MS),
+            ),
+          ]);
+          if (cancelled) return;
+          if (info && info.available && info.version) {
+            setState({ kind: "update_required", info, autoInstall: false });
+            return;
+          }
+        } catch {
+          // Silent: a failed check (offline, server down, manifest 5xx)
+          // shouldn't prevent the app from booting. The mid-session badge
+          // will retry later, and the next launch will re-gate cleanly.
         }
-      } catch {
-        // Silent: a failed check (offline, server down, manifest 5xx)
-        // shouldn't prevent the app from booting. The mid-session badge
-        // will retry later, and the next launch will re-gate cleanly.
       }
 
       // 2. Auto-open last workspace, falling back to Welcome.

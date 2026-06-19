@@ -448,6 +448,8 @@ export function ChatPane({
   const activeSubAgentIdRef = useRef<string | null>(null);
   const [autoCloseSubAgentId, setAutoCloseSubAgentId] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const historyIndexRef = useRef<number>(-1);
+  const historyDraftRef = useRef<string>("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dropActive, setDropActive] = useState(false);
   const [optimisticModeSelectionsByConversation, setOptimisticModeSelectionsByConversation] =
@@ -839,6 +841,8 @@ export function ChatPane({
     setEditingQueuedPrompt(composerDraft?.editingQueuedPrompt ?? null);
     setMention(null);
     setSkillMention(null);
+    historyIndexRef.current = -1;
+    historyDraftRef.current = "";
     setMode(
       planWorkflow.status !== "idle"
         ? "plan"
@@ -2617,8 +2621,56 @@ export function ChatPane({
         return;
       }
     }
+    if (event.key === "ArrowUp" && !mention && !skillMention) {
+      const ta = event.currentTarget;
+      if (ta.selectionStart === 0 && ta.selectionEnd === 0) {
+        const history = view.blocks
+          .filter((b): b is Extract<typeof b, { kind: "user-text" }> => b.kind === "user-text")
+          .map((b) => b.text)
+          .filter(Boolean);
+        if (history.length === 0) return;
+        const nextIndex = historyIndexRef.current === -1
+          ? history.length - 1
+          : Math.max(0, historyIndexRef.current - 1);
+        if (historyIndexRef.current === -1) historyDraftRef.current = text;
+        historyIndexRef.current = nextIndex;
+        event.preventDefault();
+        setText(history[nextIndex]);
+        requestAnimationFrame(() => {
+          const t = textareaRef.current;
+          if (t) { t.selectionStart = 0; t.selectionEnd = 0; }
+        });
+        return;
+      }
+    }
+    if (event.key === "ArrowDown" && !mention && !skillMention) {
+      if (historyIndexRef.current === -1) return;
+      const ta = event.currentTarget;
+      const atEnd = ta.selectionStart === ta.value.length;
+      if (!atEnd) return;
+      const history = view.blocks
+        .filter((b): b is Extract<typeof b, { kind: "user-text" }> => b.kind === "user-text")
+        .map((b) => b.text)
+        .filter(Boolean);
+      const nextIndex = historyIndexRef.current + 1;
+      event.preventDefault();
+      if (nextIndex >= history.length) {
+        historyIndexRef.current = -1;
+        setText(historyDraftRef.current);
+      } else {
+        historyIndexRef.current = nextIndex;
+        setText(history[nextIndex]);
+      }
+      requestAnimationFrame(() => {
+        const t = textareaRef.current;
+        if (t) { t.selectionStart = t.value.length; t.selectionEnd = t.value.length; }
+      });
+      return;
+    }
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
+      historyIndexRef.current = -1;
+      historyDraftRef.current = "";
       void handleSend();
     }
   };
@@ -3320,6 +3372,7 @@ export function ChatPane({
         showTeamTasks={activeTeamNames.size > 0}
         teamAgentColors={teamAgentColors}
         teamMessageRecipient={viewingSubAgent ? activeSubAgent?.name : undefined}
+        isStreaming={isStreaming}
         onOpenFile={onOpenFile}
         onQueuedPromptSend={viewingSubAgent ? undefined : handleQueuedPromptSend}
         onQueuedPromptEdit={viewingSubAgent ? undefined : handleQueuedPromptEdit}
