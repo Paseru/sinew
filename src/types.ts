@@ -279,12 +279,29 @@ export type McpEnvVar = {
   value: string;
 };
 
+export type McpHeader = {
+  key: string;
+  value: string;
+};
+
+export type McpAuthConfig = {
+  // Mirrors the Rust `auth_type` field, serialized as `type`.
+  type: string;
+  token?: string;
+  scopes: string[];
+};
+
 export type McpServerConfig = {
   id: string;
   name: string;
+  // `command` drives stdio servers; `url` drives HTTP/streamable servers.
+  // Exactly one transport is expected per server.
   command: string;
+  url?: string | null;
   args: string[];
   env: McpEnvVar[];
+  headers: McpHeader[];
+  auth?: McpAuthConfig | null;
   cwd?: string | null;
   enabled: boolean;
 };
@@ -308,7 +325,32 @@ export type McpServerProbe = {
   enabled: boolean;
   ok: boolean;
   tools: McpToolInfo[];
+  // "stdio" for command servers, "http" for URL-based servers.
+  transport: string;
+  // The probe failed because the server demands OAuth authentication.
+  authRequired: boolean;
+  // The server already has usable credentials (OAuth token, bearer, headers).
+  authenticated: boolean;
   error?: string | null;
+};
+
+// Mirrors `McpOAuthStatus` in crates/sinew-app/src/mcp.rs.
+export type McpOAuthConnectionState =
+  | "connected"
+  | "connecting"
+  | "disconnected"
+  | "error";
+
+export type McpOAuthStatus = {
+  connected: boolean;
+  connectionState: McpOAuthConnectionState | string;
+  loginId?: string | null;
+  error?: string | null;
+};
+
+export type StartMcpOAuthLoginOutput = {
+  loginId: string;
+  authUrl: string;
 };
 
 export type SkillSource = "workspace" | "global";

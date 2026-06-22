@@ -1,0 +1,100 @@
+{
+  "generatedAt": "2026-06-16T17:40:36.470Z",
+  "source": "https://styles.refero.design/",
+  "limit": 10,
+  "viewport": "1440,1000",
+  "waitMs": 2500,
+  "timeoutMs": 45000,
+  "results": [
+    {
+      "id": "21cfe0c1-778d-4613-9f47-a5718eb929b3",
+      "siteName": "Auros",
+      "url": "https://auros.global",
+      "referoUrl": "https://styles.refero.design/style/21cfe0c1-778d-4613-9f47-a5718eb929b3",
+      "index": 1,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/001-auros.png"
+    },
+    {
+      "id": "00537a20-e99e-4ef2-b119-c6f532c44cc9",
+      "siteName": "Gsap",
+      "url": "https://gsap.com",
+      "referoUrl": "https://styles.refero.design/style/00537a20-e99e-4ef2-b119-c6f532c44cc9",
+      "index": 2,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/002-gsap.png"
+    },
+    {
+      "id": "e5f5f8cf-e68d-4ed1-bbf5-6b67569af648",
+      "siteName": "Your workplace has the answer. Just ask Dala for it.",
+      "url": "https://dala.craftedbygc.com",
+      "referoUrl": "https://styles.refero.design/style/e5f5f8cf-e68d-4ed1-bbf5-6b67569af648",
+      "index": 3,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/003-your-workplace-has-the-answer-just-ask-dala-for-it.png"
+    },
+    {
+      "id": "6c0b77d3-71f9-469d-98aa-4ce1d6d76ac8",
+      "siteName": "Structured",
+      "url": "https://structured.money",
+      "referoUrl": "https://styles.refero.design/style/6c0b77d3-71f9-469d-98aa-4ce1d6d76ac8",
+      "index": 4,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/004-structured.png"
+    },
+    {
+      "id": "1f32d914-6fdd-4692-b4fc-fcee2c414766",
+      "siteName": "Jeton",
+      "url": "https://www.jeton.com",
+      "referoUrl": "https://styles.refero.design/style/1f32d914-6fdd-4692-b4fc-fcee2c414766",
+      "index": 5,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/005-jeton.png"
+    },
+    {
+      "id": "d3289fe7-a85e-42d8-96b7-eb7faa62a104",
+      "siteName": "Air",
+      "url": "https://air.inc",
+      "referoUrl": "https://styles.refero.design/style/d3289fe7-a85e-42d8-96b7-eb7faa62a104",
+      "index": 6,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/006-air.png"
+    },
+    {
+      "id": "e7f92774-3c08-402b-917d-020ba1f3d489",
+      "siteName": "Reflect Notes",
+      "url": "https://reflect.app",
+      "referoUrl": "https://styles.refero.design/style/e7f92774-3c08-402b-917d-020ba1f3d489",
+      "index": 7,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/007-reflect-notes.png"
+    },
+    {
+      "id": "e9001d5a-504d-47ed-aef0-d0d35fa86418",
+      "siteName": "Ditto",
+      "url": "https://trustditto.com",
+      "referoUrl": "https://styles.refero.design/style/e9001d5a-504d-47ed-aef0-d0d35fa86418",
+      "index": 8,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/008-ditto.png"
+    },
+    {
+      "id": "90ce5883-bb24-4466-93f7-801cd617b0d1",
+      "siteName": "Linear",
+      "url": "https://linear.app",
+      "referoUrl": "https://styles.refero.design/style/90ce5883-bb24-4466-93f7-801cd617b0d1",
+      "index": 9,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/009-linear.png"
+    },
+    {
+      "id": "c9cabb96-32fa-4896-837a-f2497ce1c856",
+      "siteName": "Apple",
+      "url": "https://www.apple.com/macbook-neo",
+      "referoUrl": "https://styles.refero.design/style/c9cabb96-32fa-4896-837a-f2497ce1c856",
+      "index": 10,
+      "status": "ok",
+      "screenshot": "/Users/hyrak/sinew/refero-heroes/screenshots/010-apple.png"
+    }
+  ]
+}

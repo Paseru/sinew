@@ -275,7 +275,6 @@ pub(super) async fn send_message(
     let state_for_wake = state.inner().clone();
     let conversation_id = conversation.id.clone();
     let conversation_title = conversation.title.clone();
-    let conversation_model = conversation.model.clone();
     let conversation_mode_model_settings = conversation.mode_model_settings.clone();
     let conversation_system_prompt = conversation.system_prompt.clone();
     let workspace_root_for_output = workspace_root.clone();
@@ -361,11 +360,13 @@ pub(super) async fn send_message(
                                 }
                             }
                             let turn_duration_ms = goal_workflow_duration_ms(&goal_workflow);
+                            let saved_mode = workflow_active_mode(&plan_workflow, &goal_workflow);
+                            let saved_model = conversation_mode_model_settings.get(saved_mode).clone();
                             let saved = SavedConversation {
                                 id: conversation_id.clone(),
                                 workspace_id: workspace_id.clone(),
                                 title: conversation_title.clone(),
-                                model: conversation_model.clone(),
+                                model: saved_model,
                                 mode_model_settings: conversation_mode_model_settings.clone(),
                                 system_prompt: conversation_system_prompt.clone(),
                                 todo_list: output.todo_list,

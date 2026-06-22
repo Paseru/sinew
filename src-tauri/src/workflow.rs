@@ -1,16 +1,21 @@
 use crate::*;
 
 pub(super) fn conversation_active_mode(conversation: &SavedConversation) -> AgentMode {
-    let mode = match &conversation.plan_workflow {
+    workflow_active_mode(&conversation.plan_workflow, &conversation.goal_workflow)
+}
+
+pub(super) fn workflow_active_mode(
+    plan_workflow: &PlanWorkflowState,
+    goal_workflow: &GoalWorkflowState,
+) -> AgentMode {
+    let mode = match plan_workflow {
         PlanWorkflowState::Idle => AgentMode::Act,
         PlanWorkflowState::PlanningQuestions | PlanWorkflowState::PlanReady { .. } => {
             AgentMode::Plan
         }
     };
 
-    if mode == AgentMode::Act
-        && matches!(conversation.goal_workflow, GoalWorkflowState::Active { .. })
-    {
+    if mode == AgentMode::Act && matches!(goal_workflow, GoalWorkflowState::Active { .. }) {
         AgentMode::Goal
     } else {
         mode

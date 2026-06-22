@@ -116,6 +116,43 @@ fn plan_policy_returns_to_question_loop_when_updating_ready_plan() {
 }
 
 #[test]
+fn workflow_active_mode_returns_to_act_after_goal_completion() {
+    let goal = GoalWorkflowState::Complete {
+        objective: "done".into(),
+        started_at_ms: 10,
+        completed_at_ms: 20,
+    };
+
+    assert_eq!(
+        workflow_active_mode(&PlanWorkflowState::Idle, &goal),
+        AgentMode::Act
+    );
+}
+
+#[test]
+fn workflow_active_mode_uses_goal_only_while_goal_is_active() {
+    let active_goal = GoalWorkflowState::Active {
+        objective: "work".into(),
+        started_at_ms: 10,
+        updated_at_ms: 15,
+    };
+    let paused_goal = GoalWorkflowState::Paused {
+        objective: "work".into(),
+        started_at_ms: 10,
+        updated_at_ms: 15,
+    };
+
+    assert_eq!(
+        workflow_active_mode(&PlanWorkflowState::Idle, &active_goal),
+        AgentMode::Goal
+    );
+    assert_eq!(
+        workflow_active_mode(&PlanWorkflowState::Idle, &paused_goal),
+        AgentMode::Act
+    );
+}
+
+#[test]
 fn context_estimate_stays_in_plan_mode_for_active_workflows() {
     assert_eq!(
         plan_estimate_mode(&PlanWorkflowState::PlanningQuestions, AgentMode::Act),

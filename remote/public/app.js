@@ -765,6 +765,7 @@ function App() {
     if (!client?.session) return;
     try {
       const fresh = await cmd({ type: "load_conversation", conversation_id: conversationId }, workspaceId);
+      if (convRef.current?.id === conversationId) setMode(modeFromConversation(fresh));
       setConv((current) => (current && current.id === conversationId ? fresh : current));
       setLiveEvents((current) => {
         const next = new Map(current);

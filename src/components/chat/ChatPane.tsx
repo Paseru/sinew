@@ -670,11 +670,13 @@ export function ChatPane({
 
   const planWorkflowActive = planWorkflow.status !== "idle";
   const goalWorkflowActive = goalWorkflow.status === "active";
+  const baseMode: AgentMode =
+    goalWorkflow.status === "complete" && mode === "goal" ? "act" : mode;
   const effectiveMode: AgentMode = planWorkflowActive
     ? "plan"
     : goalWorkflowActive
       ? "goal"
-      : mode;
+      : baseMode;
   const selectorLocked = isStreaming || view.status === "streaming";
   const rawCurrentSelection = selectorLocked
     ? selectionFromRef(streamingModel ?? activeModel)
@@ -835,6 +837,8 @@ export function ChatPane({
       setMode("plan");
     } else if (goalWorkflow.status === "active") {
       setMode("goal");
+    } else if (goalWorkflow.status === "complete") {
+      setMode("act");
     }
   }, [goalWorkflow.status, planWorkflow.status]);
 

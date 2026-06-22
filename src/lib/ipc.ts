@@ -20,6 +20,7 @@ import type {
   InstalledSkill,
   KimiProviderStatus,
   MessageVisibility,
+  McpOAuthStatus,
   McpServerProbe,
   McpSettings,
   ModeModelSettings,
@@ -36,6 +37,7 @@ import type {
   StartAnthropicLoginOutput,
   StartGoogleLoginOutput,
   StartKimiLoginOutput,
+  StartMcpOAuthLoginOutput,
   StartOpenAiLoginOutput,
   SubAgentSettings,
   TerminalCommandResult,
@@ -458,6 +460,26 @@ export const api = {
   },
   probeMcpTools() {
     return invoke<McpServerProbe[]>("probe_mcp_tools");
+  },
+  getMcpOAuthStatus(serverId: string) {
+    return invoke<McpOAuthStatus>("get_mcp_oauth_status", {
+      input: { serverId },
+    });
+  },
+  startMcpOAuthLogin(serverId: string) {
+    return invoke<StartMcpOAuthLoginOutput>("start_mcp_oauth_login_command", {
+      input: { serverId },
+    });
+  },
+  cancelMcpOAuthLogin(serverId: string) {
+    return invoke<McpOAuthStatus>("cancel_mcp_oauth_login", {
+      input: { serverId },
+    });
+  },
+  disconnectMcpOAuth(serverId: string) {
+    return invoke<McpOAuthStatus>("disconnect_mcp_oauth", {
+      input: { serverId },
+    });
   },
   listInstalledSkills(workspacePath: string) {
     return invoke<InstalledSkill[]>("list_installed_skills_command", {

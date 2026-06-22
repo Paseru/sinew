@@ -72,7 +72,7 @@ impl EditFileTool {
                                         "properties": {
                                             "oldContent": {
                                                 "type": "string",
-                                                "description": "Exact text to replace. It must be copied verbatim from the current file content and occur exactly once. Use the shortest substring that is still unique; include surrounding context only if required for uniqueness."
+                                                "description": "Exact text to replace. It must be copied verbatim from the current file content and occur exactly once."
                                             },
                                             "newContent": {
                                                 "type": "string",
@@ -600,17 +600,17 @@ fn find_unique_replacement_match(
     multiple: bool,
 ) -> Result<ReplacementMatch> {
     let exact_matches = exact_replacement_matches(original, old_content, false);
-    let fuzzy_matches = fuzzy_replacement_matches(original, old_content, false)?;
-
-    if fuzzy_matches.len() > 1 {
-        return duplicate_match_error(relative_path, edit_index, multiple, fuzzy_matches.len());
-    }
     match exact_matches.len() {
         1 => return Ok(exact_matches[0]),
         count if count > 1 => {
             return duplicate_match_error(relative_path, edit_index, multiple, count)
         }
         _ => {}
+    }
+
+    let fuzzy_matches = fuzzy_replacement_matches(original, old_content, false)?;
+    if fuzzy_matches.len() > 1 {
+        return duplicate_match_error(relative_path, edit_index, multiple, fuzzy_matches.len());
     }
     if fuzzy_matches.len() == 1 {
         return Ok(fuzzy_matches[0]);
@@ -2380,10 +2380,37 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fuzzy_fallback_still_requires_unique_match() {
+    async fn exact_unique_match_wins_over_ambiguous_fuzzy_match() {
         let root = unique_temp_dir();
         fs::create_dir_all(&root).expect("create temp workspace");
         fs::write(root.join("copy.txt"), "title: “Hello”\ntitle: \"Hello\"\n").expect("write file");
+        let tool = EditFileTool::new(&root);
+        let fingerprints = fingerprints(&root, &["copy.txt"]);
+
+        tool.edit(
+            json!({
+                "files": [{
+                    "path": "copy.txt",
+                    "edits": [{"oldContent": "title: \"Hello\"", "newContent": "title: hi"}]
+                }]
+            }),
+            &fingerprints,
+        )
+        .await
+        .expect("exact unique match should apply before fuzzy duplicate checks");
+
+        assert_eq!(
+            fs::read_to_string(root.join("copy.txt")).unwrap(),
+            "title: “Hello”\ntitle: hi\n"
+        );
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[tokio::test]
+    async fn fuzzy_fallback_still_requires_unique_match_when_no_exact_match_exists() {
+        let root = unique_temp_dir();
+        fs::create_dir_all(&root).expect("create temp workspace");
+        fs::write(root.join("copy.txt"), "title: “Hello”\ntitle: “Hello”\n").expect("write file");
         let tool = EditFileTool::new(&root);
         let fingerprints = fingerprints(&root, &["copy.txt"]);
 
@@ -2398,7 +2425,7 @@ mod tests {
                 &fingerprints,
             )
             .await
-            .expect_err("non unique fuzzy match should fail");
+            .expect_err("non unique fuzzy match should fail when exact matching has no result");
 
         assert_eq!(
             error.to_string(),

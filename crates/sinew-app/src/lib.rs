@@ -34,7 +34,13 @@ pub use edit::EditFileTool;
 pub use glob::GlobTool;
 pub use grep::GrepTool;
 pub use image::CreateImageTool;
-pub use mcp::{probe_mcp_servers, McpServerProbe, McpSettings, McpToolRegistry};
+pub use mcp::{
+    delete_mcp_oauth, discover_mcp_oauth, exchange_mcp_oauth_code, mcp_oauth_connected,
+    probe_mcp_servers, start_mcp_oauth_login, McpOAuthDiscovery, McpOAuthLoginPlan,
+    McpOAuthOutcome, McpOAuthStatus, McpServerProbe, McpSettings, McpToolRegistry,
+    StartMcpOAuthLoginOutput, StartMcpOAuthLoginResult, MCP_OAUTH_CALLBACK_PATH,
+    MCP_OAUTH_REDIRECT_PORT,
+};
 #[cfg(windows)]
 pub use powershell::{ensure_powershell_7_executable, find_powershell_7_executable};
 pub use question::QuestionTool;

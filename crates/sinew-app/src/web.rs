@@ -67,7 +67,7 @@ impl WebSearchTool {
                     "properties": {
                         "q": {
                             "type": "string",
-                            "description": "The search question or query."
+                            "description": "The search question, ask a real question, not a bot query."
                         },
                         "depth": {
                             "type": "string",
@@ -81,13 +81,14 @@ impl WebSearchTool {
             },
             WebSearchProvider::Classic => ToolDescriptor {
                 name: tool_names::WEB_SEARCH.into(),
-                description: "Search the web using Exa AI. Use this for current information, docs, recent data, or information beyond the model knowledge cutoff.".into(),
+                description: "Use this for web search, documentation check or fresh information."
+                    .into(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Websearch query. Use the current year when searching for recent information or current events."
+                            "description": "The search query."
                         },
                         "numResults": {
                             "type": "number",
