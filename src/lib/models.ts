@@ -92,6 +92,13 @@ export const MODELS: ModelEntry[] = [
     defaultThinking: "medium",
   },
   {
+    value: "anthropic:claude-sonnet-5",
+    provider: "anthropic",
+    label: "Sonnet 5",
+    thinking: ["off", "low", "medium", "high", "max"],
+    defaultThinking: "medium",
+  },
+  {
     value: "anthropic:claude-sonnet-4-6",
     provider: "anthropic",
     label: "Sonnet 4.6",
