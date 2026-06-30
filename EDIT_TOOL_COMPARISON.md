@@ -10,15 +10,15 @@ Repos inspectés :
 
 ## Résumé exécutif
 
-- **Sinew** est le plus complet et le plus défensif : multi-fichiers, plusieurs edits par fichier, `replaceAll`, fingerprint SHA-256 après `read`, préservation BOM/CRLF, fallbacks de matching très nombreux. Mais il est aussi le plus complexe, et il a un comportement qui peut expliquer ton ressenti : il peut déclarer `oldContent` non unique même quand l'exact match est unique, parce qu'il vérifie aussi les matchs fuzzy/permissifs et peut les considérer ambigus. Il applique aussi partiellement des edits déjà planifiés si un edit suivant échoue.
+- **Sinew** est le plus complet et le plus défensif : multi-fichiers, plusieurs edits par fichier, `replaceAll`, fingerprint SHA-256 après `read`, préservation BOM/CRLF, fallbacks de matching très nombreux. Son matching applique la règle exact-first : si `oldContent` apparaît exactement une fois, ce match est accepté avant les fallbacks fuzzy/permissifs. Les faux `oldContent not unique` restent surtout possibles quand aucun match exact n'existe et que les fallbacks trouvent plusieurs candidats équivalents. Il reste moins atomique que PI/OpenCode `edit` seul, car il peut appliquer partiellement des edits déjà planifiés si un edit suivant échoue.
 - **PI** a le meilleur noyau pour le **multi-edit dans un seul fichier** : tous les `edits[]` sont matchés sur le contenu original, les overlaps sont rejetés, puis les remplacements sont appliqués en reverse. C'est propre et évite les effets de décalage. Mais PI n'a pas de `replaceAll`, n'impose pas un `read` préalable, n'a pas de protection forte contre les fichiers modifiés entre-temps, et son fuzzy matching réécrit le fichier dans un espace normalisé si un fuzzy match est utilisé.
 - **OpenCode** est le plus pragmatique contre les faux “not unique” : il essaie d'abord le match exact simple et retourne tout de suite si ce match exact est unique, avant de tenter les fallbacks. Il a `replaceAll`, un lock par fichier, une vérification “read before edit” via mtime/size, une permission avec diff, puis diagnostics LSP. Mais son `multiedit` n'est pas réellement atomique malgré sa doc : il appelle `edit` en boucle et peut laisser les premiers edits appliqués si un edit suivant échoue. Son `edit` peut aussi créer un fichier avec `oldString: ""`, donc la séparation Edit/Create est moins nette.
 
 **Verdict court :**
 
-- Pour réduire les bugs `oldContent not unique`, **OpenCode a le meilleur comportement as-is** grâce au “exact unique wins before fuzzy”.
-- Pour le design multi-edit, **PI a la meilleure idée algorithmique** : matcher tous les edits contre l'original et rejeter les overlaps avant d'écrire.
-- Pour Sinew, je garderais sa base de sécurité, mais je changerais le matching pour reprendre l'ordre d'OpenCode et l'atomicité per-file de PI. Le meilleur design cible serait donc : **Sinew + exact-first OpenCode + planning all-or-nothing PI**.
+- Pour réduire les faux bugs `oldContent not unique`, **Sinew et OpenCode ont le meilleur comportement** sur le point critique : “exact unique wins before fuzzy”.
+- Pour le design multi-edit, **PI garde la meilleure idée algorithmique** : matcher tous les edits contre l'original et rejeter les overlaps avant d'écrire.
+- Le meilleur design cible serait donc : **Sinew + planning all-or-nothing PI + meilleurs diagnostics de duplicate**.
 
 ## Tableau comparatif
 
@@ -35,8 +35,9 @@ Repos inspectés :
 | Stale file protection | Forte : SHA-256 + size + modified_ms | Faible côté edit | Moyenne : mtime + size |
 | Création via Edit | Non | Non | Oui si `oldString === ""` |
 | Line endings/BOM | Normalise LF, restaure CRLF, préserve BOM | Normalise LF, restaure CRLF, préserve BOM | Préserve CRLF; pas de traitement BOM explicite |
-| Fuzzy/permissive matching | Très large : exact, fuzzy ponctuation/espaces, whitespace, indentation, anchors, escapes, context | Exact + fuzzy ponctuation/espaces/trailing whitespace | Exact + nombreux fallbacks whitespace/indent/anchors/escapes/context, mais pas smart quotes/dashes |
-| Risque faux “non unique” | Élevé dans certains cas fuzzy : exact unique peut être rejeté si fuzzy est ambigu | Possible aussi, car le comptage se fait en fuzzy-normalized space | Plus faible : l'exact unique gagne avant les fallbacks |
+| Fuzzy/permissive matching | Très large : exact-first, puis fuzzy ponctuation/espaces, whitespace, indentation, anchors, escapes, context | Exact + fuzzy ponctuation/espaces/trailing whitespace | Exact + nombreux fallbacks whitespace/indent/anchors/escapes/context, mais pas smart quotes/dashes |
+| Exact unique vs fuzzy ambigu | Correct : l'exact unique gagne avant les fallbacks | Risque possible en fuzzy-normalized space selon le cas | Correct : l'exact unique gagne avant les fallbacks |
+| Risque faux “non unique” | Faible pour les cas exacts; possible si aucun exact match n'existe et que fuzzy/permissif est ambigu | Possible aussi, car le comptage se fait en fuzzy-normalized space | Faible pour les cas exacts; possible si les fallbacks sont ambigus |
 | Atomicité intra-fichier | Non : peut appliquer les edits précédents si un edit suivant échoue | Oui : si un edit échoue/overlap/no-op, rien n'est écrit | `edit` seul oui; `multiedit` non en pratique |
 | Concurrency | Main turn séquentiel; lock workspace optionnel pour teams | Queue par realpath entre edit/write | Lock par fichier via `FileTime.withLock` |
 | Post-edit | Retourne diff/file changes + met à jour fingerprint | Retourne diff + patch | Permission diff avant écriture, formatage, diff final, diagnostics LSP |
@@ -94,9 +95,14 @@ Points forts :
 - `replaceAll` existe.
 - Les erreurs sont explicites : not found, duplicate, no-op, stale read, partial failure.
 
-Point faible principal : **l'ordre de décision peut créer des faux doublons**.
+Point clé : **Sinew évite les faux doublons exact-vs-fuzzy**.
 
-Dans `find_unique_replacement_match`, Sinew calcule les matchs exacts et fuzzy. Si le fuzzy trouve plusieurs matchs, Sinew retourne une erreur de duplicate avant de retourner l'exact match unique.
+`find_unique_replacement_match` applique l'ordre de décision suivant :
+
+1. chercher les matchs exacts ;
+2. si le match exact est unique, l'accepter immédiatement ;
+3. si le match exact est dupliqué, refuser sauf `replaceAll` ;
+4. seulement si aucun match exact n'existe, essayer le fuzzy puis les matchers permissifs.
 
 Exemple conceptuel :
 
@@ -111,7 +117,7 @@ Si le modèle demande :
 { "oldContent": "title: \"Hello\"", "newContent": "title: hi" }
 ```
 
-Le match exact est unique : seulement la deuxième ligne. Mais le fuzzy normalise les smart quotes, donc il voit deux lignes équivalentes et peut déclarer le texte non unique. C'est défendable d'un point de vue “prudence”, mais en pratique ça provoque exactement le type de bug que tu décris : le modèle donne un bloc qui devrait marcher, et le tool répond “pas unique”.
+Le match exact est unique : seulement la deuxième ligne. Même si le fuzzy normalise les smart quotes et voit deux lignes équivalentes, Sinew applique le match exact unique. Le fuzzy ne sert que de fallback quand l'exact ne trouve rien.
 
 ### Atomicité
 
@@ -250,9 +256,9 @@ Solution côté prompt/tool description : demander explicitement 2-5 lignes de c
 
 ### 2. Le tool rend l'unicité plus stricte que l'exact match
 
-Sinew et PI peuvent déclarer duplicate parce que plusieurs zones deviennent identiques après normalisation fuzzy. Exemple smart quotes vs quotes ASCII, dashes Unicode vs `-`, espaces spéciaux, trailing whitespace.
+PI peut déclarer duplicate parce que plusieurs zones deviennent identiques après normalisation fuzzy. Sinew et OpenCode évitent ce faux positif dans le cas exact : si l'exact match est unique, il gagne avant les fallbacks.
 
-OpenCode évite mieux ça car l'exact unique gagne avant les fallbacks.
+Le risque restant existe seulement quand aucun match exact n'existe et que les fallbacks fuzzy/permissifs trouvent plusieurs candidats équivalents.
 
 ### 3. Les fallbacks permissifs augmentent les collisions
 
@@ -267,12 +273,12 @@ Le bon compromis selon moi :
 
 ## Recommandations pour Sinew
 
-Je ne copierais pas PI ou OpenCode entièrement. Je garderais Sinew comme base, mais je changerais ces points :
+Je ne copierais pas PI ou OpenCode entièrement. Sinew reprend déjà le point le plus important d'OpenCode côté matching. Les chantiers restants sont :
 
-1. **Faire gagner l'exact match unique avant le fuzzy.**  
+1. **Garder l'exact match prioritaire sur le fuzzy.**  
    Si `oldContent` apparaît exactement une fois, appliquer ce match. Ne pas rejeter parce qu'une normalisation fuzzy trouve plusieurs équivalents.
 
-2. **Utiliser le fuzzy/permissive seulement après échec de l'exact.**  
+2. **Garder le fuzzy/permissive comme fallback seulement après échec de l'exact.**  
    Ça réduit fortement les faux “non unique”.
 
 3. **Adopter l'algorithme PI pour les edits multiples d'un fichier.**  
@@ -297,8 +303,8 @@ Je ne copierais pas PI ou OpenCode entièrement. Je garderais Sinew comme base, 
 
 Selon le critère :
 
-1. **Moins de faux bugs `oldContent not unique` : OpenCode.**  
-   Son exact-first est le meilleur comportement pratique.
+1. **Moins de faux bugs `oldContent not unique` : Sinew et OpenCode.**  
+   Les deux ont le comportement important : l'exact unique gagne avant le fuzzy/permissif.
 
 2. **Meilleur multi-edit algorithmique : PI.**  
    Match sur original + overlap check + write unique est le design le plus propre.
@@ -306,4 +312,4 @@ Selon le critère :
 3. **Meilleure sécurité globale : Sinew.**  
    Fingerprint SHA-256, read obligatoire, CRLF/BOM, limites de taille et `replaceAll` sont solides.
 
-Donc mon avis : **le meilleur tool Edit tel quel pour ton problème précis est OpenCode**, mais **le meilleur design à implémenter dans Sinew est hybride** : garder la sécurité de Sinew, prendre l'exact-first d'OpenCode, et prendre l'atomicité/multi-edit de PI.
+Donc mon avis : **pour ton problème précis, Sinew et OpenCode sont les meilleurs sur le faux `oldContent not unique` exact-vs-fuzzy**. Le meilleur design final reste hybride : garder la sécurité de Sinew, garder l'exact-first, prendre l'atomicité/multi-edit de PI et ajouter des diagnostics de duplicate avec lignes candidates.
