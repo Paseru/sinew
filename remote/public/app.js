@@ -17,6 +17,7 @@ const THINKING_LABELS = { off: "Off", low: "Low", medium: "Medium", high: "High"
 // Static catalog mirrored from the desktop (src/lib/models.ts). "minimal" is
 // desktop-only; the remote protocol clamps it to "low".
 const MODEL_CATALOG = [
+  { value: "anthropic:claude-fable-5-1", provider: "anthropic", label: "Fable 5.1", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
   { value: "anthropic:claude-fable-5", provider: "anthropic", label: "Fable 5", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
   { value: "anthropic:claude-opus-4-8", provider: "anthropic", label: "Opus 4.8", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
   { value: "anthropic:claude-opus-4-7", provider: "anthropic", label: "Opus 4.7", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },

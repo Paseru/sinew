@@ -31,6 +31,12 @@ const MODELS: &[AnthropicModelInfo] = &[
         max_output_tokens: 128_000,
     },
     AnthropicModelInfo {
+        id: "claude-fable-5-1",
+        context_window: 1_000_000,
+        preferred_window: 900_000,
+        max_output_tokens: 128_000,
+    },
+    AnthropicModelInfo {
         id: "claude-fable-5",
         context_window: 1_000_000,
         preferred_window: 900_000,
