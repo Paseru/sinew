@@ -21,6 +21,13 @@ const MODELS: &[OpenAiModelInfo] = &[
         supports_images: true,
     },
     OpenAiModelInfo {
+        id: "gpt-6-astra",
+        context_window: 272_000,
+        preferred_window: 240_000,
+        max_output_tokens: 128_000,
+        supports_images: true,
+    },
+    OpenAiModelInfo {
         id: "gpt-5.6-sol",
         context_window: 1_050_000,
         preferred_window: 950_000,
@@ -105,6 +112,16 @@ mod tests {
     use sinew_core::ModelRef;
 
     use super::capabilities;
+
+    #[test]
+    fn gpt_6_astra_uses_codex_account_capabilities() {
+        let capabilities = capabilities(&ModelRef::new("openai", "gpt-6-astra"));
+
+        assert_eq!(capabilities.context_window, 272_000);
+        assert_eq!(capabilities.preferred_window, 240_000);
+        assert_eq!(capabilities.max_output_tokens, 128_000);
+        assert!(capabilities.supports_images);
+    }
 
     #[test]
     fn gpt_5_6_models_use_expected_capabilities() {

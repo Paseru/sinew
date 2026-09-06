@@ -166,6 +166,7 @@ impl ResponsesWebsocketConnection {
             HeaderValue::from_static(RESPONSES_WEBSOCKET_BETA),
         );
         if bearer.is_oauth {
+            headers.insert("originator", HeaderValue::from_static("sinew"));
             if let Some(account_id) = bearer.account_id.as_deref() {
                 headers.insert(
                     "chatgpt-account-id",

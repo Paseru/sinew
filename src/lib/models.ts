@@ -127,6 +127,14 @@ export const MODELS: ModelEntry[] = [
     defaultThinking: "medium",
   },
   {
+    value: "openai:gpt-6-astra",
+    provider: "openai",
+    label: "GPT-6 Astra",
+    thinking: ["off", "low", "medium", "high", "xhigh", "max"],
+    defaultThinking: "medium",
+    supportsFast: true,
+  },
+  {
     value: "openai:gpt-5.6-sol",
     provider: "openai",
     label: "GPT-5.6 Sol",
@@ -408,7 +416,12 @@ function modelId(provider: string, name: string): ModelId {
 }
 
 function supportsOpenAiMaxEffort(modelName: string): boolean {
-  return modelName === "gpt-5.6" || modelName.startsWith("gpt-5.6-");
+  return (
+    modelName === "gpt-6" ||
+    modelName.startsWith("gpt-6-") ||
+    modelName === "gpt-5.6" ||
+    modelName.startsWith("gpt-5.6-")
+  );
 }
 
 function normalizedModelName(provider: string, name: string): string {

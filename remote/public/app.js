@@ -24,6 +24,7 @@ const MODEL_CATALOG = [
   { value: "anthropic:claude-opus-4-6", provider: "anthropic", label: "Opus 4.6", thinking: ["off", "low", "medium", "high", "max"], defaultThinking: "medium" },
   { value: "anthropic:claude-sonnet-4-6", provider: "anthropic", label: "Sonnet 4.6", thinking: ["off", "low", "medium", "high", "max"], defaultThinking: "medium" },
   { value: "anthropic:claude-haiku-4-5", provider: "anthropic", label: "Haiku 4.5", thinking: ["off", "low", "medium", "high"], defaultThinking: "medium" },
+  { value: "openai:gpt-6-astra", provider: "openai", label: "GPT-6 Astra", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
   { value: "openai:gpt-5.6-sol", provider: "openai", label: "GPT-5.6 Sol", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
   { value: "openai:gpt-5.6-terra", provider: "openai", label: "GPT-5.6 Terra", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
   { value: "openai:gpt-5.6-luna", provider: "openai", label: "GPT-5.6 Luna", thinking: ["off", "low", "medium", "high", "xhigh", "max"], defaultThinking: "medium" },
