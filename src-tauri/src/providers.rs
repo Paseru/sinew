@@ -410,9 +410,20 @@ pub(super) async fn handle_openai_oauth_request(
 
 pub(super) async fn bind_anthropic_oauth_listener() -> Result<tokio::net::TcpListener> {
     const CALLBACK_PORT: u16 = 53692;
-    tokio::net::TcpListener::bind(("127.0.0.1", CALLBACK_PORT))
-        .await
-        .context("unable to bind Anthropic OAuth callback port 53692")
+    match tokio::net::TcpListener::bind(("127.0.0.1", CALLBACK_PORT)).await {
+        Ok(listener) => Ok(listener),
+        Err(err) => {
+            let mut message =
+                format!("unable to bind Anthropic OAuth callback port {CALLBACK_PORT}");
+            #[cfg(target_os = "windows")]
+            if err.raw_os_error() == Some(10013) {
+                message.push_str(
+                    "; Windows may have reserved this port. Check excluded TCP port ranges or restart WinNAT/HNS before trying again",
+                );
+            }
+            Err(err).with_context(|| message)
+        }
+    }
 }
 
 pub(super) async fn run_anthropic_oauth_server(
