@@ -1,5 +1,6 @@
 Code map:
 - L'agent doit garder à jour cette carte simple des fichiers à chaque création, suppression, renommage, déplacement ou modification.
+- Version de l'application : 0.1.48 (Cargo.toml, Cargo.lock, package.json, package-lock.json et src-tauri/tauri.conf.json).
 
 .
 ├── .gitignore
@@ -64,7 +65,7 @@ Code map:
 │   │   ├── Cargo.toml
 │   │   └── src
 │   │       ├── auth.rs
-│   │       ├── client.rs
+│   │       ├── client.rs # requêtes HTTP Anthropic, compatibilité Claude Code 2.1.251 (Fable 5.1)
 │   │       ├── lib.rs
 │   │       ├── model_info.rs
 │   │       ├── stream.rs

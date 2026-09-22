@@ -15,7 +15,8 @@ use crate::{
 
 const BASE_URL: &str = "https://api.anthropic.com";
 const API_VERSION: &str = "2023-06-01";
-const USER_AGENT: &str = "claude-cli/2.1.75";
+// Anthropic gates newer models on this version; Fable 5.1 requires >= 2.1.251.
+const USER_AGENT: &str = "claude-cli/2.1.251";
 const CODE_SYSTEM_PREFIX: &str = "You are Claude Code, Anthropic's official CLI for Claude.";
 // Note: we intentionally do NOT advertise `context-1m-2025-08-07` here.
 // All models currently shipped in the app (Opus 4.6/4.7/4.8, Sonnet 4.6/5) already
