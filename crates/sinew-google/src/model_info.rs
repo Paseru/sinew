@@ -1,6 +1,6 @@
 use sinew_core::{Effort, EffortMode, ModelCapabilities, ModelRef};
 
-pub const MODEL_ID: &str = "gemini-3.1-pro";
+pub const MODEL_ID: &str = "gemini-3.8-flash";
 pub const GEMINI_WINDOW: u32 = 1_048_576;
 pub const GEMINI_MAX_OUTPUT: u32 = 65_535;
 
@@ -12,36 +12,13 @@ struct GoogleModelInfo {
     supports_images: bool,
 }
 
-const MODELS: &[GoogleModelInfo] = &[
-    GoogleModelInfo {
-        id: "gemini-3.1-pro",
-        context_window: GEMINI_WINDOW,
-        preferred_window: 950_000,
-        max_output_tokens: GEMINI_MAX_OUTPUT,
-        supports_images: true,
-    },
-    GoogleModelInfo {
-        id: "gemini-3-flash",
-        context_window: GEMINI_WINDOW,
-        preferred_window: 950_000,
-        max_output_tokens: GEMINI_MAX_OUTPUT,
-        supports_images: true,
-    },
-    GoogleModelInfo {
-        id: "gemini-3.5-flash",
-        context_window: GEMINI_WINDOW,
-        preferred_window: 950_000,
-        max_output_tokens: GEMINI_MAX_OUTPUT,
-        supports_images: true,
-    },
-    GoogleModelInfo {
-        id: "gemini-3.1-flash-lite",
-        context_window: GEMINI_WINDOW,
-        preferred_window: 950_000,
-        max_output_tokens: GEMINI_MAX_OUTPUT,
-        supports_images: true,
-    },
-];
+const MODELS: &[GoogleModelInfo] = &[GoogleModelInfo {
+    id: "gemini-3.8-flash",
+    context_window: GEMINI_WINDOW,
+    preferred_window: 950_000,
+    max_output_tokens: GEMINI_MAX_OUTPUT,
+    supports_images: true,
+}];
 
 fn model_info(model_id: &str) -> &'static GoogleModelInfo {
     MODELS
@@ -83,16 +60,11 @@ pub fn antigravity_model_and_thinking(
         Effort::High | Effort::Xhigh | Effort::Max => "high",
     };
 
-    // Antigravity exposes 3.5-flash uniquement sous l'ID `gemini-3.5-flash-low`.
-    // Le thinkingLevel reste libre, mais l'ID modèle est figé.
-    if base == "gemini-3.5-flash" {
-        return ("gemini-3.5-flash-low".into(), Some(thinking_level));
-    }
-    // Gemini 3.1 Pro on Antigravity is always routed to the agentic variant
-    // (`gemini-pro-agent`), which is the fine-tuned artefact for tool use and
-    // long thinking. The `thinkingLevel` is still variable.
-    if base == "gemini-3.1-pro" {
-        return ("gemini-pro-agent".into(), Some(thinking_level));
+    // Antigravity exposes the Flash tier under a fixed `-low` model ID
+    // (`gemini-3.5-flash-low` for 3.5, same scheme for 3.8). Le thinkingLevel
+    // reste libre, mais l'ID modèle est figé.
+    if base == "gemini-3.8-flash" {
+        return ("gemini-3.8-flash-low".into(), Some(thinking_level));
     }
     if is_pro {
         (format!("{base}-{thinking_level}"), Some(thinking_level))

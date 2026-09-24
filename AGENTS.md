@@ -1,6 +1,6 @@
 Code map:
 - L'agent doit garder à jour cette carte simple des fichiers à chaque création, suppression, renommage, déplacement ou modification.
-- Version de l'application : 0.1.50 (Cargo.toml, Cargo.lock, package.json, package-lock.json et src-tauri/tauri.conf.json).
+- Version de l'application : 0.1.51 (Cargo.toml, Cargo.lock, package.json, package-lock.json et src-tauri/tauri.conf.json).
 
 .
 ├── .gitignore

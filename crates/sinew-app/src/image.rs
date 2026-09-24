@@ -16,7 +16,7 @@ use reqwest::{
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use sinew_core::ToolDescriptor;
-use sinew_openai::{Credential, MODEL_ID as OPENAI_RESPONSES_IMAGE_MODEL};
+use sinew_openai::Credential;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use crate::read::detect_image_media_type;
@@ -27,6 +27,10 @@ use crate::tool_run::{FileChange, FileChangeKind, ToolRunImage, ToolRunResult};
 const OPENAI_IMAGES_URL: &str = "https://api.openai.com/v1/images/generations";
 const OPENAI_CODEX_RESPONSES_URL: &str = "https://chatgpt.com/backend-api/codex/responses";
 const GPT_IMAGE_MODEL: &str = "gpt-image-2";
+/// Model behind the ChatGPT-subscription image path. Deliberately independent
+/// from `sinew_openai::MODEL_ID` so the picker and this endpoint can move
+/// separately; GPT-6 Astra is the Codex-account model this path targets.
+const OPENAI_RESPONSES_IMAGE_MODEL: &str = "gpt-6-astra";
 const NANO_BANANA_MODEL: &str = "gemini-3.1-flash-image-preview";
 const NANO_BANANA_URL: &str =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent";

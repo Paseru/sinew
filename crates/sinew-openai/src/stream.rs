@@ -535,7 +535,7 @@ mod tests {
 
     #[test]
     fn response_failed_context_error_maps_to_context_length() {
-        let mut parser = EventParser::new("gpt-5.5".to_string());
+        let mut parser = EventParser::new("gpt-6-astra".to_string());
         let err = parser
             .push(json!({
                 "type": "response.failed",
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn overloaded_stream_error_is_retryable() {
-        let mut parser = EventParser::new("gpt-5.5".to_string());
+        let mut parser = EventParser::new("gpt-6-astra".to_string());
         let err = parser
             .push(json!({
                 "type": "error",

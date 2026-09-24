@@ -19,9 +19,9 @@ const API_VERSION: &str = "2023-06-01";
 // itself from the npm registry instead of going stale here.
 const CODE_SYSTEM_PREFIX: &str = "You are Claude Code, Anthropic's official CLI for Claude.";
 // Note: we intentionally do NOT advertise `context-1m-2025-08-07` here.
-// All models currently shipped in the app (Opus 4.6/4.7/4.8, Sonnet 4.6/5) already
-// expose a 1M context window natively, and Haiku 4.5 does not support that
-// beta at all. Sending it inconditionally caused:
+// Every model we ship (Opus 5.5, Sonnet 5, Fable 5/5.1) already exposes a 1M
+// context window natively. Sending the beta inconditionally broke the models
+// we shipped back then:
 //   * Sonnet 4.6 → server-side tier gating → `rate_limit_error: Extra usage
 //     is required for long context requests` even for trivial prompts.
 //   * Haiku 4.5 → `invalid_request_error: The long context beta is not yet
@@ -772,8 +772,8 @@ mod tests {
 
     #[test]
     fn beta_unavailable_error_is_not_classified_as_context_length() {
-        // Real Anthropic 400 on Haiku 4.5 when we still sent the
-        // `context-1m-2025-08-07` beta header.
+        // Real Anthropic 400 (Haiku 4.5, no longer shipped) when we still sent
+        // the `context-1m-2025-08-07` beta header.
         let message = "invalid_request_error: The long context beta is not yet available for this subscription.";
         assert!(!is_context_length_message(message));
     }
@@ -797,7 +797,7 @@ mod tests {
     fn common_beta_header_no_longer_advertises_long_context() {
         assert!(
             !COMMON_BETA.contains("context-1m"),
-            "context-1m beta must not be advertised globally; it triggers tier-gating on Sonnet 4.6 and 400s on Haiku 4.5"
+            "context-1m beta must not be advertised globally; it triggered tier-gating on Sonnet 4.6 and 400s on Haiku 4.5"
         );
     }
 
