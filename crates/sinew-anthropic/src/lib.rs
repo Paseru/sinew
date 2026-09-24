@@ -1,4 +1,5 @@
 mod auth;
+mod cli_version;
 mod client;
 mod model_info;
 mod stream;

@@ -8,15 +8,15 @@ use sinew_core::{
 
 use crate::{
     auth::{Credential, ANTHROPIC_RECONNECT_MESSAGE},
-    model_info,
+    cli_version, model_info,
     stream::map_stream,
     wire,
 };
 
 const BASE_URL: &str = "https://api.anthropic.com";
 const API_VERSION: &str = "2023-06-01";
-// Anthropic gates newer models on this version; Fable 5.1 requires >= 2.1.251.
-const USER_AGENT: &str = "claude-cli/2.1.251";
+// The advertised Claude Code version lives in `cli_version`, which refreshes
+// itself from the npm registry instead of going stale here.
 const CODE_SYSTEM_PREFIX: &str = "You are Claude Code, Anthropic's official CLI for Claude.";
 // Note: we intentionally do NOT advertise `context-1m-2025-08-07` here.
 // All models currently shipped in the app (Opus 4.6/4.7/4.8, Sonnet 4.6/5) already
@@ -71,7 +71,7 @@ pub struct AnthropicProvider {
 impl AnthropicProvider {
     pub fn new(config: AnthropicConfig) -> Result<Self> {
         let http = reqwest::Client::builder()
-            .user_agent(USER_AGENT)
+            .user_agent(cli_version::user_agent())
             .build()
             .map_err(|err| AppError::Network(err.to_string()))?;
         Ok(Self { config, http })
@@ -82,6 +82,8 @@ impl AnthropicProvider {
     }
 
     async fn post(&self, route: &str) -> Result<(reqwest::RequestBuilder, String)> {
+        // Cheap no-op unless the cached Claude Code version lookup expired.
+        cli_version::ensure_fresh(&self.http);
         let token = self.config.credential.bearer_or_key(&self.http).await?;
         let is_oauth = self.config.credential.is_oauth();
         let mut request = self
@@ -94,26 +96,18 @@ impl AnthropicProvider {
             .header("anthropic-version", &self.config.api_version)
             .header("content-type", "application/json")
             .header("anthropic-dangerous-direct-browser-access", "true")
-            .header("anthropic-beta", self.beta_header(is_oauth));
+            .header("anthropic-beta", self.beta_header(is_oauth))
+            .header("user-agent", cli_version::user_agent());
 
         if is_oauth {
             request = request
                 .header("authorization", format!("Bearer {token}"))
-                .header("x-app", "cli")
-                .header("user-agent", USER_AGENT);
+                .header("x-app", "cli");
         } else {
             request = request.header("x-api-key", token.clone());
         }
 
         Ok((request, token))
-    }
-
-    async fn send_json<T: Serialize + ?Sized>(
-        &self,
-        route: &str,
-        body: &T,
-    ) -> Result<reqwest::Response> {
-        self.send_json_accept(route, body, "application/json").await
     }
 
     async fn send_json_accept<T: Serialize + ?Sized>(
@@ -149,6 +143,58 @@ impl AnthropicProvider {
             .send()
             .await
             .map_err(|err| AppError::Network(err.to_string()))
+    }
+
+    /// Send a JSON body, retrying once when Anthropic rejects the Claude Code
+    /// version we advertise ("version X or newer is required").
+    ///
+    /// Without this, any model gated behind a newer CLI than the one we ship
+    /// stays broken until the app is rebuilt. With it, the first rejected
+    /// request teaches us the required version and the retry goes through.
+    async fn send_json_version_aware<T: Serialize + ?Sized>(
+        &self,
+        route: &str,
+        body: &T,
+        accept: &'static str,
+        retry_transient: bool,
+    ) -> Result<reqwest::Response> {
+        let response = self.send_json_accept(route, body, accept).await?;
+        if response.status().is_success() || !response.status().is_client_error() {
+            return Ok(response);
+        }
+
+        let status = response.status();
+        let delay_ms = retry_after_ms(&response);
+        let message = error_message(&response.text().await.unwrap_or_default());
+
+        let Some(required) = cli_version::adopt_required_version(&message) else {
+            return Err(classify_http_error(
+                status,
+                message,
+                retry_transient,
+                delay_ms,
+            ));
+        };
+
+        tracing::info!(
+            %required,
+            "anthropic requires a newer claude-cli version; retrying the request"
+        );
+
+        let retry = self.send_json_accept(route, body, accept).await?;
+        if retry.status().is_success() || !retry.status().is_client_error() {
+            return Ok(retry);
+        }
+
+        let status = retry.status();
+        let delay_ms = retry_after_ms(&retry);
+        let message = error_message(&retry.text().await.unwrap_or_default());
+        Err(classify_http_error(
+            status,
+            message,
+            retry_transient,
+            delay_ms,
+        ))
     }
 
     fn beta_header(&self, is_oauth: bool) -> String {
@@ -203,7 +249,14 @@ impl Provider for AnthropicProvider {
                 .collect(),
         };
 
-        let response = self.send_json("/v1/messages/count_tokens", &body).await?;
+        let response = self
+            .send_json_version_aware(
+                "/v1/messages/count_tokens",
+                &body,
+                "application/json",
+                false,
+            )
+            .await?;
 
         if !response.status().is_success() {
             return Err(read_http_error(response, false).await);
@@ -262,7 +315,7 @@ impl Provider for AnthropicProvider {
         };
 
         let response = self
-            .send_json_accept("/v1/messages", &body, "text/event-stream")
+            .send_json_version_aware("/v1/messages", &body, "text/event-stream", true)
             .await?;
 
         if !response.status().is_success() {
@@ -558,11 +611,23 @@ async fn read_http_error(response: reqwest::Response, retry_transient: bool) -> 
     let status = response.status();
     let delay_ms = retry_after_ms(&response);
     let body = response.text().await.unwrap_or_default();
-    let parsed: std::result::Result<wire::ApiErrorEnvelope, _> = serde_json::from_str(&body);
-    let message = parsed
-        .map(|payload| format!("{}: {}", payload.error.kind, payload.error.message))
-        .unwrap_or(body);
+    classify_http_error(status, error_message(&body), retry_transient, delay_ms)
+}
 
+/// Turn a raw API error body into `kind: message`, falling back to the raw text.
+fn error_message(body: &str) -> String {
+    let parsed: std::result::Result<wire::ApiErrorEnvelope, _> = serde_json::from_str(body);
+    parsed
+        .map(|payload| format!("{}: {}", payload.error.kind, payload.error.message))
+        .unwrap_or_else(|_| body.to_string())
+}
+
+fn classify_http_error(
+    status: reqwest::StatusCode,
+    message: String,
+    retry_transient: bool,
+    delay_ms: Option<u64>,
+) -> AppError {
     if status == reqwest::StatusCode::UNAUTHORIZED {
         tracing::warn!(error = %message, "anthropic oauth request was rejected after refresh");
         AppError::Auth(ANTHROPIC_RECONNECT_MESSAGE.into())
@@ -734,5 +799,120 @@ mod tests {
             !COMMON_BETA.contains("context-1m"),
             "context-1m beta must not be advertised globally; it triggers tier-gating on Sonnet 4.6 and 400s on Haiku 4.5"
         );
+    }
+
+    /// Regression test for the "Claude Code X does not support this model;
+    /// version Y or newer is required" gate: the provider must adopt the
+    /// demanded version and replay the request instead of surfacing a 400.
+    #[tokio::test]
+    async fn retries_once_with_the_version_the_server_demands() {
+        use std::sync::{Arc, Mutex};
+        use tokio::io::AsyncWriteExt;
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let recorded = Arc::new(Mutex::new(Vec::<String>::new()));
+        let recorder = recorded.clone();
+
+        tokio::spawn(async move {
+            for attempt in 0..2 {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let head = read_request(&mut socket).await;
+                let user_agent = head
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        name.trim()
+                            .eq_ignore_ascii_case("user-agent")
+                            .then(|| value.trim().to_string())
+                    })
+                    .unwrap_or_default();
+                recorder.lock().unwrap().push(user_agent);
+
+                let body = if attempt == 0 {
+                    r#"{"type":"error","error":{"type":"invalid_request_error","message":"Claude Code 2.1.251 does not support this model; version 9.9.9 or newer is required. Run 'claude update', or update the Claude desktop app, then try again."}}"#
+                } else {
+                    "event: message_stop\ndata: {}\n\n"
+                };
+                let status = if attempt == 0 {
+                    "400 Bad Request"
+                } else {
+                    "200 OK"
+                };
+                let response = format!(
+                    "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                socket.write_all(response.as_bytes()).await.unwrap();
+                socket.flush().await.unwrap();
+            }
+        });
+
+        let provider = AnthropicProvider::new(AnthropicConfig {
+            credential: Credential::from_oauth_parts("test-access", "test-refresh", i64::MAX, None),
+            base_url: format!("http://{addr}"),
+            api_version: "2023-06-01".into(),
+            extra_beta: None,
+        })
+        .unwrap();
+
+        let request = ProviderRequest::new(
+            ModelRef::new("anthropic", "claude-opus-5-5"),
+            vec![ChatMessage::user_text("ping")],
+        );
+        let _stream = provider
+            .stream(request)
+            .await
+            .expect("the version-gated request should be retried and succeed");
+
+        let recorded = recorded.lock().unwrap().clone();
+        assert_eq!(
+            recorded.len(),
+            2,
+            "expected exactly one retry: {recorded:?}"
+        );
+        assert!(
+            recorded[0].starts_with("claude-cli/"),
+            "unexpected first user-agent: {}",
+            recorded[0]
+        );
+        assert_eq!(recorded[1], "claude-cli/9.9.9");
+    }
+
+    async fn read_request(socket: &mut tokio::net::TcpStream) -> String {
+        use tokio::io::AsyncReadExt;
+
+        let mut buffer = [0u8; 1024];
+        let mut received = Vec::new();
+        let head_end = loop {
+            let read = socket.read(&mut buffer).await.unwrap();
+            if read == 0 {
+                break received.len();
+            }
+            received.extend_from_slice(&buffer[..read]);
+            if let Some(index) = received.windows(4).position(|w| w == b"\r\n\r\n") {
+                break index + 4;
+            }
+        };
+        let head = String::from_utf8_lossy(&received[..head_end]).to_string();
+        let content_length: usize = head
+            .lines()
+            .find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.trim()
+                    .eq_ignore_ascii_case("content-length")
+                    .then(|| value.trim().parse().ok())?
+            })
+            .unwrap_or(0);
+        let mut pending = content_length.saturating_sub(received.len() - head_end);
+        while pending > 0 {
+            let read = socket.read(&mut buffer).await.unwrap();
+            if read == 0 {
+                break;
+            }
+            pending = pending.saturating_sub(read);
+        }
+        head
     }
 }
